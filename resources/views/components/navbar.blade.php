@@ -13,7 +13,7 @@
                             <div class="relative" x-data="{ isMasterOpen: false }">
                                 <button @click="isMasterOpen = !isMasterOpen"
                                     :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('perusahaan') ||
+                                        'bg-red-1000 text-white': {{ request()->is('company') ||
                                             request()->is('blok') ||
                                             request()->is('plotting') ||
                                             request()->is('mapping') ||
@@ -23,7 +23,7 @@
                                             request()->routeIs('master.username.edit') }},
                                         'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                             !(
-                                                {{ request()->is('perusahaan') ||
+                                                {{ request()->is('company') ||
                                                     request()->is('blok') ||
                                                     request()->is('plotting') ||
                                                     request()->is('mapping') ||
@@ -54,8 +54,8 @@
                                     x-transition:leave-end="opacity-0 transform scale-95"
                                     class="absolute z-10 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                     @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('master.perusahaan.index') }}"
-                                            :active="request()->is('perusahaan')">Company</x-childnav-link>
+                                        <x-childnav-link href="{{ route('master.company.index') }}"
+                                            :active="request()->is('company')">Company</x-childnav-link>
                                     @endif
                                     @if (auth()->user() && in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('master.blok.index') }}"
@@ -281,9 +281,9 @@
             <div class="hidden md:block">
                 <div class="ml-4 flex items-center md:ml-6">
                     @php
-                        $compName = DB::table('perusahaan')
-                            ->where('kd_comp', '=', session('dropdown_value'))
-                            ->value('nama');
+                        $compName = DB::table('company')
+                            ->where('companycode', '=', session('dropdown_value'))
+                            ->value('name');
                     @endphp
                     <div class="mr-3 text-right">
                         <div class="text-sm font-medium leading-none text-white opacity-70">
@@ -374,14 +374,14 @@
                     <span class="absolute -inset-0.5"></span>
                     <span class="sr-only">Open main menu</span>
                     <!-- Menu open: "hidden", Menu closed: "block" -->
-                    <svg :class="{ 'hidden': isOpen, 'block': !isOpen }" class="block h-6 w-6" fill="none"
+                    <svg :class="{ 'hidden': isOpen, blok: !isOpen }" class="block h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
                         data-slot="icon">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                     <!-- Menu open: "block", Menu closed: "hidden" -->
-                    <svg :class="{ 'block': isOpen, 'hidden': !isOpen }" class="hidden h-6 w-6" fill="none"
+                    <svg :class="{ blok: isOpen, 'hidden': !isOpen }" class="hidden h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
                         data-slot="icon">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -399,7 +399,7 @@
                 <div class="relative" x-data="{ isMasterOpen: false }">
                     <button @click="isMasterOpen = !isMasterOpen; isMasterActive = !isMasterActive"
                         :class="{
-                            'bg-red-1000 text-white': {{ request()->is('perusahaan') ||
+                            'bg-red-1000 text-white': {{ request()->is('company') ||
                                 request()->is('blok') ||
                                 request()->is('plotting') ||
                                 request()->is('mapping') ||
@@ -409,7 +409,7 @@
                                 request()->routeIs('master.username.edit') }},
                             'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                 !(
-                                    {{ request()->is('perusahaan') ||
+                                    {{ request()->is('company') ||
                                         request()->is('blok') ||
                                         request()->is('plotting') ||
                                         request()->is('mapping') ||
@@ -440,8 +440,8 @@
                         x-transition:leave-end="opacity-0 transform scale-95"
                         class="absolute z-10 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                         @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.perusahaan.index') }}"
-                                :active="request()->is('perusahaan')">Company</x-childnav-link>
+                            <x-childnav-link href="{{ route('master.company.index') }}"
+                                :active="request()->is('company')">Company</x-childnav-link>
                         @endif
                         @if (auth()->user() && in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
                             <x-childnav-link href="{{ route('master.blok.index') }}"

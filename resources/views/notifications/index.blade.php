@@ -27,11 +27,11 @@
 
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex gap-2 items-center">
-                                <span class="lg:text-sm text-xs text-gray-500">{{ $item->created_at->diffForHumans() }}</span>
+                                <span class="lg:text-sm text-xs text-gray-500">{{ $item->createdat->diffForHumans() }}</span>
                                 @if (auth()->user() && in_array('Admin', json_decode(auth()->user()->permissions ?? '[]')))
                                     <span class="font-medium text-sm text-gray-500"> - </span>
                                     <div class="text-gray-500 text-xs font-medium">
-                                        {{ $item->kd_comp }}
+                                        {{ $item->companycode }}
                                     </div>
                                 @endif
                             </div>
@@ -212,7 +212,7 @@
                 const notifId = dot.getAttribute('data-notif-id');
                 const notif = @json($notif).find(n => n.id === parseInt(notifId));
 
-                if (notif && notif.read_by && JSON.parse(notif.read_by).includes(currentUser)) {
+                if (notif && notif.readby && JSON.parse(notif.readby).includes(currentUser)) {
                     dot.classList.add('hidden');
                 }
             });

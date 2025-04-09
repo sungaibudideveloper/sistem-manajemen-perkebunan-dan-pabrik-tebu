@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\Perusahaan;
+use App\Models\company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -22,7 +22,7 @@ class ReportController extends Controller
     {
         $title = "Report Agronomi";
         $nav = "Agronomi";
-        $company = Perusahaan::all();
+        $company = company::all();
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -39,22 +39,22 @@ class ReportController extends Controller
         $query = DB::table('agro_lst')
             ->leftJoin('agro_hdr', function ($join) {
                 $join->on('agro_lst.no_sample', '=', 'agro_hdr.no_sample')
-                    ->whereColumn('agro_lst.kd_comp', '=', 'agro_hdr.kd_comp')
-                    ->whereColumn('agro_lst.tgltanam', '=', 'agro_hdr.tgltanam');
+                    ->whereColumn('agro_lst.companycode', '=', 'agro_hdr.companycode')
+                    ->whereColumn('agro_lst.tanggaltanam', '=', 'agro_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('agro_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('agro_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('agro_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('agro_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('agro_hdr.companycode', '=', 'plotting.companycode');
             })
-            ->where('agro_lst.kd_comp', session('dropdown_value'))
-            ->where('agro_hdr.kd_comp', session('dropdown_value'))
+            ->where('agro_lst.companycode', session('dropdown_value'))
+            ->where('agro_hdr.companycode', session('dropdown_value'))
             ->where('agro_hdr.status', '=', 'Posted')
             ->where('agro_lst.status', '=', 'Posted')
             ->select(
@@ -62,11 +62,11 @@ class ReportController extends Controller
                 'agro_hdr.varietas',
                 'agro_hdr.kat',
                 'agro_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
-                'plotting.jarak_tanam',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
+                'plotting.jaraktanam',
             )
             ->orderBy('agro_hdr.tglamat', 'asc');
 
@@ -80,8 +80,8 @@ class ReportController extends Controller
         $agronomi = $query->paginate($perPage);
 
         foreach ($agronomi as $item) {
-            $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
-            $dateInput = Carbon::parse($item->created_at);
+            $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
+            $dateInput = Carbon::parse($item->createdat);
             $item->bulanPengamatan = $dateInput->format('F');
         }
 
@@ -96,7 +96,7 @@ class ReportController extends Controller
     {
         $title = "Report HPT";
         $nav = "HPT";
-        $company = Perusahaan::all();
+        $company = company::all();
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -113,32 +113,32 @@ class ReportController extends Controller
         $query = DB::table('hpt_lst')
             ->leftJoin('hpt_hdr', function ($join) {
                 $join->on('hpt_lst.no_sample', '=', 'hpt_hdr.no_sample')
-                    ->whereColumn('hpt_lst.kd_comp', '=', 'hpt_hdr.kd_comp')
-                    ->whereColumn('hpt_lst.tgltanam', '=', 'hpt_hdr.tgltanam');
+                    ->whereColumn('hpt_lst.companycode', '=', 'hpt_hdr.companycode')
+                    ->whereColumn('hpt_lst.tanggaltanam', '=', 'hpt_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('hpt_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('hpt_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('hpt_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('hpt_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'plotting.companycode');
             })
-            ->where('hpt_lst.kd_comp', session('dropdown_value'))
-            ->where('hpt_hdr.kd_comp', session('dropdown_value'))
+            ->where('hpt_lst.companycode', session('dropdown_value'))
+            ->where('hpt_hdr.companycode', session('dropdown_value'))
             ->where('hpt_hdr.status', '=', 'Posted')
             ->where('hpt_lst.status', '=', 'Posted')
             ->select(
                 'hpt_lst.*',
                 'hpt_hdr.varietas',
                 'hpt_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
             )
             ->orderBy('hpt_hdr.tglamat', 'desc');
 
@@ -152,8 +152,8 @@ class ReportController extends Controller
         $hpt = $query->paginate($perPage);
 
         foreach ($hpt as $item) {
-            $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
-            $dateInput = Carbon::parse($item->created_at);
+            $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
+            $dateInput = Carbon::parse($item->createdat);
             $item->bulanPengamatan = $dateInput->format('F');
         }
 

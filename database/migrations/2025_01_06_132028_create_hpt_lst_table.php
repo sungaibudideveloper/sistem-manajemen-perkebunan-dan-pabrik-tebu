@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('hpt_lst', function (Blueprint $table) {
             $table->char('no_sample', 4)->default('');
-            $table->char('kd_comp', 4)->default('');
-            $table->date('tgltanam')->useCurrent();
-            $table->integer('no_urut')->default(0);
+            $table->char('companycode', 4)->default('');
+            $table->date('tanggaltanam')->useCurrent();
+            $table->integer('nourut')->default(0);
             $table->integer('jm_batang')->default(0);
             $table->integer('ppt')->default(0);
             $table->integer('ppt_aktif')->default(0);
@@ -62,9 +62,9 @@ return new class extends Migration
             $table->integer('jum_larva_pbt')->default(0);
             $table->enum('status',['Posted','Unposted'])->default('Unposted');
             $table->integer('count')->default(0);
-            $table->string('user_input', 50)->default('');
+            $table->string('inputby', 50)->default('');
             $table->timestamps();
-            $table->primary(['no_sample', 'kd_comp', 'tgltanam', 'no_urut']);
+            $table->primary(['no_sample', 'companycode', 'tanggaltanam', 'nourut']);
         });
     }
 

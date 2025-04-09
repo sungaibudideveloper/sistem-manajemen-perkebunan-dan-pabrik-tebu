@@ -56,7 +56,7 @@ class GPXController extends Controller
                 $extensions = $track->extensions;
                 $fid = safeGet($extensions->children('ogr', true)->fid);           
 
-                $exists = DB::table('gps_hdr')->where('fid', $fid)->where('kd_comp', session('dropdown_value'))->exists();
+                $exists = DB::table('gps_hdr')->where('fid', $fid)->where('companycode', session('dropdown_value'))->exists();
                 // dd($exists);
                 if (!$exists) {
                     $hdrData[] = [
@@ -67,7 +67,7 @@ class GPXController extends Controller
                         'luas' => safeGet($extensions->children('ogr', true)->LUAS),
                         'shape_leng' => safeGet($extensions->children('ogr', true)->Shape_Leng),
                         'shape_area' => safeGet($extensions->children('ogr', true)->Shape_Area),
-                        'kd_comp' => session('dropdown_value'),
+                        'companycode' => session('dropdown_value'),
                     ];
 
                     foreach ($track->trkseg->trkpt as $trkpt) {
@@ -75,7 +75,7 @@ class GPXController extends Controller
                             'fid' => $fid,
                             'lon' => safeGet($trkpt['lon']),
                             'lat' => safeGet($trkpt['lat']),
-                            'kd_comp' => session('dropdown_value'),
+                            'companycode' => session('dropdown_value'),
                         ];
                     }
                 }
@@ -104,7 +104,7 @@ class GPXController extends Controller
         if ($request->isMethod('post')) {
             $results = DB::table('gps_lst')
                 ->select('fid', 'lon', 'lat')
-                ->where('kd_comp', session('dropdown_value'))
+                ->where('companycode', session('dropdown_value'))
                 ->orderBy('fid')
                 ->get();
 

@@ -25,8 +25,8 @@ class MappingController extends Controller
     {
         $title = "Daftar Mapping";
 
-        $bloks = DB::table('blok')->where('kd_comp', '=', session('dropdown_value'))->get();
-        $plotting = DB::table('plotting')->where('kd_comp', '=', session('dropdown_value'))->get();
+        $bloks = DB::table('blok')->where('companycode', '=', session('dropdown_value'))->get();
+        $plotting = DB::table('plot')->where('companycode', '=', session('dropdown_value'))->get();
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -36,8 +36,8 @@ class MappingController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        $mapping = DB::table('mapping')->where('kd_comp', '=', session('dropdown_value'))
-            ->orderByRaw('CAST(kd_plotsample AS UNSIGNED) ASC')
+        $mapping = DB::table('mappingblokplot')->where('companycode', '=', session('dropdown_value'))
+            ->orderByRaw('CAST(idblokplot AS UNSIGNED) ASC')
             ->paginate($perPage);
 
         foreach ($mapping as $index => $item) {
@@ -57,17 +57,17 @@ class MappingController extends Controller
     protected function requestValidated(): array
     {
         return [
-            'kd_plotsample' => 'required',
-            'kd_blok' => 'required|exists:blok,kd_blok',
-            'kd_plot' => 'required|exists:plotting,kd_plot',
+            'plotcodesample' => 'required',
+            'blok' => 'required|exists:blok,blok',
+            'plot' => 'required|exists:plotting,plotcode',
         ];
     }
 
     public function getFilteredData(Request $request)
     {
-        $companyCode = $request->kd_comp;
-        $bloks = DB::table('blok')->where('kd_comp', $companyCode)->get();
-        $plots = DB::table('plotting')->where('kd_comp', $companyCode)->get();
+        $companyCode = $request->companycode;
+        $bloks = DB::table('blok')->where('companycode', $companyCode)->get();
+        $plots = DB::table('plot')->where('companycode', $companyCode)->get();
 
         return response()->json([
             'bloks' => $bloks,
@@ -78,17 +78,17 @@ class MappingController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('mapping')->where('kd_plotsample', $request->kd_plotsample)
-            ->where('kd_blok', $request->kd_blok)
-            ->where('kd_plot', $request->kd_plot)
-            ->where('kd_comp', $request->kd_comp)
+        $exists = DB::table('mappingblokplot')->where('idblokplot', $request->plotcodesample)
+            ->where('blok', $request->blok)
+            ->where('plot', $request->plotcode)
+            ->where('companycode', $request->companycode)
             ->exists();
-        $existCode = DB::table('mapping')->where('kd_plotsample', $request->kd_plotsample)
-            ->where('kd_comp', $request->kd_comp)
+        $existCode = DB::table('mappingblokplot')->where('idblokplot', $request->plotcodesample)
+            ->where('companycode', $request->companycode)
             ->exists();
-        $existBody = DB::table('mapping')->where('kd_blok', $request->kd_blok)
-            ->where('kd_plot', $request->kd_plot)
-            ->where('kd_comp', $request->kd_comp)
+        $existBody = DB::table('mappingblokplot')->where('blok', $request->blok)
+            ->where('plot', $request->plotcode)
+            ->where('companycode', $request->companycode)
             ->exists();
 
         if ($exists) {
@@ -104,19 +104,19 @@ class MappingController extends Controller
         } else if ($existBody) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kombinasi blok dan plot sudah ada pada company ' . $request->kd_comp . '.'
+                'message' => 'Kombinasi blok dan plot sudah ada pada company ' . $request->companycode . '.'
             ], 422);
         }
 
         DB::transaction(function () use ($request) {
-            DB::table('mapping')->insert([
-                'kd_plotsample' => $request->kd_plotsample,
-                'kd_blok' => $request->kd_blok,
-                'kd_plot' => $request->kd_plot,
-                'kd_comp' => session('dropdown_value'),
+            DB::table('mappingblokplot')->insert([
+                'idblokplot' => $request->plotcodesample,
+                'blok' => $request->blok,
+                'plot' => $request->plotcode,
+                'companycode' => session('dropdown_value'),
                 'usernm' => Auth::user()->usernm,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
         });
         return response()->json([
@@ -124,32 +124,32 @@ class MappingController extends Controller
             'message' => 'Data berhasil ditambahkan',
             'newData' => [
                 'no' => 'NEW!',
-                'kd_plotsample' => $request->kd_plotsample,
-                'kd_blok' => $request->kd_blok,
-                'kd_plot' => $request->kd_plot,
-                'kd_comp' => $request->kd_comp,
+                'plotcodesample' => $request->plotcodesample,
+                'blok' => $request->blok,
+                'plot' => $request->plotcode,
+                'companycode' => $request->companycode,
             ]
         ]);
     }
 
-    public function update(Request $request, $kd_plotsample, $kd_blok, $kd_plot, $kd_comp)
+    public function update(Request $request, $plotcodesample, $blok, $plotcode, $companycode)
     {
         $request->validate($this->requestValidated());
 
-        $exists = DB::table('mapping')->where('kd_plotsample', $request->kd_plotsample)
-            ->where('kd_blok', $kd_blok)
-            ->where('kd_plot', $kd_plot)
-            ->where('kd_comp', $kd_comp)
-            ->where('kd_plotsample', '!=', $kd_plotsample)
+        $exists = DB::table('mappingblokplot')->where('idblokplot', $request->plotcodesample)
+            ->where('blok', $blok)
+            ->where('plot', $plotcode)
+            ->where('companycode', $companycode)
+            ->where('idblokplot', '!=', $plotcodesample)
             ->exists();
-        $existCode = DB::table('mapping')->where('kd_plotsample', $request->kd_plotsample)
-            ->where('kd_comp', $request->kd_comp)
-            ->where('kd_plotsample', '!=', $kd_plotsample)
+        $existCode = DB::table('mappingblokplot')->where('idblokplot', $request->plotcodesample)
+            ->where('companycode', $request->companycode)
+            ->where('idblokplot', '!=', $plotcodesample)
             ->exists();
-        $existBody = DB::table('mapping')->where('kd_blok', $request->kd_blok)
-            ->where('kd_plot', $request->kd_plot)
-            ->where('kd_comp', $request->kd_comp)
-            ->where('kd_plotsample', '!=', $kd_plotsample)
+        $existBody = DB::table('mappingblokplot')->where('blok', $request->blok)
+            ->where('plot', $request->plotcode)
+            ->where('companycode', $request->companycode)
+            ->where('idblokplot', '!=', $plotcodesample)
             ->exists();
 
         if ($exists) {
@@ -162,22 +162,22 @@ class MappingController extends Controller
                 ->withInput();
         } else if ($existBody) {
             return redirect()->back()
-                ->with('error', 'Kombinasi blok dan plot sudah ada pada company ' . $request->kd_comp . '.')
+                ->with('error', 'Kombinasi blok dan plot sudah ada pada company ' . $request->companycode . '.')
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $kd_plotsample, $kd_blok, $kd_plot, $kd_comp) {
-            DB::table('mapping')->where('kd_plotsample', $kd_plotsample)
-                ->where('kd_blok', $kd_blok)
-                ->where('kd_plot', $kd_plot)
-                ->where('kd_comp', $kd_comp)
+        DB::transaction(function () use ($request, $plotcodesample, $blok, $plotcode, $companycode) {
+            DB::table('mappingblokplot')->where('idblokplot', $plotcodesample)
+                ->where('blok', $blok)
+                ->where('plot', $plotcode)
+                ->where('companycode', $companycode)
                 ->update([
-                    'kd_plotsample' => $request->kd_plotsample,
-                    'kd_blok' => $request->kd_blok,
-                    'kd_plot' => $request->kd_plot,
-                    'kd_comp' => session('dropdown_value'),
+                    'idblokplot' => $request->plotcodesample,
+                    'blok' => $request->blok,
+                    'plot' => $request->plotcode,
+                    'companycode' => session('dropdown_value'),
                     'usernm' => Auth::user()->usernm,
-                    'updated_at' => now(),
+                    'updatedat' => now(),
                 ]);
         });
 
@@ -185,13 +185,13 @@ class MappingController extends Controller
             ->with('success1', 'Data updated successfully.');
     }
 
-    public function destroy($kd_plotsample, $kd_blok, $kd_plot, $kd_comp)
+    public function destroy($plotcodesample, $blok, $plotcode, $companycode)
     {
-        DB::transaction(function () use ($kd_plotsample, $kd_blok, $kd_plot, $kd_comp) {
-            DB::table('mapping')->where('kd_plotsample', $kd_plotsample)
-                ->where('kd_blok', $kd_blok)
-                ->where('kd_plot', $kd_plot)
-                ->where('kd_comp', $kd_comp)
+        DB::transaction(function () use ($plotcodesample, $blok, $plotcode, $companycode) {
+            DB::table('mappingblokplot')->where('idblokplot', $plotcodesample)
+                ->where('blok', $blok)
+                ->where('plot', $plotcode)
+                ->where('companycode', $companycode)
                 ->delete();
         });
         return response()->json([

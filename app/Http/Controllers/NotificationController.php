@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Perusahaan;
+use App\Models\company;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -24,7 +24,7 @@ class NotificationController extends Controller
     protected function requestValidated(): array
     {
         return [
-            'kd_comp' => 'required',
+            'companycode' => 'required',
             'title' => 'required',
             'body' => 'required',
         ];
@@ -33,7 +33,7 @@ class NotificationController extends Controller
     public function index()
     {
         $title = 'Notifications';
-        $comp = explode(',', Auth::user()->userComp->kd_comp);
+        $comp = explode(',', Auth::user()->userComp->companycode);
         $dropdownValue = session('dropdown_value');
 
         $permissions = json_decode(Auth::user()->permissions, true);
@@ -41,30 +41,30 @@ class NotificationController extends Controller
         $isAdmin = in_array('Admin', $permissions);
 
         $notifQuery = DB::table('notification')
-            ->join('perusahaan', function ($join) {
-                $join->whereRaw('FIND_IN_SET(perusahaan.kd_comp, notification.kd_comp)');
+            ->join('company', function ($join) {
+                $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
             });
 
         if ($isAdmin) {
             $notifQuery->where(function ($query) use ($comp) {
                 foreach ($comp as $company) {
-                    $query->orWhereRaw('FIND_IN_SET(?, notification.kd_comp)', [$company]);
+                    $query->orWhereRaw('FIND_IN_SET(?, notification.companycode)', [$company]);
                 }
             })->distinct();
         } else {
-            $notifQuery->whereRaw('FIND_IN_SET(?, notification.kd_comp)', [session('dropdown_value')])->distinct();
+            $notifQuery->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('dropdown_value')])->distinct();
         }
 
         if (!$isKepalaKebun) {
-            $notifQuery->where('notification.user_input', '!=', 'Automatic by System');
+            $notifQuery->where('notification.inputby', '!=', 'Automatic by System');
         }
 
-        $notif = $notifQuery->whereBetween('notification.created_at', [DB::raw('perusahaan.tgl'), now()])
+        $notif = $notifQuery->whereBetween('notification.createdat', [DB::raw('company.tgl'), now()])
             ->select('notification.*')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('createdat', 'desc')
             ->get()
             ->map(function ($item) {
-                $item->created_at = Carbon::parse($item->created_at);
+                $item->createdat = Carbon::parse($item->createdat);
                 return $item;
             });
 
@@ -77,7 +77,7 @@ class NotificationController extends Controller
     {
         $title = "Create Data";
         $notification = new Notification();
-        $company = Perusahaan::all();
+        $company = company::all();
         $method = 'POST';
         $buttonSubmit = 'Create';
         $url = route('notifications.store');
@@ -89,7 +89,7 @@ class NotificationController extends Controller
         $validated = $request->validate($this->requestValidated());
 
         DB::transaction(function () use ($validated) {
-            $kd_comp = implode(',', $validated['kd_comp']);
+            $companycode = implode(',', $validated['companycode']);
             $existingIds = Notification::pluck('id')->toArray();
             sort($existingIds);
 
@@ -103,10 +103,10 @@ class NotificationController extends Controller
 
             Notification::create([
                 'id' => $nextId,
-                'kd_comp' => $kd_comp,
+                'companycode' => $companycode,
                 'title' => $validated['title'],
                 'body' => $validated['body'],
-                'user_input' => Auth::user()->usernm,
+                'inputby' => Auth::user()->usernm,
             ]);
         });
 
@@ -117,7 +117,7 @@ class NotificationController extends Controller
     {
         $title = 'Edit Data';
         $notification = Notification::findOrFail($id);
-        $company = Perusahaan::all();
+        $company = company::all();
         $method = 'PUT';
         $buttonSubmit = 'Update';
         $url = route('notifications.update', $notification);
@@ -151,11 +151,11 @@ class NotificationController extends Controller
         }
 
         $currentUser = Auth::user()->usernm;
-        $readBy = $notification->read_by ? json_decode($notification->read_by, true) : [];
+        $readBy = $notification->readby ? json_decode($notification->readby, true) : [];
 
         if (!in_array($currentUser, $readBy)) {
             $readBy[] = $currentUser;
-            $notification->read_by = json_encode($readBy);
+            $notification->readby = json_encode($readBy);
             $notification->save();
         }
 
@@ -165,48 +165,48 @@ class NotificationController extends Controller
     public function getUnreadCount()
     {
         $currentUser = Auth::user()->usernm;
-        $comp = explode(',', Auth::user()->userComp->kd_comp);
+        $comp = explode(',', Auth::user()->userComp->companycode);
         $permissions = json_decode(Auth::user()->permissions, true);
         $isKepalaKebun = in_array('Kepala Kebun', $permissions);
         $isAdmin = in_array('Admin', $permissions);
 
         $query = DB::table('notification')
-            ->join('perusahaan', function ($join) {
-                $join->whereRaw('FIND_IN_SET(perusahaan.kd_comp, notification.kd_comp)');
+            ->join('company', function ($join) {
+                $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
             });
 
         if ($isAdmin) {
             $query->where(function ($query) use ($comp, $currentUser) {
                 $query->where(function ($query) use ($comp) {
                     foreach ($comp as $kdComp) {
-                        $query->orWhereRaw('FIND_IN_SET(?, notification.kd_comp)', [$kdComp]);
+                        $query->orWhereRaw('FIND_IN_SET(?, notification.companycode)', [$kdComp]);
                     }
                 })
                     ->where(function ($query) use ($currentUser) {
-                        $query->where('notification.read_by', '=', '')
-                            ->orWhereRaw('NOT JSON_CONTAINS(notification.read_by, ?)', [json_encode($currentUser)]);
+                        $query->where('notification.readby', '=', '')
+                            ->orWhereRaw('NOT JSON_CONTAINS(notification.readby, ?)', [json_encode($currentUser)]);
                     });
             })
                 ->distinct();
         } else {
-            $query->whereRaw('FIND_IN_SET(?, notification.kd_comp)', [session('dropdown_value')])
+            $query->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('dropdown_value')])
                 ->where(function ($query) use ($currentUser) {
-                    $query->where('notification.read_by', '=', '')
-                        ->orWhereRaw('NOT JSON_CONTAINS(notification.read_by, ?)', [json_encode($currentUser)]);
+                    $query->where('notification.readby', '=', '')
+                        ->orWhereRaw('NOT JSON_CONTAINS(notification.readby, ?)', [json_encode($currentUser)]);
                 })
                 ->distinct();
         }
 
         if (!$isKepalaKebun) {
-            $query->where('notification.user_input', '!=', 'Automatic by System');
+            $query->where('notification.inputby', '!=', 'Automatic by System');
         }
 
-        $notif = $query->whereBetween('notification.created_at', [DB::raw('perusahaan.tgl'), now()])
+        $notif = $query->whereBetween('notification.createdat', [DB::raw('company.tgl'), now()])
             ->select('notification.*')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('createdat', 'desc')
             ->get()
             ->map(function ($item) {
-                $item->created_at = Carbon::parse($item->created_at);
+                $item->createdat = Carbon::parse($item->createdat);
                 return $item;
             });
 
@@ -219,14 +219,14 @@ class NotificationController extends Controller
     {
         DB::transaction(function () {
             $lastCheckedTime = DB::table('notification')
-                ->max('created_at');
+                ->max('createdat');
 
             if (!$lastCheckedTime) {
                 $lastCheckedTime = '2025-01-01 00:00:00';
             }
             $data = DB::table('agro_lst')
-                ->select('kd_comp as comp', 'no_sample as sample', 'no_urut as urut', 'per_germinasi', 'per_gulma', 'tgltanam')
-                ->where('created_at', '>', $lastCheckedTime)
+                ->select('companycode as comp', 'no_sample as sample', 'nourut as urut', 'per_germinasi', 'per_gulma', 'tanggaltanam')
+                ->where('createdat', '>', $lastCheckedTime)
                 ->where(function ($query) {
                     $query->where('per_germinasi', '<', 0.9)
                         ->orWhere('per_gulma', '>', 0.25);
@@ -243,8 +243,8 @@ class NotificationController extends Controller
             }
 
             foreach ($data as $item) {
-                if ($item->tgltanam) {
-                    $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
+                if ($item->tanggaltanam) {
+                    $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
                 } else {
                     $item->umur_tanam = null;
                 }
@@ -252,10 +252,10 @@ class NotificationController extends Controller
                 if ($item->per_germinasi < 0.9 && ceil($item->umur_tanam) == 1.0) {
                     Notification::create([
                         'id' => $nextId,
-                        'kd_comp' => $item->comp,
+                        'companycode' => $item->comp,
                         'title' => 'Agronomi - Persentase Germinasi < 90%',
                         'body' => 'Persentase Germinasi kurang dari 90% untuk nomor sample ' . $item->sample . ', nomor urut ' . $item->urut . ', berumur ' . ceil($item->umur_tanam) . ' bulan.',
-                        'user_input' => 'Automatic by System',
+                        'inputby' => 'Automatic by System',
                     ]);
                     $nextId++;
                 }
@@ -263,10 +263,10 @@ class NotificationController extends Controller
                 if ($item->per_gulma > 0.25) {
                     Notification::create([
                         'id' => $nextId,
-                        'kd_comp' => $item->comp,
+                        'companycode' => $item->comp,
                         'title' => 'Agronomi - Persentase Penutupan Gulma > 25%',
                         'body' => 'Persentase Penutupan Gulma lebih dari 25% untuk nomor sample ' . $item->sample . ', nomor urut ' . $item->urut . '.',
-                        'user_input' => 'Automatic by System',
+                        'inputby' => 'Automatic by System',
                     ]);
                     $nextId++;
                 }
@@ -278,14 +278,14 @@ class NotificationController extends Controller
     {
         DB::transaction(function () {
             $lastCheckedTime = DB::table('notification')
-                ->max('created_at');
+                ->max('createdat');
 
             if (!$lastCheckedTime) {
                 $lastCheckedTime = '2025-01-01 00:00:00';
             }
             $data = DB::table('hpt_lst')
-                ->select('kd_comp as comp', 'no_sample as sample', 'no_urut as urut', 'per_pbt', 'tgltanam')
-                ->where('created_at', '>', $lastCheckedTime)
+                ->select('companycode as comp', 'no_sample as sample', 'nourut as urut', 'per_pbt', 'tanggaltanam')
+                ->where('createdat', '>', $lastCheckedTime)
                 ->where(function ($query) {
                     $query->where('per_pbt', '>', 0.03)
                         ->orWhere('per_ppt', '>', 0.03);
@@ -302,24 +302,24 @@ class NotificationController extends Controller
             }
 
             foreach ($data as $item) {
-                $item->umur_tanam = $item->tgltanam ? Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now()) : null;
+                $item->umur_tanam = $item->tanggaltanam ? Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now()) : null;
                 $umur_tanam = ceil($item->umur_tanam);
-            
+
                 $notifications = [
                     ['per' => $item->per_pbt, 'threshold' => 0.03, 'min_age' => 1, 'max_age' => 3, 'title' => 'HPT - Persentase PBT > 3%', 'type' => 'penggerek batang tebu'],
                     ['per' => $item->per_ppt, 'threshold' => 0.03, 'min_age' => 1, 'max_age' => 3, 'title' => 'HPT - Persentase PPT > 3%', 'type' => 'penggerek pucuk tebu'],
                     ['per' => $item->per_pbt, 'threshold' => 0.05, 'min_age' => 4, 'max_age' => null, 'title' => 'HPT - Persentase PBT > 5%', 'type' => 'penggerek batang tebu'],
                     ['per' => $item->per_ppt, 'threshold' => 0.05, 'min_age' => 4, 'max_age' => null, 'title' => 'HPT - Persentase PPT > 5%', 'type' => 'penggerek pucuk tebu']
                 ];
-            
+
                 foreach ($notifications as $notif) {
                     if ($notif['per'] > $notif['threshold'] && $umur_tanam >= $notif['min_age'] && ($notif['max_age'] === null || $umur_tanam <= $notif['max_age'])) {
                         Notification::create([
                             'id' => $nextId++,
-                            'kd_comp' => $item->comp,
+                            'companycode' => $item->comp,
                             'title' => $notif['title'],
                             'body' => "Persentase {$notif['type']} lebih dari " . ($notif['threshold'] * 100) . "% untuk nomor sample {$item->sample}, nomor urut {$item->urut}, umur tanaman {$umur_tanam} bulan.",
-                            'user_input' => 'Automatic by System',
+                            'inputby' => 'Automatic by System',
                         ]);
                     }
                 }

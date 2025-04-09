@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('agro_lst', function (Blueprint $table) {
             $table->char('no_sample', 4)->default('');
-            $table->char('kd_comp', 4)->default('');
-            $table->date('tgltanam')->useCurrent();
-            $table->integer('no_urut')->default(0);
+            $table->char('companycode', 4)->default('');
+            $table->date('tanggaltanam')->useCurrent();
+            $table->integer('nourut')->default(0);
             $table->integer('jm_batang')->default(0);
             $table->integer('pan_gap')->default(0);
             $table->decimal('per_gap', 7,2)->default(0.0);
@@ -34,9 +34,9 @@ return new class extends Migration
             $table->decimal('d_kuarter',7,4)->default(0.0);
             $table->enum('status',['Posted','Unposted'])->default('Unposted');
             $table->integer('count')->default(0);
-            $table->string('user_input', 50)->default('');
+            $table->string('inputby', 50)->default('');
             $table->timestamps();
-            $table->primary(['no_sample', 'kd_comp', 'tgltanam', 'no_urut']);
+            $table->primary(['no_sample', 'companycode', 'tanggaltanam', 'nourut']);
         });
     }
 

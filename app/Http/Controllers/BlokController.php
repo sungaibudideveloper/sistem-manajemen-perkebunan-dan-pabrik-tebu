@@ -30,8 +30,8 @@ class BlokController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        $blok = DB::table('blok')->where('kd_comp', '=', session('dropdown_value'))
-            ->orderBy('kd_blok', 'asc')->paginate($perPage);
+        $blok = DB::table('blok')->where('companycode', '=', session('dropdown_value'))
+            ->orderBy('blok', 'asc')->paginate($perPage);
 
         foreach ($blok as $index => $item) {
             $item->no = ($blok->currentPage() - 1) * $blok->perPage() + $index + 1;
@@ -53,15 +53,15 @@ class BlokController extends Controller
     protected function requestValidated(): array
     {
         return [
-            'kd_blok' => 'required|max:2',
+            'blok' => 'required|max:2',
         ];
     }
 
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('blok')->where('kd_blok', $request->kd_blok)
-            ->where('kd_comp', $request->kd_comp)
+        $exists = DB::table('blok')->where('blok', $request->blok)
+            ->where('companycode', $request->companycode)
             ->exists();
 
         if ($exists) {
@@ -73,11 +73,11 @@ class BlokController extends Controller
 
         DB::transaction(function () use ($request) {
             DB::table('blok')->insert([
-                'kd_blok' => $request->kd_blok,
-                'kd_comp' => session('dropdown_value'),
-                'usernm' => Auth::user()->usernm,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'blok' => $request->blok,
+                'companycode' => session('dropdown_value'),
+                'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
         });
 
@@ -86,19 +86,19 @@ class BlokController extends Controller
             'message' => 'Data berhasil ditambahkan',
             'newData' => [
                 'no' => 'NEW!',
-                'kd_blok' => $request->kd_blok,
-                'kd_comp' => $request->kd_comp,
+                'blok' => $request->blok,
+                'companycode' => $request->companycode,
             ]
         ]);
     }
 
-    public function update(Request $request, $kd_blok, $kd_comp)
+    public function update(Request $request, $blok, $companycode)
     {
         $request->validate($this->requestValidated());
 
-        $exists = DB::table('blok')->where('kd_blok', $request->kd_blok)
-            ->where('kd_comp', $kd_comp)
-            ->where('kd_blok', '!=', $kd_blok)
+        $exists = DB::table('blok')->where('blok', $request->blok)
+            ->where('companycode', $companycode)
+            ->where('blok', '!=', $blok)
             ->exists();
 
         if ($exists) {
@@ -107,15 +107,15 @@ class BlokController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $kd_blok, $kd_comp) {
+        DB::transaction(function () use ($request, $blok, $companycode) {
 
-            DB::table('blok')->where('kd_blok', $kd_blok)
-                ->where('kd_comp', $kd_comp)
+            DB::table('blok')->where('blok', $blok)
+                ->where('companycode', $companycode)
                 ->update([
-                    'kd_blok' => $request->kd_blok,
-                    'kd_comp' => session('dropdown_value'),
-                    'usernm' => Auth::user()->usernm,
-                    'updated_at' => now()
+                    'blok' => $request->blok,
+                    'companycode' => session('dropdown_value'),
+                    'inputby' => Auth::user()->userid,
+                    'updatedat' => now()
                 ]);
         });
 
@@ -123,10 +123,10 @@ class BlokController extends Controller
             ->with('success1', 'Data updated successfully.');
     }
 
-    public function destroy($kd_blok, $kd_comp)
+    public function destroy($blok, $companycode)
     {
-        DB::transaction(function () use ($kd_blok, $kd_comp) {
-            DB::table('blok')->where('kd_blok', $kd_blok)->where('kd_comp', $kd_comp)->delete();
+        DB::transaction(function () use ($blok, $companycode) {
+            DB::table('blok')->where('blok', $blok)->where('companycode', $companycode)->delete();
         });
         return response()->json([
             'success' => true,

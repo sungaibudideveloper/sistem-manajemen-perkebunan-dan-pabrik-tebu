@@ -12,9 +12,9 @@ class CompanyFilter
     {
         $user = Auth::user();
 
-        if ($user && $user->kd_comp) {
+        if ($user && $user->companycode) {
             
-            $request->merge(['kd_comp' => $user->kd_comp]);
+            $request->merge(['companycode' => $user->companycode]);
         }
 
         return $next($request);

@@ -159,7 +159,7 @@
                                 <tr>
                                     <td class="w-1 py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         <input type="checkbox" class="rowCheckbox rounded" name="selected_items[]"
-                                            value="{{ $item->no_sample }},{{ $item->kd_comp }},{{ $item->tgltanam }}">
+                                            value="{{ $item->no_sample }},{{ $item->companycode }},{{ $item->tanggaltanam }}">
                                     </td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->no }}.</td>
@@ -167,7 +167,7 @@
                                         {{ $item->no_sample }}</td>
                                     </td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->kd_plotsample }}</td>
+                                        {{ $item->plotcodesample }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->varietas }}</td>
                                     @if (session('unposting') === 'Agronomi')
@@ -175,7 +175,7 @@
                                             {{ $item->kat }}</td>
                                     @endif
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->tgltanam }}</td>
+                                        {{ $item->tanggaltanam }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->tglamat }}</td>
 

@@ -9,44 +9,44 @@ class Mapping extends Model
 {
     public $incrementing = false;
     protected $table = 'mapping';
-    protected $primaryKey = ['kd_plotsample', 'kd_blok', 'kd_plot', 'kd_comp'];
+    protected $primaryKey = ['plotcodesample', 'blok', 'plotcode', 'companycode'];
     protected $keyType = 'char';
-    protected $fillable = ['kd_plotsample', 'kd_blok', 'kd_plot', 'kd_comp', 'usernm', 'created_at'];
+    protected $fillable = ['plotcodesample', 'blok', 'plotcode', 'companycode', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {
-        $this->attributes['created_at'] = $value;
+        $this->attributes['createdat'] = $value;
     }
 
-    // Getter untuk mendapatkan nilai created_at dari created_at
+    // Getter untuk mendapatkan nilai createdat dari createdat
     public function getCreatedAtAttribute()
     {
-        return $this->attributes['created_at'];
+        return $this->attributes['createdat'];
     }
 
     protected function setKeysForSaveQuery($query)
     {
-        $query->where('kd_plotsample', $this->getAttribute('kd_plotsample'))
-              ->where('kd_blok', $this->getAttribute('kd_blok'))
-              ->where('kd_plot', $this->getAttribute('kd_plot'))
-              ->where('kd_comp', $this->getAttribute('kd_comp'));
+        $query->where('plotcodesample', $this->getAttribute('plotcodesample'))
+              ->where('blok', $this->getAttribute('blok'))
+              ->where('plotcode', $this->getAttribute('plotcode'))
+              ->where('companycode', $this->getAttribute('companycode'));
 
         return $query;
     }
 
-    public function perusahaan()
+    public function company()
     {
-        return $this->belongsTo(Perusahaan::class, 'kd_comp', 'kd_comp');
+        return $this->belongsTo(company::class, 'companycode', 'companycode');
     }
 
     public function blok()
     {
-        return $this->belongsTo(Blok::class, 'kd_blok', 'kd_blok');
+        return $this->belongsTo(Blok::class, 'blok', 'blok');
     }
 
     public function plot()
     {
-        return $this->belongsTo(Plotting::class, 'kd_plot', 'kd_plot');
+        return $this->belongsTo(Plotting::class, 'plotcode', 'plotcode');
     }
-   
+
 }

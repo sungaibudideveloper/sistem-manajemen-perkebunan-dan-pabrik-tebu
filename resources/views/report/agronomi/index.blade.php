@@ -116,7 +116,7 @@
                                 </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                     Sample</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Blok
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">block
                                 </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
                                 </th>
@@ -179,22 +179,22 @@
                                     <td class="py-2 px-4 border-b border-gray-300">
                                         {{ $item->compName ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->no_sample }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blokName ?? '' }}
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blockName ?? '' }}
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->plotName ?? '' }}
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">
-                                        {{ $item->luas_area ?? '' }}</td>
+                                        {{ $item->luasarea ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->varietas ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->kat ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tgltanam ?? '' }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggaltanam ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ ceil($item->umur_tanam) }} Bulan
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">
-                                        {{ $item->jarak_tanam ?? '' }}</td>
+                                        {{ $item->jaraktanam ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->tglamat ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->bulanPengamatan }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->no_urut }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->nourut }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->jm_batang }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->pan_gap }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->per_gap * 100 }}%</td>

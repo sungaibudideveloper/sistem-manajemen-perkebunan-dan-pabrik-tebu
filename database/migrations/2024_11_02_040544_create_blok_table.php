@@ -10,11 +10,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('blok', function (Blueprint $table) {
-            $table->char('kd_blok',2)->default('');
-            $table->char('kd_comp',4)->default('');
+            $table->char('blok',2)->default('');
+            $table->char('companycode',4)->default('');
             $table->string('usernm',50)->default('');
             $table->timestamps();
-            $table->primary(['kd_blok', 'kd_comp']);
+            $table->primary(['blok', 'companycode']);
         });
     }
 

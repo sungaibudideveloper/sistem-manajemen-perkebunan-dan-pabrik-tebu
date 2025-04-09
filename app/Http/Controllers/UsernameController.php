@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Usercomp;
-use App\Models\Username;
-use App\Models\Perusahaan;
+use App\Models\User;
+use App\Models\company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -36,11 +36,11 @@ class UsernameController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        $username = DB::table('username')
-            ->join('usercomp', 'username.usernm', '=', 'usercomp.usernm')
-            ->select('usercomp.*', 'username.*')
-            ->where('username.usernm', '!=', 'Admin')
-            ->orderBy('username.usernm', 'asc')
+        $username = DB::table('user')
+            ->join('usercompany', 'user.userid', '=', 'usercompany.userid')
+            ->select('usercompany.*', 'user.*')
+            ->where('user.userid', '!=', 'Admin')
+            ->orderBy('user.userid', 'asc')
             ->paginate($perPage);
 
         foreach ($username as $index => $item) {
@@ -61,22 +61,22 @@ class UsernameController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $company = DB::table('perusahaan')->get();
+        $company = DB::table('company')->get();
         return view('master.username.create', compact('title', 'company'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'usernm' => 'required|unique:username,usernm',
+            'usernm' => 'required|unique:user,userid',
             'name' => 'required',
             'password' => 'required',
             'permissions' => 'nullable|array',
-            'kd_comp' => 'required|array',
+            'companycode' => 'required|array',
         ]);
 
-        $exists = DB::table('usercomp')->where('usernm', $request->usernm)
-            ->where('kd_comp', $request->kd_comp)
+        $exists = DB::table('usercompany')->where('userid', $request->usernm)
+            ->where('companycode', $request->companycode)
             ->exists();
 
         if ($exists) {
@@ -86,61 +86,61 @@ class UsernameController extends Controller
         }
 
         DB::transaction(function () use ($validated) {
-            $kd_comp = implode(',', $validated['kd_comp']);
-            DB::table('username')->insert([
-                'usernm' => $validated['usernm'],
-                'name' => $validated['name'],
+            $companycode = implode(',', $validated['companycode']);
+            DB::table('user')->insert([
+                'userid' => strtoupper($validated['usernm']),
+                'name' => strtoupper($validated['name']),
                 'password' => bcrypt($validated['password']),
                 'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
-            DB::table('usercomp')->insert([
-                'usernm' => $validated['usernm'],
-                'kd_comp' => $kd_comp,
-                'user_input' => Auth::user()->usernm,
-                'created_at' => now(),
-                'updated_at' => now(),
+            DB::table('usercompany')->insert([
+                'userid' => $validated['usernm'],
+                'companycode' => $companycode,
+                'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
         });
         return redirect()->back()
             ->with('success1', 'Data created successfully.');
     }
 
-    public function edit($usernm, $kd_comp)
+    public function edit($usernm, $companycode)
     {
         $title = 'Edit Data';
-        $username = DB::table('username')->where('usernm', $usernm)->first();
-        $usercomp = DB::table('usercomp')->where('usernm', $usernm)
-            ->where('kd_comp', $kd_comp)
+        $user = DB::table('user')->where('userid', $usernm)->first();
+        $usercompany = DB::table('usercompany')->where('userid', $usernm)
+            ->where('companycode', $companycode)
             ->first();
-        $company = DB::table('perusahaan')->get();
-        return view('master.username.edit', compact('username', 'usercomp', 'company', 'title'));
+        $company = DB::table('company')->get();
+        return view('master.username.edit', compact('user', 'usercompany', 'company', 'title'));
     }
 
-    public function update(Request $request, $usernm, $kd_comp)
+    public function update(Request $request, $usernm, $companycode)
     {
         $validated = $request->validate([
             'usernm' => 'required',
             'name' => 'required',
             'password' => 'required',
-            'kd_comp' => 'required|array',
+            'companycode' => 'required|array',
         ]);
 
-        DB::transaction(function () use ($usernm, $kd_comp, $validated) {
-            DB::table('username')
-                ->where('usernm', $usernm)
+        DB::transaction(function () use ($usernm, $companycode, $validated) {
+            DB::table('user')
+                ->where('userid', $usernm)
                 ->update([
-                    'usernm' => $validated['usernm'],
-                    'name' => $validated['name'],
+                    'userid' => $validated['usernm'],
+                    'name' => strtoupper($validated['name']),
                     'password' => bcrypt($validated['password']),
                 ]);;
-            DB::table('usercomp')->where('usernm', $usernm)
-                ->where('kd_comp', $kd_comp)
+            DB::table('usercompany')->where('userid', $usernm)
+                ->where('companycode', $companycode)
                 ->update([
-                    'usernm' => $validated['usernm'],
-                    'kd_comp' => implode(',', array_filter($validated['kd_comp'])),
-                    'user_input' => Auth::user()->usernm,
+                    'userid' => strtoupper($validated['usernm']),
+                    'companycode' => implode(',', array_filter($validated['companycode'])),
+                    'inputby' => Auth::user()->userid,
                 ]);
         });
         return redirect()->route('master.username.index')
@@ -150,23 +150,23 @@ class UsernameController extends Controller
     public function access($usernm)
     {
         $title = 'Set Hak Akses';
-        $username = Username::findOrFail($usernm);
+        $user = User::findOrFail($usernm);
 
-        return view('master.username.access', compact('username', 'title'));
+        return view('master.username.access', compact('user', 'title'));
     }
 
     public function setaccess(Request $request, $usernm)
     {
         $validated = $request->validate([
-            'usernm' => 'required',
+            'userid' => 'required',
             'permissions' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($validated, $usernm) {
-            DB::table('username')
-            ->where('usernm', $usernm)
+            DB::table('user')
+            ->where('userid', $usernm)
             ->update([
-                'usernm' => $validated['usernm'],
+                'userid' => $validated['userid'],
                 'permissions' => $validated['permissions'] ?? null,
             ]);
         });
@@ -175,11 +175,11 @@ class UsernameController extends Controller
             ->with('success', 'Data updated successfully.');
     }
 
-    public function destroy($usernm, $kd_comp)
+    public function destroy($usernm, $companycode)
     {
-        DB::transaction(function () use ($usernm, $kd_comp) {
-            DB::table('username')->where('usernm', $usernm)->delete();
-            DB::table('usercomp')->where('usernm', $usernm)->where('kd_comp', $kd_comp)->delete();
+        DB::transaction(function () use ($usernm, $companycode) {
+            DB::table('user')->where('userid', $usernm)->delete();
+            DB::table('usercompany')->where('userid', $usernm)->where('companycode', $companycode)->delete();
         });
         return redirect()->route('master.username.index')
             ->with('success', 'Data deleted successfully.');

@@ -5,12 +5,12 @@
     <x-slot:navnav>{{ $title }}</x-slot:navnav>
 
     <div class="mx-4 pb-4">
-        <form action="{{ route('master.username.setaccess', $username) }}" method="POST">
+        <form action="{{ route('master.username.setaccess', $user->userid) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="bg-white p-4 rounded-md shadow-md mb-4">
                 <label class="block text-md">Username</label>
-                <input type="text" name="usernm" value="{{ $username->usernm }}"
+                <input type="text" name="usernm" value="{{ $user->userid }}"
                     class="border rounded-md border-gray-300 p-2 w-auto text-sm focus:ring-0 focus:border-gray-300 bg-gray-100 text-gray-600"
                     readonly>
             </div>
@@ -61,7 +61,7 @@
                                 class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center mb-2">
                                 <input type="checkbox" id="{{ $permission['id'] }}" name="permissions[]"
                                     value="{{ $permission['label'] }}"
-                                    {{ in_array($permission['label'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                    {{ in_array($permission['label'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <span class="ml-1">{{ $permission['label'] }}</span>
                                 <button type="button" id="toggle{{ ucfirst($permission['id']) }}"
@@ -82,7 +82,7 @@
                                         <label class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                                             <input type="checkbox" id="{{ $submenu['id'] }}" name="permissions[]"
                                                 value="{{ $submenu['label'] }}"
-                                                {{ in_array($submenu['label'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                {{ in_array($submenu['label'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 master-child-checkbox">
                                             <span class="ml-1">{{ $submenu['label'] }}</span>
                                             <button type="button" id="toggle{{ ucfirst($submenu['id']) }}"
@@ -105,7 +105,7 @@
                                                     class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                                     <input type="checkbox" name="permissions[]"
                                                         value="{{ $subitem }}"
-                                                        {{ in_array($subitem, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                        {{ in_array($subitem, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                         class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 master-child-checkbox">
                                                     <span class="ml-1">{{ $subitem }}</span>
                                                 </label>
@@ -121,7 +121,7 @@
                     <div>
                         <label class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center mb-2">
                             <input type="checkbox" id="inputData" name="permissions[]" value="Input Data"
-                                {{ in_array('Input Data', old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                {{ in_array('Input Data', old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <span class="ml-1">Input Data</span>
                             <button type="button" id="toggleInputData"
@@ -157,7 +157,7 @@
                                         class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                         <input type="checkbox" id="{{ $category['id'] }}" name="permissions[]"
                                             value="{{ $category['name'] }}"
-                                            {{ in_array($category['name'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                            {{ in_array($category['name'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 inputData-child-checkbox">
                                         <span class="ml-1">{{ $category['name'] }}</span>
                                         <button type="button" id="toggle{{ ucfirst($category['name']) }}"
@@ -180,7 +180,7 @@
                                                 class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                                 <input type="checkbox" name="permissions[]"
                                                     value="{{ $sub }}"
-                                                    {{ in_array($sub, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                    {{ in_array($sub, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 inputData-child-checkbox">
                                                 <span class="ml-1">{{ $sub }}</span>
                                             </label>
@@ -193,7 +193,7 @@
                         <label
                             class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center mb-2">
                             <input type="checkbox" id="dashboard" name="permissions[]" value="Dashboard"
-                                {{ in_array('Dashboard', old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                {{ in_array('Dashboard', old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <span class="ml-1">Dashboard</span>
                             <button type="button" id="toggleDashboard"
@@ -225,7 +225,7 @@
                                         class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                         <input type="checkbox" id="{{ $category['id'] }}" name="permissions[]"
                                             value="Dashboard {{ $category['name'] }}"
-                                            {{ in_array('Dashboard ' . $category['name'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                            {{ in_array('Dashboard ' . $category['name'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 dashboard-child-checkbox">
                                         <span class="ml-1">{{ $category['name'] }}</span>
                                         <button type="button" id="toggle{{ ucfirst($category['id']) }}"
@@ -248,7 +248,7 @@
                                                 class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                                 <input type="checkbox" name="permissions[]"
                                                     value="{{ $sub }}"
-                                                    {{ in_array($sub, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                    {{ in_array($sub, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 dashboard-child-checkbox">
                                                 <span class="ml-1">{{ $sub }}</span>
                                             </label>
@@ -262,7 +262,7 @@
                         <label
                             class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center mb-2">
                             <input type="checkbox" id="report" name="permissions[]" value="Report"
-                                {{ in_array('Report', old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                {{ in_array('Report', old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <span class="ml-1">Report</span>
                             <button type="button" id="toggleReport"
@@ -290,7 +290,7 @@
                                         class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                         <input type="checkbox" id="{{ $category['id'] }}" name="permissions[]"
                                             value="Report {{ $category['name'] }}"
-                                            {{ in_array('Report ' . $category['name'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                            {{ in_array('Report ' . $category['name'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 report-child-checkbox">
                                         <span class="ml-1">{{ $category['name'] }}</span>
                                         <button type="button" id="toggle{{ ucfirst($category['id']) }}"
@@ -313,7 +313,7 @@
                                                 class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                                 <input type="checkbox" name="permissions[]"
                                                     value="{{ $sub }}"
-                                                    {{ in_array($sub, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                    {{ in_array($sub, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 report-child-checkbox">
                                                 <span class="ml-1">{{ $sub }}</span>
                                             </label>
@@ -328,7 +328,7 @@
                         <label
                             class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center mb-2">
                             <input type="checkbox" id="process" name="permissions[]" value="Process"
-                                {{ in_array('Process', old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                {{ in_array('Process', old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <span class="ml-1">Process</span>
                             <button type="button" id="toggleProcess"
@@ -359,7 +359,7 @@
                                         class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                         <input type="checkbox" id="{{ $category['id'] }}" name="permissions[]"
                                             value="{{ $category['name'] }}"
-                                            {{ in_array($category['name'], old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                            {{ in_array($category['name'], old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 process-child-checkbox">
                                         <span class="ml-1">{{ $category['name'] }}</span>
                                         @isset($category['submenus'])
@@ -385,7 +385,7 @@
                                                     class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                                     <input type="checkbox" name="permissions[]"
                                                         value="{{ $sub }}"
-                                                        {{ in_array($sub, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                                        {{ in_array($sub, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                                         class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 process-child-checkbox">
                                                     <span class="ml-1">{{ $sub }}</span>
                                                 </label>
@@ -395,7 +395,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        
+
                         <div class="mt-4">
                             @php
                                 $menuu = [
@@ -411,7 +411,7 @@
                                     <label
                                         class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center">
                                         <input type="checkbox" name="permissions[]" value="{{ $menu }}"
-                                            {{ in_array($menu, old('permissions', json_decode($username->permissions ?? '[]', true))) ? 'checked' : '' }}
+                                            {{ in_array($menu, old('permissions', json_decode($user->permissions ?? '[]', true))) ? 'checked' : '' }}
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                         <span class="ml-1">{{ $menu }}</span>
                                     </label>
@@ -499,7 +499,7 @@
             }
 
             setupCheckboxLogic("Company", ["Hapus Company", "Edit Company", "Create Company"]);
-            setupCheckboxLogic("Blok", ["Hapus Blok", "Edit Blok", "Create Blok"]);
+            setupCheckboxLogic("block", ["Hapus Blok", "Edit Blok", "Create Blok"]);
             setupCheckboxLogic("Plotting", ["Hapus Plotting", "Edit Plotting", "Create Plotting"]);
             setupCheckboxLogic("Mapping", ["Hapus Mapping", "Edit Mapping", "Create Mapping"]);
             setupCheckboxLogic("Kelola User", ["Hapus User", "Edit User", "Create User", "Hak Akses"]);
@@ -547,9 +547,9 @@
                     icon: 'companyToggleIcon'
                 },
                 {
-                    toggle: 'toggleBlok',
-                    dropdown: 'blokDropdown',
-                    icon: 'blokToggleIcon'
+                    toggle: 'toggleblock',
+                    dropdown: 'blockDropdown',
+                    icon: 'blockToggleIcon'
                 },
                 {
                     toggle: 'togglePlotting',

@@ -10,32 +10,32 @@ class ClosingController extends Controller
 {
     public function closing()
     {
-        $period = DB::table('perusahaan')->where('kd_comp', '=', session('dropdown_value'))
+        $period = DB::table('company')->where('companycode', '=', session('dropdown_value'))
             ->value('tgl');
         $now = Carbon::now()->toDateString();
 
         $headAgronomiQuery = DB::table('agro_hdr')
-            ->join('perusahaan', 'agro_hdr.kd_comp', '=', 'perusahaan.kd_comp')
-            ->where('agro_hdr.kd_comp', '=', session('dropdown_value'))
-            ->whereBetween('agro_hdr.created_at', [DB::raw('perusahaan.tgl'), now()])
+            ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
+            ->where('agro_hdr.companycode', '=', session('dropdown_value'))
+            ->whereBetween('agro_hdr.createdat', [DB::raw('company.tgl'), now()])
             ->select('agro_hdr.*');
 
         $listAgronomiQuery = DB::table('agro_lst')
-            ->join('perusahaan', 'agro_lst.kd_comp', '=', 'perusahaan.kd_comp')
-            ->where('agro_lst.kd_comp', '=', session('dropdown_value'))
-            ->whereBetween('agro_lst.created_at', [DB::raw('perusahaan.tgl'), now()])
+            ->join('company', 'agro_lst.companycode', '=', 'company.companycode')
+            ->where('agro_lst.companycode', '=', session('dropdown_value'))
+            ->whereBetween('agro_lst.createdat', [DB::raw('company.tgl'), now()])
             ->select('agro_lst.*');
 
         $headHPTQuery = DB::table('hpt_hdr')
-            ->join('perusahaan', 'hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp')
-            ->where('hpt_hdr.kd_comp', '=', session('dropdown_value'))
-            ->whereBetween('hpt_hdr.created_at', [DB::raw('perusahaan.tgl'), now()])
+            ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
+            ->where('hpt_hdr.companycode', '=', session('dropdown_value'))
+            ->whereBetween('hpt_hdr.createdat', [DB::raw('company.tgl'), now()])
             ->select('hpt_hdr.*');
 
         $listHPTQuery = DB::table('hpt_lst')
-            ->join('perusahaan', 'hpt_lst.kd_comp', '=', 'perusahaan.kd_comp')
-            ->where('hpt_lst.kd_comp', '=', session('dropdown_value'))
-            ->whereBetween('hpt_lst.created_at', [DB::raw('perusahaan.tgl'), now()])
+            ->join('company', 'hpt_lst.companycode', '=', 'company.companycode')
+            ->where('hpt_lst.companycode', '=', session('dropdown_value'))
+            ->whereBetween('hpt_lst.createdat', [DB::raw('company.tgl'), now()])
             ->select('hpt_lst.*');
 
         $headAgronomi = $headAgronomiQuery->get();
@@ -43,11 +43,11 @@ class ClosingController extends Controller
         $headHPT = $headHPTQuery->get();
         $listHPT = $listHPTQuery->get();
 
-        $log = DB::table('perusahaan')
-            ->where('kd_comp', '=', session('dropdown_value'))
+        $log = DB::table('company')
+            ->where('companycode', '=', session('dropdown_value'))
             ->get();
         $close = DB::table('log_closing')
-            ->where('kd_comp', '=', session('dropdown_value'))
+            ->where('companycode', '=', session('dropdown_value'))
             ->where('tgl1', '=', now()->toDateString())
             ->exists();
 
@@ -66,18 +66,18 @@ class ClosingController extends Controller
             }
             foreach ($log as $lo) {
                 $logData = [
-                    'kd_comp' => $lo->kd_comp,
+                    'companycode' => $lo->companycode,
                     'tgl1' => $lo->tgl,
                     'tgl2' => Carbon::now(),
                 ];
                 $comp = [
                     'tgl' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
+                    'updatedat' => Carbon::now(),
                 ];
 
                 DB::table('log_closing')->insert($logData);
-                DB::table('perusahaan')
-                    ->where('kd_comp', '=', session('dropdown_value'))
+                DB::table('company')
+                    ->where('companycode', '=', session('dropdown_value'))
                     ->update($comp);
             }
 

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Mapping;
 use App\Models\HPTHeader;
-use App\Models\Perusahaan;
+use App\Models\company;
 use Illuminate\Http\Request;
 use App\Models\HPTList;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class HPTController extends Controller
         $title = "Daftar HPT";
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->kd_comp);
+        $companyArray = explode(',', Auth::user()->userComp->companycode);
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -43,18 +43,18 @@ class HPTController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $hpt = HPTHeader::orderBy('created_at', 'desc')->with('lists', 'perusahaan')
-            ->where('kd_comp', '=', session('dropdown_value'))
+        $hpt = HPTHeader::orderBy('createdat', 'desc')->with('lists', 'company')
+            ->where('companycode', '=', session('dropdown_value'))
             ->when($startDate, function ($query) use ($startDate) {
-                $query->whereDate('created_at', '>=', $startDate);
+                $query->whereDate('createdat', '>=', $startDate);
             })
             ->when($endDate, function ($query) use ($endDate) {
-                $query->whereDate('created_at', '<=', $endDate);
+                $query->whereDate('createdat', '<=', $endDate);
             })
             ->paginate($perPage);
 
         foreach ($hpt as $item) {
-            $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
+            $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
         }
 
         foreach ($hpt as $index => $item) {
@@ -76,7 +76,7 @@ class HPTController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $mapping = Mapping::where('kd_comp', '=', session('dropdown_value'))->get();
+        $mapping = Mapping::where('companycode', '=', session('dropdown_value'))->get();
         $method = 'POST';
         $url = route('input.hpt.handle');
         $buttonSubmit = 'Create';
@@ -85,14 +85,14 @@ class HPTController extends Controller
 
     public function getFieldByMapping(Request $request)
     {
-        $kd_plotsample = $request->input('kd_plotsample');
-        $mapping = Mapping::where('kd_plotsample', $kd_plotsample)->first();
+        $plotcodesample = $request->input('plotcodesample');
+        $mapping = Mapping::where('plotcodesample', $plotcodesample)->first();
 
         if ($mapping) {
             return response()->json([
-                'kd_comp' => $mapping->kd_comp,
-                'kd_blok' => $mapping->kd_blok,
-                'kd_plot' => $mapping->kd_plot,
+                'companycode' => $mapping->companycode,
+                'blok' => $mapping->blok,
+                'plotcode' => $mapping->plotcode,
             ]);
         }
 
@@ -102,18 +102,18 @@ class HPTController extends Controller
     public function checkData(Request $request)
     {
         $noSample = $request->get('no_sample');
-        $kdPlotSample = $request->get('kd_plotsample');
+        $kdPlotSample = $request->get('plotcodesample');
 
         $data = DB::table('hpt_hdr')
             ->where('no_sample', $noSample)
-            ->where('kd_plotsample', $kdPlotSample)
+            ->where('plotcodesample', $kdPlotSample)
             ->first();
 
         if ($data) {
             return response()->json([
                 'success' => true,
                 'varietas' => $data->varietas,
-                'tgltanam' => $data->tgltanam,
+                'tanggaltanam' => $data->tanggaltanam,
             ]);
         }
 
@@ -127,14 +127,14 @@ class HPTController extends Controller
     {
         return [
             'no_sample' => 'required',
-            'kd_comp' => 'required',
-            'kd_blok' => 'required',
-            'kd_plot' => 'required',
-            'kd_plotsample' => 'required|exists:mapping,kd_plotsample',
+            'companycode' => 'required',
+            'blok' => 'required',
+            'plotcode' => 'required',
+            'plotcodesample' => 'required|exists:mapping,plotcodesample',
             'varietas' => 'required',
-            'tgltanam' => 'required',
+            'tanggaltanam' => 'required',
             'tglamat' => 'required',
-            'lists.*.no_urut' => 'required',
+            'lists.*.nourut' => 'required',
             'lists.*.ppt_aktif' => 'required',
             'lists.*.pbt_aktif' => 'required',
             'lists.*.skor0' => 'required',
@@ -185,14 +185,14 @@ class HPTController extends Controller
 
             $header = HPTHeader::create([
                 'no_sample' => $validated['no_sample'],
-                'kd_comp' => $validated['kd_comp'],
-                'kd_blok' => $validated['kd_blok'],
-                'kd_plot' => $validated['kd_plot'],
-                'kd_plotsample' => $validated['kd_plotsample'],
+                'companycode' => $validated['companycode'],
+                'blok' => $validated['blok'],
+                'plotcode' => $validated['plotcode'],
+                'plotcodesample' => $validated['plotcodesample'],
                 'varietas' => $validated['varietas'],
-                'tgltanam' => $validated['tgltanam'],
+                'tanggaltanam' => $validated['tanggaltanam'],
                 'tglamat' => $validated['tglamat'],
-                'user_input' => Auth::user()->usernm,
+                'inputby' => Auth::user()->usernm,
             ]);
 
             foreach ($validated['lists'] as $list) {
@@ -203,9 +203,9 @@ class HPTController extends Controller
 
                 $header->lists()->create([
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'tgltanam' => $validated['tgltanam'],
-                    'no_urut' => $list['no_urut'],
+                    'companycode' => $validated['companycode'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
+                    'nourut' => $list['nourut'],
                     'jm_batang' => $jm_batang,
                     'ppt' => $ppt,
                     'ppt_aktif' => $list['ppt_aktif'],
@@ -253,7 +253,7 @@ class HPTController extends Controller
                     'smut_stadia3' => $list['smut_stadia3'],
                     'jum_larva_ppt' => $list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'],
                     'jum_larva_pbt' => $list['larva_pbt1'] + $list['larva_pbt2'] + $list['larva_pbt3'] + $list['larva_pbt4'],
-                    'user_input' => Auth::user()->usernm,
+                    'inputby' => Auth::user()->usernm,
                 ]);
             }
 
@@ -271,13 +271,13 @@ class HPTController extends Controller
     }
 
 
-    public function show($no_sample, $kd_comp, $tgltanam)
+    public function show($no_sample, $companycode, $tanggaltanam)
     {
         $hpt = DB::table('hpt_hdr')
-            ->where('kd_comp', '=', session('dropdown_value'))
+            ->where('companycode', '=', session('dropdown_value'))
             ->where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->first();
 
         if (!$hpt) {
@@ -287,39 +287,39 @@ class HPTController extends Controller
         $hptLists = DB::table('hpt_lst')
             ->leftJoin('hpt_hdr', function ($join) use ($hpt) {
                 $join->on('hpt_lst.no_sample', '=', 'hpt_hdr.no_sample')
-                    ->whereColumn('hpt_lst.kd_comp', '=', 'hpt_hdr.kd_comp')
-                    ->whereColumn('hpt_lst.tgltanam', '=', 'hpt_hdr.tgltanam');
+                    ->whereColumn('hpt_lst.companycode', '=', 'hpt_hdr.companycode')
+                    ->whereColumn('hpt_lst.tanggaltanam', '=', 'hpt_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('hpt_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('hpt_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('hpt_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('hpt_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'plotting.companycode');
             })
             ->select(
                 'hpt_lst.*',
                 'hpt_hdr.varietas',
                 'hpt_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
             )
             ->where('hpt_lst.no_sample', $no_sample)
-            ->where('hpt_lst.kd_comp', $kd_comp)
-            ->where('hpt_lst.tgltanam', $tgltanam)
-            ->orderBy('hpt_lst.created_at', 'desc')
+            ->where('hpt_lst.companycode', $companycode)
+            ->where('hpt_lst.tanggaltanam', $tanggaltanam)
+            ->orderBy('hpt_lst.createdat', 'desc')
             ->get();
 
         $now = Carbon::now();
 
         $hptLists = $hptLists->map(function ($item) use ($now) {
-            $tgl_tanam = Carbon::parse($item->tgltanam);
+            $tgl_tanam = Carbon::parse($item->tanggaltanam);
             $item->umur_tanam = $tgl_tanam->diffInMonths($now);
             return $item;
         });
@@ -331,27 +331,27 @@ class HPTController extends Controller
         return response()->json($hptLists);
     }
 
-    public function edit($no_sample, $kd_comp, $tgltanam)
+    public function edit($no_sample, $companycode, $tanggaltanam)
     {
         $title = 'Edit Data';
-        $header = HPTHeader::with(['lists' => function ($query) use ($no_sample, $kd_comp, $tgltanam) {
+        $header = HPTHeader::with(['lists' => function ($query) use ($no_sample, $companycode, $tanggaltanam) {
             $query->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam);
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam);
         }])
             ->where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->firstOrFail();
         $list = HPTList::where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->firstOrFail();
-        $company = Perusahaan::all();
+        $company = company::all();
         $mapping = Mapping::all();
         $method = 'PUT';
         $buttonSubmit = 'Update';
-        $url = route('input.hpt.update', ['no_sample' => $no_sample, 'kd_comp' => $kd_comp, 'tgltanam' => $tgltanam]);
+        $url = route('input.hpt.update', ['no_sample' => $no_sample, 'companycode' => $companycode, 'tanggaltanam' => $tanggaltanam]);
 
         if ($header->status === "Posted") {
             return redirect()->route('input.hpt.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
@@ -360,7 +360,7 @@ class HPTController extends Controller
         return view('input.hpt.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
     }
 
-    public function update(Request $request, $no_sample, $kd_comp, $tgltanam)
+    public function update(Request $request, $no_sample, $companycode, $tanggaltanam)
     {
         $validated = $request->validate($this->requestValidated());
 
@@ -368,36 +368,36 @@ class HPTController extends Controller
 
         try {
             $header = HPTHeader::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->firstOrFail();
 
             DB::table('hpt_hdr')
                 ->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->update([
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'kd_blok' => $validated['kd_blok'],
-                    'kd_plot' => $validated['kd_plot'],
-                    'kd_plotsample' => $validated['kd_plotsample'],
+                    'companycode' => $validated['companycode'],
+                    'blok' => $validated['blok'],
+                    'plotcode' => $validated['plotcode'],
+                    'plotcodesample' => $validated['plotcodesample'],
                     'varietas' => $validated['varietas'],
-                    'tgltanam' => $validated['tgltanam'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
                     'tglamat' => $validated['tglamat'],
-                    'updated_at' => now(),
+                    'updatedat' => now(),
                 ]);
 
             $existingLists = HPTList::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
-                ->get(['no_urut', 'user_input', 'created_at'])
-                ->keyBy('no_urut');
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
+                ->get(['nourut', 'inputby', 'createdat'])
+                ->keyBy('nourut');
 
             DB::table('hpt_lst')
                 ->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->delete();
 
             $listData = [];
@@ -408,9 +408,9 @@ class HPTController extends Controller
                 $sum_ni = $list['skor0'] * 0 + $list['skor1'] * 1 + $list['skor2'] * 2 + $list['skor3'] * 3 + $list['skor4'] * 4;
                 $listData[] = [
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'tgltanam' => $validated['tgltanam'],
-                    'no_urut' => $list['no_urut'],
+                    'companycode' => $validated['companycode'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
+                    'nourut' => $list['nourut'],
                     'jm_batang' => $jm_batang,
                     'ppt' => $ppt,
                     'ppt_aktif' => $list['ppt_aktif'],
@@ -458,9 +458,9 @@ class HPTController extends Controller
                     'smut_stadia3' => $list['smut_stadia3'],
                     'jum_larva_ppt' => $list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'],
                     'jum_larva_pbt' => $list['larva_pbt1'] + $list['larva_pbt2'] + $list['larva_pbt3'] + $list['larva_pbt4'],
-                    'user_input' => $existingLists[$list['no_urut']]['user_input'] ?? $header->user_input,
-                    'created_at' => $existingLists[$list['no_urut']]['created_at'] ?? $header->created_at,
-                    'updated_at' => now(),
+                    'inputby' => $existingLists[$list['nourut']]['inputby'] ?? $header->inputby,
+                    'createdat' => $existingLists[$list['nourut']]['createdat'] ?? $header->createdat,
+                    'updatedat' => now(),
                 ];
             }
 
@@ -478,16 +478,16 @@ class HPTController extends Controller
         }
     }
 
-    public function destroy($no_sample, $kd_comp, $tgltanam)
+    public function destroy($no_sample, $companycode, $tanggaltanam)
     {
-        DB::transaction(function () use ($no_sample, $kd_comp, $tgltanam) {
+        DB::transaction(function () use ($no_sample, $companycode, $tanggaltanam) {
             $header = HPTHeader::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->firstOrFail();
             $list = HPTList::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam);
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam);
 
             $header->delete();
             $list->delete();
@@ -504,39 +504,39 @@ class HPTController extends Controller
         $query = DB::table('hpt_lst')
             ->leftJoin('hpt_hdr', function ($join) {
                 $join->on('hpt_lst.no_sample', '=', 'hpt_hdr.no_sample')
-                    ->whereColumn('hpt_lst.kd_comp', '=', 'hpt_hdr.kd_comp')
-                    ->whereColumn('hpt_lst.tgltanam', '=', 'hpt_hdr.tgltanam');
+                    ->whereColumn('hpt_lst.companycode', '=', 'hpt_hdr.companycode')
+                    ->whereColumn('hpt_lst.tanggaltanam', '=', 'hpt_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('hpt_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('hpt_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('hpt_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('hpt_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'plotting.companycode');
             })
-            ->where('hpt_lst.kd_comp', session('dropdown_value'))
-            ->where('hpt_hdr.kd_comp', session('dropdown_value'))
+            ->where('hpt_lst.companycode', session('dropdown_value'))
+            ->where('hpt_hdr.companycode', session('dropdown_value'))
             ->select(
                 'hpt_lst.*',
                 'hpt_hdr.varietas',
                 'hpt_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
             )
-            ->orderBy('hpt_lst.created_at', 'desc');
+            ->orderBy('hpt_lst.createdat', 'desc');
 
 
         if ($startDate) {
-            $query->whereDate('hpt_lst.created_at', '>=', $startDate);
+            $query->whereDate('hpt_lst.createdat', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('hpt_lst.created_at', '<=', $endDate);
+            $query->whereDate('hpt_lst.createdat', '<=', $endDate);
         }
         $hpt = $query->get();
 
@@ -603,8 +603,8 @@ class HPTController extends Controller
         $row = 2;
         foreach ($hpt as $list) {
 
-            $tglTanam = Carbon::parse($list->tgltanam);
-            $umurTanam = $tglTanam->diffInMonths($now);
+            $tanggaltanam = Carbon::parse($list->tanggaltanam);
+            $umurTanam = $tanggaltanam->diffInMonths($now);
 
             $tglAmat = Carbon::parse($list->tglamat);
             $bulanPengamatan = $tglAmat->format('F');
@@ -613,13 +613,13 @@ class HPTController extends Controller
             $sheet->setCellValue('B' . $row, $list->compName);
             $sheet->setCellValue('C' . $row, $list->blokName);
             $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luas_area);
-            $sheet->setCellValue('F' . $row, $tglTanam->format('Y-m-d'));
+            $sheet->setCellValue('E' . $row, $list->luasarea);
+            $sheet->setCellValue('F' . $row, $tanggaltanam->format('Y-m-d'));
             $sheet->setCellValue('G' . $row, ceil($umurTanam) . ' Bulan');
             $sheet->setCellValue('H' . $row, $list->varietas);
             $sheet->setCellValue('I' . $row, $list->tglamat);
             $sheet->setCellValue('J' . $row, $bulanPengamatan);
-            $sheet->setCellValue('K' . $row, $list->no_urut);
+            $sheet->setCellValue('K' . $row, $list->nourut);
             $sheet->setCellValue('L' . $row, $list->jm_batang);
             $sheet->setCellValue('M' . $row, $list->ppt);
             $sheet->setCellValue('N' . $row, $list->pbt);

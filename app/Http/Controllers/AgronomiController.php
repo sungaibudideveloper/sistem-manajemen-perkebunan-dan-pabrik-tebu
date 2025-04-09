@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Mapping;
-use App\Models\Perusahaan;
+use App\Models\company;
 use App\Models\AgronomiList;
 use Illuminate\Http\Request;
 use App\Models\AgronomiHeader;
@@ -32,15 +32,15 @@ class AgronomiController extends Controller
     {
         return [
             'no_sample' => 'required',
-            'kd_comp' => 'required',
-            'kd_blok' => 'required',
-            'kd_plot' => 'required',
-            'kd_plotsample' => 'required|exists:mapping,kd_plotsample',
+            'companycode' => 'required',
+            'blok' => 'required',
+            'plotcode' => 'required',
+            'plotcodesample' => 'required|exists:mapping,plotcodesample',
             'varietas' => 'required',
             'kat' => 'required',
-            'tgltanam' => 'required',
+            'tanggaltanam' => 'required',
             'tglamat' => 'required',
-            'lists.*.no_urut' => 'required',
+            'lists.*.nourut' => 'required',
             'lists.*.jm_batang' => 'required',
             'lists.*.pan_gap' => 'required',
             'lists.*.ph_tanah' => 'required|numeric',
@@ -61,7 +61,7 @@ class AgronomiController extends Controller
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->kd_comp);
+        $companyArray = explode(',', Auth::user()->userComp->companycode);
         // dd($company);
 
         if ($request->isMethod('post')) {
@@ -74,18 +74,18 @@ class AgronomiController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $agronomi = AgronomiHeader::orderBy('created_at', 'desc')->with('lists', 'perusahaan')
-            ->where('kd_comp', '=', session('dropdown_value'))
+        $agronomi = AgronomiHeader::orderBy('createdat', 'desc')->with('lists', 'company')
+            ->where('companycode', '=', session('dropdown_value'))
             ->when($startDate, function ($query) use ($startDate) {
-                $query->whereDate('created_at', '>=', $startDate);
+                $query->whereDate('createdat', '>=', $startDate);
             })
             ->when($endDate, function ($query) use ($endDate) {
-                $query->whereDate('created_at', '<=', $endDate);
+                $query->whereDate('createdat', '<=', $endDate);
             })
             ->paginate($perPage);
 
         foreach ($agronomi as $item) {
-            $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
+            $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
         }
 
         foreach ($agronomi as $index => $item) {
@@ -107,7 +107,7 @@ class AgronomiController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $mapping = Mapping::where('kd_comp', '=', session('dropdown_value'))->get();
+        $mapping = Mapping::where('companycode', '=', session('dropdown_value'))->get();
         $method = 'POST';
         $url = route('input.agronomi.handle');
         $buttonSubmit = 'Create';
@@ -116,15 +116,15 @@ class AgronomiController extends Controller
 
     public function getFieldByMapping(Request $request)
     {
-        $kd_plotsample = $request->input('kd_plotsample');
-        $mapping = Mapping::where('kd_plotsample', $kd_plotsample)
-            ->where('kd_comp', session('dropdown_value'))->first();
+        $plotcodesample = $request->input('plotcodesample');
+        $mapping = Mapping::where('plotcodesample', $plotcodesample)
+            ->where('companycode', session('dropdown_value'))->first();
 
         if ($mapping) {
             return response()->json([
-                'kd_comp' => $mapping->kd_comp,
-                'kd_blok' => $mapping->kd_blok,
-                'kd_plot' => $mapping->kd_plot,
+                'companycode' => $mapping->companycode,
+                'blok' => $mapping->blok,
+                'plotcode' => $mapping->plotcode,
             ]);
         }
 
@@ -134,12 +134,12 @@ class AgronomiController extends Controller
     public function checkData(Request $request)
     {
         $noSample = $request->get('no_sample');
-        $kdPlotSample = $request->get('kd_plotsample');
+        $kdPlotSample = $request->get('plotcodesample');
 
         $data = DB::table('agro_hdr')
             ->where('no_sample', $noSample)
-            ->where('kd_plotsample', $kdPlotSample)
-            ->where('kd_comp', session('dropdown_value'))
+            ->where('plotcodesample', $kdPlotSample)
+            ->where('companycode', session('dropdown_value'))
             ->first();
 
         if ($data) {
@@ -147,7 +147,7 @@ class AgronomiController extends Controller
                 'success' => true,
                 'kat' => $data->kat,
                 'varietas' => $data->varietas,
-                'tgltanam' => $data->tgltanam,
+                'tanggaltanam' => $data->tanggaltanam,
             ]);
         }
 
@@ -163,13 +163,13 @@ class AgronomiController extends Controller
         $notifController = new NotificationController();
 
         $existsInHeader = AgronomiHeader::where('no_sample', $request->no_sample)
-            ->where('kd_comp', $request->kd_comp)
-            ->where('tgltanam', $request->tgltanam)
+            ->where('companycode', $request->companycode)
+            ->where('tanggaltanam', $request->tanggaltanam)
             ->exists();
 
         $existsInLists = AgronomiList::where('no_sample', $request->no_sample)
-            ->where('kd_comp', $request->kd_comp)
-            ->where('tgltanam', $request->tgltanam)
+            ->where('companycode', $request->companycode)
+            ->where('tanggaltanam', $request->tanggaltanam)
             ->exists();
 
         if ($existsInHeader || $existsInLists) {
@@ -184,15 +184,15 @@ class AgronomiController extends Controller
 
             $header = AgronomiHeader::create([
                 'no_sample' => $validated['no_sample'],
-                'kd_comp' => $validated['kd_comp'],
-                'kd_blok' => $validated['kd_blok'],
-                'kd_plot' => $validated['kd_plot'],
-                'kd_plotsample' => $validated['kd_plotsample'],
+                'companycode' => $validated['companycode'],
+                'blok' => $validated['blok'],
+                'plotcode' => $validated['plotcode'],
+                'plotcodesample' => $validated['plotcodesample'],
                 'varietas' => $validated['varietas'],
                 'kat' => $validated['kat'],
-                'tgltanam' => $validated['tgltanam'],
+                'tanggaltanam' => $validated['tanggaltanam'],
                 'tglamat' => $validated['tglamat'],
-                'user_input' => Auth::user()->usernm,
+                'inputby' => Auth::user()->usernm,
             ]);
 
             foreach ($validated['lists'] as $list) {
@@ -202,9 +202,9 @@ class AgronomiController extends Controller
 
                 $header->lists()->create([
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'tgltanam' => $validated['tgltanam'],
-                    'no_urut' => $list['no_urut'],
+                    'companycode' => $validated['companycode'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
+                    'nourut' => $list['nourut'],
                     'jm_batang' => $list['jm_batang'],
                     'pan_gap' => $list['pan_gap'],
                     'per_gap' => $per_gap,
@@ -221,7 +221,7 @@ class AgronomiController extends Controller
                     'd_sekunder' => $list['d_sekunder'],
                     'd_tersier' => $list['d_tersier'],
                     'd_kuarter' => $list['d_kuarter'],
-                    'user_input' => Auth::user()->usernm,
+                    'inputby' => Auth::user()->usernm,
                 ]);
 
                 if ($per_germinasi < 0.9 || $per_gulma > 0.25) {
@@ -241,14 +241,14 @@ class AgronomiController extends Controller
         }
     }
 
-    public function show($no_sample, $kd_comp, $tgltanam)
+    public function show($no_sample, $companycode, $tanggaltanam)
     {
 
         $agronomi = DB::table('agro_hdr')
-            ->where('kd_comp', '=', session('dropdown_value'))
+            ->where('companycode', '=', session('dropdown_value'))
             ->where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->first();
 
         if (!$agronomi) {
@@ -258,41 +258,41 @@ class AgronomiController extends Controller
         $agronomiLists = DB::table('agro_lst')
             ->leftJoin('agro_hdr', function ($join) {
                 $join->on('agro_lst.no_sample', '=', 'agro_hdr.no_sample')
-                    ->whereColumn('agro_lst.kd_comp', '=', 'agro_hdr.kd_comp')
-                    ->whereColumn('agro_lst.tgltanam', '=', 'agro_hdr.tgltanam');
+                    ->whereColumn('agro_lst.companycode', '=', 'agro_hdr.companycode')
+                    ->whereColumn('agro_lst.tanggaltanam', '=', 'agro_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('agro_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('agro_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('agro_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('agro_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('agro_hdr.companycode', '=', 'plotting.companycode');
             })
             ->select(
                 'agro_lst.*',
                 'agro_hdr.varietas',
                 'agro_hdr.kat',
                 'agro_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
-                'plotting.jarak_tanam',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
+                'plotting.jaraktanam',
             )
             ->where('agro_lst.no_sample', $no_sample)
-            ->where('agro_lst.kd_comp', $kd_comp)
-            ->where('agro_lst.tgltanam', $tgltanam)
-            ->orderBy('agro_lst.created_at', 'desc')
+            ->where('agro_lst.companycode', $companycode)
+            ->where('agro_lst.tanggaltanam', $tanggaltanam)
+            ->orderBy('agro_lst.createdat', 'desc')
             ->get();
 
         $now = Carbon::now();
 
         $agronomiLists = $agronomiLists->map(function ($item) use ($now) {
-            $tgl_tanam = Carbon::parse($item->tgltanam);
+            $tgl_tanam = Carbon::parse($item->tanggaltanam);
             $item->umur_tanam = $tgl_tanam->diffInMonths($now);
             return $item;
         });
@@ -304,27 +304,27 @@ class AgronomiController extends Controller
         return response()->json($agronomiLists);
     }
 
-    public function edit($no_sample, $kd_comp, $tgltanam)
+    public function edit($no_sample, $companycode, $tanggaltanam)
     {
         $title = 'Edit Data';
-        $header = AgronomiHeader::with(['lists' => function ($query) use ($no_sample, $kd_comp, $tgltanam) {
+        $header = AgronomiHeader::with(['lists' => function ($query) use ($no_sample, $companycode, $tanggaltanam) {
             $query->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam);
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam);
         }])
             ->where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->firstOrFail();
         $list = AgronomiList::where('no_sample', $no_sample)
-            ->where('kd_comp', $kd_comp)
-            ->where('tgltanam', $tgltanam)
+            ->where('companycode', $companycode)
+            ->where('tanggaltanam', $tanggaltanam)
             ->firstOrFail();
-        $company = Perusahaan::all();
+        $company = company::all();
         $mapping = Mapping::all();
         $method = 'PUT';
         $buttonSubmit = 'Update';
-        $url = route('input.agronomi.update', ['no_sample' => $no_sample, 'kd_comp' => $kd_comp, 'tgltanam' => $tgltanam]);
+        $url = route('input.agronomi.update', ['no_sample' => $no_sample, 'companycode' => $companycode, 'tanggaltanam' => $tanggaltanam]);
         
         if ($header->status === "Posted") {
             return redirect()->route('input.hpt.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
@@ -333,7 +333,7 @@ class AgronomiController extends Controller
         return view('input.agronomi.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
     }
 
-    public function update(Request $request, $no_sample, $kd_comp, $tgltanam)
+    public function update(Request $request, $no_sample, $companycode, $tanggaltanam)
     {
         $validated = $request->validate($this->requestValidated());
 
@@ -341,46 +341,46 @@ class AgronomiController extends Controller
 
         try {
             $header = AgronomiHeader::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->firstOrFail();
 
             DB::table('agro_hdr')
                 ->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->update([
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'kd_blok' => $validated['kd_blok'],
-                    'kd_plot' => $validated['kd_plot'],
-                    'kd_plotsample' => $validated['kd_plotsample'],
+                    'companycode' => $validated['companycode'],
+                    'blok' => $validated['blok'],
+                    'plotcode' => $validated['plotcode'],
+                    'plotcodesample' => $validated['plotcodesample'],
                     'varietas' => $validated['varietas'],
                     'kat' => $validated['kat'],
-                    'tgltanam' => $validated['tgltanam'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
                     'tglamat' => $validated['tglamat'],
-                    'updated_at' => now(),
+                    'updatedat' => now(),
                 ]);
 
             $existingLists = AgronomiList::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
-                ->get(['no_urut', 'user_input', 'created_at'])
-                ->keyBy('no_urut');
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
+                ->get(['nourut', 'inputby', 'createdat'])
+                ->keyBy('nourut');
 
             DB::table('agro_lst')
                 ->where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->delete();
 
             $listData = [];
             foreach ($validated['lists'] as $list) {
                 $listData[] = [
                     'no_sample' => $validated['no_sample'],
-                    'kd_comp' => $validated['kd_comp'],
-                    'tgltanam' => $validated['tgltanam'],
-                    'no_urut' => $list['no_urut'],
+                    'companycode' => $validated['companycode'],
+                    'tanggaltanam' => $validated['tanggaltanam'],
+                    'nourut' => $list['nourut'],
                     'jm_batang' => $list['jm_batang'],
                     'pan_gap' => $list['pan_gap'],
                     'per_gap' => $list['pan_gap'] / 1000,
@@ -397,9 +397,9 @@ class AgronomiController extends Controller
                     'd_sekunder' => $list['d_sekunder'],
                     'd_tersier' => $list['d_tersier'],
                     'd_kuarter' => $list['d_kuarter'],
-                    'user_input' => $existingLists[$list['no_urut']]['user_input'] ?? $header->user_input,
-                    'created_at' => $existingLists[$list['no_urut']]['created_at'] ?? $header->created_at,
-                    'updated_at' => now(),
+                    'inputby' => $existingLists[$list['nourut']]['inputby'] ?? $header->inputby,
+                    'createdat' => $existingLists[$list['nourut']]['createdat'] ?? $header->createdat,
+                    'updatedat' => now(),
                 ];
             }
 
@@ -417,16 +417,16 @@ class AgronomiController extends Controller
         }
     }
 
-    public function destroy($no_sample, $kd_comp, $tgltanam)
+    public function destroy($no_sample, $companycode, $tanggaltanam)
     {
-        DB::transaction(function () use ($no_sample, $kd_comp, $tgltanam) {
+        DB::transaction(function () use ($no_sample, $companycode, $tanggaltanam) {
             $header = AgronomiHeader::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam)
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam)
                 ->firstOrFail();
             $list = AgronomiList::where('no_sample', $no_sample)
-                ->where('kd_comp', $kd_comp)
-                ->where('tgltanam', $tgltanam);
+                ->where('companycode', $companycode)
+                ->where('tanggaltanam', $tanggaltanam);
 
             $header->delete();
             $list->delete();
@@ -444,44 +444,44 @@ class AgronomiController extends Controller
         $query = DB::table('agro_lst')
             ->leftJoin('agro_hdr', function ($join) {
                 $join->on('agro_lst.no_sample', '=', 'agro_hdr.no_sample')
-                    ->whereColumn('agro_lst.kd_comp', '=', 'agro_hdr.kd_comp')
-                    ->whereColumn('agro_lst.tgltanam', '=', 'agro_hdr.tgltanam');
+                    ->whereColumn('agro_lst.companycode', '=', 'agro_hdr.companycode')
+                    ->whereColumn('agro_lst.tanggaltanam', '=', 'agro_hdr.tanggaltanam');
             })
-            ->leftJoin('perusahaan', function ($join) {
-                $join->on('agro_hdr.kd_comp', '=', 'perusahaan.kd_comp');
+            ->leftJoin('company', function ($join) {
+                $join->on('agro_hdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('agro_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plotting', function ($join) {
-                $join->on('agro_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->whereColumn('agro_hdr.companycode', '=', 'plotting.companycode');
             })
-            ->where('agro_lst.kd_comp', session('dropdown_value'))
-            ->where('agro_hdr.kd_comp', session('dropdown_value'))
+            ->where('agro_lst.companycode', session('dropdown_value'))
+            ->where('agro_hdr.companycode', session('dropdown_value'))
             ->select(
                 'agro_lst.*',
                 'agro_hdr.varietas',
                 'agro_hdr.kat',
                 'agro_hdr.tglamat',
-                'perusahaan.nama as compName',
-                'blok.kd_blok as blokName',
-                'plotting.kd_plot as plotName',
-                'plotting.luas_area',
-                'plotting.jarak_tanam',
+                'company.nama as compName',
+                'blok.blok as blokName',
+                'plotting.plotcode as plotName',
+                'plotting.luasarea',
+                'plotting.jaraktanam',
             )
-            ->orderBy('agro_lst.created_at', 'desc');
+            ->orderBy('agro_lst.createdat', 'desc');
 
 
         if ($startDate) {
-            $query->whereDate('agro_lst.created_at', '>=', $startDate);
+            $query->whereDate('agro_lst.createdat', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('agro_lst.created_at', '<=', $endDate);
+            $query->whereDate('agro_lst.createdat', '<=', $endDate);
         }
         if (!empty($comp)) {
-            $query->whereIn('agro_lst.kd_comp', $comp);
+            $query->whereIn('agro_lst.companycode', $comp);
         }
         $agronomi = $query->get();
 
@@ -526,8 +526,8 @@ class AgronomiController extends Controller
         $row = 2;
         foreach ($agronomi as $list) {
 
-            $tglTanam = Carbon::parse($list->tgltanam);
-            $umurTanam = $tglTanam->diffInMonths($now);
+            $tanggaltanam = Carbon::parse($list->tanggaltanam);
+            $umurTanam = $tanggaltanam->diffInMonths($now);
 
             $tglAmat = Carbon::parse($list->tglamat);
             $bulanPengamatan = $tglAmat->format('F');
@@ -536,15 +536,15 @@ class AgronomiController extends Controller
             $sheet->setCellValue('B' . $row, $list->compName);
             $sheet->setCellValue('C' . $row, $list->blokName);
             $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luas_area);
+            $sheet->setCellValue('E' . $row, $list->luasarea);
             $sheet->setCellValue('F' . $row, $list->varietas);
             $sheet->setCellValue('G' . $row, $list->kat);
-            $sheet->setCellValue('H' . $row, $tglTanam->format('Y-m-d'));
+            $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
             $sheet->setCellValue('I' . $row, ceil($umurTanam) . ' Bulan');
-            $sheet->setCellValue('J' . $row, $list->jarak_tanam);
+            $sheet->setCellValue('J' . $row, $list->jaraktanam);
             $sheet->setCellValue('K' . $row, $list->tglamat);
             $sheet->setCellValue('L' . $row, $bulanPengamatan);
-            $sheet->setCellValue('M' . $row, $list->no_urut);
+            $sheet->setCellValue('M' . $row, $list->nourut);
             $sheet->setCellValue('N' . $row, $list->jm_batang);
             $sheet->setCellValue('O' . $row, $list->pan_gap);
             $sheet->setCellValue('P' . $row, $list->per_gap);

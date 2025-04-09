@@ -32,7 +32,7 @@ class PlottingController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        $plotting = DB::table('plotting')->where('kd_comp', '=', session('dropdown_value'))->orderByRaw("LEFT(kd_plot, 1), CAST(SUBSTRING(kd_plot, 2) AS UNSIGNED)")->paginate($perPage);
+        $plotting = DB::table('plot')->where('companycode', '=', session('dropdown_value'))->orderByRaw("LEFT(plot, 1), CAST(SUBSTRING(plot, 2) AS UNSIGNED)")->paginate($perPage);
 
         foreach ($plotting as $index => $item) {
             $item->no = ($plotting->currentPage() - 1) * $plotting->perPage() + $index + 1;
@@ -52,17 +52,17 @@ class PlottingController extends Controller
     protected function requestValidated(): array
     {
         return [
-            'kd_plot' => 'required|max:5',
-            'luas_area' => 'required',
-            'jarak_tanam' => 'required',
+            'plot' => 'required|max:5',
+            'luasarea' => 'required',
+            'jaraktanam' => 'required',
         ];
     }
 
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('plotting')->where('kd_plot', $request->kd_plot)
-            ->where('kd_comp', $request->kd_comp)
+        $exists = DB::table('plot')->where('plot', $request->plot)
+            ->where('companycode', $request->companycode)
             ->exists();
 
         if ($exists) {
@@ -73,14 +73,14 @@ class PlottingController extends Controller
         }
 
         DB::transaction(function () use ($request) {
-            DB::table('plotting')->insert([
-                'kd_plot' => $request->kd_plot,
-                'luas_area' => $request->luas_area,
-                'jarak_tanam' => $request->jarak_tanam,
-                'kd_comp' => session('dropdown_value'),
-                'usernm' => Auth::user()->usernm,
-                'created_at' => now(),
-                'updated_at' => now(),
+            DB::table('plot')->insert([
+                'plot' => $request->plot,
+                'luasarea' => $request->luasarea,
+                'jaraktanam' => $request->jaraktanam,
+                'companycode' => session('dropdown_value'),
+                'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
         });
         return response()->json([
@@ -88,21 +88,21 @@ class PlottingController extends Controller
             'message' => 'Data berhasil ditambahkan',
             'newData' => [
                 'no' => 'NEW!',
-                'kd_plot' => $request->kd_plot,
-                'luas_area' => number_format($request->luas_area, 2, '.', ''),
-                'jarak_tanam' => $request->jarak_tanam,
-                'kd_comp' => $request->kd_comp,
+                'plot' => $request->plot,
+                'luasarea' => number_format($request->luasarea, 2, '.', ''),
+                'jaraktanam' => $request->jaraktanam,
+                'companycode' => $request->companycode,
             ]
         ]);
     }
 
-    public function update(Request $request, $kd_plot, $kd_comp)
+    public function update(Request $request, $plot, $companycode)
     {
         $request->validate($this->requestValidated());
 
-        $existingPlot = DB::table('plotting')->where('kd_plot', $request->kd_plot)
-            ->where('kd_comp', $kd_comp)
-            ->where('kd_plot', '!=', $kd_plot)
+        $existingPlot = DB::table('plot')->where('plot', $request->plot)
+            ->where('companycode', $companycode)
+            ->where('plot', '!=', $plot)
             ->exists();
 
         if ($existingPlot) {
@@ -111,27 +111,27 @@ class PlottingController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $kd_plot, $kd_comp) {
-            DB::table('plotting')
-                ->where('kd_plot', $kd_plot)
-                ->where('kd_comp', $kd_comp)
+        DB::transaction(function () use ($request, $plot, $companycode) {
+            DB::table('plot')
+                ->where('plot', $plot)
+                ->where('companycode', $companycode)
                 ->update([
-                    'kd_plot' => $request->kd_plot,
-                    'luas_area' => $request->luas_area,
-                    'jarak_tanam' => $request->jarak_tanam,
-                    'kd_comp' => session('dropdown_value'),
-                    'usernm' => Auth::user()->usernm,
-                    'updated_at' => now(),
+                    'plot' => $request->plot,
+                    'luasarea' => $request->luasarea,
+                    'jaraktanam' => $request->jaraktanam,
+                    'companycode' => session('dropdown_value'),
+                    'inputby' => Auth::user()->userid,
+                    'updatedat' => now(),
                 ]);
         });
         return redirect()->route('master.plotting.index')
             ->with('success1', 'Data updated successfully.');
     }
 
-    public function destroy($kd_plot, $kd_comp)
+    public function destroy($plot, $companycode)
     {
-        DB::transaction(function () use ($kd_plot, $kd_comp) {
-            DB::table('plotting')->where('kd_plot', $kd_plot)->where('kd_comp', $kd_comp)->delete();
+        DB::transaction(function () use ($plot, $companycode) {
+            DB::table('plot')->where('plot', $plot)->where('companycode', $companycode)->delete();
         });
         return response()->json([
             'success' => true,

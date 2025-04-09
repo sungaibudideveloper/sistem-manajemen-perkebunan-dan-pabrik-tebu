@@ -50,16 +50,16 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-1' }}">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_blok }}</td>
+                                    {{ $item->blok }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_comp }}</td>
+                                    {{ $item->companycode }}</td>
                                 @if (auth()->user() &&
                                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                         <div class="flex items-center justify-center">
                                             @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
                                                 <button
-                                                    onclick="openEditModal('{{ $item->kd_blok }}', '{{ $item->kd_comp }}')"
+                                                    onclick="openEditModal('{{ $item->blok }}', '{{ $item->companycode }}')"
                                                     class="group flex items-center edit-button"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -88,8 +88,8 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="button" class="group flex delete-button"
-                                                        data-kd-blok="{{ $item->kd_blok }}"
-                                                        data-kd-comp="{{ $item->kd_comp }}">
+                                                        data-kd-blok="{{ $item->blok }}"
+                                                        data-kd-comp="{{ $item->companycode }}">
                                                         <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                                             aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                                             width="24" height="24" fill="none"
@@ -154,11 +154,11 @@
                 <form class="p-4 md:p-5" id="crud-form" action="" method="POST">
                     @csrf
                     <input type="hidden" name="_method" id="crud-method" value="POST">
-                    <input type="hidden" name="kd_comp" id="kd_comp" value="{{ session('dropdown_value') }}">
+                    <input type="hidden" name="companycode" id="companycode" value="{{ session('dropdown_value') }}">
 
                     <div class="mb-4">
-                        <label class="block text-md">Kode Blok</label>
-                        <input type="text" name="kd_blok" id="kd_blok" value="" autocomplete="off"
+                        <label class="blok text-md">Kode Blok</label>
+                        <input type="text" name="blok" id="blok" value="" autocomplete="off"
                             maxlength="2" class="rounded-md p-2 w-full border-gray-300" required>
                     </div>
 
@@ -204,11 +204,11 @@
     <script>
         document.querySelectorAll('.delete-button').forEach(button => {
             button.addEventListener('click', function() {
-                let kdBlok = this.getAttribute('data-kd-blok');
+                let kdblok = this.getAttribute('data-kd-blok');
                 let kdComp = this.getAttribute('data-kd-comp');
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                    fetch(`{{ route('master.blok.destroy', ['kd_blok' => '__kdBlok__', 'kd_comp' => '__kdComp__']) }}`
-                            .replace('__kdBlok__', kdBlok)
+                    fetch(`{{ route('master.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
+                            .replace('__kdblok__', kdblok)
                             .replace('__kdComp__', kdComp), {
                                 method: 'POST',
                                 headers: {
@@ -238,8 +238,8 @@
         const modal = document.getElementById("crud-modal");
         const form = document.getElementById("crud-form");
         const modalTitle = document.getElementById("modal-title");
-        const kdBlokInput = document.getElementById("kd_blok");
-        const kdCompInput = document.getElementById("kd_comp");
+        const kdBlokInput = document.getElementById("blok");
+        const kdCompInput = document.getElementById("companycode");
         const crudMethod = document.getElementById("crud-method");
 
         function openCreateModal() {
@@ -265,15 +265,15 @@
             }, 300);
         }
 
-        function openEditModal(kdBlok, kdComp) {
+        function openEditModal(kdblok, kdComp) {
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute =
-                "{{ route('master.blok.update', ['kd_blok' => '__kdBlok__', 'kd_comp' => '__kdComp__']) }}";
-            form.action = editRoute.replace('__kdBlok__', kdBlok).replace('__kdComp__', kdComp);
+                "{{ route('master.blok.update', ['blok' => 'kdblok', 'companycode' => '__kdComp__']) }}";
+            form.action = editRoute.replace('kdblok', kdblok).replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
-            kdBlokInput.value = kdBlok;
+            kdBlokInput.value = kdblok;
             kdCompInput.value = kdComp;
             setTimeout(() => {
                 modal.style.opacity = "1";
@@ -281,10 +281,10 @@
             }, 50);
         }
 
-        function deleteRow(kdBlok, kdComp, row) {
+        function deleteRow(kdblok, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.blok.destroy', ['kd_blok' => '__kdBlok__', 'kd_comp' => '__kdComp__']) }}`
-                        .replace('__kdBlok__', kdBlok)
+                fetch(`{{ route('master.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
+                        .replace('__kdblok__', kdblok)
                         .replace('__kdComp__', kdComp), {
                             method: "DELETE",
                             headers: {
@@ -336,13 +336,13 @@
                         ${newData.no}
                     </span>
                 </td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.kd_blok}</td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.kd_comp}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.blok}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.companycode}</td>
                 @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
                 <td class="py-2 px-4 border-b border-gray-300">
                     <div class="flex items-center justify-center">
                         @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.kd_blok}','${newData.kd_comp}')">
+                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.blok}','${newData.companycode}')">
                             <svg
                                 class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -367,7 +367,7 @@
                         @endif
                         <span class="w-0.5"></span>
                         @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex delete-button" data-kd_blok="${newData.kd_blok}" data-kd_comp="${newData.kd_comp}">
+                        <button class="group flex delete-button" data-blok="${newData.blok}" data-companycode="${newData.companycode}">
                             <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                 width="24" height="24" fill="none"
@@ -392,7 +392,7 @@
             `;
             tableBody.prepend(newRow);
             newRow.querySelector(".delete-button").addEventListener("click", function() {
-                deleteRow(this.dataset.kd_blok, this.dataset.kd_comp, newRow);
+                deleteRow(this.dataset.blok, this.dataset.companycode, newRow);
             });
         }
     </script>

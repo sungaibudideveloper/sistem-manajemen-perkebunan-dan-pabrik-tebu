@@ -52,14 +52,14 @@
                                             <label class="inline-flex items-center" onchange="this.form.submit()">
                                                 <input type="checkbox" id="selectAllComp"
                                                     class="form-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    {{ old('kd_comp', request()->kd_comp ?? []) && count(old('kd_comp', request()->kd_comp ?? [])) === count($kdCompHPTOpt) ? 'checked' : '' }} />
+                                                    {{ old('companycode', request()->companycode ?? []) && count(old('companycode', request()->companycode ?? [])) === count($kdCompHPTOpt) ? 'checked' : '' }} />
                                                 <span class="ml-2">(Select All)</span>
                                             </label>
                                             @foreach ($kdCompHPTOpt as $comp)
                                                 <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                    <input type="checkbox" name="kd_comp[]" value="{{ $comp->kd_comp }}"
+                                                    <input type="checkbox" name="companycode[]" value="{{ $comp->companycode }}"
                                                         class="form-checkbox comp-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                        {{ in_array($comp->kd_comp, old('kd_comp', request()->kd_comp ?? [])) ? 'checked' : '' }} />
+                                                        {{ in_array($comp->companycode, old('companycode', request()->companycode ?? [])) ? 'checked' : '' }} />
                                                     <span class="ml-2">{{ $comp->nama }}</span>
                                                 </label>
                                             @endforeach
@@ -69,10 +69,10 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Blok</label>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">block</label>
                             <div class="relative">
                                 <div class="dropdown relative">
-                                    <button type="button" id="dropdownButtonBlok"
+                                    <button type="button" id="dropdownButtonblock"
                                         class="w-auto flex items-center justify-between rounded-md font-medium border border-gray-300 shadow-sm hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white px-4 py-2 text-sm text-gray-700">
                                         <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
                                             class="h-4 w-4 mr-2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -80,31 +80,31 @@
                                                 d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
                                                 clip-rule="evenodd" />
                                         </svg>
-                                        <span>Filter Blok</span>
+                                        <span>Filter block</span>
                                         <svg class="-mr-1 ml-2 w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg"
                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                                                 d="m19 9-7 7-7-7" />
                                         </svg>
                                     </button>
-                                    <div id="dropdownContentBlok"
+                                    <div id="dropdownContentblock"
                                         class="z-10 absolute hidden mt-[1px] w-auto text-sm bg-white border border-gray-300 shadow-md rounded-md p-2 px-3">
                                         <div class="flex flex-col space-y-1 min-w-max">
-                                            <h6 class="mb-2 text-sm font-medium text-gray-900">Pilih Blok
+                                            <h6 class="mb-2 text-sm font-medium text-gray-900">Pilih block
                                             </h6>
                                             <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                <input type="checkbox" id="selectAllBlok"
+                                                <input type="checkbox" id="selectAllblock"
                                                     class="form-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    {{ old('kd_blok', request()->kd_blok ?? []) && count(old('kd_blok', request()->kd_blok ?? [])) === count($kdBlokHPTOpt) ? 'checked' : '' }} />
+                                                    {{ old('blok', request()->block ?? []) && count(old('blok', request()->block ?? [])) === count($kdblockHPTOpt) ? 'checked' : '' }} />
                                                 <span class="ml-2">(Select All)</span>
                                             </label>
-                                            @foreach ($kdBlokHPTOpt as $blok)
+                                            @foreach ($kdblockHPTOpt as $block)
                                                 <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                    <input type="checkbox" name="kd_blok[]"
-                                                        value="{{ $blok->kd_blok }}"
-                                                        class="form-checkbox blok-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                        {{ in_array($blok->kd_blok, old('kd_blok', request()->kd_blok ?? [])) ? 'checked' : '' }} />
-                                                    <span class="ml-2">{{ $blok->kd_blok }}</span>
+                                                    <input type="checkbox" name="block[]"
+                                                        value="{{ $block->block }}"
+                                                        class="form-checkbox block-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                                        {{ in_array($block->block, old('blok', request()->block ?? [])) ? 'checked' : '' }} />
+                                                    <span class="ml-2">{{ $block->block }}</span>
                                                 </label>
                                             @endforeach
                                         </div>
@@ -141,16 +141,16 @@
                                             <label class="inline-flex items-center" onchange="this.form.submit()">
                                                 <input type="checkbox" id="selectAllPlot"
                                                     class="form-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    {{ old('kd_plot', request()->kd_plot ?? []) && count(old('kd_plot', request()->kd_plot ?? [])) === count($kdPlotHPTOpt) ? 'checked' : '' }} />
+                                                    {{ old('plotcode', request()->plotcode ?? []) && count(old('plotcode', request()->plotcode ?? [])) === count($kdPlotHPTOpt) ? 'checked' : '' }} />
                                                 <span class="ml-2">(Select All)</span>
                                             </label>
                                             @foreach ($kdPlotHPTOpt as $plot)
                                                 <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                    <input type="checkbox" name="kd_plot[]"
-                                                        value="{{ $plot->kd_plot }}"
+                                                    <input type="checkbox" name="plotcode[]"
+                                                        value="{{ $plot->plotcode }}"
                                                         class="form-checkbox plot-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                        {{ in_array($plot->kd_plot, old('kd_plot', request()->kd_plot ?? [])) ? 'checked' : '' }} />
-                                                    <span class="ml-2">{{ $plot->kd_plot }}</span>
+                                                        {{ in_array($plot->plotcode, old('plotcode', request()->plotcode ?? [])) ? 'checked' : '' }} />
+                                                    <span class="ml-2">{{ $plot->plotcode }}</span>
                                                 </label>
                                             @endforeach
                                         </div>
@@ -245,15 +245,15 @@
             return {
                 index,
                 age: parseInt(parts[0]) || 0,
-                blokName: parts.splice(-2, 1)[0] || '',
+                blockName: parts.splice(-2, 1)[0] || '',
                 companyName: parts.pop()
             };
         }).sort((a, b) => {
             if (a.companyName !== b.companyName) {
                 return a.companyName.localeCompare(b.companyName);
             }
-            if (a.blokName !== b.blokName) {
-                return a.blokName.localeCompare(b.blokName);
+            if (a.blockName !== b.blockName) {
+                return a.blockName.localeCompare(b.blockName);
             }
             if (a.category !== b.category) {
                 return a.category.localeCompare(b.category);
@@ -277,7 +277,7 @@
                 label: item.label,
                 data: item.data,
                 companyName: item.companyName,
-                blokName: item.blokName
+                blockName: item.blockName
             }))
         };
 
@@ -350,7 +350,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const dropdowns = ["Comp", "Blok", "Plot"];
+            const dropdowns = ["Comp", "block", "Plot"];
 
             dropdowns.forEach(type => {
                 const dropdownButton = document.getElementById(`dropdownButton${type}`);

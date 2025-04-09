@@ -19,9 +19,9 @@ class DashboardController extends Controller
     }
     public function agronomi(Request $request)
     {
-        $kdCompAgronomi = $request->input('kd_comp', []);
-        $kdBlokAgronomi = $request->input('kd_blok', []);
-        $kdPlotAgronomi = $request->input('kd_plot', []);
+        $kdCompAgronomi = $request->input('companycode', []);
+        $kdBlokAgronomi = $request->input('blok', []);
+        $kdPlotAgronomi = $request->input('plotcode', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
         $title = "Dashboard Agronomi";
@@ -78,66 +78,66 @@ class DashboardController extends Controller
             $chartDataQuery = DB::table('agro_hdr')
                 ->join('agro_lst', function ($join) {
                     $join->on('agro_hdr.no_sample', '=', 'agro_lst.no_sample')
-                        ->on('agro_hdr.kd_comp', '=', 'agro_lst.kd_comp');
+                        ->on('agro_hdr.companycode', '=', 'agro_lst.companycode');
                 })
-                ->join('perusahaan', 'agro_hdr.kd_comp', '=', 'perusahaan.kd_comp')
+                ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
                 ->join('plotting', function ($join) {
-                    $join->on('agro_hdr.kd_plot', '=', 'plotting.kd_plot')
-                        ->on('agro_hdr.kd_comp', '=', 'plotting.kd_comp');
+                    $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
+                        ->on('agro_hdr.companycode', '=', 'plotting.companycode');
                 })
                 ->leftJoin('blok', function ($join) {
-                    $join->on('agro_hdr.kd_blok', '=', 'blok.kd_blok')
-                        ->whereColumn('agro_hdr.kd_comp', '=', 'blok.kd_comp');
+                    $join->on('agro_hdr.blok', '=', 'blok.blok')
+                        ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
                 })
                 ->select(
                     DB::raw("MONTH(agro_hdr.tglamat) as bln_amat"),
-                    DB::raw("MIN(agro_hdr.tgltanam) as tgltanam"),
+                    DB::raw("MIN(agro_hdr.tanggaltanam) as tanggaltanam"),
                     'agro_hdr.kat',
                     DB::raw("CASE 
                         WHEN '$verticalField' IN ('populasi', 'ph_tanah') 
                         THEN AVG($verticalField) 
                         ELSE AVG($verticalField) * 100 
                     END as total"),
-                    'perusahaan.nama as perusahaan_nama',
-                    'blok.kd_blok as blok_nama',
-                    'plotting.kd_plot as plot_nama'
+                    'company.nama as company_nama',
+                    'blok.blok as blok_nama',
+                    'plotting.plotcode as plot_nama'
                 )
                 ->when($kdCompAgronomi, function ($query) use ($kdCompAgronomi) {
-                    return $query->whereIn('agro_hdr.kd_comp', $kdCompAgronomi);
+                    return $query->whereIn('agro_hdr.companycode', $kdCompAgronomi);
                 })
                 ->when($kdBlokAgronomi, function ($query) use ($kdBlokAgronomi) {
-                    return $query->whereIn('agro_hdr.kd_blok', $kdBlokAgronomi);
+                    return $query->whereIn('agro_hdr.blok', $kdBlokAgronomi);
                 })
                 ->when($kdPlotAgronomi, function ($query) use ($kdPlotAgronomi) {
-                    return $query->whereIn('agro_hdr.kd_plot', $kdPlotAgronomi);
+                    return $query->whereIn('agro_hdr.plotcode', $kdPlotAgronomi);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
                     return $query->whereBetween(DB::raw("MONTH(agro_hdr.tglamat)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('bln_amat', 'kat', 'perusahaan.nama', 'blok.kd_blok', 'plotting.kd_plot')
+                ->groupBy('bln_amat', 'kat', 'company.nama', 'blok.blok', 'plotting.plotcode')
                 ->orderBy('kat');
 
             $chartDataResult = $chartDataQuery->get();
             $chartDataResult->transform(function ($item) {
-                $item->umur_tanam = ceil(Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now())) . ' Bulan';
+                $item->umur_tanam = ceil(Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now())) . ' Bulan';
                 return $item;
             });
 
             $xAxis = $chartDataResult->map(function ($item) use ($kdCompAgronomi, $kdBlokAgronomi, $kdPlotAgronomi) {
                 if (!empty($kdCompAgronomi) && empty($kdBlokAgronomi) && empty($kdPlotAgronomi)) {
-                    return $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->perusahaan_nama;
+                    return $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->company_nama;
                 } elseif (empty($kdCompAgronomi) && !empty($kdBlokAgronomi) && empty($kdPlotAgronomi)) {
                     return $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama;
                 } elseif (empty($kdCompAgronomi) && empty($kdBlokAgronomi) && !empty($kdPlotAgronomi)) {
                     return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat;
                 } elseif (!empty($kdCompAgronomi) && empty($kdBlokAgronomi) && !empty($kdPlotAgronomi)) {
-                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->perusahaan_nama;
+                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->company_nama;
                 } elseif (empty($kdCompAgronomi) && !empty($kdBlokAgronomi) && !empty($kdPlotAgronomi)) {
                     return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama;
                 } elseif (!empty($kdCompAgronomi) && !empty($kdBlokAgronomi) && empty($kdPlotAgronomi)) {
-                    return $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama . ' - ' . $item->perusahaan_nama;
+                    return $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama . ' - ' . $item->company_nama;
                 } else {
-                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama . ' - ' . $item->perusahaan_nama;
+                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->kat . ' - ' . $item->blok_nama . ' - ' . $item->company_nama;
                 }
             })->unique()->values();
 
@@ -158,8 +158,8 @@ class DashboardController extends Controller
                             } elseif (!empty($kdCompAgronomi) && empty($kdBlokAgronomi) && empty($kdPlotAgronomi)) {
                                 $umur_tanam = explode(' - ', $x)[0];
                                 $kat = explode(' - ', $x)[1];
-                                $perusahaan = explode(' - ', $x)[2];
-                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[2];
+                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->company_nama == $company;
                             } elseif (empty($kdCompAgronomi) && empty($kdBlokAgronomi) && !empty($kdPlotAgronomi)) {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
@@ -169,8 +169,8 @@ class DashboardController extends Controller
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
                                 $kat = explode(' - ', $x)[2];
-                                $perusahaan = explode(' - ', $x)[3];
-                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[3];
+                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->company_nama == $company;
                             } elseif (empty($kdCompAgronomi) && !empty($kdBlokAgronomi) && !empty($kdPlotAgronomi)) {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
@@ -181,15 +181,15 @@ class DashboardController extends Controller
                                 $umur_tanam = explode(' - ', $x)[0];
                                 $kat = explode(' - ', $x)[1];
                                 $blok = explode(' - ', $x)[2];
-                                $perusahaan = explode(' - ', $x)[3];
-                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->blok_nama == $blok && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[3];
+                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->blok_nama == $blok && $item->company_nama == $company;
                             } else {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
                                 $kat = explode(' - ', $x)[2];
                                 $blok = explode(' - ', $x)[3];
-                                $perusahaan = explode(' - ', $x)[4];
-                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->blok_nama == $blok && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[4];
+                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->kat == $kat && $item->blok_nama == $blok && $item->company_nama == $company;
                             }
                         })->avg('total'),
                         2
@@ -205,20 +205,20 @@ class DashboardController extends Controller
             }
         }
 
-        $kdCompAgroOpt = DB::table('perusahaan')
-            ->join('agro_hdr', 'perusahaan.kd_comp', '=', 'agro_hdr.kd_comp')
-            ->select('perusahaan.kd_comp', 'perusahaan.nama')
+        $kdCompAgroOpt = DB::table('company')
+            ->join('agro_hdr', 'company.companycode', '=', 'agro_hdr.companycode')
+            ->select('company.companycode', 'company.nama')
             ->distinct()
             ->get();
         $kdBlokAgroOpt = DB::table('blok')
-            ->join('agro_hdr', 'blok.kd_blok', '=', 'agro_hdr.kd_blok')
-            ->select('blok.kd_blok')
+            ->join('agro_hdr', 'blok.blok', '=', 'agro_hdr.blok')
+            ->select('blok.blok')
             ->distinct()
             ->get();
         $kdPlotAgroOpt = DB::table('plotting')
-            ->join('agro_hdr', 'plotting.kd_plot', '=', 'agro_hdr.kd_plot')
-            ->select('plotting.kd_plot')
-            ->orderByRaw("LEFT(plotting.kd_plot, 1), CAST(SUBSTRING(plotting.kd_plot, 2) AS UNSIGNED)")
+            ->join('agro_hdr', 'plotting.plotcode', '=', 'agro_hdr.plotcode')
+            ->select('plotting.plotcode')
+            ->orderByRaw("LEFT(plotting.plotcode, 1), CAST(SUBSTRING(plotting.plotcode, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 
@@ -261,9 +261,9 @@ class DashboardController extends Controller
 
     public function hpt(Request $request)
     {
-        $kdCompHPT = $request->input('kd_comp', []);
-        $kdBlokHPT = $request->input('kd_blok', []);
-        $kdPlotHPT = $request->input('kd_plot', []);
+        $kdCompHPT = $request->input('companycode', []);
+        $kdBlokHPT = $request->input('blok', []);
+        $kdPlotHPT = $request->input('plotcode', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
         $title = "Dashboard HPT";
@@ -326,66 +326,66 @@ class DashboardController extends Controller
             $chartDataQuery = DB::table('hpt_hdr')
                 ->join('hpt_lst', function ($join) {
                     $join->on('hpt_hdr.no_sample', '=', 'hpt_lst.no_sample')
-                        ->on('hpt_hdr.kd_comp', '=', 'hpt_lst.kd_comp');
+                        ->on('hpt_hdr.companycode', '=', 'hpt_lst.companycode');
                 })
                 ->join('plotting', function ($join) {
-                    $join->on('hpt_hdr.kd_plot', '=', 'plotting.kd_plot')
-                        ->on('hpt_hdr.kd_comp', '=', 'plotting.kd_comp');
+                    $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
+                        ->on('hpt_hdr.companycode', '=', 'plotting.companycode');
                 })
-                ->join('perusahaan', 'hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp')
+                ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
                 ->leftJoin('blok', function ($join) {
-                    $join->on('hpt_hdr.kd_blok', '=', 'blok.kd_blok')
-                        ->whereColumn('hpt_hdr.kd_comp', '=', 'blok.kd_comp');
+                    $join->on('hpt_hdr.blok', '=', 'blok.blok')
+                        ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
                 })
                 ->select(
                     DB::raw("MONTH(hpt_hdr.tglamat) as bln_amat"),
-                    DB::raw("MIN(hpt_hdr.tgltanam) as tgltanam"),
+                    DB::raw("MIN(hpt_hdr.tanggaltanam) as tanggaltanam"),
                     DB::raw("CASE 
                         WHEN '$verticalField' IN ('per_ppt', 'per_pbt') 
                         THEN AVG($verticalField) * 100
                         ELSE AVG($verticalField) 
                     END as total"),
-                    'perusahaan.nama as perusahaan_nama',
-                    'blok.kd_blok as blok_nama',
-                    'plotting.kd_plot as plot_nama'
+                    'company.nama as company_nama',
+                    'blok.blok as blok_nama',
+                    'plotting.plotcode as plot_nama'
                 )
                 ->when($kdCompHPT, function ($query) use ($kdCompHPT) {
-                    return $query->whereIn('hpt_hdr.kd_comp', $kdCompHPT);
+                    return $query->whereIn('hpt_hdr.companycode', $kdCompHPT);
                 })
                 ->when($kdBlokHPT, function ($query) use ($kdBlokHPT) {
-                    return $query->whereIn('hpt_hdr.kd_blok', $kdBlokHPT);
+                    return $query->whereIn('hpt_hdr.blok', $kdBlokHPT);
                 })
                 ->when($kdPlotHPT, function ($query) use ($kdPlotHPT) {
-                    return $query->whereIn('hpt_hdr.kd_plot', $kdPlotHPT);
+                    return $query->whereIn('hpt_hdr.plotcode', $kdPlotHPT);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
                     return $query->whereBetween(DB::raw("MONTH(hpt_hdr.tglamat)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('perusahaan.nama', 'blok.kd_blok', 'plotting.kd_plot', 'bln_amat')
+                ->groupBy('company.nama', 'blok.blok', 'plotting.plotcode', 'bln_amat')
                 ->orderBy('plot_nama');
 
 
             $chartDataResult = $chartDataQuery->get();
             $chartDataResult->transform(function ($item) {
-                $item->umur_tanam = ceil(Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now())) . ' Bulan';
+                $item->umur_tanam = ceil(Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now())) . ' Bulan';
                 return $item;
             });
 
             $xAxis = $chartDataResult->map(function ($item) use ($kdCompHPT, $kdBlokHPT, $kdPlotHPT) {
                 if (!empty($kdCompHPT) && empty($kdBlokHPT) && empty($kdPlotHPT)) {
-                    return $item->umur_tanam . ' - ' . $item->perusahaan_nama;
+                    return $item->umur_tanam . ' - ' . $item->company_nama;
                 } elseif (empty($kdCompHPT) && !empty($kdBlokHPT) && empty($kdPlotHPT)) {
                     return $item->umur_tanam . ' - ' . $item->blok_nama;
                 } elseif (empty($kdCompHPT) && empty($kdBlokHPT) && !empty($kdPlotHPT)) {
                     return $item->plot_nama . ' - ' . $item->umur_tanam;
                 } elseif (!empty($kdCompHPT) && empty($kdBlokHPT) && !empty($kdPlotHPT)) {
-                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->perusahaan_nama;
+                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->company_nama;
                 } elseif (empty($kdCompHPT) && !empty($kdBlokHPT) && !empty($kdPlotHPT)) {
                     return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->blok_nama;
                 } elseif (!empty($kdCompHPT) && !empty($kdBlokHPT) && empty($kdPlotHPT)) {
-                    return $item->umur_tanam . ' - ' . $item->blok_nama . ' - ' . $item->perusahaan_nama;
+                    return $item->umur_tanam . ' - ' . $item->blok_nama . ' - ' . $item->company_nama;
                 } else {
-                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->blok_nama . ' - ' . $item->perusahaan_nama;
+                    return $item->plot_nama . ' - ' . $item->umur_tanam . ' - ' . $item->blok_nama . ' - ' . $item->company_nama;
                 }
             })->unique()->values();
 
@@ -404,8 +404,8 @@ class DashboardController extends Controller
                                 return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->blok_nama == $blok;
                             } elseif (!empty($kdCompHPT) && empty($kdBlokHPT) && empty($kdPlotHPT)) {
                                 $umur_tanam = explode(' - ', $x)[0];
-                                $perusahaan = explode(' - ', $x)[1];
-                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[1];
+                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->company_nama == $company;
                             } elseif (empty($kdCompHPT) && empty($kdBlokHPT) && !empty($kdPlotHPT)) {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
@@ -413,8 +413,8 @@ class DashboardController extends Controller
                             } elseif (!empty($kdCompHPT) && empty($kdBlokHPT) && !empty($kdPlotHPT)) {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
-                                $perusahaan = explode(' - ', $x)[2];
-                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[2];
+                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->company_nama == $company;
                             } elseif (empty($kdCompHPT) && !empty($kdBlokHPT) && !empty($kdPlotHPT)) {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
@@ -423,14 +423,14 @@ class DashboardController extends Controller
                             } elseif (!empty($kdCompHPT) && !empty($kdBlokHPT) && empty($kdPlotHPT)) {
                                 $umur_tanam = explode(' - ', $x)[0];
                                 $blok = explode(' - ', $x)[1];
-                                $perusahaan = explode(' - ', $x)[2];
-                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->blok_nama == $blok && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[2];
+                                return $item->bln_amat == $legend && $item->umur_tanam == $umur_tanam && $item->blok_nama == $blok && $item->company_nama == $company;
                             } else {
                                 $plot = explode(' - ', $x)[0];
                                 $umur_tanam = explode(' - ', $x)[1];
                                 $blok = explode(' - ', $x)[2];
-                                $perusahaan = explode(' - ', $x)[3];
-                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->blok_nama == $blok && $item->perusahaan_nama == $perusahaan;
+                                $company = explode(' - ', $x)[3];
+                                return $item->bln_amat == $legend && $item->plot_nama == $plot && $item->umur_tanam == $umur_tanam && $item->blok_nama == $blok && $item->company_nama == $company;
                             }
                         })->avg('total'),
                         2
@@ -446,20 +446,20 @@ class DashboardController extends Controller
             }
         }
 
-        $kdCompHPTOpt = DB::table('perusahaan')
-            ->join('hpt_hdr', 'perusahaan.kd_comp', '=', 'hpt_hdr.kd_comp')
-            ->select('perusahaan.kd_comp', 'perusahaan.nama')
+        $kdCompHPTOpt = DB::table('company')
+            ->join('hpt_hdr', 'company.companycode', '=', 'hpt_hdr.companycode')
+            ->select('company.companycode', 'company.nama')
             ->distinct()
             ->get();
         $kdBlokHPTOpt = DB::table('blok')
-            ->join('hpt_hdr', 'blok.kd_blok', '=', 'hpt_hdr.kd_blok')
-            ->select('blok.kd_blok')
+            ->join('hpt_hdr', 'blok.blok', '=', 'hpt_hdr.blok')
+            ->select('blok.blok')
             ->distinct()
             ->get();
         $kdPlotHPTOpt = DB::table('plotting')
-            ->join('hpt_hdr', 'plotting.kd_plot', '=', 'hpt_hdr.kd_plot')
-            ->select('plotting.kd_plot')
-            ->orderByRaw("LEFT(plotting.kd_plot, 1), CAST(SUBSTRING(plotting.kd_plot, 2) AS UNSIGNED)")
+            ->join('hpt_hdr', 'plotting.plotcode', '=', 'hpt_hdr.plotcode')
+            ->select('plotting.plotcode')
+            ->orderByRaw("LEFT(plotting.plotcode, 1), CAST(SUBSTRING(plotting.plotcode, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 

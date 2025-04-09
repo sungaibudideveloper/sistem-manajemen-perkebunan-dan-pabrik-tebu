@@ -8,31 +8,31 @@ class Blok extends Model
 {
     public $incrementing = false;
     protected $table = 'blok';
-    protected $primaryKey = ['kd_blok', 'kd_comp'];
+    protected $primaryKey = ['blok', 'companycode'];
     protected $keyType = 'char';
-    protected $fillable = ['kd_blok', 'nama', 'kd_comp', 'usernm', 'created_at'];
+    protected $fillable = ['blok', 'nama', 'companycode', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {
-        $this->attributes['created_at'] = $value;
+        $this->attributes['createdat'] = $value;
     }
 
-    // Getter untuk mendapatkan nilai created_at dari created_at
+    // Getter untuk mendapatkan nilai createdat dari createdat
     public function getCreatedAtAttribute()
     {
-        return $this->attributes['created_at'];
+        return $this->attributes['createdat'];
     }
 
     protected function setKeysForSaveQuery($query)
     {
-        $query->where('kd_blok', $this->getAttribute('kd_blok'))
-              ->where('kd_comp', $this->getAttribute('kd_comp'));
+        $query->where('blok', $this->getAttribute('blok'))
+              ->where('companycode', $this->getAttribute('companycode'));
 
         return $query;
     }
 
     // public function kode()
     // {
-    //     return $this->belongsTo(Perusahaan::class, 'kd_comp', 'kd_comp');
+    //     return $this->belongsTo(company::class, 'companycode', 'companycode');
     // }
 }

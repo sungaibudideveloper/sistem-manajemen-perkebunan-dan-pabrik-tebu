@@ -53,20 +53,20 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-1' }}">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_plot }}</td>
+                                    {{ $item->plot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->luas_area }}</td>
+                                    {{ $item->luasarea }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->jarak_tanam }}</td>
+                                    {{ $item->jaraktanam }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_comp }}</td>
+                                    {{ $item->companycode }}</td>
                                 @if (auth()->user() &&
                                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                         <div class="flex items-center justify-center">
                                             @if (auth()->user() && in_array('Edit Plotting', json_decode(auth()->user()->permissions ?? '[]')))
                                                 <button
-                                                    onclick="openEditModal('{{ $item->kd_plot }}', '{{ $item->luas_area }}', '{{ $item->jarak_tanam }}', '{{ $item->kd_comp }}')"
+                                                    onclick="openEditModal('{{ $item->plot }}', '{{ $item->luasarea }}', '{{ $item->jaraktanam }}', '{{ $item->companycode }}')"
                                                     class="group flex items-center edit-button"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -95,8 +95,8 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="button" class="group flex delete-button"
-                                                        data-kd-plot="{{ $item->kd_plot }}"
-                                                        data-kd-comp="{{ $item->kd_comp }}">
+                                                        data-kd-plot="{{ $item->plot }}"
+                                                        data-kd-comp="{{ $item->companycode }}">
                                                         <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                                             aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                                             width="24" height="24" fill="none"
@@ -161,17 +161,17 @@
                 <form class="p-4 md:p-5" id="crud-form" action="" method="POST">
                     @csrf
                     <input type="hidden" name="_method" id="crud-method" value="POST">
-                    <input type="hidden" name="kd_comp" id="kd_comp" value="{{ session('dropdown_value') }}">
+                    <input type="hidden" name="companycode" id="companycode" value="{{ session('dropdown_value') }}">
 
                     <div class="mb-4">
                         <label class="block text-md">Plot</label>
-                        <input type="text" name="kd_plot" id="kd_plot" value="" autocomplete="off"
+                        <input type="text" name="plot" id="plot" value="" autocomplete="off"
                             maxlength="5" class="rounded-md p-2 w-full max-w-[20ch] border-gray-300" required>
                     </div>
 
                     <div class="mb-4">
                         <label class="block text-md">Luas Area</label>
-                        <input type="number" id="luas_area" name="luas_area" autocomplete="off" max="9999.99"
+                        <input type="number" id="luasarea" name="luasarea" autocomplete="off" max="9999.99"
                             value="" min="0" step="0.01"
                             class="rounded-md p-2 w-full max-w-[20ch] border-gray-300" required inputmode="decimal"
                             pattern="[0-9]+([.][0-9]+)?" onkeypress="return hanyaAngka(event)">
@@ -179,7 +179,7 @@
 
                     <div class="mb-4">
                         <label class="block text-md">Jarak Tanam</label>
-                        <input type="number" id="jarak_tanam" name="jarak_tanam" autocomplete="off" value=""
+                        <input type="number" id="jaraktanam" name="jaraktanam" autocomplete="off" value=""
                             min="0" class="rounded-md p-2 w-full max-w-[20ch] border-gray-300" required
                             inputmode="numeric" pattern="[0-9]*" onkeypress="return hanyaAngka(event)">
                     </div>
@@ -229,7 +229,7 @@
                 let kdPlot = this.getAttribute('data-kd-plot');
                 let kdComp = this.getAttribute('data-kd-comp');
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                    fetch(`{{ route('master.plotting.destroy', ['kd_plot' => '__kdPlot__', 'kd_comp' => '__kdComp__']) }}`
+                    fetch(`{{ route('master.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                             .replace('__kdPlot__', kdPlot)
                             .replace('__kdComp__', kdComp), {
                                 method: 'POST',
@@ -260,10 +260,10 @@
         const modal = document.getElementById("crud-modal");
         const form = document.getElementById("crud-form");
         const modalTitle = document.getElementById("modal-title");
-        const kdPlotInput = document.getElementById("kd_plot");
-        const luasAreaInput = document.getElementById("luas_area");
-        const jarakTanamInput = document.getElementById("jarak_tanam");
-        const kdCompInput = document.getElementById("kd_comp");
+        const kdPlotInput = document.getElementById("plot");
+        const luasAreaInput = document.getElementById("luasarea");
+        const jarakTanamInput = document.getElementById("jaraktanam");
+        const kdCompInput = document.getElementById("companycode");
         const crudMethod = document.getElementById("crud-method");
 
         function openCreateModal() {
@@ -296,7 +296,7 @@
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute =
-                "{{ route('master.plotting.update', ['kd_plot' => '__kdPlot__', 'kd_comp' => '__kdComp__']) }}";
+                "{{ route('master.plotting.update', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}";
             form.action = editRoute.replace('__kdPlot__', kdPlot).replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
             kdPlotInput.value = kdPlot;
@@ -311,7 +311,7 @@
 
         function deleteRow(kdPlot, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.plotting.destroy', ['kd_plot' => '__kdPlot__', 'kd_comp' => '__kdComp__']) }}`
+                fetch(`{{ route('master.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                         .replace('__kdPlot__', kdPlot)
                         .replace('__kdComp__', kdComp), {
                             method: "DELETE",
@@ -364,16 +364,16 @@
                         ${newData.no}
                     </span>
                 </td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.kd_plot}</td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.luas_area}</td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.jarak_tanam}</td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.kd_comp}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.plot}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.luasarea}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.jaraktanam}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.companycode}</td>
                 @if (auth()->user() &&
                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                 <td class="py-2 px-4 border-b border-gray-300">
                     <div class="flex items-center justify-center">
                         @if (auth()->user() && in_array('Edit Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.kd_plot}','${newData.luas_area}','${newData.jarak_tanam}','${newData.kd_comp}')">
+                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.plot}','${newData.luasarea}','${newData.jaraktanam}','${newData.companycode}')">
                             <svg
                                 class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -398,7 +398,7 @@
                         <span class="w-0.5"></span>
                         @endif
                         @if (auth()->user() && in_array('Hapus Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex delete-button" data-kd_plot="${newData.kd_plot}" data-kd_comp="${newData.kd_comp}">
+                        <button class="group flex delete-button" data-plot="${newData.plot}" data-companycode="${newData.companycode}">
                             <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                 width="24" height="24" fill="none"
@@ -423,7 +423,7 @@
             `;
             tableBody.prepend(newRow);
             newRow.querySelector(".delete-button").addEventListener("click", function() {
-                deleteRow(this.dataset.kd_plot, this.dataset.kd_comp, newRow);
+                deleteRow(this.dataset.plot, this.dataset.companycode, newRow);
             });
         }
     </script>
@@ -438,14 +438,14 @@
         });
     </script>
     <script>
-        document.getElementById('luas_area').addEventListener('input', function(e) {
+        document.getElementById('luasarea').addEventListener('input', function(e) {
             const value = e.target.value;
 
             if (!/^\d{0,2}(\.\d{0,2})?$/.test(value)) {
                 e.target.value = value.slice(0, -1);
             }
         });
-        document.getElementById('jarak_tanam').addEventListener('input', function(e) {
+        document.getElementById('jaraktanam').addEventListener('input', function(e) {
             const value = e.target.value;
 
             if (!/^\d{0,3}(\.\d{0,0})?$/.test(value)) {

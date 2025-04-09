@@ -10,13 +10,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('mapping', function (Blueprint $table) {
-            $table->char('kd_plotsample', 5)->default('');
-            $table->char('kd_blok', 2)->default('');
-            $table->char('kd_plot', 5)->default('');
-            $table->char('kd_comp', 4)->default('');
+            $table->char('plotcodesample', 5)->default('');
+            $table->char('blok', 2)->default('');
+            $table->char('plotcode', 5)->default('');
+            $table->char('companycode', 4)->default('');
             $table->string('usernm', 50)->default('');
             $table->timestamps();
-            $table->primary(['kd_plotsample', 'kd_blok', 'kd_plot', 'kd_comp']);
+            $table->primary(['plotcodesample', 'blok', 'plotcode', 'companycode']);
         });
     }
 

@@ -23,8 +23,8 @@ class UserSeeder extends Seeder
         ]);
         Usercomp::create([
             'usernm' => 'Admin',
-            'kd_comp' => 'SB',
-            'user_input' => 'Admin',
+            'companycode' => 'SB',
+            'inputby' => 'Admin',
         ]);
     }
 }

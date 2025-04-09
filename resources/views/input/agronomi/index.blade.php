@@ -135,18 +135,18 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->perusahaan->nama }}
+                                    {{ $item->company->nama }}
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->no_sample }}</td>
                                 </td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_plotsample }}</td>
+                                    {{ $item->plotcodesample }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->varietas }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->kat }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->tgltanam }}</td>
+                                    {{ $item->tanggaltanam }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->tglamat }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -158,7 +158,7 @@
                                     class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
                                     <div class="flex items-center justify-center">
                                         <button class="group flex items-center"
-                                            onclick="showList('{{ $item->no_sample }}', '{{ $item->kd_comp }}', '{{ $item->tgltanam }}')"><svg
+                                            onclick="showList('{{ $item->no_sample }}', '{{ $item->companycode }}', '{{ $item->tanggaltanam }}')"><svg
                                                 class="w-6 h-6 text-gray-500 dark:text-white group-hover:hidden"
                                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
                                                 height="24" fill="none" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@
                                         </button>
                                         @if (auth()->user() && in_array('Edit Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
                                             @if ($item->status === 'Unposted')
-                                                <a href="{{ route('input.agronomi.edit', ['no_sample' => $item->no_sample, 'kd_comp' => $item->kd_comp, 'tgltanam' => $item->tgltanam]) }}"
+                                                <a href="{{ route('input.agronomi.edit', ['no_sample' => $item->no_sample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
                                                     class="group flex items-center"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -206,7 +206,7 @@
                                         @if (auth()->user() && in_array('Hapus Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
                                             @if ($item->status === 'Unposted')
                                                 <form
-                                                    action="{{ route('input.agronomi.destroy', ['no_sample' => $item->no_sample, 'kd_comp' => $item->kd_comp, 'tgltanam' => $item->tgltanam]) }}"
+                                                    action="{{ route('input.agronomi.destroy', ['no_sample' => $item->no_sample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
                                                     method="POST" class="inline">@csrf @method('DELETE')
                                                     <button type="submit" class="group flex"
                                                         onclick="return confirm('Yakin ingin menghapus data ini?')"><svg
@@ -301,7 +301,7 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No. Sample</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kebun</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Blok</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">block</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luas</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Varietas</th>
@@ -350,27 +350,27 @@
     </style>
 
     <script>
-        function showList(no_sample, kd_comp, tgltanam) {
+        function showList(no_sample, companycode, tanggaltanam) {
             const modal = document.getElementById('listModal');
             const tableBody = document.getElementById('listTableBody');
 
             tableBody.innerHTML = '';
 
             const url =
-                `{{ route('input.agronomi.show', ['no_sample' => '__no_sample__', 'kd_comp' => '__kd_comp__', 'tgltanam' => '__tgltanam__']) }}`
+                `{{ route('input.agronomi.show', ['no_sample' => '__no_sample__', 'companycode' => '__companycode__', 'tanggaltanam' => '__tanggaltanam__']) }}`
                 .replace('__no_sample__', no_sample)
-                .replace('__kd_comp__', kd_comp)
-                .replace('__tgltanam__', tgltanam);
+                .replace('__companycode__', companycode)
+                .replace('__tanggaltanam__', tanggaltanam);
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     data.forEach(item => {
 
-                        const tglTanam = new Date(item.tgltanam);
+                        const tanggaltanam = new Date(item.tanggaltanam);
                         const now = new Date();
 
-                        const diffInTime = now - tglTanam;
+                        const diffInTime = now - tanggaltanam;
                         const diffInMonths = Math.ceil(diffInTime / (1000 * 3600 * 24 * 30));
                         const umurTanam = diffInMonths >= 0 ? `${diffInMonths} Bulan` : 'Tunggu Tanggal Tanam';
 
@@ -384,17 +384,17 @@
                                 <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.no_sample}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.compName}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.blokName}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.blockName}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plotName}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.luas_area}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.luasarea}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.varietas}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.kat}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.tgltanam}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.tanggaltanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${umurTanam}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.jarak_tanam}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.jaraktanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.tglamat}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${month}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.no_urut}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.nourut}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.jm_batang}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.pan_gap}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${(item.per_gap*100).toFixed(2)}%</td>

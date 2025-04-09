@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('usercomp', function (Blueprint $table) {
             $table->string('usernm', 50)->default('');
-            $table->string('kd_comp',255);
-            $table->string('user_input', 50)->default('');
+            $table->string('companycode',255);
+            $table->string('inputby', 50)->default('');
             $table->timestamps();
-            $table->primary(['usernm', 'kd_comp']);
+            $table->primary(['usernm', 'companycode']);
         });
     }
 

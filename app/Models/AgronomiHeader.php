@@ -9,24 +9,24 @@ class AgronomiHeader extends Model
 {
     public $incrementing = false;
     protected $table = 'agro_hdr';
-    protected $primaryKey = ['no_sample', 'kd_comp', 'tgltanam'];
-    protected $fillable = ['no_sample', 'kd_comp', 'tgltanam', 'tglamat', 'kd_blok', 'kd_plot', 'kd_plotsample', 'varietas', 'kat', 'user_input', 'created_at'];
+    protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam'];
+    protected $fillable = ['no_sample', 'companycode', 'tanggaltanam', 'tglamat', 'blok', 'plotcode', 'plotcodesample', 'varietas', 'kat', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {
-        $this->attributes['created_at'] = $value;
+        $this->attributes['createdat'] = $value;
     }
 
     public function getCreatedAtAttribute()
     {
-        return $this->attributes['created_at'];
+        return $this->attributes['createdat'];
     }
 
     protected function setKeysForSaveQuery($query)
     {
         $query->where('no_sample', $this->getAttribute('no_sample'))
-            ->where('kd_comp', $this->getAttribute('kd_comp'))
-            ->where('tgltanam', $this->getAttribute('tgltanam'));
+            ->where('companycode', $this->getAttribute('companycode'))
+            ->where('tanggaltanam', $this->getAttribute('tanggaltanam'));
 
         return $query;
     }
@@ -34,34 +34,34 @@ class AgronomiHeader extends Model
     public function lists()
     {
         return $this->hasMany(AgronomiList::class, 'no_sample', 'no_sample')->where(function ($query) {
-            $query->whereColumn('kd_comp', 'kd_comp')
-                ->whereColumn('tgltanam', 'tgltanam');
+            $query->whereColumn('companycode', 'companycode')
+                ->whereColumn('tanggaltanam', 'tanggaltanam');
         });
     }
 
 
     public function mapping()
     {
-        return $this->belongsTo(Mapping::class, 'kd_plotsample', 'kd_plotsample');
+        return $this->belongsTo(Mapping::class, 'plotcodesample', 'plotcodesample');
     }
 
-    public function perusahaan()
+    public function company()
     {
-        return $this->belongsTo(Perusahaan::class, 'kd_comp', 'kd_comp');
+        return $this->belongsTo(company::class, 'companycode', 'companycode');
     }
 
     public function blok()
     {
-        return $this->belongsTo(Blok::class, 'kd_blok', 'kd_blok');
+        return $this->belongsTo(Blok::class, 'blok', 'blok');
     }
 
     public function plot()
     {
-        return $this->belongsTo(Plotting::class, 'kd_plot', 'kd_plot');
+        return $this->belongsTo(Plotting::class, 'plotcode', 'plotcode');
     }
 
     public function userComp()
     {
-        return $this->belongsTo(Usercomp::class, 'kd_comp', 'kd_comp');
+        return $this->belongsTo(Usercomp::class, 'companycode', 'companycode');
     }
 }

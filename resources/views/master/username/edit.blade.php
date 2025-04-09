@@ -11,19 +11,19 @@
         @enderror
 
         <form
-            action="{{ route('master.username.update', ['usernm' => $username->usernm, 'kd_comp' => $usercomp->kd_comp]) }}"
+            action="{{ route('master.username.update', ['userid' => $user->userid, 'companycode' => $usercompany->companycode]) }}"
             method="POST">
             @csrf
             @method('PUT')
             <div class="gap-4">
                 <div class="mb-4">
                     <label class="block text-md">Username</label>
-                    <input type="text" name="usernm" value="{{ $username->usernm }}" autocomplete="off"
+                    <input type="text" name="usernm" value="{{ $user->userid }}" autocomplete="off"
                         class="border rounded-md border-gray-300 p-2 w-auto focus:ring-0 focus:border-gray-300 bg-gray-100 text-gray-600" readonly>
                 </div>
                 <div class="mb-4">
                     <label class="block text-md">Name</label>
-                    <input type="text" name="name" value="{{ $username->name }}" autocomplete="off"
+                    <input type="text" name="name" value="{{ $user->name }}" autocomplete="off"
                         class="border rounded-md border-gray-300 p-2 w-auto" required>
                 </div>
                 <div class="mb-4">
@@ -48,17 +48,17 @@
                         <div
                             class="mt-1 dropdown-menu absolute hidden border border-gray-300 bg-white rounded-md max-h-60 overflow-auto z-10 shadow-sm">
                             @php
-                                $oldKdComp = is_array(old('kd_comp'))
-                                    ? old('kd_comp')
-                                    : explode(',', old('kd_comp', $usercomp->kd_comp));
+                                $oldKdComp = is_array(old('companycode'))
+                                    ? old('companycode')
+                                    : explode(',', old('companycode', $usercompany->companycode));
                             @endphp
 
                             @foreach ($company as $comp)
                                 <label class="flex items-center gap-x-2 px-4 py-2 cursor-pointer hover:bg-gray-200">
-                                    <input type="hidden" name="kd_comp[]" value="">
-                                    <input type="checkbox" name="kd_comp[]" value="{{ $comp->kd_comp }}" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                        {{ in_array($comp->kd_comp, $oldKdComp) ? 'checked' : '' }}>
-                                    {{ $comp->kd_comp }}
+                                    <input type="hidden" name="companycode[]" value="">
+                                    <input type="checkbox" name="companycode[]" value="{{ $comp->companycode }}" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                        {{ in_array($comp->companycode, $oldKdComp) ? 'checked' : '' }}>
+                                    {{ $comp->companycode }}
                                 </label>
                             @endforeach
                         </div>

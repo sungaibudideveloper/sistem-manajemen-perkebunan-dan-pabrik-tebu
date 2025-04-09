@@ -28,7 +28,7 @@ class PostController extends Controller
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->kd_comp);
+        $companyArray = explode(',', Auth::user()->userComp->companycode);
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -45,17 +45,17 @@ class PostController extends Controller
 
         $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
 
-        $posts = $model::orderBy('created_at', 'desc')
-            ->with(['lists', 'perusahaan'])
-            ->where('kd_comp', '=', $dropdownValue)
+        $posts = $model::orderBy('createdat', 'desc')
+            ->with(['lists', 'company'])
+            ->where('companycode', '=', $dropdownValue)
             ->where('status', '=', 'Unposted')
-            ->when($startDate, fn($query) => $query->whereDate('created_at', '>=', $startDate))
-            ->when($endDate, fn($query) => $query->whereDate('created_at', '<=', $endDate))
+            ->when($startDate, fn($query) => $query->whereDate('createdat', '>=', $startDate))
+            ->when($endDate, fn($query) => $query->whereDate('createdat', '<=', $endDate))
             ->paginate($perPage);
 
         foreach ($posts as $index => $item) {
-            if (!empty($item->tgltanam)) {
-                $item->umur_tanam = Carbon::parse($item->tgltanam)->diffInMonths(Carbon::now());
+            if (!empty($item->tanggaltanam)) {
+                $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
             } else {
                 $item->umur_tanam = null;
             }
@@ -84,8 +84,8 @@ class PostController extends Controller
             $parts = explode(',', $item);
             return [
                 'no_sample' => $parts[0] ?? null,
-                'kd_comp'   => $parts[1] ?? null,
-                'tgltanam'  => $parts[2] ?? null,
+                'companycode'   => $parts[1] ?? null,
+                'tanggaltanam'  => $parts[2] ?? null,
             ];
         }, $selectedItems);
 
@@ -100,8 +100,8 @@ class PostController extends Controller
         foreach ($tables as $table) {
             DB::table($table)
                 ->whereIn('no_sample', array_column($selectedItems, 'no_sample'))
-                ->whereIn('kd_comp', array_column($selectedItems, 'kd_comp'))
-                ->whereIn('tgltanam', array_column($selectedItems, 'tgltanam'))
+                ->whereIn('companycode', array_column($selectedItems, 'companycode'))
+                ->whereIn('tanggaltanam', array_column($selectedItems, 'tanggaltanam'))
                 ->update(['status' => 'Posted', 'count' => DB::raw('count + 1')]);
         }
 

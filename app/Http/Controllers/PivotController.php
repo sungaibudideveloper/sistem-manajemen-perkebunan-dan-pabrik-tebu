@@ -22,25 +22,25 @@ class PivotController extends Controller
         $chartDataQuery = DB::table('agro_hdr')
             ->join('agro_lst', function ($join) {
                 $join->on('agro_hdr.no_sample', '=', 'agro_lst.no_sample')
-                    ->on('agro_hdr.kd_comp', '=', 'agro_lst.kd_comp');
+                    ->on('agro_hdr.companycode', '=', 'agro_lst.companycode');
             })
-            ->join('perusahaan', 'agro_hdr.kd_comp', '=', 'perusahaan.kd_comp')
+            ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
             ->join('plotting', function ($join) {
-                $join->on('agro_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->on('agro_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->on('agro_hdr.companycode', '=', 'plotting.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('agro_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('agro_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
             })
-            ->where('agro_lst.kd_comp', session('dropdown_value'))
-            ->where('agro_hdr.kd_comp', session('dropdown_value'))
+            ->where('agro_lst.companycode', session('dropdown_value'))
+            ->where('agro_hdr.companycode', session('dropdown_value'))
             ->where('agro_hdr.status', '=', 'Posted')
             ->where('agro_lst.status', '=', 'Posted')
             ->select(
-                'perusahaan.nama as Perusahaan',
-                'blok.kd_blok as Blok',
-                'plotting.kd_plot as Plot',
+                'company.nama as company',
+                'blok.blok as Blok',
+                'plotting.plotcode as Plot',
                 DB::raw("MONTH(agro_hdr.tglamat) as Bulan"),
                 DB::raw("AVG(per_germinasi) as Germinasi"),
                 DB::raw("AVG(per_gap) as GAP"),
@@ -51,7 +51,7 @@ class PivotController extends Controller
             ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
                 return $query->whereBetween('agro_hdr.tglamat', [$startDate, $endDate]);
             })
-            ->groupBy('Bulan', 'Perusahaan', 'Blok', 'Plot')
+            ->groupBy('Bulan', 'company', 'Blok', 'Plot')
             ->orderBy('Bulan', 'asc')
             ->get();
 
@@ -92,7 +92,7 @@ class PivotController extends Controller
         $startMergeBlokRow = 2;
         $startMergePlotRow = 2;
         foreach ($chartDataQuery as $index => $data) {
-            $currentCompany = $data->Perusahaan;
+            $currentCompany = $data->company;
             $currentBlok = $data->Blok;
             $currentPlot = $data->Plot;
 
@@ -133,21 +133,21 @@ class PivotController extends Controller
             $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
             $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
 
-            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->Perusahaan !== $currentCompany) {
+            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->company !== $currentCompany) {
                 if ($row > $startMergeCompanyRow) {
                     $sheet->mergeCells("A{$startMergeCompanyRow}:A{$row}");
                     $sheet->getStyle("A{$startMergeCompanyRow}:A{$row}")->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
                 }
             }
 
-            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->Blok !== $currentBlok || $chartDataQuery[$index + 1]->Perusahaan !== $currentCompany) {
+            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->Blok !== $currentBlok || $chartDataQuery[$index + 1]->company !== $currentCompany) {
                 if ($row > $startMergeBlokRow) {
                     $sheet->mergeCells("B{$startMergeBlokRow}:B{$row}");
                     $sheet->getStyle("B{$startMergeBlokRow}:B{$row}")->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
                 }
             }
 
-            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->Plot !== $currentPlot || $chartDataQuery[$index + 1]->Blok !== $currentBlok || $chartDataQuery[$index + 1]->Perusahaan !== $currentCompany) {
+            if (!isset($chartDataQuery[$index + 1]) || $chartDataQuery[$index + 1]->Plot !== $currentPlot || $chartDataQuery[$index + 1]->Blok !== $currentBlok || $chartDataQuery[$index + 1]->company !== $currentCompany) {
                 if ($row > $startMergePlotRow) {
                     $sheet->mergeCells("C{$startMergePlotRow}:C{$row}");
                     $sheet->getStyle("C{$startMergePlotRow}:C{$row}")->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
@@ -176,9 +176,9 @@ class PivotController extends Controller
 
     public function pivotTableHPT(Request $request)
     {
-        $kdCompAgronomi = $request->input('kd_comp', []);
-        $kdBlokAgronomi = $request->input('kd_blok', []);
-        $kdPlotAgronomi = $request->input('kd_plot', []);
+        $kdCompAgronomi = $request->input('companycode', []);
+        $kdBlokAgronomi = $request->input('blok', []);
+        $kdPlotAgronomi = $request->input('plotcode', []);
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
@@ -186,21 +186,21 @@ class PivotController extends Controller
         $chartDataQuery = DB::table('hpt_hdr')
             ->join('hpt_lst', function ($join) {
                 $join->on('hpt_hdr.no_sample', '=', 'hpt_lst.no_sample')
-                    ->on('hpt_hdr.kd_comp', '=', 'hpt_lst.kd_comp');
+                    ->on('hpt_hdr.companycode', '=', 'hpt_lst.companycode');
             })
             ->join('plotting', function ($join) {
-                $join->on('hpt_hdr.kd_plot', '=', 'plotting.kd_plot')
-                    ->on('hpt_hdr.kd_comp', '=', 'plotting.kd_comp');
+                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
+                    ->on('hpt_hdr.companycode', '=', 'plotting.companycode');
             })
-            ->join('perusahaan', 'hpt_hdr.kd_comp', '=', 'perusahaan.kd_comp')
+            ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
             ->leftJoin('blok', function ($join) {
-                $join->on('hpt_hdr.kd_blok', '=', 'blok.kd_blok')
-                    ->whereColumn('hpt_hdr.kd_comp', '=', 'blok.kd_comp');
+                $join->on('hpt_hdr.blok', '=', 'blok.blok')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
             })
             ->select(
-                'perusahaan.nama as Perusahaan',
-                'blok.kd_blok as Blok',
-                'plotting.kd_plot as Plot',
+                'company.nama as company',
+                'blok.blok as Blok',
+                'plotting.plotcode as Plot',
                 DB::raw("MONTH(hpt_hdr.tglamat) as Bulan"),
                 DB::raw("AVG(per_ppt) as PPT"),
                 DB::raw("AVG(per_pbt) as PBT"),
@@ -215,19 +215,19 @@ class PivotController extends Controller
                 DB::raw("AVG(serang_smut) as SMUT"),
             )
             ->when($kdCompAgronomi, function ($query) use ($kdCompAgronomi) {
-                return $query->whereIn('hpt_hdr.kd_comp', $kdCompAgronomi);
+                return $query->whereIn('hpt_hdr.companycode', $kdCompAgronomi);
             })
             ->when($kdBlokAgronomi, function ($query) use ($kdBlokAgronomi) {
-                return $query->whereIn('hpt_hdr.kd_blok', $kdBlokAgronomi);
+                return $query->whereIn('hpt_hdr.blok', $kdBlokAgronomi);
             })
             ->when($kdPlotAgronomi, function ($query) use ($kdPlotAgronomi) {
-                return $query->whereIn('hpt_hdr.kd_plot', $kdPlotAgronomi);
+                return $query->whereIn('hpt_hdr.plotcode', $kdPlotAgronomi);
             })
             ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
                 return $query->whereBetween('hpt_hdr.tglamat', [$startDate, $endDate]);
             })
-            ->groupBy('Bulan', 'Perusahaan', 'Blok', 'Plot')
-            ->orderBy('Perusahaan', 'asc')
+            ->groupBy('Bulan', 'company', 'Blok', 'Plot')
+            ->orderBy('company', 'asc')
             ->get();
 
         $spreadsheet = new Spreadsheet();
@@ -258,7 +258,7 @@ class PivotController extends Controller
         $row = 2;
         foreach ($chartDataQuery as $data) {
             $sheet->fromArray([
-                $data->Perusahaan,
+                $data->company,
                 $data->Blok,
                 $data->Plot,
                 Carbon::createFromFormat('m', $data->Bulan)->translatedFormat('F'),

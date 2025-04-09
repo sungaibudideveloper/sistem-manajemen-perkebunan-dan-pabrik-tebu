@@ -8,12 +8,12 @@ class AgronomiList extends Model
 {
     public $incrementing = false;
     protected $table = 'agro_lst';
-    protected $primaryKey = ['no_sample', 'kd_comp', 'tgltanam'];
+    protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam'];
     protected $fillable = [
         'no_sample',
-        'kd_comp',
-        'tgltanam',
-        'no_urut',
+        'companycode',
+        'tanggaltanam',
+        'nourut',
         'jm_batang',
         'pan_gap',
         'per_gap',
@@ -30,15 +30,15 @@ class AgronomiList extends Model
         'd_sekunder',
         'd_tersier',
         'd_kuarter',
-        'user_input',
-        'created_at'
+        'inputby',
+        'createdat'
     ];
 
     protected function setKeysForSaveQuery($query)
     {
         return $query->where('no_sample', $this->getAttribute('no_sample'))
-            ->where('kd_comp', $this->getAttribute('kd_comp'))
-            ->where('no_urut', $this->getAttribute('no_urut'));
+            ->where('companycode', $this->getAttribute('companycode'))
+            ->where('nourut', $this->getAttribute('nourut'));
     }
 
     public function header()
@@ -50,29 +50,29 @@ class AgronomiList extends Model
     // {
     //     return $this->belongsTo(AgronomiHeader::class)->where(function ($query) {
     //         $query->whereColumn('no_sample', 'no_sample')
-    //             ->whereColumn('kd_comp', 'kd_comp')
-    //             ->whereColumn('tgltanam', 'tgltanam');
+    //             ->whereColumn('companycode', 'companycode')
+    //             ->whereColumn('tanggaltanam', 'tanggaltanam');
     //     });
     // }
 
-    public function perusahaan()
+    public function company()
     {
-        return $this->belongsTo(Perusahaan::class, 'kd_comp', 'kd_comp');
+        return $this->belongsTo(company::class, 'companycode', 'companycode');
     }
 
     public function blok()
     {
-        return $this->belongsTo(Blok::class, 'kd_blok', 'kd_blok');
+        return $this->belongsTo(Blok::class, 'blok', 'blok');
     }
 
     public function plot()
     {
-        return $this->belongsTo(Plotting::class, 'kd_plot', 'kd_plot');
+        return $this->belongsTo(Plotting::class, 'plotcode', 'plotcode');
     }
 
     public function mapping()
     {
-        return $this->belongsTo(Mapping::class, 'kd_plotsample', 'kd_plotsample');
+        return $this->belongsTo(Mapping::class, 'plotcodesample', 'plotcodesample');
     }
     public function user()
     {

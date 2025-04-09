@@ -17,13 +17,13 @@ class UsernameLoginController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'usernm' => 'required',
+            'userid' => 'required',
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($request->only('usernm', 'password'))) {
+        if (Auth::attempt($request->only('userid', 'password'))) {
             $user = Auth::user();
-            $session =  DB::table('sessions')->where('user_id', $user->usernm)->exists();
+            $session =  DB::table('sessions')->where('user_id', $user->userid)->exists();
             if ($session) {
                 Auth::logout();
                 return back()->withErrors(['error' => 'Akun ini sedang digunakan di perangkat lain.']);

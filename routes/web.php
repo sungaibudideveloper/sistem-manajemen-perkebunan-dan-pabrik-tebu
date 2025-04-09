@@ -16,13 +16,13 @@ use App\Http\Controllers\AgronomiController;
 use App\Http\Controllers\PlottingController;
 use App\Http\Controllers\UsernameController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PerusahaanController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
 
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login');
-Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
+Route::any('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
 
 Route::group(['middleware' => 'auth'], function () {
 
@@ -62,23 +62,23 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT')
         ->middleware('permission:Pivot HPT');
 
-    //Perusahaan
+    //company
     Route::group(['middleware' => ['auth', 'permission:Company']], function () {
-        Route::post('/perusahaan', [PerusahaanController::class, 'handle'])->name('master.perusahaan.handle');
-        Route::get('/perusahaan', [PerusahaanController::class, 'index'])->name('master.perusahaan.index');
+        Route::post('/company', [companyController::class, 'handle'])->name('master.company.handle');
+        Route::get('/company', [companyController::class, 'index'])->name('master.company.index');
     });
-    Route::put('perusahaan/{kd_comp}', [PerusahaanController::class, 'update'])->name('master.perusahaan.update')->middleware('permission:Edit Company');
-    Route::delete('perusahaan/{kd_comp}', [PerusahaanController::class, 'destroy'])
-        ->name('master.perusahaan.destroy')->middleware('permission:Hapus Company');
+    Route::put('company/{companycode}', [companyController::class, 'update'])->name('master.company.update')->middleware('permission:Edit Company');
+    Route::delete('company/{companycode}', [companyController::class, 'destroy'])
+        ->name('master.company.destroy')->middleware('permission:Hapus Company');
 
     //Blok
     Route::group(['middleware' => ['auth', 'permission:Blok']], function () {
         Route::get('/blok', [BlokController::class, 'index'])->name('master.blok.index');
         Route::post('/blok', [BlokController::class, 'handle'])->name('master.blok.handle');
     });
-    Route::delete('blok/{kd_blok}/{kd_comp}', [BlokController::class, 'destroy'])
+    Route::delete('blok/{blok}/{companycode}', [BlokController::class, 'destroy'])
         ->name('master.blok.destroy')->middleware('permission:Hapus Blok');
-    Route::put('blok/{kd_blok}/{kd_comp}', [BlokController::class, 'update'])
+    Route::put('blok/{blok}/{companycode}', [BlokController::class, 'update'])
         ->name('master.blok.update')->middleware('permission:Edit Blok');
 
     //Plotting
@@ -86,9 +86,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/plotting', [PlottingController::class, 'handle'])->name('master.plotting.handle');
         Route::get('/plotting', [PlottingController::class, 'index'])->name('master.plotting.index');
     });
-    Route::delete('plotting/{kd_plot}/{kd_comp}', [PlottingController::class, 'destroy'])
+    Route::delete('plotting/{plot}/{companycode}', [PlottingController::class, 'destroy'])
         ->name('master.plotting.destroy')->middleware('permission:Hapus Plotting');
-    Route::put('plotting/{kd_plot}/{kd_comp}', [PlottingController::class, 'update'])
+    Route::put('plotting/{plot}/{companycode}', [PlottingController::class, 'update'])
         ->name('master.plotting.update')->middleware('permission:Edit Plotting');
 
     //Mapping
@@ -97,9 +97,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/mapping', [MappingController::class, 'handle'])->name('master.mapping.handle');
         Route::get('/mapping', [MappingController::class, 'index'])->name('master.mapping.index');
     });
-    Route::delete('mapping/{kd_plotsample}/{kd_blok}/{kd_plot}/{kd_comp}', [MappingController::class, 'destroy'])
+    Route::delete('mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'destroy'])
         ->name('master.mapping.destroy')->middleware('permission:Hapus Mapping');
-    Route::put('mapping/{kd_plotsample}/{kd_blok}/{kd_plot}/{kd_comp}', [MappingController::class, 'update'])
+    Route::put('mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'update'])
         ->name('master.mapping.update')->middleware('permission:Edit Mapping');
 
 
@@ -107,7 +107,7 @@ Route::group(['middleware' => 'auth'], function () {
 
         Route::get('/agronomi', [AgronomiController::class, 'index'])->name('input.agronomi.index');
         Route::post('/agronomi', [AgronomiController::class, 'handle'])->name('input.agronomi.handle');
-        Route::get('agronomi/show/{no_sample}/{kd_comp}/{tgltanam}', [AgronomiController::class, 'show'])
+        Route::get('agronomi/show/{no_sample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'show'])
             ->name('input.agronomi.show');
         Route::post('/agronomi/get-field', [AgronomiController::class, 'getFieldByMapping'])->name('input.agronomi.getFieldByMapping');
         Route::get('/agronomi/check-data', [AgronomiController::class, 'checkData'])->name('input.agronomi.check-data');
@@ -116,12 +116,12 @@ Route::group(['middleware' => 'auth'], function () {
         ->name('input.agronomi.exportExcel')->middleware('permission:Excel Agronomi');
     Route::get('/agronomi/create', [AgronomiController::class, 'create'])
         ->name('input.agronomi.create')->middleware('permission:Create Agronomi');
-    Route::delete('agronomi/{no_sample}/{kd_comp}/{tgltanam}', [AgronomiController::class, 'destroy'])
+    Route::delete('agronomi/{no_sample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'destroy'])
         ->name('input.agronomi.destroy')->middleware('permission:Hapus Agronomi');
     Route::group(['middleware' => ['auth', 'permission:Edit Agronomi']], function () {
-        Route::put('agronomi/{no_sample}/{kd_comp}/{tgltanam}', [AgronomiController::class, 'update'])
+        Route::put('agronomi/{no_sample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'update'])
             ->name('input.agronomi.update');
-        Route::get('agronomi/{no_sample}/{kd_comp}/{tgltanam}/edit', [AgronomiController::class, 'edit'])
+        Route::get('agronomi/{no_sample}/{companycode}/{tanggaltanam}/edit', [AgronomiController::class, 'edit'])
             ->name('input.agronomi.edit');
     });
 
@@ -129,7 +129,7 @@ Route::group(['middleware' => 'auth'], function () {
 
         Route::get('/hpt', [HPTController::class, 'index'])->name('input.hpt.index');
         Route::post('/hpt', [HPTController::class, 'handle'])->name('input.hpt.handle');
-        Route::get('hpt/show/{no_sample}/{kd_comp}/{tgltanam}', [HPTController::class, 'show'])
+        Route::get('hpt/show/{no_sample}/{companycode}/{tanggaltanam}', [HPTController::class, 'show'])
             ->name('input.hpt.show');
         Route::post('/hpt/get-field', [HPTController::class, 'getFieldByMapping'])->name('input.hpt.getFieldByMapping');
         Route::get('/hpt/check-data', [HPTController::class, 'checkData'])->name('input.hpt.check-data');
@@ -138,13 +138,13 @@ Route::group(['middleware' => 'auth'], function () {
         ->name('input.hpt.exportExcel')->middleware('permission:Excel HPT');
     Route::get('/hpt/create', [HPTController::class, 'create'])
         ->name('input.hpt.create')->middleware('permission:Create HPT');
-    Route::delete('hpt/{no_sample}/{kd_comp}/{tgltanam}', [HPTController::class, 'destroy'])
+    Route::delete('hpt/{no_sample}/{companycode}/{tanggaltanam}', [HPTController::class, 'destroy'])
         ->name('input.hpt.destroy')->middleware('permission:Hapus HPT');
     Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 
-        Route::put('hpt/{no_sample}/{kd_comp}/{tgltanam}', [HPTController::class, 'update'])
+        Route::put('hpt/{no_sample}/{companycode}/{tanggaltanam}', [HPTController::class, 'update'])
             ->name('input.hpt.update');
-        Route::get('hpt/{no_sample}/{kd_comp}/{tgltanam}/edit', [HPTController::class, 'edit'])
+        Route::get('hpt/{no_sample}/{companycode}/{tanggaltanam}/edit', [HPTController::class, 'edit'])
             ->name('input.hpt.edit');
     });
 
@@ -155,18 +155,18 @@ Route::group(['middleware' => 'auth'], function () {
     });
     Route::get('/username/create', [UsernameController::class, 'create'])
         ->name('master.username.create')->middleware('permission:Create User');
-    Route::delete('username/{usernm}/{kd_comp}', [UsernameController::class, 'destroy'])
+    Route::delete('username/{userid}/{companycode}', [UsernameController::class, 'destroy'])
         ->name('master.username.destroy')->middleware('permission:Hapus User');
     Route::group(['middleware' => ['auth', 'permission:Edit User']], function () {
-        Route::put('username/update/{usernm}/{kd_comp}', [UsernameController::class, 'update'])
+        Route::put('username/update/{userid}/{companycode}', [UsernameController::class, 'update'])
             ->name('master.username.update');
-        Route::get('username/{usernm}/{kd_comp}/edit', [UsernameController::class, 'edit'])
+        Route::get('username/{userid}/{companycode}/edit', [UsernameController::class, 'edit'])
             ->name('master.username.edit');
     });
     Route::group(['middleware' => ['auth', 'permission:Hak Akses']], function () {
-        Route::put('username/access/{usernm}', [UsernameController::class, 'setaccess'])
+        Route::put('username/access/{userid}', [UsernameController::class, 'setaccess'])
             ->name('master.username.setaccess');
-        Route::get('username/{usernm}/access', [UsernameController::class, 'access'])
+        Route::get('username/{userid}/access', [UsernameController::class, 'access'])
             ->name('master.username.access');
     });
 
@@ -198,7 +198,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/posting/submit', [PostController::class, 'posting'])->name('process.posting.submit');
         Route::post('/post-session', [PostController::class, 'postSession'])->name('postSession');
     });
-    
+
     Route::group(['middleware' => ['auth', 'permission:Unposting']], function () {
         Route::match(['POST', 'GET'], '/unposting',  [UnpostController::class, 'index'])->name('process.unposting');
         Route::post('/unposting/submit', [UnpostController::class, 'unposting'])->name('process.unposting.submit');

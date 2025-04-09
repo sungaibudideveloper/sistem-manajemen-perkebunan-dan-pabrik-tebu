@@ -51,17 +51,17 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-1' }}">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->usernm }}</td>
+                                    {{ $item->userid }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->name }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->kd_comp }}</td>
+                                    {{ $item->companycode }}</td>
                                 @if (auth()->user() &&
                                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit User', 'Hapus User', 'Hak Akses'])->isNotEmpty())
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-40' }}">
                                         <div class="flex items-center justify-center">
                                             @if (auth()->user() && in_array('Hak Akses', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <a href="{{ route('master.username.access', $item->usernm) }}"
+                                                <a href="{{ route('master.username.access', $item->userid) }}"
                                                     class="group flex items-center"><svg
                                                         class="w-6 h-6 text-gray-600 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -84,7 +84,7 @@
                                                 </a>
                                             @endif
                                             @if (auth()->user() && in_array('Edit User', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <a href="{{ route('master.username.edit', ['usernm' => $item->usernm, 'kd_comp' => $item->kd_comp]) }}"
+                                                <a href="{{ route('master.username.edit', ['userid' => $item->userid, 'companycode' => $item->companycode]) }}"
                                                     class="group flex items-center"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -110,7 +110,7 @@
                                             @endif
                                             @if (auth()->user() && in_array('Hapus User', json_decode(auth()->user()->permissions ?? '[]')))
                                                 <form
-                                                    action="{{ route('master.username.destroy', ['usernm' => $item->usernm, 'kd_comp' => $item->kd_comp]) }}"
+                                                    action="{{ route('master.username.destroy', ['userid' => $item->userid, 'companycode' => $item->companycode]) }}"
                                                     method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')

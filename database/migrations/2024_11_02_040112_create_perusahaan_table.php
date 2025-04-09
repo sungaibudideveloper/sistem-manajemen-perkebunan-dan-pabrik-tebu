@@ -9,11 +9,11 @@ return new class extends Migration
    
     public function up(): void
     {
-        Schema::create('perusahaan', function (Blueprint $table) {
-            $table->char('kd_comp',4)->default('')->primary();
+        Schema::create('company', function (Blueprint $table) {
+            $table->char('companycode',4)->default('')->primary();
             $table->string('nama',50)->default('');
             $table->text('alamat');
-            $table->string('user_input',50)->default('');
+            $table->string('inputby',50)->default('');
             $table->date('tgl')->useCurrent();
             $table->timestamps();
         });
@@ -21,6 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('perusahaan');
+        Schema::dropIfExists('company');
     }
 };

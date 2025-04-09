@@ -8,7 +8,7 @@
             <select name="filterkml" class="border rounded-md border-gray-300 p-2 w-full max-w-[20ch]" required>
                 <option value="" disabled selected>--Filter--</option>
                 <option value="comp" class="text-black">Kebun</option>
-                <option value="blok" class="text-black">Blok</option>
+                <option value="block" class="text-black">block</option>
             </select>
         </div> --}}
         <form action="{{ route('export.kml') }}" method="post">

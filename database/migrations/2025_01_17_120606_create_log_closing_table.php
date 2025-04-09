@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('log_closing', function (Blueprint $table) {
-            $table->char('kd_comp',4)->default('');
+            $table->char('companycode',4)->default('');
             $table->date('tgl1')->useCurrent();
             $table->date('tgl2')->useCurrent();
-            $table->primary(['kd_comp', 'tgl1', 'tgl2']);
+            $table->primary(['companycode', 'tgl1', 'tgl2']);
         });
     }
 

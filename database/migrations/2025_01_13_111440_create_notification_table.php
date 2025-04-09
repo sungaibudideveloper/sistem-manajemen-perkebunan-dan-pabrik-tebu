@@ -11,11 +11,11 @@ return new class extends Migration
     {
         Schema::create('notification', function (Blueprint $table) {
             $table->id();
-            $table->string('kd_comp', 255)->default('');
+            $table->string('companycode', 255)->default('');
             $table->string('title', 70)->default('');
             $table->text('body');
-            $table->string('read_by',255)->default('');
-            $table->string('user_input',50)->default('');
+            $table->string('readby',255)->default('');
+            $table->string('inputby',50)->default('');
             $table->timestamps();
         });
     }

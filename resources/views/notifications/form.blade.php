@@ -27,10 +27,10 @@
                         <div class="p-2 max-h-40 overflow-y-auto">
                             @foreach ($company as $comp)
                                 <div class="flex items-center mb-2">
-                                    <input type="checkbox" id="comp-{{ $comp->kd_comp }}" name="kd_comp[]"
-                                        value="{{ $comp->kd_comp }}" class="rounded-sm bg-gray-100 border-gray-300"
-                                        {{ $comp->kd_comp == $notification->kd_comp ? 'checked' : '' }} />
-                                    <label for="comp-{{ $comp->kd_comp }}" class="ml-2 text-black">
+                                    <input type="checkbox" id="comp-{{ $comp->companycode }}" name="companycode[]"
+                                        value="{{ $comp->companycode }}" class="rounded-sm bg-gray-100 border-gray-300"
+                                        {{ $comp->companycode == $notification->companycode ? 'checked' : '' }} />
+                                    <label for="comp-{{ $comp->companycode }}" class="ml-2 text-black">
                                         {{ $comp->nama }}
                                     </label>
                                 </div>

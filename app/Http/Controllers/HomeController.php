@@ -13,15 +13,14 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $title = 'Home';
-        $user = DB::table('username')->where('usernm', '=', Auth::user()->usernm)
+        $user = DB::table('user')->where('userid', '=', Auth::user()->userid)
             ->value('name');
-        $companyRaw = DB::table('usercomp')->where('usernm', '=', Auth::user()->usernm)
-            ->value('kd_comp');
+        $companyRaw = DB::table('usercompany')->where('userid', '=', Auth::user()->userid)
+            ->value('companycode');
         $company = explode(',', $companyRaw);
         sort($company);
         $showPopup = !$request->session()->has('dropdown_value');
-        $period = DB::table('perusahaan')->where('kd_comp', '=', session('dropdown_value'))
-            ->value('tgl');
+        $period = DB::table('company')->where('companycode', '=', session('dropdown_value'))->value('updatedat');
         $now = Carbon::now()->toDateString();
 
         return view('home', compact('title', 'now', 'period', 'user', 'showPopup', 'company'));

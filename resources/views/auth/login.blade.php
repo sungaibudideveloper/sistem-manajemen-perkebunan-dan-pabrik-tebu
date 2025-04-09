@@ -54,11 +54,11 @@
                     <form class="space-y-6" action="{{ route('login') }}" method="POST">
                         @csrf
                         <div>
-                            <label for="usernm" class="block text-sm font-medium text-gray-900">Username</label>
+                            <label for="userid" class="block text-sm font-medium text-gray-900">Username</label>
                             <div class="mt-2">
-                                <input id="usernm" name="usernm" value="{{ old('usernm') }}" type="text" required
+                                <input id="usernm" name="userid" value="{{ old('userid') }}" type="text" required
                                     placeholder="Enter Username"
-                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm 
+                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm
                                 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : 'ring-gray-300 focus:ring-gray-600' }}">
                             </div>
                         </div>
@@ -70,7 +70,7 @@
                             <div class="mt-2 relative">
                                 <input id="password" name="password" type="password" autocomplete="current-password"
                                     placeholder="Enter password" value="{{ old('password') }}" required
-                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm 
+                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm
                                     {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : 'ring-gray-300 focus:ring-gray-600' }}">
                                 <button type="button" id="toggle-password-visibility"
                                     class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">

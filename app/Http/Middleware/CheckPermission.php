@@ -9,14 +9,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
 {
-    
+
     public function handle(Request $request, Closure $next, $permission): Response
     {
-        
+
         if (!Auth::check() || !in_array($permission, json_decode(Auth::user()->permissions ?? '[]'))) {
-            abort(404, 'Not Found');
+            
         }
-    
+
         return $next($request);
     }
 }

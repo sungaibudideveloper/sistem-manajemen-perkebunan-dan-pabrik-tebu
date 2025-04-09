@@ -4,34 +4,34 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Plotting extends Model
+class Plot extends Model
 {
     public $incrementing = false;
-    protected $table = 'plotting';
-    protected $primaryKey = ['kd_plot', 'kd_comp'];
+    protected $table = 'plot';
+    protected $primaryKey = ['plot', 'companycode'];
     protected $keyType = 'char';
-    protected $fillable = ['kd_plot', 'nama', 'luas_area', 'jarak_tanam', 'kd_comp', 'usernm', 'created_at'];
+    protected $fillable = ['plot', 'nama', 'luasarea', 'jaraktanam', 'companycode', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {
-        $this->attributes['created_at'] = $value;
+        $this->attributes['createdat'] = $value;
     }
 
     public function getCreatedAtAttribute()
     {
-        return $this->attributes['created_at'];
+        return $this->attributes['createdat'];
     }
 
     // protected function setKeysForSaveQuery($query)
     // {
-    //     $query->where('kd_plot', $this->getAttribute('kd_plot'))
-    //           ->where('kd_comp', $this->getAttribute('kd_comp'));
+    //     $query->where('plotcode', $this->getAttribute('plotcode'))
+    //           ->where('companycode', $this->getAttribute('companycode'));
 
     //     return $query;
     // }
 
     // public function kode()
     // {
-    //     return $this->belongsTo(Perusahaan::class, 'kd_comp');
+    //     return $this->belongsTo(company::class, 'companycode');
     // }
 }

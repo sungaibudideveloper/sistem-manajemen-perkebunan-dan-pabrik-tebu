@@ -17,7 +17,7 @@
                     <div class="mb-4">
                         <label class="block text-md">Username</label>
                         <input type="text" name="usernm" autocomplete="off" maxlength="50" value="{{ old('usernm') }}"
-                            class="rounded-md p-2 w-full 
+                            class="rounded-md p-2 w-full
                             {{ $errors->has('usernm') ? 'border-red-600 focus:ring-red-600 focus:border-red-600' : 'border-gray-300 focus:ring-blue-600 focus:border-blue-600' }}"
                             required>
                         @error('usernm')
@@ -50,16 +50,16 @@
                             <div
                                 class="mt-1 dropdown-menu absolute hidden border border-gray-300 bg-white rounded-md w-full max-h-60 overflow-auto z-10 shadow-sm">
                                 @php
-                                    $oldKdComp = is_array(old('kd_comp'))
-                                        ? old('kd_comp')
-                                        : explode(',', old('kd_comp', ''));
+                                    $oldKdComp = is_array(old('companycode'))
+                                        ? old('companycode')
+                                        : explode(',', old('companycode', ''));
                                 @endphp
                                 @foreach ($company as $comp)
                                     <label class="flex items-center gap-x-2 px-4 py-2 cursor-pointer hover:bg-gray-200">
-                                        <input type="checkbox" name="kd_comp[]" value="{{ $comp->kd_comp }}"
+                                        <input type="checkbox" name="companycode[]" value="{{ $comp->companycode }}"
                                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                            {{ in_array($comp->kd_comp, $oldKdComp) ? 'checked' : '' }}>
-                                        {{ $comp->kd_comp }}
+                                            {{ in_array($comp->companycode, $oldKdComp) ? 'checked' : '' }}>
+                                        {{ $comp->companycode }}
                                     </label>
                                 @endforeach
                             </div>
@@ -557,7 +557,7 @@
             }
 
             setupCheckboxLogic("Company", ["Hapus Company", "Edit Company", "Create Company"]);
-            setupCheckboxLogic("Blok", ["Hapus Blok", "Edit Blok", "Create Blok"]);
+            setupCheckboxLogic("blok", ["Hapus Blok", "Edit Blok", "Create Blok"]);
             setupCheckboxLogic("Plotting", ["Hapus Plotting", "Edit Plotting", "Create Plotting"]);
             setupCheckboxLogic("Mapping", ["Hapus Mapping", "Edit Mapping", "Create Mapping"]);
             setupCheckboxLogic("Kelola User", ["Hapus User", "Edit User", "Create User", "Hak Akses"]);
@@ -605,9 +605,9 @@
                     icon: 'companyToggleIcon'
                 },
                 {
-                    toggle: 'toggleBlok',
+                    toggle: 'toggleblok',
                     dropdown: 'blokDropdown',
-                    icon: 'blokToggleIcon'
+                    icon: 'blockToggleIcon'
                 },
                 {
                     toggle: 'togglePlotting',
