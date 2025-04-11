@@ -19,29 +19,29 @@ class PivotController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        $chartDataQuery = DB::table('agro_hdr')
-            ->join('agro_lst', function ($join) {
-                $join->on('agro_hdr.no_sample', '=', 'agro_lst.no_sample')
-                    ->on('agro_hdr.companycode', '=', 'agro_lst.companycode');
+        $chartDataQuery = DB::table('agrohdr')
+            ->join('agrolst', function ($join) {
+                $join->on('agrohdr.no_sample', '=', 'agrolst.no_sample')
+                    ->on('agrohdr.companycode', '=', 'agrolst.companycode');
             })
-            ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
-            ->join('plotting', function ($join) {
-                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
-                    ->on('agro_hdr.companycode', '=', 'plotting.companycode');
+            ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
+            ->join('plot', function ($join) {
+                $join->on('agrohdr.plot', '=', 'plot.plot')
+                    ->on('agrohdr.companycode', '=', 'plot.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.blok', '=', 'blok.blok')
-                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
+                $join->on('agrohdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->where('agro_lst.companycode', session('dropdown_value'))
-            ->where('agro_hdr.companycode', session('dropdown_value'))
-            ->where('agro_hdr.status', '=', 'Posted')
-            ->where('agro_lst.status', '=', 'Posted')
+            ->where('agrolst.companycode', session('companycode'))
+            ->where('agrohdr.companycode', session('companycode'))
+            ->where('agrohdr.status', '=', 'Posted')
+            ->where('agrolst.status', '=', 'Posted')
             ->select(
                 'company.nama as company',
                 'blok.blok as Blok',
-                'plotting.plotcode as Plot',
-                DB::raw("MONTH(agro_hdr.tglamat) as Bulan"),
+                'plot.plot as Plot',
+                DB::raw("MONTH(agrohdr.tglamat) as Bulan"),
                 DB::raw("AVG(per_germinasi) as Germinasi"),
                 DB::raw("AVG(per_gap) as GAP"),
                 DB::raw("AVG(populasi) as Populasi"),
@@ -49,7 +49,7 @@ class PivotController extends Controller
                 DB::raw("AVG(ph_tanah) as PHTanah")
             )
             ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
-                return $query->whereBetween('agro_hdr.tglamat', [$startDate, $endDate]);
+                return $query->whereBetween('agrohdr.tglamat', [$startDate, $endDate]);
             })
             ->groupBy('Bulan', 'company', 'Blok', 'Plot')
             ->orderBy('Bulan', 'asc')
@@ -178,7 +178,7 @@ class PivotController extends Controller
     {
         $kdCompAgronomi = $request->input('companycode', []);
         $kdBlokAgronomi = $request->input('blok', []);
-        $kdPlotAgronomi = $request->input('plotcode', []);
+        $kdPlotAgronomi = $request->input('plot', []);
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
@@ -188,9 +188,9 @@ class PivotController extends Controller
                 $join->on('hpt_hdr.no_sample', '=', 'hpt_lst.no_sample')
                     ->on('hpt_hdr.companycode', '=', 'hpt_lst.companycode');
             })
-            ->join('plotting', function ($join) {
-                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
-                    ->on('hpt_hdr.companycode', '=', 'plotting.companycode');
+            ->join('plot', function ($join) {
+                $join->on('hpt_hdr.plot', '=', 'plot.plot')
+                    ->on('hpt_hdr.companycode', '=', 'plot.companycode');
             })
             ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
             ->leftJoin('blok', function ($join) {
@@ -200,7 +200,7 @@ class PivotController extends Controller
             ->select(
                 'company.nama as company',
                 'blok.blok as Blok',
-                'plotting.plotcode as Plot',
+                'plot.plot as Plot',
                 DB::raw("MONTH(hpt_hdr.tglamat) as Bulan"),
                 DB::raw("AVG(per_ppt) as PPT"),
                 DB::raw("AVG(per_pbt) as PBT"),
@@ -221,7 +221,7 @@ class PivotController extends Controller
                 return $query->whereIn('hpt_hdr.blok', $kdBlokAgronomi);
             })
             ->when($kdPlotAgronomi, function ($query) use ($kdPlotAgronomi) {
-                return $query->whereIn('hpt_hdr.plotcode', $kdPlotAgronomi);
+                return $query->whereIn('hpt_hdr.plot', $kdPlotAgronomi);
             })
             ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
                 return $query->whereBetween('hpt_hdr.tglamat', [$startDate, $endDate]);

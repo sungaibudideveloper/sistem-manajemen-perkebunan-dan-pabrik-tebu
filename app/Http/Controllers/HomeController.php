@@ -19,8 +19,8 @@ class HomeController extends Controller
             ->value('companycode');
         $company = explode(',', $companyRaw);
         sort($company);
-        $showPopup = !$request->session()->has('dropdown_value');
-        $period = DB::table('company')->where('companycode', '=', session('dropdown_value'))->value('updatedat');
+        $showPopup = !$request->session()->has('companycode');
+        $period = DB::table('company')->where('companycode', '=', session('companycode'))->value('updatedat');
         $now = Carbon::now()->toDateString();
 
         return view('home', compact('title', 'now', 'period', 'user', 'showPopup', 'company'));
@@ -32,7 +32,7 @@ class HomeController extends Controller
             'dropdown_value' => 'required|string',
         ]);
 
-        session(['dropdown_value' => $request->dropdown_value]);
+        session(['companycode' => $request->dropdown_value]);
 
         return redirect()->route('home');
     }

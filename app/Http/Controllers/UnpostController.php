@@ -40,7 +40,7 @@ class UnpostController extends Controller
         $perPage = $request->session()->get('perPage', 10);
 
         $session = session('unposting');
-        $dropdownValue = session('dropdown_value');
+        $dropdownValue = session('companycode');
 
         $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
 
@@ -93,7 +93,7 @@ class UnpostController extends Controller
         }
 
         $tables = session('unposting') === 'Agronomi'
-            ? ['agro_hdr', 'agro_lst']
+            ? ['agrohdr', 'agrolst']
             : ['hpt_hdr', 'hpt_lst'];
 
         foreach ($tables as $table) {

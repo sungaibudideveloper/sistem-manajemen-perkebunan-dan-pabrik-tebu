@@ -10,31 +10,31 @@ class ClosingController extends Controller
 {
     public function closing()
     {
-        $period = DB::table('company')->where('companycode', '=', session('dropdown_value'))
+        $period = DB::table('company')->where('companycode', '=', session('companycode'))
             ->value('tgl');
         $now = Carbon::now()->toDateString();
 
-        $headAgronomiQuery = DB::table('agro_hdr')
-            ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
-            ->where('agro_hdr.companycode', '=', session('dropdown_value'))
-            ->whereBetween('agro_hdr.createdat', [DB::raw('company.tgl'), now()])
-            ->select('agro_hdr.*');
+        $headAgronomiQuery = DB::table('agrohdr')
+            ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
+            ->where('agrohdr.companycode', '=', session('companycode'))
+            ->whereBetween('agrohdr.createdat', [DB::raw('company.tgl'), now()])
+            ->select('agrohdr.*');
 
-        $listAgronomiQuery = DB::table('agro_lst')
-            ->join('company', 'agro_lst.companycode', '=', 'company.companycode')
-            ->where('agro_lst.companycode', '=', session('dropdown_value'))
-            ->whereBetween('agro_lst.createdat', [DB::raw('company.tgl'), now()])
-            ->select('agro_lst.*');
+        $listAgronomiQuery = DB::table('agrolst')
+            ->join('company', 'agrolst.companycode', '=', 'company.companycode')
+            ->where('agrolst.companycode', '=', session('companycode'))
+            ->whereBetween('agrolst.createdat', [DB::raw('company.tgl'), now()])
+            ->select('agrolst.*');
 
         $headHPTQuery = DB::table('hpt_hdr')
             ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
-            ->where('hpt_hdr.companycode', '=', session('dropdown_value'))
+            ->where('hpt_hdr.companycode', '=', session('companycode'))
             ->whereBetween('hpt_hdr.createdat', [DB::raw('company.tgl'), now()])
             ->select('hpt_hdr.*');
 
         $listHPTQuery = DB::table('hpt_lst')
             ->join('company', 'hpt_lst.companycode', '=', 'company.companycode')
-            ->where('hpt_lst.companycode', '=', session('dropdown_value'))
+            ->where('hpt_lst.companycode', '=', session('companycode'))
             ->whereBetween('hpt_lst.createdat', [DB::raw('company.tgl'), now()])
             ->select('hpt_lst.*');
 
@@ -44,19 +44,19 @@ class ClosingController extends Controller
         $listHPT = $listHPTQuery->get();
 
         $log = DB::table('company')
-            ->where('companycode', '=', session('dropdown_value'))
+            ->where('companycode', '=', session('companycode'))
             ->get();
         $close = DB::table('log_closing')
-            ->where('companycode', '=', session('dropdown_value'))
+            ->where('companycode', '=', session('companycode'))
             ->where('tgl1', '=', now()->toDateString())
             ->exists();
 
         if ($headAgronomi && $listAgronomi && $headHPT && $listHPT && $log && !$close) {
             foreach ($headAgronomi as $head) {
-                DB::table('closing_agro_hdr')->insert((array) $head);
+                DB::table('closing_agrohdr')->insert((array) $head);
             }
             foreach ($listAgronomi as $row) {
-                DB::table('closing_agro_lst')->insert((array) $row);
+                DB::table('closing_agrolst')->insert((array) $row);
             }
             foreach ($headHPT as $head) {
                 DB::table('closing_hpt_hdr')->insert((array) $head);
@@ -77,7 +77,7 @@ class ClosingController extends Controller
 
                 DB::table('log_closing')->insert($logData);
                 DB::table('company')
-                    ->where('companycode', '=', session('dropdown_value'))
+                    ->where('companycode', '=', session('companycode'))
                     ->update($comp);
             }
 

@@ -13,7 +13,7 @@ class SessionController extends Controller
             'dropdown_value' => 'required|string',
         ]);
 
-        session(['dropdown_value' => $request->dropdown_value]);
+        session(['companycode' => $request->dropdown_value]);
 
         return redirect()->route('home')->with('success', 'Preference saved successfully!');
     }

@@ -282,12 +282,12 @@
                 <div class="ml-4 flex items-center md:ml-6">
                     @php
                         $compName = DB::table('company')
-                            ->where('companycode', '=', session('dropdown_value'))
+                            ->where('companycode', '=', session('companycode'))
                             ->value('name');
                     @endphp
                     <div class="mr-3 text-right">
                         <div class="text-sm font-medium leading-none text-white opacity-70">
-                            {{ session('dropdown_value') }}
+                            {{ session('companycode') }}
                         </div>
                         <div class="text-sm font-medium leading-none text-white opacity-50">{{ $compName }}</div>
                     </div>
@@ -669,7 +669,7 @@
                 <div class="ml-3 space-y-2">
                     <div class="text-base font-medium leading-none text-white">{{ Auth::user()->name }}</div>
                     <div class="text-sm font-medium leading-none text-white opacity-70">
-                        {{ session('dropdown_value') }}
+                        {{ session('companycode') }}
                         <span class="text-white opacity-50">
                             ( {{ $compName }} )
                         </span>

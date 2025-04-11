@@ -9,7 +9,7 @@ class HPTHeader extends Model
     public $incrementing = false;
     protected $table = 'hpt_hdr';
     protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam'];
-    protected $fillable = ['no_sample', 'companycode', 'blok', 'plotcode', 'plotcodesample', 'varietas', 'tanggaltanam', 'tglamat', 'inputby'];
+    protected $fillable = ['no_sample', 'companycode', 'blok', 'plot', 'idblokplot', 'varietas', 'tanggaltanam', 'tglamat', 'inputby'];
 
 
     public function setCreatedAt($value)
@@ -41,7 +41,7 @@ class HPTHeader extends Model
 
     public function mapping()
     {
-        return $this->belongsTo(Mapping::class, 'plotcodesample', 'plotcodesample');
+        return $this->belongsTo(Mapping::class, 'idblokplot', 'idblokplot');
     }
 
     public function company()

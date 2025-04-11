@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Mapping extends Model
 {
     public $incrementing = false;
-    protected $table = 'mapping';
-    protected $primaryKey = ['plotcodesample', 'blok', 'plotcode', 'companycode'];
+    protected $table = 'mappingblokplot';
+    protected $primaryKey = ['idblokplot', 'blok', 'plot', 'companycode'];
     protected $keyType = 'char';
-    protected $fillable = ['plotcodesample', 'blok', 'plotcode', 'companycode', 'inputby', 'createdat'];
+    protected $fillable = ['idblokplot', 'blok', 'plot', 'companycode', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {
@@ -26,9 +26,9 @@ class Mapping extends Model
 
     protected function setKeysForSaveQuery($query)
     {
-        $query->where('plotcodesample', $this->getAttribute('plotcodesample'))
+        $query->where('idblokplot', $this->getAttribute('idblokplot'))
               ->where('blok', $this->getAttribute('blok'))
-              ->where('plotcode', $this->getAttribute('plotcode'))
+              ->where('plot', $this->getAttribute('plot'))
               ->where('companycode', $this->getAttribute('companycode'));
 
         return $query;
@@ -46,7 +46,7 @@ class Mapping extends Model
 
     public function plot()
     {
-        return $this->belongsTo(Plotting::class, 'plotcode', 'plotcode');
+        return $this->belongsTo(Plotting::class, 'plot', 'plot');
     }
 
 }

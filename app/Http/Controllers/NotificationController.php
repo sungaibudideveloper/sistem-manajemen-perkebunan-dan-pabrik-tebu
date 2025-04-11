@@ -34,7 +34,7 @@ class NotificationController extends Controller
     {
         $title = 'Notifications';
         $comp = explode(',', Auth::user()->userComp->companycode);
-        $dropdownValue = session('dropdown_value');
+        $dropdownValue = session('companycode');
 
         $permissions = json_decode(Auth::user()->permissions, true);
         $isKepalaKebun = in_array('Kepala Kebun', $permissions);
@@ -43,7 +43,6 @@ class NotificationController extends Controller
         $notifQuery = DB::table('notification')
             ->join('company', function ($join) {
                 $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
-            });
 
         if ($isAdmin) {
             $notifQuery->where(function ($query) use ($comp) {
@@ -52,14 +51,14 @@ class NotificationController extends Controller
                 }
             })->distinct();
         } else {
-            $notifQuery->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('dropdown_value')])->distinct();
+            $notifQuery->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('companycode')])->distinct();
         }
 
         if (!$isKepalaKebun) {
             $notifQuery->where('notification.inputby', '!=', 'Automatic by System');
         }
 
-        $notif = $notifQuery->whereBetween('notification.createdat', [DB::raw('company.tgl'), now()])
+        $notif = $notifQuery->whereBetween('notification.createdat', [DB::raw('company.companyperiod'), now()])
             ->select('notification.*')
             ->orderBy('createdat', 'desc')
             ->get()
@@ -189,7 +188,7 @@ class NotificationController extends Controller
             })
                 ->distinct();
         } else {
-            $query->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('dropdown_value')])
+            $query->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('companycode')])
                 ->where(function ($query) use ($currentUser) {
                     $query->where('notification.readby', '=', '')
                         ->orWhereRaw('NOT JSON_CONTAINS(notification.readby, ?)', [json_encode($currentUser)]);
@@ -201,7 +200,7 @@ class NotificationController extends Controller
             $query->where('notification.inputby', '!=', 'Automatic by System');
         }
 
-        $notif = $query->whereBetween('notification.createdat', [DB::raw('company.tgl'), now()])
+        $notif = $query->whereBetween('notification.createdat', [DB::raw('company.companyperiod'), now()])
             ->select('notification.*')
             ->orderBy('createdat', 'desc')
             ->get()
@@ -224,7 +223,7 @@ class NotificationController extends Controller
             if (!$lastCheckedTime) {
                 $lastCheckedTime = '2025-01-01 00:00:00';
             }
-            $data = DB::table('agro_lst')
+            $data = DB::table('agrolst')
                 ->select('companycode as comp', 'no_sample as sample', 'nourut as urut', 'per_germinasi', 'per_gulma', 'tanggaltanam')
                 ->where('createdat', '>', $lastCheckedTime)
                 ->where(function ($query) {

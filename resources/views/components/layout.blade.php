@@ -8,16 +8,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
+    <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
     <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@9.0.3"></script>
-
-    {{-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css"> --}}
+    <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
+    <script src="{{ asset('asset/chart.js') }}"></script>
+    <script src="{{ asset('asset/chartjs-plugin-datalabels@2.0.0.js') }}"></script>
+    <script src="{{ asset('asset/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('asset/simple-datatables@9.0.3.js') }}"></script>
 
     <title>{{ $title }}</title>
 </head>

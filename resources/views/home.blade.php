@@ -42,7 +42,7 @@
                         <option value="" disabled selected>--Pilih Company--</option>
                         @foreach ($company as $comp)
                             <option value="{{ $comp }}" class="text-black"
-                                {{ $comp == session('dropdown_value') ? 'selected' : '' }}>
+                                {{ $comp == session('companycode') ? 'selected' : '' }}>
                                 {{ $comp }}
                             </option>
                         @endforeach

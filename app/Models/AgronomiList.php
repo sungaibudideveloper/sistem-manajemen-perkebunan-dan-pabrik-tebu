@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class AgronomiList extends Model
 {
     public $incrementing = false;
-    protected $table = 'agro_lst';
-    protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam'];
+    protected $table = 'agrolst';
+    protected $primaryKey = ['nosample', 'companycode', 'tanggaltanam'];
     protected $fillable = [
-        'no_sample',
+        'nosample',
         'companycode',
         'tanggaltanam',
         'nourut',
-        'jm_batang',
+        'jumlahbatang',
         'pan_gap',
         'per_gap',
         'per_germinasi',
@@ -36,14 +36,14 @@ class AgronomiList extends Model
 
     protected function setKeysForSaveQuery($query)
     {
-        return $query->where('no_sample', $this->getAttribute('no_sample'))
+        return $query->where('nosample', $this->getAttribute('nosample'))
             ->where('companycode', $this->getAttribute('companycode'))
             ->where('nourut', $this->getAttribute('nourut'));
     }
 
     public function header()
     {
-        return $this->belongsTo(AgronomiHeader::class, 'no_sample', 'no_sample');
+        return $this->belongsTo(AgronomiHeader::class, 'nosample', 'nosample');
     }
 
     // public function header()
@@ -67,15 +67,15 @@ class AgronomiList extends Model
 
     public function plot()
     {
-        return $this->belongsTo(Plotting::class, 'plotcode', 'plotcode');
+        return $this->belongsTo(Plot::class, 'plot', 'plot');
     }
 
     public function mapping()
     {
-        return $this->belongsTo(Mapping::class, 'plotcodesample', 'plotcodesample');
+        return $this->belongsTo(Mapping::class, 'idblokplot', 'idblokplot');
     }
     public function user()
     {
-        return $this->belongsTo(Username::class);
+        return $this->belongsTo(User::class);
     }
 }

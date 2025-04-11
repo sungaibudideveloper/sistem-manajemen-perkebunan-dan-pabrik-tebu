@@ -24,7 +24,7 @@ class Plot extends Model
 
     // protected function setKeysForSaveQuery($query)
     // {
-    //     $query->where('plotcode', $this->getAttribute('plotcode'))
+    //     $query->where('plot', $this->getAttribute('plot'))
     //           ->where('companycode', $this->getAttribute('companycode'));
 
     //     return $query;

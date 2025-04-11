@@ -154,7 +154,7 @@
                 <form class="p-4 md:p-5" id="crud-form" action="" method="POST">
                     @csrf
                     <input type="hidden" name="_method" id="crud-method" value="POST">
-                    <input type="hidden" name="companycode" id="companycode" value="{{ session('dropdown_value') }}">
+                    <input type="hidden" name="companycode" id="companycode" value="{{ session('companycode') }}">
 
                     <div class="mb-4">
                         <label class="blok text-md">Kode Blok</label>

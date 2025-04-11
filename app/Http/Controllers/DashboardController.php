@@ -21,7 +21,7 @@ class DashboardController extends Controller
     {
         $kdCompAgronomi = $request->input('companycode', []);
         $kdBlokAgronomi = $request->input('blok', []);
-        $kdPlotAgronomi = $request->input('plotcode', []);
+        $kdPlotAgronomi = $request->input('plot', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
         $title = "Dashboard Agronomi";
@@ -75,24 +75,24 @@ class DashboardController extends Controller
         $endMonthNum = $months[$endMonth] ?? null;
 
         if (!empty($kdCompAgronomi) || !empty($kdBlokAgronomi) || !empty($kdPlotAgronomi) || ($startMonthNum && $endMonthNum)) {
-            $chartDataQuery = DB::table('agro_hdr')
-                ->join('agro_lst', function ($join) {
-                    $join->on('agro_hdr.no_sample', '=', 'agro_lst.no_sample')
-                        ->on('agro_hdr.companycode', '=', 'agro_lst.companycode');
+            $chartDataQuery = DB::table('agrohdr')
+                ->join('agrolst', function ($join) {
+                    $join->on('agrohdr.no_sample', '=', 'agrolst.no_sample')
+                        ->on('agrohdr.companycode', '=', 'agrolst.companycode');
                 })
-                ->join('company', 'agro_hdr.companycode', '=', 'company.companycode')
-                ->join('plotting', function ($join) {
-                    $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
-                        ->on('agro_hdr.companycode', '=', 'plotting.companycode');
+                ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
+                ->join('plot', function ($join) {
+                    $join->on('agrohdr.plot', '=', 'plot.plot')
+                        ->on('agrohdr.companycode', '=', 'plot.companycode');
                 })
                 ->leftJoin('blok', function ($join) {
-                    $join->on('agro_hdr.blok', '=', 'blok.blok')
-                        ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
+                    $join->on('agrohdr.blok', '=', 'blok.blok')
+                        ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
                 })
                 ->select(
-                    DB::raw("MONTH(agro_hdr.tglamat) as bln_amat"),
-                    DB::raw("MIN(agro_hdr.tanggaltanam) as tanggaltanam"),
-                    'agro_hdr.kat',
+                    DB::raw("MONTH(agrohdr.tglamat) as bln_amat"),
+                    DB::raw("MIN(agrohdr.tanggaltanam) as tanggaltanam"),
+                    'agrohdr.kat',
                     DB::raw("CASE 
                         WHEN '$verticalField' IN ('populasi', 'ph_tanah') 
                         THEN AVG($verticalField) 
@@ -100,21 +100,21 @@ class DashboardController extends Controller
                     END as total"),
                     'company.nama as company_nama',
                     'blok.blok as blok_nama',
-                    'plotting.plotcode as plot_nama'
+                    'plot.plot as plot_nama'
                 )
                 ->when($kdCompAgronomi, function ($query) use ($kdCompAgronomi) {
-                    return $query->whereIn('agro_hdr.companycode', $kdCompAgronomi);
+                    return $query->whereIn('agrohdr.companycode', $kdCompAgronomi);
                 })
                 ->when($kdBlokAgronomi, function ($query) use ($kdBlokAgronomi) {
-                    return $query->whereIn('agro_hdr.blok', $kdBlokAgronomi);
+                    return $query->whereIn('agrohdr.blok', $kdBlokAgronomi);
                 })
                 ->when($kdPlotAgronomi, function ($query) use ($kdPlotAgronomi) {
-                    return $query->whereIn('agro_hdr.plotcode', $kdPlotAgronomi);
+                    return $query->whereIn('agrohdr.plot', $kdPlotAgronomi);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
-                    return $query->whereBetween(DB::raw("MONTH(agro_hdr.tglamat)"), [$startMonthNum, $endMonthNum]);
+                    return $query->whereBetween(DB::raw("MONTH(agrohdr.tglamat)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('bln_amat', 'kat', 'company.nama', 'blok.blok', 'plotting.plotcode')
+                ->groupBy('bln_amat', 'kat', 'company.nama', 'blok.blok', 'plot.plot')
                 ->orderBy('kat');
 
             $chartDataResult = $chartDataQuery->get();
@@ -206,19 +206,19 @@ class DashboardController extends Controller
         }
 
         $kdCompAgroOpt = DB::table('company')
-            ->join('agro_hdr', 'company.companycode', '=', 'agro_hdr.companycode')
+            ->join('agrohdr', 'company.companycode', '=', 'agrohdr.companycode')
             ->select('company.companycode', 'company.nama')
             ->distinct()
             ->get();
         $kdBlokAgroOpt = DB::table('blok')
-            ->join('agro_hdr', 'blok.blok', '=', 'agro_hdr.blok')
+            ->join('agrohdr', 'blok.blok', '=', 'agrohdr.blok')
             ->select('blok.blok')
             ->distinct()
             ->get();
-        $kdPlotAgroOpt = DB::table('plotting')
-            ->join('agro_hdr', 'plotting.plotcode', '=', 'agro_hdr.plotcode')
-            ->select('plotting.plotcode')
-            ->orderByRaw("LEFT(plotting.plotcode, 1), CAST(SUBSTRING(plotting.plotcode, 2) AS UNSIGNED)")
+        $kdPlotAgroOpt = DB::table('plot')
+            ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
+            ->select('plot.plot')
+            ->orderByRaw("LEFT(plotting.plot, 1), CAST(SUBSTRING(plotting.plot, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 
@@ -263,7 +263,7 @@ class DashboardController extends Controller
     {
         $kdCompHPT = $request->input('companycode', []);
         $kdBlokHPT = $request->input('blok', []);
-        $kdPlotHPT = $request->input('plotcode', []);
+        $kdPlotHPT = $request->input('plot', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
         $title = "Dashboard HPT";
@@ -328,9 +328,9 @@ class DashboardController extends Controller
                     $join->on('hpt_hdr.no_sample', '=', 'hpt_lst.no_sample')
                         ->on('hpt_hdr.companycode', '=', 'hpt_lst.companycode');
                 })
-                ->join('plotting', function ($join) {
-                    $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
-                        ->on('hpt_hdr.companycode', '=', 'plotting.companycode');
+                ->join('plot', function ($join) {
+                    $join->on('hpt_hdr.plot', '=', 'plot.plot')
+                        ->on('hpt_hdr.companycode', '=', 'plot.companycode');
                 })
                 ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
                 ->leftJoin('blok', function ($join) {
@@ -347,7 +347,7 @@ class DashboardController extends Controller
                     END as total"),
                     'company.nama as company_nama',
                     'blok.blok as blok_nama',
-                    'plotting.plotcode as plot_nama'
+                    'plot.plot as plot_nama'
                 )
                 ->when($kdCompHPT, function ($query) use ($kdCompHPT) {
                     return $query->whereIn('hpt_hdr.companycode', $kdCompHPT);
@@ -356,12 +356,12 @@ class DashboardController extends Controller
                     return $query->whereIn('hpt_hdr.blok', $kdBlokHPT);
                 })
                 ->when($kdPlotHPT, function ($query) use ($kdPlotHPT) {
-                    return $query->whereIn('hpt_hdr.plotcode', $kdPlotHPT);
+                    return $query->whereIn('hpt_hdr.plot', $kdPlotHPT);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
                     return $query->whereBetween(DB::raw("MONTH(hpt_hdr.tglamat)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('company.nama', 'blok.blok', 'plotting.plotcode', 'bln_amat')
+                ->groupBy('company.nama', 'blok.blok', 'plot.plot', 'bln_amat')
                 ->orderBy('plot_nama');
 
 
@@ -456,10 +456,10 @@ class DashboardController extends Controller
             ->select('blok.blok')
             ->distinct()
             ->get();
-        $kdPlotHPTOpt = DB::table('plotting')
-            ->join('hpt_hdr', 'plotting.plotcode', '=', 'hpt_hdr.plotcode')
-            ->select('plotting.plotcode')
-            ->orderByRaw("LEFT(plotting.plotcode, 1), CAST(SUBSTRING(plotting.plotcode, 2) AS UNSIGNED)")
+        $kdPlotHPTOpt = DB::table('plot')
+            ->join('hpt_hdr', 'plot.plot', '=', 'hpt_hdr.plot')
+            ->select('plot.plot')
+            ->orderByRaw("LEFT(plotting.plot, 1), CAST(SUBSTRING(plotting.plot, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 

@@ -36,45 +36,45 @@ class ReportController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $query = DB::table('agro_lst')
-            ->leftJoin('agro_hdr', function ($join) {
-                $join->on('agro_lst.no_sample', '=', 'agro_hdr.no_sample')
-                    ->whereColumn('agro_lst.companycode', '=', 'agro_hdr.companycode')
-                    ->whereColumn('agro_lst.tanggaltanam', '=', 'agro_hdr.tanggaltanam');
+        $query = DB::table('agrolst')
+            ->leftJoin('agrohdr', function ($join) {
+                $join->on('agrolst.no_sample', '=', 'agrohdr.no_sample')
+                    ->whereColumn('agrolst.companycode', '=', 'agrohdr.companycode')
+                    ->whereColumn('agrolst.tanggaltanam', '=', 'agrohdr.tanggaltanam');
             })
             ->leftJoin('company', function ($join) {
-                $join->on('agro_hdr.companycode', '=', 'company.companycode');
+                $join->on('agrohdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('agro_hdr.blok', '=', 'blok.blok')
-                    ->whereColumn('agro_hdr.companycode', '=', 'blok.companycode');
+                $join->on('agrohdr.blok', '=', 'blok.blok')
+                    ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plotting', function ($join) {
-                $join->on('agro_hdr.plotcode', '=', 'plotting.plotcode')
-                    ->whereColumn('agro_hdr.companycode', '=', 'plotting.companycode');
+            ->leftJoin('plot', function ($join) {
+                $join->on('agrohdr.plot', '=', 'plot.plot')
+                    ->whereColumn('agrohdr.companycode', '=', 'plot.companycode');
             })
-            ->where('agro_lst.companycode', session('dropdown_value'))
-            ->where('agro_hdr.companycode', session('dropdown_value'))
-            ->where('agro_hdr.status', '=', 'Posted')
-            ->where('agro_lst.status', '=', 'Posted')
+            ->where('agrolst.companycode', session('companycode'))
+            ->where('agrohdr.companycode', session('companycode'))
+            ->where('agrohdr.status', '=', 'Posted')
+            ->where('agrolst.status', '=', 'Posted')
             ->select(
-                'agro_lst.*',
-                'agro_hdr.varietas',
-                'agro_hdr.kat',
-                'agro_hdr.tglamat',
+                'agrolst.*',
+                'agrohdr.varietas',
+                'agrohdr.kat',
+                'agrohdr.tglamat',
                 'company.nama as compName',
                 'blok.blok as blokName',
-                'plotting.plotcode as plotName',
-                'plotting.luasarea',
-                'plotting.jaraktanam',
+                'plot.plot as plotName',
+                'plot.luasarea',
+                'plot.jaraktanam',
             )
-            ->orderBy('agro_hdr.tglamat', 'asc');
+            ->orderBy('agrohdr.tglamat', 'asc');
 
         if ($startDate) {
-            $query->whereDate('agro_hdr.tglamat', '>=', $startDate);
+            $query->whereDate('agrohdr.tglamat', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('agro_hdr.tglamat', '<=', $endDate);
+            $query->whereDate('agrohdr.tglamat', '<=', $endDate);
         }
 
         $agronomi = $query->paginate($perPage);
@@ -123,12 +123,12 @@ class ReportController extends Controller
                 $join->on('hpt_hdr.blok', '=', 'blok.blok')
                     ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plotting', function ($join) {
-                $join->on('hpt_hdr.plotcode', '=', 'plotting.plotcode')
-                    ->whereColumn('hpt_hdr.companycode', '=', 'plotting.companycode');
+            ->leftJoin('plot', function ($join) {
+                $join->on('hpt_hdr.plot', '=', 'plot.plot')
+                    ->whereColumn('hpt_hdr.companycode', '=', 'plot.companycode');
             })
-            ->where('hpt_lst.companycode', session('dropdown_value'))
-            ->where('hpt_hdr.companycode', session('dropdown_value'))
+            ->where('hpt_lst.companycode', session('companycode'))
+            ->where('hpt_hdr.companycode', session('companycode'))
             ->where('hpt_hdr.status', '=', 'Posted')
             ->where('hpt_lst.status', '=', 'Posted')
             ->select(
@@ -137,8 +137,8 @@ class ReportController extends Controller
                 'hpt_hdr.tglamat',
                 'company.nama as compName',
                 'blok.blok as blokName',
-                'plotting.plotcode as plotName',
-                'plotting.luasarea',
+                'plot.plot as plotName',
+                'plot.luasarea',
             )
             ->orderBy('hpt_hdr.tglamat', 'desc');
 
