@@ -10,7 +10,7 @@ class AgronomiHeader extends Model
     public $incrementing = false;
     protected $table = 'agrohdr';
     protected $primaryKey = ['nosample', 'companycode', 'tanggaltanam'];
-    protected $fillable = ['nosample', 'companycode', 'tanggaltanam', 'tanggalpengamatan', 'blok', 'plot', 'idblokplot', 'varietas', 'kat', 'inputby', 'createdat'];
+    protected $fillable = ['nosample', 'companycode', 'tanggaltanam', 'tanggalpengamatan', 'blok', 'plot', 'idblokplot', 'varietas', 'kat', 'inputby', 'createdat', 'updatedat'];
 
     public function setCreatedAt($value)
     {

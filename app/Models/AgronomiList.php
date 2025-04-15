@@ -31,7 +31,8 @@ class AgronomiList extends Model
         'd_tersier',
         'd_kuarter',
         'inputby',
-        'createdat'
+        'createdat',
+        'updatedat'
     ];
 
     protected function setKeysForSaveQuery($query)
@@ -41,19 +42,20 @@ class AgronomiList extends Model
             ->where('nourut', $this->getAttribute('nourut'));
     }
 
+    public function setCreatedAt($value)
+    {
+        $this->attributes['createdat'] = $value;
+    }
+
+    public function getCreatedAtAttribute()
+    {
+        return $this->attributes['createdat'];
+    }
+
     public function header()
     {
         return $this->belongsTo(AgronomiHeader::class, 'nosample', 'nosample');
     }
-
-    // public function header()
-    // {
-    //     return $this->belongsTo(AgronomiHeader::class)->where(function ($query) {
-    //         $query->whereColumn('no_sample', 'no_sample')
-    //             ->whereColumn('companycode', 'companycode')
-    //             ->whereColumn('tanggaltanam', 'tanggaltanam');
-    //     });
-    // }
 
     public function company()
     {

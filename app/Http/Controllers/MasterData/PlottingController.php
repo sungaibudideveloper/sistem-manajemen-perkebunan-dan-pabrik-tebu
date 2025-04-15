@@ -37,7 +37,7 @@ class PlottingController extends Controller
         foreach ($plotting as $index => $item) {
             $item->no = ($plotting->currentPage() - 1) * $plotting->perPage() + $index + 1;
         }
-        return view('master.plotting.index', compact('plot', 'perPage', 'title'));
+        return view('master.plotting.index', compact('plotting', 'perPage', 'title'));
     }
 
     public function handle(Request $request)

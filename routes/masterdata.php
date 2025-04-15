@@ -1,15 +1,16 @@
 <?php
 use App\Http\Controllers\MasterData\BlokController;
+use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MappingController;
 use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\UsernameController;
 //company
 Route::group(['middleware' => ['auth', 'permission:Company']], function () {
-    Route::post('masterdata/company', [companyController::class, 'handle'])->name('master.company.handle');
-    Route::get('masterdata/company', [companyController::class, 'index'])->name('master.company.index');
+    Route::post('masterdata/company', [CompanyController::class, 'handle'])->name('master.company.handle');
+    Route::get('masterdata/company', [CompanyController::class, 'index'])->name('master.company.index');
 });
-Route::put('masterdata/company/{companycode}', [companyController::class, 'update'])->name('master.company.update')->middleware('permission:Edit Company');
-Route::delete('masterdata/company/{companycode}', [companyController::class, 'destroy'])
+Route::put('masterdata/company/{companycode}', [CompanyController::class, 'update'])->name('master.company.update')->middleware('permission:Edit Company');
+Route::delete('masterdata/company/{companycode}', [CompanyController::class, 'destroy'])
     ->name('master.company.destroy')->middleware('permission:Hapus Company');
 
 //Blok
