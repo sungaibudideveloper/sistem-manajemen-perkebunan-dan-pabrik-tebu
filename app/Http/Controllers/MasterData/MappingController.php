@@ -44,7 +44,7 @@ class MappingController extends Controller
         foreach ($mapping as $index => $item) {
             $item->no = ($mapping->currentPage() - 1) * $mapping->perPage() + $index + 1;
         }
-        return view('master.mapping.index', compact('mapping', 'bloks', 'plot', 'perPage', 'title'));
+        return view('master.mapping.index', compact('mapping', 'bloks', 'plotting', 'perPage', 'title'));
     }
 
     public function handle(Request $request)
@@ -115,7 +115,7 @@ class MappingController extends Controller
                 'blok' => $request->blok,
                 'plot' => $request->plot,
                 'companycode' => session('companycode'),
-                'usernm' => Auth::user()->usernm,
+                'inputby' => Auth::user()->userid,
                 'createdat' => now(),
                 'updatedat' => now(),
             ]);

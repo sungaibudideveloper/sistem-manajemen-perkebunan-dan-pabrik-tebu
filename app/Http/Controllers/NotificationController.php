@@ -40,10 +40,9 @@ class NotificationController extends Controller
         $isKepalaKebun = in_array('Kepala Kebun', $permissions);
         $isAdmin = in_array('Admin', $permissions);
 
-        $notifQuery = DB::table('notification')
-            ->join('company', function ($join) {
+        $notifQuery = DB::table('notification')->join('company', function ($join) {
                 $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
-
+        });
         if ($isAdmin) {
             $notifQuery->where(function ($query) use ($comp) {
                 foreach ($comp as $company) {
@@ -224,7 +223,7 @@ class NotificationController extends Controller
                 $lastCheckedTime = '2025-01-01 00:00:00';
             }
             $data = DB::table('agrolst')
-                ->select('companycode as comp', 'no_sample as sample', 'nourut as urut', 'per_germinasi', 'per_gulma', 'tanggaltanam')
+                ->select('companycode as comp', 'nosample as sample', 'nourut as urut', 'per_germinasi', 'per_gulma', 'tanggaltanam')
                 ->where('createdat', '>', $lastCheckedTime)
                 ->where(function ($query) {
                     $query->where('per_germinasi', '<', 0.9)
@@ -255,6 +254,8 @@ class NotificationController extends Controller
                         'title' => 'Agronomi - Persentase Germinasi < 90%',
                         'body' => 'Persentase Germinasi kurang dari 90% untuk nomor sample ' . $item->sample . ', nomor urut ' . $item->urut . ', berumur ' . ceil($item->umur_tanam) . ' bulan.',
                         'inputby' => 'Automatic by System',
+                        'createdat'=>now(),
+                        'updatedat'=>now()
                     ]);
                     $nextId++;
                 }
@@ -283,7 +284,7 @@ class NotificationController extends Controller
                 $lastCheckedTime = '2025-01-01 00:00:00';
             }
             $data = DB::table('hpt_lst')
-                ->select('companycode as comp', 'no_sample as sample', 'nourut as urut', 'per_pbt', 'tanggaltanam')
+                ->select('companycode as comp', 'nosample as sample', 'nourut as urut', 'per_pbt', 'tanggaltanam')
                 ->where('createdat', '>', $lastCheckedTime)
                 ->where(function ($query) {
                     $query->where('per_pbt', '>', 0.03)
@@ -319,6 +320,8 @@ class NotificationController extends Controller
                             'title' => $notif['title'],
                             'body' => "Persentase {$notif['type']} lebih dari " . ($notif['threshold'] * 100) . "% untuk nomor sample {$item->sample}, nomor urut {$item->urut}, umur tanaman {$umur_tanam} bulan.",
                             'inputby' => 'Automatic by System',
+                            'createdat'=>now(),
+                            'updatedat'=>now()
                         ]);
                     }
                 }

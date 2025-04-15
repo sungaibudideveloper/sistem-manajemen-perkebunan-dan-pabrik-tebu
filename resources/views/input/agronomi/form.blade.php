@@ -13,7 +13,7 @@
             {{ $message }}</div>
     @enderror
 
-
+    @include('errorfile')
 
     <form action="{{ $url }}" method="POST">
         @csrf
@@ -24,8 +24,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm">Nomor Sample</label>
-                    <input type="text" name="no_sample" class="border rounded-md border-gray-300 p-2 w-full"
-                        autocomplete="off" maxlength="4" value="{{ old('no_sample', $header->nosample ?? '') }}"
+                    <input type="text" name="nosample" class="border rounded-md border-gray-300 p-2 w-full"
+                        autocomplete="off" maxlength="4" value="{{ old('nosample', $header->nosample ?? '') }}"
                         required>
                 </div>
                 <div>
@@ -407,14 +407,14 @@
         });
     </script>
     <script>
-        document.querySelectorAll('input[name="no_sample"], select[name="idblokplot"]').forEach((element) => {
+        document.querySelectorAll('input[name="nosample"], select[name="idblokplot"]').forEach((element) => {
             element.addEventListener('change', () => {
-                const noSample = document.querySelector('input[name="no_sample"]').value;
+                const noSample = document.querySelector('input[name="nosample"]').value;
                 const kdPlotSample = document.querySelector('select[name="idblokplot"]').value;
 
                 if (noSample && kdPlotSample) {
                     fetch(
-                            `{{ route('input.agronomi.check-data') }}?no_sample=${noSample}&idblokplot=${kdPlotSample}`
+                            `{{ route('input.agronomi.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
                         )
                         .then(response => response.json())
                         .then(data => {

@@ -4,9 +4,9 @@
     </IfModule>
 
     RewriteEngine On
-    
-    RewriteBase /tebu/
-    RewriteCond %{REQUEST_URI} !^/tebu/
+
+    #RewriteBase /tebu/
+    #RewriteCond %{REQUEST_URI} !^/tebu/
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .

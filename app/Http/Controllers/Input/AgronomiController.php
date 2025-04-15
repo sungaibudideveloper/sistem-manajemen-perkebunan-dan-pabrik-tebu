@@ -40,7 +40,7 @@ class AgronomiController extends Controller
             'varietas' => 'required',
             'kat' => 'required',
             'tanggaltanam' => 'required',
-            'tglamat' => 'required',
+            'tanggalpengamatan' => 'required',
             'lists.*.nourut' => 'required',
             'lists.*.jumlahbatang' => 'required',
             'lists.*.pan_gap' => 'required',
@@ -161,7 +161,6 @@ class AgronomiController extends Controller
     {
         $validated = $request->validate($this->requestValidated());
         $notifController = new NotificationController();
-
         $existsInHeader = AgronomiHeader::where('nosample', $request->nosample)
             ->where('companycode', $request->companycode)
             ->where('tanggaltanam', $request->tanggaltanam)
@@ -191,8 +190,8 @@ class AgronomiController extends Controller
                 'varietas' => $validated['varietas'],
                 'kat' => $validated['kat'],
                 'tanggaltanam' => $validated['tanggaltanam'],
-                'tglamat' => $validated['tglamat'],
-                'inputby' => Auth::user()->usernm,
+                'tanggalpengamatan' => $validated['tanggalpengamatan'],
+                'inputby' => Auth::user()->userid,
             ]);
 
             foreach ($validated['lists'] as $list) {
@@ -205,12 +204,12 @@ class AgronomiController extends Controller
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
                     'nourut' => $list['nourut'],
-                    'jm_batang' => $list['jumlahbatang'],
+                    'jumlahbatang' => $list['jumlahbatang'],
                     'pan_gap' => $list['pan_gap'],
                     'per_gap' => $per_gap,
                     'per_germinasi' => 1 - $per_gap,
                     'ph_tanah' => $list['ph_tanah'],
-                    'populasi' => $list['jm_batang'] / 10,
+                    'populasi' => $list['jumlahbatang'] / 10,
                     'ktk_gulma' => $list['ktk_gulma'],
                     'per_gulma' => $list['ktk_gulma'] ? $list['ktk_gulma'] / 16 : 0,
                     't_primer' => $list['t_primer'],
@@ -222,6 +221,8 @@ class AgronomiController extends Controller
                     'd_tersier' => $list['d_tersier'],
                     'd_kuarter' => $list['d_kuarter'],
                     'inputby' => Auth::user()->userid,
+                    'createdat' => now(),
+                    'updatedat' => now()
                 ]);
 
                 if ($per_germinasi < 0.9 || $per_gulma > 0.25) {
@@ -235,7 +236,7 @@ class AgronomiController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
-
+            dd($e);
             return redirect()->route('input.agronomi.create')
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage())->withInput();
         }
@@ -336,7 +337,6 @@ class AgronomiController extends Controller
     public function update(Request $request, $nosample, $companycode, $tanggaltanam)
     {
         $validated = $request->validate($this->requestValidated());
-
         DB::beginTransaction();
 
         try {
@@ -358,7 +358,7 @@ class AgronomiController extends Controller
                     'varietas' => $validated['varietas'],
                     'kat' => $validated['kat'],
                     'tanggaltanam' => $validated['tanggaltanam'],
-                    'tglamat' => $validated['tglamat'],
+                    'tanggalpengamatan' => $validated['tanggalpengamatan'],
                     'updatedat' => now(),
                 ]);
 
@@ -381,12 +381,12 @@ class AgronomiController extends Controller
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
                     'nourut' => $list['nourut'],
-                    'jm_batang' => $list['jm_batang'],
+                    'jumlahbatang' => $list['jumlahbatang'],
                     'pan_gap' => $list['pan_gap'],
                     'per_gap' => $list['pan_gap'] / 1000,
                     'per_germinasi' => 1 - ($list['pan_gap'] / 1000),
                     'ph_tanah' => $list['ph_tanah'],
-                    'populasi' => $list['jm_batang'] / 10,
+                    'populasi' => $list['jumlahbatang'] / 10,
                     'ktk_gulma' => $list['ktk_gulma'],
                     'per_gulma' => $list['ktk_gulma'] ? $list['ktk_gulma'] / 16 : 0,
                     't_primer' => $list['t_primer'],
@@ -411,7 +411,6 @@ class AgronomiController extends Controller
                 ->with('success', 'Data updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-
             return redirect()->route('input.agronomi.create')
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
@@ -464,7 +463,7 @@ class AgronomiController extends Controller
                 'agrolst.*',
                 'agrohdr.varietas',
                 'agrohdr.kat',
-                'agrohdr.tglamat',
+                'agrohdr.tanggalpengamatan',
                 'company.nama as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
@@ -529,7 +528,7 @@ class AgronomiController extends Controller
             $tanggaltanam = Carbon::parse($list->tanggaltanam);
             $umurTanam = $tanggaltanam->diffInMonths($now);
 
-            $tglAmat = Carbon::parse($list->tglamat);
+            $tglAmat = Carbon::parse($list->tanggalpengamatan);
             $bulanPengamatan = $tglAmat->format('F');
 
             $sheet->setCellValue('A' . $row, $list->nosample);
@@ -542,10 +541,10 @@ class AgronomiController extends Controller
             $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
             $sheet->setCellValue('I' . $row, ceil($umurTanam) . ' Bulan');
             $sheet->setCellValue('J' . $row, $list->jaraktanam);
-            $sheet->setCellValue('K' . $row, $list->tglamat);
+            $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
             $sheet->setCellValue('L' . $row, $bulanPengamatan);
             $sheet->setCellValue('M' . $row, $list->nourut);
-            $sheet->setCellValue('N' . $row, $list->jm_batang);
+            $sheet->setCellValue('N' . $row, $list->jumlahbatang);
             $sheet->setCellValue('O' . $row, $list->pan_gap);
             $sheet->setCellValue('P' . $row, $list->per_gap);
             $sheet->setCellValue('Q' . $row, $list->per_germinasi);
