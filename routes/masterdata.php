@@ -49,7 +49,7 @@ Route::put('masterdata/mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [M
 
 
 
-
+//Kelola User
 Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
 
     Route::post('masterdata/username', [UsernameController::class, 'handle'])->name('master.username.handle');
@@ -81,5 +81,5 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::delete('masterdata/herbisida/{itemcode}', [HerbisidaController::class, 'destroy'])->name('master.herbisida.destroy')->middleware('permission:Hapus Herbisida');
 });
 
-
-Route::resource('herbisida-dosage', HerbisidaDosageController::class);
+//Dosis Herbisida
+Route::resource('masterdata/herbisida-dosage',HerbisidaDosageController::class,['as' => 'masterdata']);

@@ -19,7 +19,7 @@
       <div class="flex items-center justify-between px-4 py-2">
 
         {{-- Create Button (Modal)--}}
-        @if (auth()->user() && in_array('Create Company', json_decode(auth()->user()->permissions ?? '[]')))
+        @if (auth()->user() && in_array('Create Blok', json_decode(auth()->user()->permissions ?? '[]')))
           <button @click="resetForm()"
                   class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
                   <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -61,8 +61,8 @@
                   class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
                 <form method="POST"
                   :action="mode === 'edit'
-                  ? '{{ url('herbisida-dosage') }}/' + form.activitycodeoriginal
-                  : '{{ url('herbisida-dosage') }}'"
+                  ? '{{ url('masterdata/herbisida-dosage') }}/' + form.activitycodeoriginal
+                  : '{{ url('masterdata/herbisida-dosage') }}'"
                   class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                   @csrf
                   <template x-if="mode === 'edit'">
@@ -173,45 +173,47 @@
                               <td class="py-2 px-4 border-b">{{ $data->totaldosage }}</td>
                               <td class="py-2 px-4 border-b">{{ $data->dosageunit }}</td>
                               {{-- Edit Button (Modal)--}}
-                              @if (auth()->user() && in_array('Create Company', json_decode(auth()->user()->permissions ?? '[]')))
-                              <td class="py-2 px-4 border-b">
-                                <button
-                                  @click="
-                                    mode = 'edit';
-                                    form.companycode = '{{ $data->companycode }}';
-                                    form.activitycodeoriginal = '{{ $data->activitycode }}'; {{-- Original activity code for update --}}
-                                    form.activitycode = '{{ $data->activitycode }}';
-                                    form.itemcode = '{{ $data->itemcode }}';
-                                    form.time = '{{ $data->time }}';
-                                    form.description = '{{ $data->description }}';
-                                    form.totaldosage = {{ $data->totaldosage ?? 0}};
-                                    form.dosageunit = '{{ $data->dosageunit }}';
-                                    open = true
-                                  "
-                                  class="text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                                >
-                                  Edit
-                                </button>
-                                {{-- Delete Button --}}
-                                <form 
-                                  action="{{ url('herbisida-dosage/'.$data->activitycode) }}" 
-                                  method="POST"
-                                  onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                                  class="inline"
-                                >
-                                  @csrf
-                                  @method('DELETE')
-                                  {{-- Kirim hidden companycode & itemcode ke Controller untuk Filter WHERE--}}
-                                  <input type="hidden" name="companycode" value="{{ $data->companycode }}">
-                                  <input type="hidden" name="itemcode"    value="{{ $data->itemcode }}">
-                                  <button 
-                                    type="submit"
-                                    class="text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
+                              @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                <td class="py-2 px-4 border-b">
+                                  <button
+                                    @click="
+                                      mode = 'edit';
+                                      form.companycode = '{{ $data->companycode }}';
+                                      form.activitycodeoriginal = '{{ $data->activitycode }}'; {{-- Original activity code for update --}}
+                                      form.activitycode = '{{ $data->activitycode }}';
+                                      form.itemcode = '{{ $data->itemcode }}';
+                                      form.time = '{{ $data->time }}';
+                                      form.description = '{{ $data->description }}';
+                                      form.totaldosage = {{ $data->totaldosage ?? 0}};
+                                      form.dosageunit = '{{ $data->dosageunit }}';
+                                      open = true
+                                    "
+                                    class="text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
                                   >
-                                    Delete
+                                    Edit
                                   </button>
-                                </form>
-                              </td>
+                                  {{-- Delete Button --}}
+                                  @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                    <form 
+                                      action="{{ url('masterdata/herbisida-dosage/'.$data->activitycode) }}" 
+                                      method="POST"
+                                      onsubmit="return confirm('Yakin ingin menghapus data ini?');"
+                                      class="inline"
+                                    >
+                                      @csrf
+                                      @method('DELETE')
+                                      {{-- Kirim hidden companycode & itemcode ke Controller untuk Filter WHERE--}}
+                                      <input type="hidden" name="companycode" value="{{ $data->companycode }}">
+                                      <input type="hidden" name="itemcode"    value="{{ $data->itemcode }}">
+                                      <button 
+                                        type="submit"
+                                        class="text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
+                                      >
+                                        Delete
+                                      </button>
+                                  @endif
+                                  </form>
+                                </td>
                               @endif
                           </tr>
                       @endforeach

@@ -18,6 +18,7 @@
                                             request()->is('plotting') ||
                                             request()->is('mapping') ||
                                             request()->is('herbisida') ||
+                                            request()->is('herbisida-dosage') ||
                                             request()->is('username') ||
                                             request()->routeIs('master.username.create') ||
                                             request()->routeIs('master.username.access') ||
@@ -29,6 +30,7 @@
                                                     request()->is('plotting') ||
                                                     request()->is('mapping') ||
                                                     request()->is('herbisida') ||
+                                                    request()->is('herbisida-dosage') ||
                                                     request()->is('username') ||
                                                     request()->routeIs('master.username.create') ||
                                                     request()->routeIs('master.username.access') ||
@@ -76,6 +78,11 @@
                                     {{-- @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]'))) --}}
                                         <x-childnav-link href="{{ route('master.herbisida.index') }}"
                                             :active="request()->is('herbisida')">Herbisida</x-childnav-link>
+                                    {{-- @endif --}}
+
+                                    {{-- @if (auth()->user() && in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]'))) --}}
+                                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
+                                            :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
                                     {{-- @endif --}}
 
                                     @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
@@ -413,6 +420,7 @@
                                 request()->is('plotting') ||
                                 request()->is('mapping') ||
                                 request()->is('herbisida') ||
+                                request()->is('herbisida-dosage') ||
                                 request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
                                 request()->routeIs('master.username.access') ||
@@ -424,6 +432,7 @@
                                         request()->is('plotting') ||
                                         request()->is('mapping') ||
                                         request()->is('herbisida') ||
+                                        request()->is('herbisida-dosage') ||
                                         request()->is('username') ||
                                         request()->routeIs('master.username.create') ||
                                         request()->routeIs('master.username.access') ||
@@ -469,6 +478,9 @@
 
                         <x-childnav-link href="{{ route('master.herbisida.index') }}"
                                 :active="request()->is('herbisida')">Herbisida</x-childnav-link>
+
+                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
+                                :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
 
                         @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
                             <x-childnav-link href="{{ route('master.username.index') }}" :active="request()->is('username') ||
