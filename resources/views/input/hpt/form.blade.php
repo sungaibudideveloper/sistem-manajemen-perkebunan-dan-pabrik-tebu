@@ -3,7 +3,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     <x-slot:navnav>{{ $title }}</x-slot:navnav>
-
+    @include('errorfile')
     @if (session('error'))
         <div class="bg-red-500 text-white p-4 rounded mb-4">
             <p>{{ session('error') }}</p>
@@ -24,21 +24,21 @@
 
                 <div>
                     <label class="block text-md">Nomor Sample</label>
-                    <input type="text" name="no_sample" class="border rounded-md border-gray-300 p-2 w-full"
-                        maxlength="4" autocomplete="off" value="{{ old('no_sample', $header->no_sample ?? '') }}"
+                    <input type="text" name="nosample" class="border rounded-md border-gray-300 p-2 w-full"
+                        maxlength="4" autocomplete="off" value="{{ old('nosample', $header->nosample ?? '') }}"
                         required>
                 </div>
 
                 <div>
                     <label class="block text-md">Kode Plot Sample</label>
-                    <select id="plotcodesample" name="plotcodesample" class="border rounded-md border-gray-300 p-2 w-full"
+                    <select id="idblokplot" name="idblokplot" class="border rounded-md border-gray-300 p-2 w-full"
                         required>
                         <option value="" disabled selected class="text-gray">--Pilih Plot Sample--</option>
                         @foreach ($mapping as $map)
-                            <option value="{{ $map->plotcodesample }}"
-                                {{ old('plotcodesample', $header->plotcodesample ?? '') == $map->plotcodesample ? 'selected' : '' }}
+                            <option value="{{ $map->idblokplot }}"
+                                {{ old('idblokplot', $header->idblokplot ?? '') == $map->idblokplot ? 'selected' : '' }}
                                 class="text-black">
-                                {{ $map->plotcodesample }}
+                                {{ $map->idblokplot }}
                             </option>
                         @endforeach
                     </select>
@@ -51,16 +51,16 @@
                         value="{{ old('companycode', $header->companycode ?? '') }}" required>
                 </div>
                 <div>
-                    <label class="block text-md">Kode block</label>
-                    <input id="block" type="text" name="block" maxlength="2"
+                    <label class="block text-md">Kode Blok</label>
+                    <input id="blok" type="text" name="blok" maxlength="2"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('blok', $header->block ?? '') }}" required>
+                        value="{{ old('blok', $header->blok ?? '') }}" required>
                 </div>
                 <div>
                     <label class="block text-md">Kode Plot</label>
-                    <input id="plotcode" type="text" name="plotcode" maxlength="5"
+                    <input id="plot" type="text" name="plot" maxlength="5"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('plotcode', $header->plotcode ?? '') }}" required>
+                        value="{{ old('plot', $header->plot ?? '') }}" required>
                 </div>
 
                 <div>
@@ -79,8 +79,8 @@
                 </div>
                 <div>
                     <label class="block text-md">Tanggal Pengamatan</label>
-                    <input type="date" name="tglamat" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tglamat', $header->tglamat ?? '') }}"
+                    <input type="date" name="tanggalpengamatan" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+                        value="{{ old('tanggalpengamatan', $header->tanggalpengamatan ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
@@ -638,40 +638,40 @@
 
     <script>
         $(document).ready(function() {
-            $('#plotcodesample').change(function() {
-                var plotcodesample = $(this).val();
-                if (plotcodesample) {
+            $('#idblokplot').change(function() {
+                var idblokplot = $(this).val();
+                if (idblokplot) {
                     $.ajax({
                         url: "{{ route('input.hpt.getFieldByMapping') }}",
                         type: "POST",
                         data: {
                             _token: $('meta[name="csrf-token"]').attr('content'),
-                            plotcodesample: plotcodesample
+                            idblokplot: idblokplot
                         },
                         success: function(response) {
                             $('#companycode').val(response.companycode);
-                            $('#block').val(response.block);
-                            $('#plotcode').val(response.plotcode);
+                            $('#blok').val(response.blok);
+                            $('#plot').val(response.plot);
                         },
                         error: function() {
                             alert('Data tidak ditemukan');
                         }
                     });
                 } else {
-                    $('#companycode, #block, #plotcode').val('');
+                    $('#companycode, #blok, #plot').val('');
                 }
             });
         });
     </script>
     <script>
-        document.querySelectorAll('input[name="no_sample"], select[name="plotcodesample"]').forEach((element) => {
+        document.querySelectorAll('input[name="nosample"], select[name="idblokplot"]').forEach((element) => {
             element.addEventListener('change', () => {
-                const noSample = document.querySelector('input[name="no_sample"]').value;
-                const kdPlotSample = document.querySelector('select[name="plotcodesample"]').value;
+                const noSample = document.querySelector('input[name="nosample"]').value;
+                const kdPlotSample = document.querySelector('select[name="idblokplot"]').value;
 
                 if (noSample && kdPlotSample) {
                     fetch(
-                            `{{ route('input.hpt.check-data') }}?no_sample=${noSample}&plotcodesample=${kdPlotSample}`
+                            `{{ route('input.hpt.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
                         )
                         .then(response => response.json())
                         .then(data => {

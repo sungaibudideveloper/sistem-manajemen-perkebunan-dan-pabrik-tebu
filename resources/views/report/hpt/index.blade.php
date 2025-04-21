@@ -117,7 +117,7 @@
                                 </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                     Sample</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">block
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Blok
                                 </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
                                 </th>
@@ -220,8 +220,8 @@
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->no }}.</td>
                                     <td class="py-2 px-4 border-b border-gray-300">
                                         {{ $item->compName ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->no_sample }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blockName ?? '' }}
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->nosample }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blokName ?? '' }}
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->plotName ?? '' }}
                                     </td>
@@ -231,10 +231,10 @@
                                     <td class="py-2 px-4 border-b border-gray-300">{{ ceil($item->umur_tanam) }} Bulan
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->varietas ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tglamat ?? '' }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggalpengamatan ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->bulanPengamatan }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->nourut }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->jm_batang }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->jumlahbatang }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->ppt }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->ppt_aktif }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->pbt }}</td>

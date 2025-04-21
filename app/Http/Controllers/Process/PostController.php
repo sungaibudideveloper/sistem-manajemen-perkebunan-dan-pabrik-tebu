@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Process;
 
 use Carbon\Carbon;
 use App\Models\HPTHeader;
@@ -11,8 +11,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
-class UnpostController extends Controller
+class PostController extends Controller
 {
+
     public function __construct()
     {
         View::share([
@@ -23,7 +24,7 @@ class UnpostController extends Controller
 
     public function index(Request $request)
     {
-        $title = "Unposting";
+        $title = "Posting";
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -39,7 +40,7 @@ class UnpostController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $session = session('unposting');
+        $session = session('posting');
         $dropdownValue = session('companycode');
 
         $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
@@ -47,7 +48,7 @@ class UnpostController extends Controller
         $posts = $model::orderBy('createdat', 'desc')
             ->with(['lists', 'company'])
             ->where('companycode', '=', $dropdownValue)
-            ->where('status', '=', 'Posted')
+            ->where('status', '=', 'Unposted')
             ->when($startDate, fn($query) => $query->whereDate('createdat', '>=', $startDate))
             ->when($endDate, fn($query) => $query->whereDate('createdat', '<=', $endDate))
             ->paginate($perPage);
@@ -62,27 +63,27 @@ class UnpostController extends Controller
             $item->no = ($posts->currentPage() - 1) * $posts->perPage() + $index + 1;
         }
 
-        return view('process.unposting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
+        return view('process.posting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
     }
 
-    public function unpostSession(Request $request)
+    public function postSession(Request $request)
     {
         $request->validate([
-            'unposting' => 'required|string',
+            'posting' => 'required|string',
         ]);
 
-        session(['unposting' => $request->unposting]);
+        session(['posting' => $request->posting]);
 
-        return redirect()->route('process.unposting');
+        return redirect()->route('process.posting');
     }
 
-    public function unposting(Request $request)
+    public function posting(Request $request)
     {
         $selectedItems = json_decode($request->selected_items, true);
         $selectedItems = array_map(function ($item) {
             $parts = explode(',', $item);
             return [
-                'no_sample' => $parts[0] ?? null,
+                'nosample' => $parts[0] ?? null,
                 'companycode'   => $parts[1] ?? null,
                 'tanggaltanam'  => $parts[2] ?? null,
             ];
@@ -92,18 +93,18 @@ class UnpostController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
         }
 
-        $tables = session('unposting') === 'Agronomi'
+        $tables = session('posting') === 'Agronomi'
             ? ['agrohdr', 'agrolst']
-            : ['hpt_hdr', 'hpt_lst'];
+            : ['hpthdr', 'hptlst'];
 
         foreach ($tables as $table) {
             DB::table($table)
-                ->whereIn('no_sample', array_column($selectedItems, 'no_sample'))
+                ->whereIn('nosample', array_column($selectedItems, 'nosample'))
                 ->whereIn('companycode', array_column($selectedItems, 'companycode'))
                 ->whereIn('tanggaltanam', array_column($selectedItems, 'tanggaltanam'))
-                ->update(['status' => 'Unposted']);
+                ->update(['status' => 'Posted', 'count' => DB::raw('count + 1')]);
         }
 
-        return redirect()->back()->with('success1', 'Data telah di unposting.');
+        return redirect()->back()->with('success1', 'Data berhasil diposting.');
     }
 }

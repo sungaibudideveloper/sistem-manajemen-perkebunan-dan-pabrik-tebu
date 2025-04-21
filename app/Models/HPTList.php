@@ -7,14 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class HPTList extends Model
 {
     public $incrementing = false;
-    protected $table = 'hpt_lst';
-    protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam', 'nourut'];
+    protected $table = 'hptlst';
+    protected $primaryKey = ['nosample', 'companycode', 'tanggaltanam', 'nourut'];
+    public function setCreatedAt($value)
+    {
+        $this->attributes['createdat'] = $value;
+    }
+
+    public function getCreatedAtAttribute()
+    {
+        return $this->attributes['createdat'];
+    }
     protected $fillable = [
-        'no_sample',
+        'nosample',
         'companycode',
         'tanggaltanam',
         'nourut',
-        'jm_batang',
+        'jumlahbatang',
         'ppt',
         'pbt',
         'skor0',
@@ -57,6 +66,8 @@ class HPTList extends Model
         'smut_stadia1',
         'smut_stadia2',
         'smut_stadia3',
-        'inputby'
+        'inputby',
+        'createdat',
+        'updatedat'
     ];
 }

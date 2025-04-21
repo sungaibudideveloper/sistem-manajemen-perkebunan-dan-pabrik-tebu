@@ -1,6 +1,5 @@
 <?php
-
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Dashboard;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -15,7 +14,7 @@ class DashboardController extends Controller
         View::share([
             'navbar' => 'Dashboard',
         ]);
-        
+
     }
     public function agronomi(Request $request)
     {
@@ -77,7 +76,7 @@ class DashboardController extends Controller
         if (!empty($kdCompAgronomi) || !empty($kdBlokAgronomi) || !empty($kdPlotAgronomi) || ($startMonthNum && $endMonthNum)) {
             $chartDataQuery = DB::table('agrohdr')
                 ->join('agrolst', function ($join) {
-                    $join->on('agrohdr.no_sample', '=', 'agrolst.no_sample')
+                    $join->on('agrohdr.nosample', '=', 'agrolst.nosample')
                         ->on('agrohdr.companycode', '=', 'agrolst.companycode');
                 })
                 ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
@@ -90,15 +89,15 @@ class DashboardController extends Controller
                         ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
                 })
                 ->select(
-                    DB::raw("MONTH(agrohdr.tglamat) as bln_amat"),
+                    DB::raw("MONTH(agrohdr.tanggalpengamatan) as bln_amat"),
                     DB::raw("MIN(agrohdr.tanggaltanam) as tanggaltanam"),
                     'agrohdr.kat',
-                    DB::raw("CASE 
-                        WHEN '$verticalField' IN ('populasi', 'ph_tanah') 
-                        THEN AVG($verticalField) 
-                        ELSE AVG($verticalField) * 100 
+                    DB::raw("CASE
+                        WHEN '$verticalField' IN ('populasi', 'ph_tanah')
+                        THEN AVG($verticalField)
+                        ELSE AVG($verticalField) * 100
                     END as total"),
-                    'company.nama as company_nama',
+                    'company.name as company_nama',
                     'blok.blok as blok_nama',
                     'plot.plot as plot_nama'
                 )
@@ -112,9 +111,9 @@ class DashboardController extends Controller
                     return $query->whereIn('agrohdr.plot', $kdPlotAgronomi);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
-                    return $query->whereBetween(DB::raw("MONTH(agrohdr.tglamat)"), [$startMonthNum, $endMonthNum]);
+                    return $query->whereBetween(DB::raw("MONTH(agrohdr.tanggalpengamatan)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('bln_amat', 'kat', 'company.nama', 'blok.blok', 'plot.plot')
+                ->groupBy('bln_amat', 'kat', 'company.name', 'blok.blok', 'plot.plot')
                 ->orderBy('kat');
 
             $chartDataResult = $chartDataQuery->get();
@@ -207,7 +206,7 @@ class DashboardController extends Controller
 
         $kdCompAgroOpt = DB::table('company')
             ->join('agrohdr', 'company.companycode', '=', 'agrohdr.companycode')
-            ->select('company.companycode', 'company.nama')
+            ->select('company.companycode', 'company.name')
             ->distinct()
             ->get();
         $kdBlokAgroOpt = DB::table('blok')
@@ -218,7 +217,7 @@ class DashboardController extends Controller
         $kdPlotAgroOpt = DB::table('plot')
             ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
             ->select('plot.plot')
-            ->orderByRaw("LEFT(plotting.plot, 1), CAST(SUBSTRING(plotting.plot, 2) AS UNSIGNED)")
+            ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 
@@ -323,45 +322,45 @@ class DashboardController extends Controller
         $endMonthNum = $months[$endMonth] ?? null;
 
         if (!empty($kdCompHPT) || !empty($kdBlokHPT) || !empty($kdPlotHPT) || ($startMonthNum && $endMonthNum)) {
-            $chartDataQuery = DB::table('hpt_hdr')
-                ->join('hpt_lst', function ($join) {
-                    $join->on('hpt_hdr.no_sample', '=', 'hpt_lst.no_sample')
-                        ->on('hpt_hdr.companycode', '=', 'hpt_lst.companycode');
+            $chartDataQuery = DB::table('hpthdr')
+                ->join('hptlst', function ($join) {
+                    $join->on('hpthdr.nosample', '=', 'hptlst.nosample')
+                        ->on('hpthdr.companycode', '=', 'hptlst.companycode');
                 })
                 ->join('plot', function ($join) {
-                    $join->on('hpt_hdr.plot', '=', 'plot.plot')
-                        ->on('hpt_hdr.companycode', '=', 'plot.companycode');
+                    $join->on('hpthdr.plot', '=', 'plot.plot')
+                        ->on('hpthdr.companycode', '=', 'plot.companycode');
                 })
-                ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
+                ->join('company', 'hpthdr.companycode', '=', 'company.companycode')
                 ->leftJoin('blok', function ($join) {
-                    $join->on('hpt_hdr.blok', '=', 'blok.blok')
-                        ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
+                    $join->on('hpthdr.blok', '=', 'blok.blok')
+                        ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
                 })
                 ->select(
-                    DB::raw("MONTH(hpt_hdr.tglamat) as bln_amat"),
-                    DB::raw("MIN(hpt_hdr.tanggaltanam) as tanggaltanam"),
-                    DB::raw("CASE 
-                        WHEN '$verticalField' IN ('per_ppt', 'per_pbt') 
+                    DB::raw("MONTH(hpthdr.tanggalpengamatan) as bln_amat"),
+                    DB::raw("MIN(hpthdr.tanggaltanam) as tanggaltanam"),
+                    DB::raw("CASE
+                        WHEN '$verticalField' IN ('per_ppt', 'per_pbt')
                         THEN AVG($verticalField) * 100
-                        ELSE AVG($verticalField) 
+                        ELSE AVG($verticalField)
                     END as total"),
-                    'company.nama as company_nama',
+                    'company.name as company_nama',
                     'blok.blok as blok_nama',
                     'plot.plot as plot_nama'
                 )
                 ->when($kdCompHPT, function ($query) use ($kdCompHPT) {
-                    return $query->whereIn('hpt_hdr.companycode', $kdCompHPT);
+                    return $query->whereIn('hpthdr.companycode', $kdCompHPT);
                 })
                 ->when($kdBlokHPT, function ($query) use ($kdBlokHPT) {
-                    return $query->whereIn('hpt_hdr.blok', $kdBlokHPT);
+                    return $query->whereIn('hpthdr.blok', $kdBlokHPT);
                 })
                 ->when($kdPlotHPT, function ($query) use ($kdPlotHPT) {
-                    return $query->whereIn('hpt_hdr.plot', $kdPlotHPT);
+                    return $query->whereIn('hpthdr.plot', $kdPlotHPT);
                 })
                 ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
-                    return $query->whereBetween(DB::raw("MONTH(hpt_hdr.tglamat)"), [$startMonthNum, $endMonthNum]);
+                    return $query->whereBetween(DB::raw("MONTH(hpthdr.tanggalpengamatan)"), [$startMonthNum, $endMonthNum]);
                 })
-                ->groupBy('company.nama', 'blok.blok', 'plot.plot', 'bln_amat')
+                ->groupBy('company.name', 'blok.blok', 'plot.plot', 'bln_amat')
                 ->orderBy('plot_nama');
 
 
@@ -447,19 +446,19 @@ class DashboardController extends Controller
         }
 
         $kdCompHPTOpt = DB::table('company')
-            ->join('hpt_hdr', 'company.companycode', '=', 'hpt_hdr.companycode')
-            ->select('company.companycode', 'company.nama')
+            ->join('hpthdr', 'company.companycode', '=', 'hpthdr.companycode')
+            ->select('company.companycode', 'company.name')
             ->distinct()
             ->get();
         $kdBlokHPTOpt = DB::table('blok')
-            ->join('hpt_hdr', 'blok.blok', '=', 'hpt_hdr.blok')
+            ->join('hpthdr', 'blok.blok', '=', 'hpthdr.blok')
             ->select('blok.blok')
             ->distinct()
             ->get();
         $kdPlotHPTOpt = DB::table('plot')
-            ->join('hpt_hdr', 'plot.plot', '=', 'hpt_hdr.plot')
+            ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
             ->select('plot.plot')
-            ->orderByRaw("LEFT(plotting.plot, 1), CAST(SUBSTRING(plotting.plot, 2) AS UNSIGNED)")
+            ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
             ->distinct()
             ->get();
 

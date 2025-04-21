@@ -159,15 +159,15 @@
                                 <tr>
                                     <td class="w-1 py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         <input type="checkbox" class="rowCheckbox rounded" name="selected_items[]"
-                                            value="{{ $item->no_sample }},{{ $item->companycode }},{{ $item->tanggaltanam }}">
+                                            value="{{ $item->nosample }},{{ $item->companycode }},{{ $item->tanggaltanam }}">
                                     </td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->no }}.</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->no_sample }}</td>
+                                        {{ $item->nosample }}</td>
                                     </td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->plotcodesample }}</td>
+                                        {{ $item->idblokplot }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->varietas }}</td>
                                     @if (session('posting') === 'Agronomi')
@@ -177,7 +177,7 @@
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->tanggaltanam }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->tglamat }}</td>
+                                        {{ $item->tanggalpengamatan }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

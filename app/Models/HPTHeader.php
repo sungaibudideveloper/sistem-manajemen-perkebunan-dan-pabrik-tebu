@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class HPTHeader extends Model
 {
     public $incrementing = false;
-    protected $table = 'hpt_hdr';
-    protected $primaryKey = ['no_sample', 'companycode', 'tanggaltanam'];
-    protected $fillable = ['no_sample', 'companycode', 'blok', 'plot', 'idblokplot', 'varietas', 'tanggaltanam', 'tglamat', 'inputby'];
+    protected $table = 'hpthdr';
+    protected $primaryKey = ['nosample', 'companycode', 'tanggaltanam'];
+    protected $fillable = ['nosample', 'companycode', 'blok', 'plot', 'idblokplot', 'varietas', 'tanggaltanam', 'tanggalpengamatan', 'inputby','createdat','updatedat'];
 
 
     public function setCreatedAt($value)
@@ -24,7 +24,7 @@ class HPTHeader extends Model
 
     protected function setKeysForSaveQuery($query)
     {
-        $query->where('no_sample', $this->getAttribute('no_sample'))
+        $query->where('nosample', $this->getAttribute('nosample'))
             ->where('companycode', $this->getAttribute('companycode'))
             ->where('tanggaltanam', $this->getAttribute('tanggaltanam'));
 
@@ -33,7 +33,7 @@ class HPTHeader extends Model
 
     public function lists()
     {
-        return $this->hasMany(HPTList::class, 'no_sample', 'no_sample')->where(function ($query) {
+        return $this->hasMany(HPTList::class, 'nosample', 'nosample')->where(function ($query) {
             $query->whereColumn('companycode', 'companycode')
                 ->whereColumn('tanggaltanam', 'tanggaltanam');
         });
@@ -46,10 +46,10 @@ class HPTHeader extends Model
 
     public function company()
     {
-        return $this->belongsTo(company::class, 'companycode', 'companycode');
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
     }
     public function userComp()
     {
-        return $this->belongsTo(Usercomp::class, 'companycode', 'companycode');
+        return $this->belongsTo(Usercompany::class, 'companycode', 'companycode');
     }
 }

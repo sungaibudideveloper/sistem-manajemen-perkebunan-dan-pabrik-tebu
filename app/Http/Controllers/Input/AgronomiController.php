@@ -464,7 +464,7 @@ class AgronomiController extends Controller
                 'agrohdr.varietas',
                 'agrohdr.kat',
                 'agrohdr.tanggalpengamatan',
-                'company.nama as compName',
+                'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
                 'plot.luasarea',
