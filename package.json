@@ -6,16 +6,34 @@
         "build": "vite build"
     },
     "devDependencies": {
-        "autoprefixer": "^10.4.20",
+        "autoprefixer": "^10.4.21",
         "axios": "^1.7.4",
         "flowbite": "^2.5.2",
         "flowbite-typography": "^1.0.4",
         "laravel-vite-plugin": "^1.0",
-        "postcss": "^8.4.47",
-        "tailwindcss": "^3.4.13",
+        "postcss": "^8.5.3",
+        "tailwindcss": "^3.4.17",
         "vite": "^5.0"
     },
     "dependencies": {
         "simple-datatables": "^10.0.0"
-    }
+    },
+    "name": "tebu",
+    "version": "1.0.0",
+    "description": "<<<<<<< HEAD # Web-Tebu ======= <p align=\"center\"><a href=\"https://laravel.com\" target=\"_blank\"><img src=\"https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg\" width=\"400\" alt=\"Laravel Logo\"></a></p>",
+    "main": "postcss.config.js",
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/hanschh/web-tebu.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/hanschh/web-tebu/issues"
+    },
+    "homepage": "https://github.com/hanschh/web-tebu#readme"
 }
