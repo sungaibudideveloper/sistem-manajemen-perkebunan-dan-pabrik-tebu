@@ -17,6 +17,7 @@
                                             request()->is('blok') ||
                                             request()->is('plotting') ||
                                             request()->is('mapping') ||
+                                            request()->is('herbisida') ||
                                             request()->is('username') ||
                                             request()->routeIs('master.username.create') ||
                                             request()->routeIs('master.username.access') ||
@@ -27,6 +28,7 @@
                                                     request()->is('blok') ||
                                                     request()->is('plotting') ||
                                                     request()->is('mapping') ||
+                                                    request()->is('herbisida') ||
                                                     request()->is('username') ||
                                                     request()->routeIs('master.username.create') ||
                                                     request()->routeIs('master.username.access') ||
@@ -69,6 +71,12 @@
                                         <x-childnav-link href="{{ route('master.mapping.index') }}"
                                             :active="request()->is('mapping')">Mapping</x-childnav-link>
                                     @endif
+                                    
+                                    {{-- @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]'))) --}}
+                                        <x-childnav-link href="{{ route('master.herbisida.index') }}"
+                                            :active="request()->is('herbisida')">Herbisida</x-childnav-link>
+                                    {{-- @endif --}}
+
                                     @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('master.username.index') }}"
                                             :active="request()->is('username') ||
@@ -403,6 +411,7 @@
                                 request()->is('blok') ||
                                 request()->is('plotting') ||
                                 request()->is('mapping') ||
+                                request()->is('herbisida') ||
                                 request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
                                 request()->routeIs('master.username.access') ||
@@ -413,6 +422,7 @@
                                         request()->is('blok') ||
                                         request()->is('plotting') ||
                                         request()->is('mapping') ||
+                                        request()->is('herbisida') ||
                                         request()->is('username') ||
                                         request()->routeIs('master.username.create') ||
                                         request()->routeIs('master.username.access') ||
@@ -455,6 +465,10 @@
                             <x-childnav-link href="{{ route('master.mapping.index') }}"
                                 :active="request()->is('mapping')">Mapping</x-childnav-link>
                         @endif
+
+                        <x-childnav-link href="{{ route('master.herbisida.index') }}"
+                                :active="request()->is('herbisida')">Herbisida</x-childnav-link>
+
                         @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
                             <x-childnav-link href="{{ route('master.username.index') }}" :active="request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
