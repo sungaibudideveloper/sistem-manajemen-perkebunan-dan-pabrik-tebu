@@ -1,12 +1,11 @@
 <?php
-
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Report;
+use App\Http\Controllers\Controller;
 
 use Carbon\Carbon;
 use App\Models\company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
@@ -38,7 +37,7 @@ class ReportController extends Controller
 
         $query = DB::table('agrolst')
             ->leftJoin('agrohdr', function ($join) {
-                $join->on('agrolst.no_sample', '=', 'agrohdr.no_sample')
+                $join->on('agrolst.nosample', '=', 'agrohdr.nosample')
                     ->whereColumn('agrolst.companycode', '=', 'agrohdr.companycode')
                     ->whereColumn('agrolst.tanggaltanam', '=', 'agrohdr.tanggaltanam');
             })
@@ -61,20 +60,20 @@ class ReportController extends Controller
                 'agrolst.*',
                 'agrohdr.varietas',
                 'agrohdr.kat',
-                'agrohdr.tglamat',
-                'company.nama as compName',
+                'agrohdr.tanggalpengamatan',
+                'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
                 'plot.luasarea',
                 'plot.jaraktanam',
             )
-            ->orderBy('agrohdr.tglamat', 'asc');
+            ->orderBy('agrohdr.tanggalpengamatan', 'asc');
 
         if ($startDate) {
-            $query->whereDate('agrohdr.tglamat', '>=', $startDate);
+            $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('agrohdr.tglamat', '<=', $endDate);
+            $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
         }
 
         $agronomi = $query->paginate($perPage);
@@ -91,7 +90,7 @@ class ReportController extends Controller
 
         return view('report.agronomi.index', compact('company', 'nav', 'agronomi', 'perPage', 'startDate', 'endDate', 'title'));
     }
-    
+
     public function hpt(Request $request)
     {
         $title = "Report HPT";
@@ -110,43 +109,43 @@ class ReportController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $query = DB::table('hpt_lst')
-            ->leftJoin('hpt_hdr', function ($join) {
-                $join->on('hpt_lst.no_sample', '=', 'hpt_hdr.no_sample')
-                    ->whereColumn('hpt_lst.companycode', '=', 'hpt_hdr.companycode')
-                    ->whereColumn('hpt_lst.tanggaltanam', '=', 'hpt_hdr.tanggaltanam');
+        $query = DB::table('hptlst')
+            ->leftJoin('hpthdr', function ($join) {
+                $join->on('hptlst.nosample', '=', 'hpthdr.nosample')
+                    ->whereColumn('hptlst.companycode', '=', 'hpthdr.companycode')
+                    ->whereColumn('hptlst.tanggaltanam', '=', 'hpthdr.tanggaltanam');
             })
             ->leftJoin('company', function ($join) {
-                $join->on('hpt_hdr.companycode', '=', 'company.companycode');
+                $join->on('hpthdr.companycode', '=', 'company.companycode');
             })
             ->leftJoin('blok', function ($join) {
-                $join->on('hpt_hdr.blok', '=', 'blok.blok')
-                    ->whereColumn('hpt_hdr.companycode', '=', 'blok.companycode');
+                $join->on('hpthdr.blok', '=', 'blok.blok')
+                    ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
             })
             ->leftJoin('plot', function ($join) {
-                $join->on('hpt_hdr.plot', '=', 'plot.plot')
-                    ->whereColumn('hpt_hdr.companycode', '=', 'plot.companycode');
+                $join->on('hpthdr.plot', '=', 'plot.plot')
+                    ->whereColumn('hpthdr.companycode', '=', 'plot.companycode');
             })
-            ->where('hpt_lst.companycode', session('companycode'))
-            ->where('hpt_hdr.companycode', session('companycode'))
-            ->where('hpt_hdr.status', '=', 'Posted')
-            ->where('hpt_lst.status', '=', 'Posted')
+            ->where('hptlst.companycode', session('companycode'))
+            ->where('hpthdr.companycode', session('companycode'))
+            ->where('hpthdr.status', '=', 'Posted')
+            ->where('hptlst.status', '=', 'Posted')
             ->select(
-                'hpt_lst.*',
-                'hpt_hdr.varietas',
-                'hpt_hdr.tglamat',
-                'company.nama as compName',
+                'hptlst.*',
+                'hpthdr.varietas',
+                'hpthdr.tanggalpengamatan',
+                'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
                 'plot.luasarea',
             )
-            ->orderBy('hpt_hdr.tglamat', 'desc');
+            ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 
         if ($startDate) {
-            $query->whereDate('hpt_hdr.tglamat', '>=', $startDate);
+            $query->whereDate('hpthdr.tanggalpengamatan', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('hpt_hdr.tglamat', '<=', $endDate);
+            $query->whereDate('hpthdr.tanggalpengamatan', '<=', $endDate);
         }
 
         $hpt = $query->paginate($perPage);

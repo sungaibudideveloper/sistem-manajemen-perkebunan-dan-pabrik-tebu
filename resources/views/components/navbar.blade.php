@@ -38,8 +38,9 @@
                                     class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                                     Master
                                     <!-- Arrow Icon -->
-                                    <svg :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
-                                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    <svg class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                        :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
+
                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

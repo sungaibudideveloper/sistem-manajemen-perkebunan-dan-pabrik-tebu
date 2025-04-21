@@ -31,6 +31,6 @@ class company extends Model
 
     public function usercomp()
     {
-        return $this->belongsTo(Usercomp::class, 'companycode', 'companycode');
+        return $this->belongsTo(Usercompany::class, 'companycode', 'companycode');
     }
 }

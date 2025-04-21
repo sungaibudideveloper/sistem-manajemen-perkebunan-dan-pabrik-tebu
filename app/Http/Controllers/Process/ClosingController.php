@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Process;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -26,17 +26,17 @@ class ClosingController extends Controller
             ->whereBetween('agrolst.createdat', [DB::raw('company.tgl'), now()])
             ->select('agrolst.*');
 
-        $headHPTQuery = DB::table('hpt_hdr')
-            ->join('company', 'hpt_hdr.companycode', '=', 'company.companycode')
-            ->where('hpt_hdr.companycode', '=', session('companycode'))
-            ->whereBetween('hpt_hdr.createdat', [DB::raw('company.tgl'), now()])
-            ->select('hpt_hdr.*');
+        $headHPTQuery = DB::table('hpthdr')
+            ->join('company', 'hpthdr.companycode', '=', 'company.companycode')
+            ->where('hpthdr.companycode', '=', session('companycode'))
+            ->whereBetween('hpthdr.createdat', [DB::raw('company.tgl'), now()])
+            ->select('hpthdr.*');
 
-        $listHPTQuery = DB::table('hpt_lst')
-            ->join('company', 'hpt_lst.companycode', '=', 'company.companycode')
-            ->where('hpt_lst.companycode', '=', session('companycode'))
-            ->whereBetween('hpt_lst.createdat', [DB::raw('company.tgl'), now()])
-            ->select('hpt_lst.*');
+        $listHPTQuery = DB::table('hptlst')
+            ->join('company', 'hptlst.companycode', '=', 'company.companycode')
+            ->where('hptlst.companycode', '=', session('companycode'))
+            ->whereBetween('hptlst.createdat', [DB::raw('company.tgl'), now()])
+            ->select('hptlst.*');
 
         $headAgronomi = $headAgronomiQuery->get();
         $listAgronomi = $listAgronomiQuery->get();
@@ -59,10 +59,10 @@ class ClosingController extends Controller
                 DB::table('closing_agrolst')->insert((array) $row);
             }
             foreach ($headHPT as $head) {
-                DB::table('closing_hpt_hdr')->insert((array) $head);
+                DB::table('closing_hpthdr')->insert((array) $head);
             }
             foreach ($listHPT as $row) {
-                DB::table('closing_hpt_lst')->insert((array) $row);
+                DB::table('closing_hptlst')->insert((array) $row);
             }
             foreach ($log as $lo) {
                 $logData = [

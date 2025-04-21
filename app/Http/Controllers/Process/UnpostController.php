@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Process;
 
 use Carbon\Carbon;
 use App\Models\HPTHeader;
@@ -11,9 +11,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
-class PostController extends Controller
+class UnpostController extends Controller
 {
-
     public function __construct()
     {
         View::share([
@@ -24,7 +23,7 @@ class PostController extends Controller
 
     public function index(Request $request)
     {
-        $title = "Posting";
+        $title = "Unposting";
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -40,7 +39,7 @@ class PostController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $session = session('posting');
+        $session = session('unposting');
         $dropdownValue = session('companycode');
 
         $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
@@ -48,7 +47,7 @@ class PostController extends Controller
         $posts = $model::orderBy('createdat', 'desc')
             ->with(['lists', 'company'])
             ->where('companycode', '=', $dropdownValue)
-            ->where('status', '=', 'Unposted')
+            ->where('status', '=', 'Posted')
             ->when($startDate, fn($query) => $query->whereDate('createdat', '>=', $startDate))
             ->when($endDate, fn($query) => $query->whereDate('createdat', '<=', $endDate))
             ->paginate($perPage);
@@ -63,27 +62,27 @@ class PostController extends Controller
             $item->no = ($posts->currentPage() - 1) * $posts->perPage() + $index + 1;
         }
 
-        return view('process.posting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
+        return view('process.unposting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
     }
 
-    public function postSession(Request $request)
+    public function unpostSession(Request $request)
     {
         $request->validate([
-            'posting' => 'required|string',
+            'unposting' => 'required|string',
         ]);
 
-        session(['posting' => $request->posting]);
+        session(['unposting' => $request->unposting]);
 
-        return redirect()->route('process.posting');
+        return redirect()->route('process.unposting');
     }
 
-    public function posting(Request $request)
+    public function unposting(Request $request)
     {
         $selectedItems = json_decode($request->selected_items, true);
         $selectedItems = array_map(function ($item) {
             $parts = explode(',', $item);
             return [
-                'no_sample' => $parts[0] ?? null,
+                'nosample' => $parts[0] ?? null,
                 'companycode'   => $parts[1] ?? null,
                 'tanggaltanam'  => $parts[2] ?? null,
             ];
@@ -93,18 +92,18 @@ class PostController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
         }
 
-        $tables = session('posting') === 'Agronomi'
+        $tables = session('unposting') === 'Agronomi'
             ? ['agrohdr', 'agrolst']
-            : ['hpt_hdr', 'hpt_lst'];
+            : ['hpthdr', 'hptlst'];
 
         foreach ($tables as $table) {
             DB::table($table)
-                ->whereIn('no_sample', array_column($selectedItems, 'no_sample'))
+                ->whereIn('nosample', array_column($selectedItems, 'nosample'))
                 ->whereIn('companycode', array_column($selectedItems, 'companycode'))
                 ->whereIn('tanggaltanam', array_column($selectedItems, 'tanggaltanam'))
-                ->update(['status' => 'Posted', 'count' => DB::raw('count + 1')]);
+                ->update(['status' => 'Unposted']);
         }
 
-        return redirect()->back()->with('success1', 'Data berhasil diposting.');
+        return redirect()->back()->with('success1', 'Data telah di unposting.');
     }
 }

@@ -2,10 +2,9 @@
     <x-slot:title>{{ $title }}</x-slot>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
-
+    @include('errorfile')
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="flex lg:justify-between items-end mx-4 gap-2 justify-center flex-wrap">
-
             @if (auth()->user() && in_array('Create HPT', json_decode(auth()->user()->permissions ?? '[]')))
                 <a href="{{ route('input.hpt.create') }}"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
@@ -133,18 +132,18 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->company->nama }}
+                                    {{ $item->company->name }}
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->no_sample }}</td>
+                                    {{ $item->nosample }}</td>
                                 </td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->plotcodesample }}</td>
+                                    {{ $item->plot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->varietas }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->tanggaltanam }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->tglamat }}</td>
+                                    {{ $item->tanggalpengamatan }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
                                     <span
                                         class="{{ $item->status === 'Posted' ? 'bg-green-600' : 'bg-red-600' }} px-2 py-1 rounded-md text-white font-medium shadow-md">
@@ -155,7 +154,7 @@
                                     class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} flex justify-center">
                                     <div class="flex items-center">
                                         <button class="group flex items-center"
-                                            onclick="showList('{{ $item->no_sample }}', '{{ $item->companycode }}', '{{ $item->tanggaltanam }}')"><svg
+                                            onclick="showList('{{ $item->nosample }}', '{{ $item->companycode }}', '{{ $item->tanggaltanam }}')"><svg
                                                 class="w-6 h-6 text-gray-500 dark:text-white group-hover:hidden"
                                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
                                                 height="24" fill="none" viewBox="0 0 24 24">
@@ -175,7 +174,7 @@
                                         </button>
                                         @if (auth()->user() && in_array('Edit HPT', json_decode(auth()->user()->permissions ?? '[]')))
                                             @if ($item->status === 'Unposted')
-                                                <a href="{{ route('input.hpt.edit', ['no_sample' => $item->no_sample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
+                                                <a href="{{ route('input.hpt.edit', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
                                                     class="group flex items-center"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -203,7 +202,7 @@
                                         @if (auth()->user() && in_array('Hapus HPT', json_decode(auth()->user()->permissions ?? '[]')))
                                             @if ($item->status === 'Unposted')
                                                 <form
-                                                    action="{{ route('input.hpt.destroy', ['no_sample' => $item->no_sample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
+                                                    action="{{ route('input.hpt.destroy', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
                                                     method="POST" class="inline">@csrf @method('DELETE')
                                                     <button type="submit" class="group flex"
                                                         onclick="return confirm('Yakin ingin menghapus data ini?')"><svg
@@ -277,7 +276,7 @@
         style="opacity: 0; transform: scale(0.95);">
         <div class="bg-white w-11/12 p-4 rounded shadow-lg transition-transform duration-300 ease-out transform">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold">Daftar List</h2>
+                <h2 class="text-lg font-bold">`Daftar List`</h2>
                 <button onclick="closeModal()" class="p-2 hover:bg-gray-200 rounded-md">
                     <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
                         xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
@@ -295,7 +294,7 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No. Sample</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kebun</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">block</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Blok</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luas</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Tanggal Tanam</th>
@@ -371,15 +370,15 @@
     </style>
 
     <script>
-        function showList(no_sample, companycode, tanggaltanam) {
+        function showList(nosample, companycode, tanggaltanam) {
             const modal = document.getElementById('listModal');
             const tableBody = document.getElementById('listTableBody');
 
             tableBody.innerHTML = '';
 
             const url =
-                `{{ route('input.hpt.show', ['no_sample' => '__no_sample__', 'companycode' => '__companycode__', 'tanggaltanam' => '__tanggaltanam__']) }}`
-                .replace('__no_sample__', no_sample)
+                `{{ route('input.hpt.show', ['nosample' => '__nosample__', 'companycode' => '__companycode__', 'tanggaltanam' => '__tanggaltanam__']) }}`
+                .replace('__nosample__', nosample)
                 .replace('__companycode__', companycode)
                 .replace('__tanggaltanam__', tanggaltanam);
 
@@ -387,7 +386,7 @@
                 .then(response => response.json())
                 .then(data => {
                     data.forEach(item => {
-
+                      console.log(item);
                         const tanggaltanam = new Date(item.tanggaltanam);
                         const now = new Date();
 
@@ -395,7 +394,7 @@
                         const diffInMonths = Math.ceil(diffInTime / (1000 * 3600 * 24 * 30));
                         const umurTanam = diffInMonths >= 0 ? `${diffInMonths} Bulan` : 'Tunggu Tanggal Tanam';
 
-                        const dateInput = new Date(item.tglamat);
+                        const dateInput = new Date(item.tanggalpengamatan);
                         const month = dateInput.toLocaleString('en-US', {
                             month: 'long'
                         });
@@ -403,18 +402,18 @@
                         const row = `
                             <tr class="text-center">
                                 <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.no_sample}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.nosample}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.compName}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.blockName}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.blokName}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plotName}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.luasarea}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.tanggaltanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${umurTanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.varietas}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.tglamat}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.tanggalpengamatan}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${month}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.nourut}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.jm_batang}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.jumlahbatang}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.ppt}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.ppt_aktif}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.pbt}</td>

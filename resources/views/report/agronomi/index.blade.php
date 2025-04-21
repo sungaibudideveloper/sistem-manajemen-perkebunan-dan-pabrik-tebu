@@ -178,8 +178,8 @@
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->no }}.</td>
                                     <td class="py-2 px-4 border-b border-gray-300">
                                         {{ $item->compName ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->no_sample }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blockName ?? '' }}
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->nosample }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->blokName ?? '' }}
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->plotName ?? '' }}
                                     </td>
@@ -192,10 +192,10 @@
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">
                                         {{ $item->jaraktanam ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tglamat ?? '' }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggalpengamatan ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->bulanPengamatan }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->nourut }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->jm_batang }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->jumlahbatang }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->pan_gap }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->per_gap * 100 }}%</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->per_germinasi * 100 }}%

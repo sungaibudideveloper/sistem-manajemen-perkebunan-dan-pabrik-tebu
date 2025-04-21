@@ -60,7 +60,7 @@
                                                     <input type="checkbox" name="companycode[]" value="{{ $comp->companycode }}"
                                                         class="form-checkbox comp-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                                                         {{ in_array($comp->companycode, old('companycode', request()->companycode ?? [])) ? 'checked' : '' }} />
-                                                    <span class="ml-2">{{ $comp->nama }}</span>
+                                                    <span class="ml-2">{{ $comp->name }}</span>
                                                 </label>
                                             @endforeach
                                         </div>
@@ -69,7 +69,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">block</label>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Blok</label>
                             <div class="relative">
                                 <div class="dropdown relative">
                                     <button type="button" id="dropdownButtonblock"
@@ -80,7 +80,7 @@
                                                 d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
                                                 clip-rule="evenodd" />
                                         </svg>
-                                        <span>Filter block</span>
+                                        <span>Filter Blok</span>
                                         <svg class="-mr-1 ml-2 w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg"
                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
@@ -95,16 +95,16 @@
                                             <label class="inline-flex items-center" onchange="this.form.submit()">
                                                 <input type="checkbox" id="selectAllblock"
                                                     class="form-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    {{ old('blok', request()->block ?? []) && count(old('blok', request()->block ?? [])) === count($kdblockAgroOpt) ? 'checked' : '' }} />
+                                                    {{ old('blok', request()->blok ?? []) && count(old('blok', request()->blok ?? [])) === count($kdBlokAgroOpt) ? 'checked' : '' }} />
                                                 <span class="ml-2">(Select All)</span>
                                             </label>
-                                            @foreach ($kdblockAgroOpt as $block)
+                                            @foreach ($kdBlokAgroOpt as $blok)
                                                 <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                    <input type="checkbox" name="block[]"
-                                                        value="{{ $block->block }}"
+                                                    <input type="checkbox" name="blok[]"
+                                                        value="{{ $blok->blok }}"
                                                         class="form-checkbox block-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                        {{ in_array($block->block, old('blok', request()->block ?? [])) ? 'checked' : '' }} />
-                                                    <span class="ml-2">{{ $block->block }}</span>
+                                                        {{ in_array($blok->blok, old('blok', request()->blok ?? [])) ? 'checked' : '' }} />
+                                                    <span class="ml-2">{{ $blok->blok }}</span>
                                                 </label>
                                             @endforeach
                                         </div>
@@ -141,16 +141,16 @@
                                             <label class="inline-flex items-center" onchange="this.form.submit()">
                                                 <input type="checkbox" id="selectAllPlot"
                                                     class="form-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    {{ old('plotcode', request()->plotcode ?? []) && count(old('plotcode', request()->plotcode ?? [])) === count($kdPlotAgroOpt) ? 'checked' : '' }} />
+                                                    {{ old('plot', request()->plot ?? []) && count(old('plot', request()->plot ?? [])) === count($kdPlotAgroOpt) ? 'checked' : '' }} />
                                                 <span class="ml-2">(Select All)</span>
                                             </label>
                                             @foreach ($kdPlotAgroOpt as $plot)
                                                 <label class="inline-flex items-center" onchange="this.form.submit()">
-                                                    <input type="checkbox" name="plotcode[]"
-                                                        value="{{ $plot->plotcode }}"
+                                                    <input type="checkbox" name="plot[]"
+                                                        value="{{ $plot->plot }}"
                                                         class="form-checkbox plot-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                        {{ in_array($plot->plotcode, old('plotcode', request()->plotcode ?? [])) ? 'checked' : '' }} />
-                                                    <span class="ml-2">{{ $plot->plotcode }}</span>
+                                                        {{ in_array($plot->plot, old('plot', request()->plot ?? [])) ? 'checked' : '' }} />
+                                                    <span class="ml-2">{{ $plot->plot }}</span>
                                                 </label>
                                             @endforeach
                                         </div>
