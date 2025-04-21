@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
     <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
+    <style>[x-cloak] { display: none !important; }</style>
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
     <script src="{{ asset('asset/chartjs-plugin-datalabels@2.0.0.js') }}"></script>

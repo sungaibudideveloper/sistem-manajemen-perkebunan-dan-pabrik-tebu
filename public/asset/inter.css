@@ -10,7 +10,7 @@ Usage example:
     :root { font-family: InterVariable, sans-serif; }
   }
 
-*/
+
 @font-face {
   font-family: InterVariable;
   font-style: normal;
@@ -25,9 +25,11 @@ Usage example:
   font-display: swap;
   src: url('font-files/InterVariable-Italic.woff2?v=4.1') format('woff2');
 }
-/* legacy name "Inter var" (Oct 2023) */
+/* legacy name "Inter var" (Oct 2023) 
 @font-face { font-family:'Inter var'; font-style:normal; font-weight:100 900; font-display:swap; src: url('font-files/InterVariable.woff2?v=4.1') format('woff2'); }
 @font-face { font-family:'Inter var'; font-style:italic; font-weight:100 900; font-display:swap; src: url('font-files/InterVariable-Italic.woff2?v=4.1') format('woff2'); }
+*/
+
 /* static fonts */
 @font-face { font-family:Inter; font-style:normal; font-weight:100; font-display:swap; src:url("font-files/Inter-Thin.woff2?v=4.1") format("woff2"); }
 @font-face { font-family:Inter; font-style:italic; font-weight:100; font-display:swap; src:url("font-files/Inter-ThinItalic.woff2?v=4.1") format("woff2"); }
