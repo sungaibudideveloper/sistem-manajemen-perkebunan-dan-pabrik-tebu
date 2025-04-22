@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\HerbisidaDosage;
 
@@ -15,31 +16,33 @@ class HerbisidaDosageController extends Controller
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
     
-        $query = HerbisidaDosage::query();
-    
+        $qb = DB::table('herbisidadosage as d')
+        ->join('herbisida as h', function($join){
+            $join->on('d.companycode', '=', 'h.companycode')
+                 ->on('d.itemcode',    '=', 'h.itemcode');
+        })
+        ->select('d.*', 'h.itemname');
+
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('activitycode', 'like', "%{$search}%")
-                  ->orWhere('itemcode',     'like', "%{$search}%")
-                  ->orWhere('companycode',  'like', "%{$search}%");
+            $qb->where(function($q) use ($search) {
+                $q->where('d.activitycode', 'like', "%{$search}%")
+                ->orWhere('d.itemcode',     'like', "%{$search}%")
+                ->orWhere('d.companycode',  'like', "%{$search}%");
             });
         }
 
-        $herbisidaDosages = $query
-            ->orderBy('activitycode')
+        $herbisidaDosages = $qb
+            ->orderBy('d.activitycode')
             ->paginate($perPage)
-            ->appends([
-                'perPage' => $perPage,
-                'search'  => $search,
-            ]);
-    
+            ->appends(compact('perPage','search'));
+
         return view('master.herbisidadosage.index', [
             'herbisidaDosages' => $herbisidaDosages,
+            'perPage'          => $perPage,
+            'search'           => $search,
             'title'            => 'Data Dosis Herbisida',
             'navbar'           => 'Master',
             'nav'              => 'Dosis Herbisida',
-            'perPage'          => $perPage,
-            'search'           => $search,
         ]);
     }
 
@@ -57,12 +60,13 @@ class HerbisidaDosageController extends Controller
 
         $exists = HerbisidaDosage::where('companycode', $request->companycode)
             ->where('activitycode', $request->activitycode)
+            ->where('itemcode', $request->itemcode)
             ->exists();
         if ($exists) {
         return redirect()->back()
             ->withInput()
             ->withErrors([
-                'activitycode' => 'Duplicate Entry, Activity Code already exists'
+                'activitycode' => 'Duplicate Entry, Data already exists'
             ]);
         }
 
@@ -94,17 +98,19 @@ class HerbisidaDosageController extends Controller
         $dosage = HerbisidaDosage::findOrFail($id);
         if ( /* Jika companycode dan activitycode diubah pada modal edit (request), periksa apakah sudah ada yang sama */
             $request->companycode  !== $dosage->companycode ||
-            $request->activitycode !== $dosage->activitycode
+            $request->activitycode !== $dosage->activitycode ||
+            $request->itemcode !== $dosage->itemcode
         ) {
             $exists = HerbisidaDosage::where('companycode',  $request->companycode)
                 ->where('activitycode', $request->activitycode)
+                ->where('itemcode', $request->itemcode)
                 ->exists();
     
             if ($exists) {
                 return redirect()->back()
                     ->withInput()
                     ->withErrors([
-                        'activitycode' => 'Duplicate Entry, Activity Code already exists'
+                        'activitycode' => 'Duplicate Entry, Data already exists'
                     ]);
             }
         }

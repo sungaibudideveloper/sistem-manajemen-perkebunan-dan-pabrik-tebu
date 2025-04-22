@@ -96,6 +96,9 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Herbisida Dosage' : 'Create Herbisida Dosage'">
                   </h3>
                   <div class="mt-4 space-y-4">
+                    @error('activitycode')
+                      <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
                       <select name="companycode" id="companycode" x-model="form.companycode" @change="loadItems()"
@@ -107,12 +110,9 @@
                     </div>
                     <div>
                       <label for="activitycode" class="block text-sm font-medium text-gray-700">Kode Aktivitas</label>
-                      <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode" @input="form.itemcode = form.itemcode.toUpperCase()"
+                      <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode" @input="form.activitycode = form.activitycode.toUpperCase()"
                             class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
                             maxlength="10" required>
-                      @error('activitycode')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
                     </div>
                     <div>
                       <label for="itemcode" class="block text-sm font-medium text-gray-700">Kode Item</label>
@@ -201,7 +201,8 @@
                                 href="{{ route('masterdata.herbisida.index', ['search' => $data->itemcode]) }}"
                                 class="text-blue-600 hover:underline"
                               >
-                                {{ $data->itemcode }}
+                              {{ $data->itemcode }} – {{ $data->itemname }}
+                                
                               </a>
                             </td>
                             <td class="py-2 px-4 border-b">{{ $data->time }}</td>
