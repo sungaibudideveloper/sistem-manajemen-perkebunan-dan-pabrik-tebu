@@ -9,12 +9,20 @@
       open: @json($errors->any()),
       mode: 'create',
       form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', totaldosage: '', dosageunit: 'L' },
+      items: [],
+      loadItems() {
+      fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode)
+        .then(res => res.json())
+        .then(json => this.items = json);
+      },
       resetForm() {
         this.mode = 'create';
         this.form = { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', totaldosage: '', dosageunit: 'L' };
         this.open = true;
+        this.loadItems()
       }
     }"
+    x-init="loadItems()"
     class="mx-auto py-1 bg-white rounded-md shadow-md">
 
     <div class="flex items-center justify-between px-4 py-2">
@@ -90,7 +98,7 @@
                   <div class="mt-4 space-y-4">
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
-                      <select name="companycode" id="companycode" x-model="form.companycode"
+                      <select name="companycode" id="companycode" x-model="form.companycode" @change="loadItems()"
                         class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <option value="TBL1">TBL1</option>
                         <option value="TBL2">TBL2</option>
@@ -108,9 +116,14 @@
                     </div>
                     <div>
                       <label for="itemcode" class="block text-sm font-medium text-gray-700">Kode Item</label>
-                      <input type="text" name="itemcode" id="itemcode" x-model="form.itemcode"
-                            class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            maxlength="10" required>
+                      <select id="itemcode" name="itemcode" x-model="form.itemcode" 
+                        class="mt-1 block w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required
+                        >
+                        <option value="" disabled selected>Pilih Kode Item…</option>
+                        <template x-for="i in items" :key="i.itemcode">
+                          <option :value="i.itemcode" x-text="`${i.itemcode} – ${i.itemname}`"></option>
+                        </template>
+                      </select>
                     </div>
                     <div>
                       <label for="time" class="block text-sm font-medium text-gray-700">Waktu</label>
@@ -183,7 +196,14 @@
                         <td class="py-2 px-4 border-b">{{ $herbisidaDosages->firstItem() + $index }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->activitycode }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->itemcode }}</td>
+                            <td class="py-2 px-4 border-b">
+                              <a
+                                href="{{ route('masterdata.herbisida.index', ['search' => $data->itemcode]) }}"
+                                class="text-blue-600 hover:underline"
+                              >
+                                {{ $data->itemcode }}
+                              </a>
+                            </td>
                             <td class="py-2 px-4 border-b">{{ $data->time }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->description }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->totaldosage }}</td>
@@ -203,6 +223,7 @@
                                       form.description = '{{ $data->description }}';
                                       form.totaldosage = {{ $data->totaldosage ?? 0}};
                                       form.dosageunit = '{{ $data->dosageunit }}';
+                                      loadItems(); 
                                       open = true
                                     "
                                     class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm" {{-- Pake class group biar icon bisa ganti pas di hover --}}
