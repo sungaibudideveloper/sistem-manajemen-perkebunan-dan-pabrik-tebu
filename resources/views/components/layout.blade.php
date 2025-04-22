@@ -81,7 +81,7 @@
 
         <x-footer></x-footer>
     </div>
-
+    <x-sprite-svg />
 </body>
 <x-script></x-script>
 <x-style></x-style>

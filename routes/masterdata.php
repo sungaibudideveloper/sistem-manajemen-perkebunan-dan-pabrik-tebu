@@ -73,22 +73,20 @@ Route::group(['middleware' => ['auth', 'permission:Hak Akses']], function () {
 });
 
 
-
+//Herbisida
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::post('masterdata/herbisida', [HerbisidaController::class, 'store'])->name('master.herbisida.handle');
-    Route::get('masterdata/herbisida', [HerbisidaController::class, 'index'])->name('master.herbisida.index');
-    Route::put('masterdata/herbisida/{itemcode}', [HerbisidaController::class, 'update'])->name('master.herbisida.update')->middleware('permission:Edit Herbisida');
-    Route::delete('masterdata/herbisida/{itemcode}', [HerbisidaController::class, 'destroy'])->name('master.herbisida.destroy')->middleware('permission:Hapus Herbisida');
+    Route::get('masterdata/herbisida', [HerbisidaController::class, 'index'])->name('masterdata.herbisida.index');
+    Route::post('masterdata/herbisida', [HerbisidaController::class, 'store'])->name('masterdata.herbisida.store');
 });
+Route::match(['put', 'patch'], 'masterdata/herbisida/{itemcode}',[HerbisidaController::class, 'update'])->name('masterdata.herbisida.update')->middleware(['auth','permission:Edit Herbisida']);;
+Route::delete('masterdata/herbisida/{itemcode}',[HerbisidaController::class, 'destroy'])->name('masterdata.herbisida.destroy')->middleware(['auth','permission:Hapus Herbisida']);;
 
 //Dosis Herbisida
-
+//Route::resource('masterdata/herbisida-dosage',HerbisidaDosageController::class,['as' => 'masterdata']);
 Route::group(['middleware' => ['auth', 'permission:Dosis Herbisida']], function () {
     Route::get('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('masterdata.herbisida-dosage.index');
     Route::post('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'store'])->name('masterdata.herbisida-dosage.store');
 });
 Route::match(['put', 'patch'], 'masterdata/herbisida-dosage/{activitycode}',[HerbisidaDosageController::class, 'update'])->name('masterdata.herbisida-dosage.update')->middleware(['auth','permission:Edit Dosis Herbisida']);;
 Route::delete('masterdata/herbisida-dosage/{activitycode}',[HerbisidaDosageController::class, 'destroy'])->name('masterdata.herbisida-dosage.destroy')->middleware(['auth','permission:Hapus Dosis Herbisida']);;
-/*
-Route::resource('masterdata/herbisida-dosage',HerbisidaDosageController::class,['as' => 'masterdata']);
-*/
+

@@ -11,15 +11,35 @@ class HerbisidaDosageController extends Controller
 {
     
     public function index(Request $request)
-    {   
+    {
         $perPage = (int) $request->input('perPage', 10);
-        $herbisidaDosages = HerbisidaDosage::paginate($perPage);
+        $search  = $request->input('search');
+    
+        $query = HerbisidaDosage::query();
+    
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('activitycode', 'like', "%{$search}%")
+                  ->orWhere('itemcode',     'like', "%{$search}%")
+                  ->orWhere('companycode',  'like', "%{$search}%");
+            });
+        }
+
+        $herbisidaDosages = $query
+            ->orderBy('activitycode')
+            ->paginate($perPage)
+            ->appends([
+                'perPage' => $perPage,
+                'search'  => $search,
+            ]);
+    
         return view('master.herbisidadosage.index', [
             'herbisidaDosages' => $herbisidaDosages,
-            'title' => 'Data Dosis Herbisida',
-            'navbar' => 'Master',
-            'nav' => 'Dosis Herbisida',
-            'perPage' => $perPage,
+            'title'            => 'Data Dosis Herbisida',
+            'navbar'           => 'Master',
+            'nav'              => 'Dosis Herbisida',
+            'perPage'          => $perPage,
+            'search'           => $search,
         ]);
     }
 
