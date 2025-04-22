@@ -59,22 +59,6 @@ class HerbisidaDosageController extends Controller
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
     public function update(Request $request, string $id)
     {
         $request->validate([
@@ -88,7 +72,7 @@ class HerbisidaDosageController extends Controller
         ]);
         
         $dosage = HerbisidaDosage::findOrFail($id);
-        if (
+        if ( /* Jika companycode dan activitycode diubah pada modal edit (request), periksa apakah sudah ada yang sama */
             $request->companycode  !== $dosage->companycode ||
             $request->activitycode !== $dosage->activitycode
         ) {

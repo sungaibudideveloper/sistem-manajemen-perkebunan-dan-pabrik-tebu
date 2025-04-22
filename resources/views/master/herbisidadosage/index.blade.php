@@ -19,7 +19,7 @@
       <div class="flex items-center justify-between px-4 py-2">
 
         {{-- Create Button (Modal)--}}
-        @if (auth()->user() && in_array('Create Blok', json_decode(auth()->user()->permissions ?? '[]')))
+        @if (auth()->user() && in_array('Create Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
           <button @click="resetForm()"
                   class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
                   <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -173,7 +173,7 @@
                               <td class="py-2 px-4 border-b">{{ $data->totaldosage }}</td>
                               <td class="py-2 px-4 border-b">{{ $data->dosageunit }}</td>
                               {{-- Edit Button (Modal)--}}
-                              @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                              @if (auth()->user() && in_array('Edit Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                 <td class="py-2 px-4 border-b">
                                   <button
                                     @click="
@@ -193,7 +193,7 @@
                                     Edit
                                   </button>
                                   {{-- Delete Button --}}
-                                  @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                  @if (auth()->user() && in_array('Hapus Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                     <form 
                                       action="{{ url('masterdata/herbisida-dosage/'.$data->activitycode) }}" 
                                       method="POST"
