@@ -83,9 +83,15 @@ class HerbisidaDosageController extends Controller
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, $companycode, $activitycode, $itemcode)
     {
-        $request->validate([
+        $dosage = HerbisidaDosage::where([
+            ['companycode', $companycode],
+            ['activitycode', $activitycode],
+            ['itemcode', $itemcode]
+        ])->firstOrFail();
+
+        $validated= $request->validate([
             'companycode'  => 'required|string|max:4',
             'activitycode' => 'required|string|max:50',
             'itemcode'     => 'required|string|max:30',
@@ -94,13 +100,12 @@ class HerbisidaDosageController extends Controller
             'totaldosage'  => 'required|numeric',
             'dosageunit'   => 'required|string|max:5',
         ]);
-        
-        $dosage = HerbisidaDosage::findOrFail($id);
-        if ( /* Jika companycode dan activitycode diubah pada modal edit (request), periksa apakah sudah ada yang sama */
-            $request->companycode  !== $dosage->companycode ||
+
+        // Check if the companycode, activitycode, or itemcode has changed
+        if ($request->companycode !== $dosage->companycode ||
             $request->activitycode !== $dosage->activitycode ||
-            $request->itemcode !== $dosage->itemcode
-        ) {
+            $request->itemcode !== $dosage->itemcode) {
+            
             $exists = HerbisidaDosage::where('companycode',  $request->companycode)
                 ->where('activitycode', $request->activitycode)
                 ->where('itemcode', $request->itemcode)
@@ -114,31 +119,21 @@ class HerbisidaDosageController extends Controller
                     ]);
             }
         }
-        
-        $dosage = HerbisidaDosage::findOrFail($id);
-        $dosage->update($request->only([
-            'companycode',
-            'activitycode',
-            'itemcode',
-            'time',
-            'description',
-            'totaldosage',
-            'dosageunit'
-        ]));
-    
-        return redirect()->back()->with('success', 'Data berhasil di‑update.');
+
+        $dosage->update($validated);
+
+        return redirect()->back()->with('success', 'Data berhasil diupdate.');
     }
+    
 
-    public function destroy(Request $request, string $activitycode)
+    public function destroy(Request $request, $companycode, $activitycode, $itemcode)
 {
-    $company  = $request->input('companycode');
-    $itemcode = $request->input('itemcode');
+    HerbisidaDosage::where([
+        ['companycode', $companycode],
+        ['activitycode', $activitycode],
+        ['itemcode', $itemcode]
+    ])->delete();
 
-    HerbisidaDosage::where('companycode', $company)
-        ->where('activitycode', $activitycode)
-        ->where('itemcode', $itemcode)
-        ->delete();
-
-    return redirect()->back()->with('success','Data berhasil di‑hapus.');
+    return redirect()->back()->with('success','Data berhasil dihapus.');
 }
 }

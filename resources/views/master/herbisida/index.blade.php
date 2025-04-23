@@ -77,7 +77,7 @@
                 class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST"
                 :action="mode === 'edit'
-                ? '{{ url('masterdata/herbisida') }}/' + form.itemcodeoriginal
+                ? '{{ url('masterdata/herbisida') }}/' + form.companycode +'/'+ form.itemcodeoriginal
                 : '{{ url('masterdata/herbisida') }}'"
                 class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -213,15 +213,13 @@
                                   {{-- Delete Button --}}
                                   @if (auth()->user() && in_array('Hapus Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                     <form 
-                                      action="{{ url('masterdata/herbisida/'.$data->itemcode) }}" 
+                                      action="{{ url("masterdata/herbisida/{$data->companycode}/{$data->itemcode}") }}" 
                                       method="POST"
                                       onsubmit="return confirm('Yakin ingin menghapus data ini?');"
                                       class="inline"
                                       >
                                       @csrf
                                       @method('DELETE')
-                                      {{-- Kirim hidden companycode  ke Controller untuk Filter WHERE--}}
-                                      <input type="hidden" name="companycode" value="{{ $data->companycode }}">
                                       <button 
                                         type="submit"
                                         class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"

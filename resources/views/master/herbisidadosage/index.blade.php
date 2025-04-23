@@ -11,9 +11,9 @@
       form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', totaldosage: '', dosageunit: 'L' },
       items: [],
       loadItems() {
-      fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode)
-        .then(res => res.json())
-        .then(json => this.items = json);
+      fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode) {{-- Ambil data item dari routes (secara default fetch = GET)--}}
+        .then(res => res.json()) {{-- Mengambil data dari response json dan Convert--}}
+        .then(data => this.items = data); {{-- Simpan data ke dalam items --}}
       },
       resetForm() {
         this.mode = 'create';
@@ -83,9 +83,9 @@
                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
                 class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
-              <form method="POST"
+              <form method="POST" id="formcreateedit"
                 :action="mode === 'edit'
-                ? '{{ url('masterdata/herbisida-dosage') }}/' + form.activitycodeoriginal
+                ? '{{ url('masterdata/herbisida-dosage') }}/' + form.companycode +'/'+ form.activitycodeoriginal +'/'+ form.itemcode
                 : '{{ url('masterdata/herbisida-dosage') }}'"
                 class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -156,7 +156,7 @@
                   </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                  <button type="submit"
+                  <button type="submit" id="submitmodal"
                           class="inline-flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-white text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto"
                           x-text="mode === 'edit' ? 'Update' : 'Create'">
                     Save
@@ -250,16 +250,13 @@
                                   {{-- Delete Button --}}
                                   @if (auth()->user() && in_array('Hapus Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                     <form 
-                                      action="{{ url('masterdata/herbisida-dosage/'.$data->activitycode) }}" 
+                                      action="{{ url("masterdata/herbisida-dosage/{$data->companycode}/{$data->activitycode}/{$data->itemcode}") }}" 
                                       method="POST"
                                       onsubmit="return confirm('Yakin ingin menghapus data ini?');"
                                       class="inline"
                                       >
                                       @csrf
                                       @method('DELETE')
-                                      {{-- Kirim hidden companycode & itemcode ke Controller untuk Filter WHERE--}}
-                                      <input type="hidden" name="companycode" value="{{ $data->companycode }}">
-                                      <input type="hidden" name="itemcode"    value="{{ $data->itemcode }}">
                                       <button 
                                         type="submit"
                                         class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
@@ -309,3 +306,11 @@
     @endif
   </div>
 </x-layout>
+
+<script>
+  $('#submitmodal').on('click', function() {
+    $(this).attr('disabled', true); // Disable the button
+    $(this).text('Saving...'); // Change the button text to "Saving..."
+    $('#formcreateedit').submit(); // Submit the form
+  });
+</script>

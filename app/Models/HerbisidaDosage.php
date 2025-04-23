@@ -28,17 +28,4 @@ class HerbisidaDosage extends Model
         'totaldosage' => 'decimal:2',
     ];
 
-    
-    public function herbisida()
-    {
-        return $this->belongsTo(
-            \App\Models\Herbisida::class,
-            'itemcode',      // FK di herbisidadosage
-            'itemcode'       // PK di herbisida
-        )
-        ->whereColumn(
-            'herbisida.companycode',
-            'herbisidadosage.companycode'
-        );
-    }
 }

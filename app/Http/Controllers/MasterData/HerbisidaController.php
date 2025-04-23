@@ -75,9 +75,18 @@ class HerbisidaController extends Controller
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    public function update(Request $request, string $id)
-    {
-        $request->validate([
+    public function update(Request $request, $companycode, $itemcode)
+    {   
+        $herbi = Herbisida::where([
+            ['companycode', $companycode],
+            ['itemcode', $itemcode]
+        ])->first();
+
+        if (!$herbi) {
+            return redirect()->back()->withErrors(['error' => 'Data not found']);
+        }
+
+        $validated=$request->validate([
             'companycode' => 'required|string|max:4',
             'itemcode' => 'required|string|max:30',
             'itemname' => 'required|string|max:50',
@@ -85,10 +94,9 @@ class HerbisidaController extends Controller
             'dosageperha' => 'required|numeric',
         ]);
         
-        $herbisida = Herbisida::findOrFail($id);
         if ( /* Jika companycode dan itemcode diubah pada modal edit (request), periksa apakah sudah ada yang sama */
-            $request->companycode  !== $herbisida->companycode ||
-            $request->itemcode !== $herbisida->itemcode
+            $request->companycode  !== $herbi->companycode ||
+            $request->itemcode !== $herbi->itemcode
         ) {
             $exists = Herbisida::where('companycode',  $request->companycode)
                 ->where('itemcode', $request->itemcode)
@@ -103,25 +111,20 @@ class HerbisidaController extends Controller
             }
         }
         
-        $herbisida = Herbisida::findOrFail($id);
-        $herbisida->update($request->only([
-            'companycode',
-            'itemcode',
-            'itemname',
-            'measure',
-            'dosageperha',
-        ]));
+        Herbisida::where('companycode', $companycode)
+             ->where('itemcode', $itemcode)
+             ->update($validated);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');
     }
 
-    public function destroy(Request $request, string $itemcode)
+    public function destroy(Request $request, $companycode, $itemcode)
 {
-    $company  = $request->input('companycode');
 
-    Herbisida::where('companycode', $company)
-        ->where('itemcode', $itemcode)
-        ->delete();
+    Herbisida::where([
+        ['companycode', $companycode],
+        ['itemcode', $itemcode]
+    ])->delete();
 
     return redirect()->back()->with('success','Data berhasil di‑hapus.');
 }
