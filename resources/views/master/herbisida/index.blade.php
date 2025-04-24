@@ -77,7 +77,7 @@
                 class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST"
                 :action="mode === 'edit'
-                ? '{{ url('masterdata/herbisida') }}/' + form.companycode +'/'+ form.itemcodeoriginal
+                ? '{{ url('masterdata/herbisida') }}/' + form.companycodeoriginal +'/'+ form.itemcodeoriginal
                 : '{{ url('masterdata/herbisida') }}'"
                 class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -90,7 +90,7 @@
                   <div class="mt-4 space-y-4">
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
-                      <select name="companycode" id="companycode" x-model="form.companycode"
+                      <select name="companycode" id="companycode" x-model="form.companycode" x-init="form.companycode = '{{ old('companycode') }}'"
                         class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <option value="TBL1">TBL1</option>
                         <option value="TBL2">TBL2</option>
@@ -99,7 +99,9 @@
                     </div>
                     <div>
                       <label for="itemcode" class="block text-sm font-medium text-gray-700">Kode Item</label>
-                      <input type="text" name="itemcode" id="itemcode" x-model="form.itemcode" @input="form.itemcode = form.itemcode.toUpperCase()"
+                      <input type="text" name="itemcode" id="itemcode" x-model="form.itemcode" 
+                            x-init="form.itemcode = '{{ old('itemcode') }}'"
+                            @input="form.itemcode = form.itemcode.toUpperCase()"
                             class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
                             maxlength="10" required>
                         @error('itemcode')
@@ -108,7 +110,7 @@
                     </div>
                     <div>
                       <label for="itemname" class="block text-sm font-medium text-gray-700">Nama Item</label>
-                      <input type="text" name="itemname" id="itemname" x-model="form.itemname"
+                      <input type="text" name="itemname" id="itemname" x-model="form.itemname" x-init="form.itemname = '{{ old('itemname') }}'"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             maxlength="50" required>
                     </div>
@@ -116,13 +118,13 @@
                     <div class="grid grid-cols-5 gap-4">
                       <div class="col-span-2">
                         <label for="dosageperha" class="block text-sm font-medium text-gray-700">Total Dosis</label>
-                        <input type="number" step="0.01" name="dosageperha" id="dosageperha" x-model="form.dosageperha"
+                        <input type="number" step="0.01" name="dosageperha" id="dosageperha" x-model="form.dosageperha" x-init="form.dosageperha = '{{ old('dosageperha') }}'"
                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                               min="0" max="9999.99" required>
                       </div>
                       <div class="col-span-2">
                         <label for="measure" class="block text-sm font-medium text-gray-700">Satuan</label>
-                        <select name="measure" id="measure" x-model="form.measure"
+                        <select name="measure" id="measure" x-model="form.measure" x-init="form.measure = '{{ old('measure') }}'"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                           <option value="L">L/ha</option>
                           <option value="gr">gr/ha</option>
@@ -182,6 +184,7 @@
                                   <button
                                     @click="
                                       mode = 'edit';
+                                      form.companycodeoriginal = '{{ $data->companycode }}'; {{-- Original companycode for update --}}
                                       form.companycode = '{{ $data->companycode }}';
                                       form.itemcodeoriginal = '{{ $data->itemcode }}'; {{-- Original itemcode code for update --}}
                                       form.itemcode = '{{ $data->itemcode }}';

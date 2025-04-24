@@ -8,7 +8,7 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', totaldosage: '', dosageunit: 'L' },
+      form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', totaldosage: '', dosageunit: 'L'},
       items: [],
       loadItems() {
       fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode) {{-- Ambil data item dari routes (secara default fetch = GET)--}}
@@ -85,7 +85,7 @@
                 class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST" id="formcreateedit"
                 :action="mode === 'edit'
-                ? '{{ url('masterdata/herbisida-dosage') }}/' + form.companycode +'/'+ form.activitycodeoriginal +'/'+ form.itemcode
+                ? '{{ url('masterdata/herbisida-dosage') }}/' + form.companycodeoriginal +'/'+ form.activitycodeoriginal +'/'+ form.itemcodeoriginal
                 : '{{ url('masterdata/herbisida-dosage') }}'"
                 class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -101,7 +101,7 @@
                     @enderror
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
-                      <select name="companycode" id="companycode" x-model="form.companycode" @change="loadItems()"
+                      <select name="companycode" id="companycode" x-model="form.companycode" @change="loadItems()" x-init="form.companycode = '{{ old('companycode') }}'"
                         class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <option value="TBL1">TBL1</option>
                         <option value="TBL2">TBL2</option>
@@ -110,13 +110,15 @@
                     </div>
                     <div>
                       <label for="activitycode" class="block text-sm font-medium text-gray-700">Kode Aktivitas</label>
-                      <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode" @input="form.activitycode = form.activitycode.toUpperCase()"
+                      <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode"
+                            x-init="form.activitycode = '{{ old('activitycode') }}'"
+                            @input="form.activitycode = form.activitycode.toUpperCase()"
                             class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
                             maxlength="10" required>
                     </div>
                     <div>
                       <label for="itemcode" class="block text-sm font-medium text-gray-700">Kode Item</label>
-                      <select id="itemcode" name="itemcode" x-model="form.itemcode" 
+                      <select id="itemcode" name="itemcode" x-model="form.itemcode" x-init="form.itemcode = '{{ old('itemcode') }}'"
                         class="mt-1 block w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required
                         >
                         <option value="" disabled selected>Pilih Kode Item…</option>
@@ -127,25 +129,25 @@
                     </div>
                     <div>
                       <label for="time" class="block text-sm font-medium text-gray-700">Waktu</label>
-                      <input type="text" name="time" id="time" x-model="form.time"
+                      <input type="text" name="time" id="time" x-model="form.time" x-init="form.time = '{{ old('time') }}'"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             maxlength="50" required>
                     </div>
                     <div>
                       <label for="description" class="block text-sm font-medium text-gray-700">Keterangan</label>
-                      <textarea name="description" id="description" x-model="form.description"
+                      <textarea name="description" id="description" x-model="form.description" x-init="form.description = '{{ old('description') }}'"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" maxlength="100"></textarea>
                     </div>
                     <div class="grid grid-cols-5 gap-4">
                       <div class="col-span-2">
                         <label for="totaldosage" class="block text-sm font-medium text-gray-700">Total Dosis</label>
-                        <input type="number" step="0.01" name="totaldosage" id="totaldosage" x-model="form.totaldosage"
+                        <input type="number" step="0.01" name="totaldosage" id="totaldosage" x-model="form.totaldosage" x-init="form.totaldosage = '{{ old('totaldosage') }}'"
                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                               min="0" max="9999.99" required>
                       </div>
                       <div>
                         <label for="dosageunit" class="block text-sm font-medium text-gray-700">Satuan</label>
-                        <select name="dosageunit" id="dosageunit" x-model="form.dosageunit"
+                        <select name="dosageunit" id="dosageunit" x-model="form.dosageunit" x-init="form.dosageunit = '{{ old('dosageunit') }}'"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                           <option value="L">L</option>
                           <option value="gr">gr</option>
@@ -216,9 +218,11 @@
                                   <button
                                     @click="
                                       mode = 'edit';
+                                      form.companycodeoriginal = '{{ $data->companycode }}';
                                       form.companycode = '{{ $data->companycode }}';
                                       form.activitycodeoriginal = '{{ $data->activitycode }}'; {{-- Original activity code for update --}}
                                       form.activitycode = '{{ $data->activitycode }}';
+                                      form.itemcodeoriginal = '{{ $data->itemcode }}'; {{-- Original item code for update --}}
                                       form.itemcode = '{{ $data->itemcode }}';
                                       form.time = '{{ $data->time }}';
                                       form.description = '{{ $data->description }}';

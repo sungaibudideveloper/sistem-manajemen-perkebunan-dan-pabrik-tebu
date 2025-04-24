@@ -119,8 +119,20 @@ class HerbisidaDosageController extends Controller
                     ]);
             }
         }
-
-        $dosage->update($validated);
+        // harus ditulis ulang semua agar mengedit baris yang tepat tidak bisa pake $dosage
+        HerbisidaDosage::where([
+            ['companycode',   $companycode],
+            ['activitycode',  $activitycode],
+            ['itemcode',      $itemcode],
+        ])->update([
+            'companycode'   => $validated['companycode'],
+            'activitycode'  => $validated['activitycode'],
+            'itemcode'      => $validated['itemcode'],
+            'time'          => $validated['time'],
+            'description'   => $validated['description'],
+            'totaldosage'   => $validated['totaldosage'],
+            'dosageunit'    => $validated['dosageunit'],
+        ]);
 
         return redirect()->back()->with('success', 'Data berhasil diupdate.');
     }

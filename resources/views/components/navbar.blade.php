@@ -19,6 +19,8 @@
                                             request()->is('mapping') ||
                                             request()->is('herbisida') ||
                                             request()->is('herbisida-dosage') ||
+                                            request()->is('jabatan') ||
+                                            request()->is('approval') ||
                                             request()->is('username') ||
                                             request()->routeIs('master.username.create') ||
                                             request()->routeIs('master.username.access') ||
@@ -31,6 +33,8 @@
                                                     request()->is('mapping') ||
                                                     request()->is('herbisida') ||
                                                     request()->is('herbisida-dosage') ||
+                                                    request()->is('jabatan') ||
+                                                    request()->is('approval') ||
                                                     request()->is('username') ||
                                                     request()->routeIs('master.username.create') ||
                                                     request()->routeIs('master.username.access') ||
@@ -83,6 +87,16 @@
                                     @if (auth()->user() && in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
                                             :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
+                                            :active="request()->is('jabatan')">Jabatan</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                                            :active="request()->is('approval')">Approval</x-childnav-link>
                                     @endif
 
                                     @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
@@ -421,6 +435,8 @@
                                 request()->is('mapping') ||
                                 request()->is('herbisida') ||
                                 request()->is('herbisida-dosage') ||
+                                request()->is('jabatan') ||
+                                request()->is('approval') ||
                                 request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
                                 request()->routeIs('master.username.access') ||
@@ -433,6 +449,8 @@
                                         request()->is('mapping') ||
                                         request()->is('herbisida') ||
                                         request()->is('herbisida-dosage') ||
+                                        request()->is('jabatan') ||
+                                        request()->is('approval') ||
                                         request()->is('username') ||
                                         request()->routeIs('master.username.create') ||
                                         request()->routeIs('master.username.access') ||
@@ -484,6 +502,16 @@
                         @if (auth()->user() && in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                         <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
                                 :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
+                        @endif
+
+                        @if (auth()->user() && in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
+                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
+                                :active="request()->is('jabatan')">Jabatan</x-childnav-link>
+                        @endif
+
+                        @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
+                        <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                                :active="request()->is('approval')">Approval</x-childnav-link>
                         @endif
 
                         @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))

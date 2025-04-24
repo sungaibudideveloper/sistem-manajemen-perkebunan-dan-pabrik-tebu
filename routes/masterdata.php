@@ -6,6 +6,8 @@ use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\UsernameController;
 use App\Http\Controllers\MasterData\HerbisidaController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
+use App\Http\Controllers\MasterData\JabatanController;
+use App\Http\Controllers\MasterData\ApprovalController;
 
 //company
 Route::group(['middleware' => ['auth', 'permission:Company']], function () {
@@ -94,3 +96,18 @@ Route::group(['middleware' => ['auth', 'permission:Dosis Herbisida']], function 
 Route::match(['put', 'patch'], 'masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'update'])->name('masterdata.herbisida-dosage.update')->middleware(['auth','permission:Edit Dosis Herbisida']);;
 Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'destroy'])->name('masterdata.herbisida-dosage.destroy')->middleware(['auth','permission:Hapus Dosis Herbisida']);;
 
+//Jabatan
+Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
+    Route::get('masterdata/jabatan', [JabatanController::class, 'index'])->name('masterdata.jabatan.index');
+    Route::post('masterdata/jabatan', [JabatanController::class, 'store'])->name('masterdata.jabatan.store');
+});
+Route::match(['put', 'patch'], 'masterdata/jabatan/{idjabatan}', [JabatanController::class, 'update'])->name('masterdata.jabatan.update')->middleware(['auth', 'permission:Edit Jabatan']);
+Route::delete('masterdata/jabatan/{idjabatan}', [JabatanController::class, 'destroy'])->name('masterdata.jabatan.destroy')->middleware(['auth', 'permission:Hapus Jabatan']);
+
+// Approval
+Route::group(['middleware' => ['auth', 'permission:Approval']], function () {
+    Route::get('masterdata/approval', [ApprovalController::class, 'index'])->name('masterdata.approval.index');
+    Route::post('masterdata/approval', [ApprovalController::class, 'store'])->name('masterdata.approval.store');
+});
+Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
+Route::delete('masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);

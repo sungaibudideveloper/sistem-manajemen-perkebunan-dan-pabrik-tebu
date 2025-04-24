@@ -80,11 +80,7 @@ class HerbisidaController extends Controller
         $herbi = Herbisida::where([
             ['companycode', $companycode],
             ['itemcode', $itemcode]
-        ])->first();
-
-        if (!$herbi) {
-            return redirect()->back()->withErrors(['error' => 'Data not found']);
-        }
+        ])->firstOrFail();
 
         $validated=$request->validate([
             'companycode' => 'required|string|max:4',
