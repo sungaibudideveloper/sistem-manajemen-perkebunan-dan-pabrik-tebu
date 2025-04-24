@@ -89,7 +89,6 @@
                                             :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
                                     @endif
 
-
                                     @if (auth()->user() && in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
                                             :active="request()->is('jabatan')">Jabatan</x-childnav-link>
