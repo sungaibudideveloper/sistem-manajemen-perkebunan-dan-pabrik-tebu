@@ -72,11 +72,14 @@
                                         <x-childnav-link href="{{ route('master.mapping.index') }}"
                                             :active="request()->is('mapping')">Mapping</x-childnav-link>
                                     @endif
-                                    
+
                                     {{-- @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]'))) --}}
                                         <x-childnav-link href="{{ route('master.herbisida.index') }}"
                                             :active="request()->is('herbisida')">Herbisida</x-childnav-link>
                                     {{-- @endif --}}
+
+                                    <x-childnav-link href="{{ route('master.aktifitas.index') }}"
+                                        :active="request()->is('aktifitas')">Aktifitas</x-childnav-link>
 
                                     @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('master.username.index') }}"

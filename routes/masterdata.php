@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\MasterData\ActifityController;
 use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MappingController;
@@ -83,3 +84,10 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
 
 
 Route::resource('herbisida-dosage', HerbisidaDosageController::class);
+
+//Route::group(['middleware' => ['auth', 'permission:Aktifitas']], function () {
+    Route::get('masterdata/aktifitas', [ActifityController::class, 'index'])->name('master.aktifitas.index');
+    Route::post('masterdata/aktifitas', [ActifityController::class, 'store'])->name('master.aktifitas.store');
+    Route::put('masterdata/aktifitas/{aktifitas}', [ActifityController::class, 'update'])->name('master.aktifitas.update');//->middleware('permission:Edit Aktifitas');
+    Route::delete('masterdata/aktifitas/{aktifikas}', [ActifityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
+//});
