@@ -74,15 +74,9 @@
                                         <x-childnav-link href="{{ route('master.mapping.index') }}"
                                             :active="request()->is('mapping')">Mapping</x-childnav-link>
                                     @endif
-<<<<<<< HEAD
 
-                                    {{-- @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]'))) --}}
-                                        <x-childnav-link href="{{ route('master.herbisida.index') }}"
-=======
-                                    
                                     @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
->>>>>>> 086b4477462884c62268ecb64957616d95e25567
                                             :active="request()->is('herbisida')">Herbisida</x-childnav-link>
                                     @endif
 
@@ -483,7 +477,7 @@
                         @if (auth()->user() && in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
                             <x-childnav-link href="{{ route('master.mapping.index') }}"
                                 :active="request()->is('mapping')">Mapping</x-childnav-link>
-                                
+
                         @endif
                         @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                         <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"

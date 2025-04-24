@@ -90,12 +90,11 @@ Route::delete('masterdata/herbisida/{companycode}/{itemcode}',[HerbisidaControll
 Route::group(['middleware' => ['auth', 'permission:Dosis Herbisida']], function () {
     Route::get('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('masterdata.herbisida-dosage.index');
     Route::post('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'store'])->name('masterdata.herbisida-dosage.store');
-    
+
 });
 Route::match(['put', 'patch'], 'masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'update'])->name('masterdata.herbisida-dosage.update')->middleware(['auth','permission:Edit Dosis Herbisida']);;
 Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'destroy'])->name('masterdata.herbisida-dosage.destroy')->middleware(['auth','permission:Hapus Dosis Herbisida']);;
 
-<<<<<<< HEAD
 Route::resource('herbisida-dosage', HerbisidaDosageController::class);
 
 //Route::group(['middleware' => ['auth', 'permission:Aktifitas']], function () {
@@ -104,5 +103,3 @@ Route::resource('herbisida-dosage', HerbisidaDosageController::class);
     Route::put('masterdata/aktifitas/{aktifitas}', [ActifityController::class, 'update'])->name('master.aktifitas.update');//->middleware('permission:Edit Aktifitas');
     Route::delete('masterdata/aktifitas/{aktifikas}', [ActifityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
 //});
-=======
->>>>>>> 086b4477462884c62268ecb64957616d95e25567
