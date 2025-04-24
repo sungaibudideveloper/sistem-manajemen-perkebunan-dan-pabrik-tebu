@@ -6,11 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class HerbisidaDosage extends Model
 {
-    protected $table = 'herbisida_dosage';
+    protected $table = 'herbisidadosage';
 
     public $timestamps = false;
 
+    protected $primaryKey = 'activitycode';
+    public $incrementing = false;        // kalau key-nya string/non-numeric
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'companycode',
         'activitycode',
         'itemcode',
         'time',
@@ -22,4 +27,5 @@ class HerbisidaDosage extends Model
     protected $casts = [
         'totaldosage' => 'decimal:2',
     ];
+
 }

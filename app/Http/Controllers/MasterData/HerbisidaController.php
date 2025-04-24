@@ -2,101 +2,130 @@
 
 namespace App\Http\Controllers\MasterData;
 
-use App\Http\Controllers\Controller;
-use App\Models\Herbisida;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\View;
+use App\Http\Controllers\Controller;
+
+use App\Models\Herbisida;
 
 class HerbisidaController extends Controller
 {
-    public function __construct()
-    {
-        // Menyebarkan data untuk navbar dan lainnya
-        View::share([
-            'navbar' => 'Master',
-            'nav' => 'Herbisida',
-            'routeName' => route('master.herbisida.index'),
-        ]);
-    }
-
+    
     public function index(Request $request)
     {
-        $title = "Daftar Herbisida";
-        $permissions = json_decode(Auth::user()->permissions, true);
-        $isAdmin = in_array('Admin', $permissions);
+        $perPage = (int) $request->input('perPage', 10);
+        $search  = $request->input('search');
+    
+        $query = Herbisida::query();
+    
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('itemcode', 'like', "%{$search}%")
+                  ->orWhere('companycode',     'like', "%{$search}%")
+                  ->orWhere('itemname',  'like', "%{$search}%");
+            });
+        }
 
-        $perPage = $request->session()->get('perPage', 10);
-
-        $herbisida = Herbisida::paginate($perPage);
-
-        return view('master.herbisida.index', compact('herbisida', 'perPage', 'title'));
+        $herbisida = $query
+            ->orderBy('itemcode')
+            ->paginate($perPage)
+            ->appends([
+                'perPage' => $perPage,
+                'search'  => $search,
+            ]);
+    
+        return view('master.herbisida.index', [
+            'herbisida' => $herbisida,
+            'title'     => 'Data Herbisida',
+            'navbar'    => 'Master',
+            'nav'       => 'Herbisida',
+            'perPage'   => $perPage,
+            'search'    => $search,
+        ]);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'itemcode' => 'required|max:10',
-            'itemname' => 'required|max:50',
-            'measure' => 'required|max:10',
+            'companycode' => 'required|string|max:4',
+            'itemcode' => 'required|string|max:30',
+            'itemname' => 'required|string|max:50',
+            'measure' => 'required|string|max:10',
             'dosageperha' => 'required|numeric',
-            'company_code' => 'required',
         ]);
 
-        $exists = Herbisida::where('itemcode', $request->itemcode)->exists();
-
+        $exists = Herbisida::where('companycode', $request->companycode)
+            ->where('itemcode', $request->itemcode)
+            ->exists();
         if ($exists) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data sudah ada, silahkan coba dengan data yang berbeda.'
-            ], 422);
+        return redirect()->back()
+            ->withInput()
+            ->withErrors([
+                'itemcode' => 'Duplicate Entry, Item Code already exists'
+            ]);
         }
 
         Herbisida::create([
-            'itemcode' => $request->itemcode,
-            'itemname' => $request->itemname,
-            'measure' => $request->measure,
-            'dosageperha' => $request->dosageperha,
-            'company_code' => $request->company_code,
-            'timestamp' => now(),
+            'companycode' => $request->input('companycode'),
+            'itemcode' => $request->input('itemcode'),
+            'itemname' => $request->input('itemname'),
+            'measure' => $request->input('measure'),
+            'dosageperha' => $request->input('dosageperha'),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil ditambahkan',
-        ]);
+        return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    public function update(Request $request, $itemcode)
-    {
-        $request->validate([
-            'itemname' => 'required|max:50',
-            'measure' => 'required|max:10',
+    public function update(Request $request, $companycode, $itemcode)
+    {   
+        $herbi = Herbisida::where([
+            ['companycode', $companycode],
+            ['itemcode', $itemcode]
+        ])->first();
+
+        if (!$herbi) {
+            return redirect()->back()->withErrors(['error' => 'Data not found']);
+        }
+
+        $validated=$request->validate([
+            'companycode' => 'required|string|max:4',
+            'itemcode' => 'required|string|max:30',
+            'itemname' => 'required|string|max:50',
+            'measure' => 'required|string|max:10',
             'dosageperha' => 'required|numeric',
-            'company_code' => 'required',
         ]);
-
-        $herbisida = Herbisida::findOrFail($itemcode);
-        $herbisida->update([
-            'itemname' => $request->itemname,
-            'measure' => $request->measure,
-            'dosageperha' => $request->dosageperha,
-            'company_code' => $request->company_code,
-        ]);
-
-        return redirect()->route('master.herbisida.index')
-            ->with('success1', 'Data updated successfully.');
+        
+        if ( /* Jika companycode dan itemcode diubah pada modal edit (request), periksa apakah sudah ada yang sama */
+            $request->companycode  !== $herbi->companycode ||
+            $request->itemcode !== $herbi->itemcode
+        ) {
+            $exists = Herbisida::where('companycode',  $request->companycode)
+                ->where('itemcode', $request->itemcode)
+                ->exists();
+    
+            if ($exists) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors([
+                        'itemcode' => 'Duplicate Entry, Item Code already exists'
+                    ]);
+            }
+        }
+        
+        Herbisida::where('companycode', $companycode)
+             ->where('itemcode', $itemcode)
+             ->update($validated);
+    
+        return redirect()->back()->with('success', 'Data berhasil di‑update.');
     }
 
-    public function destroy($itemcode)
-    {
-        $herbisida = Herbisida::findOrFail($itemcode);
-        $herbisida->delete();
+    public function destroy(Request $request, $companycode, $itemcode)
+{
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus',
-        ]);
-    }
+    Herbisida::where([
+        ['companycode', $companycode],
+        ['itemcode', $itemcode]
+    ])->delete();
+
+    return redirect()->back()->with('success','Data berhasil di‑hapus.');
+}
 }

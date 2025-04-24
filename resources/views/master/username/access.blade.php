@@ -47,6 +47,16 @@
                                             'subitems' => ['Create Mapping', 'Hapus Mapping', 'Edit Mapping'],
                                         ],
                                         [
+                                            'id' => 'herbisida',
+                                            'label' => 'Herbisida',
+                                            'subitems' => ['Create Herbisida', 'Hapus Herbisida', 'Edit Herbisida'],
+                                        ],
+                                        [
+                                            'id' => 'herbisidadosage',
+                                            'label' => 'Dosis Herbisida',
+                                            'subitems' => ['Create Dosis Herbisida', 'Hapus Dosis Herbisida', 'Edit Dosis Herbisida'],
+                                        ],
+                                        [
                                             'id' => 'kelolaUser',
                                             'label' => 'Kelola User',
                                             'subitems' => ['Create User', 'Hapus User', 'Edit User', 'Hak Akses'],
@@ -502,6 +512,8 @@
             setupCheckboxLogic("block", ["Hapus Blok", "Edit Blok", "Create Blok"]);
             setupCheckboxLogic("Plotting", ["Hapus Plotting", "Edit Plotting", "Create Plotting"]);
             setupCheckboxLogic("Mapping", ["Hapus Mapping", "Edit Mapping", "Create Mapping"]);
+            setupCheckboxLogic("Herbisida", ["Hapus Herbisida", "Edit Herbisida", "Create Herbisida"]);
+            setupCheckboxLogic("Dosis Herbisida", ["Create Dosis Herbisida","Hapus Dosis Herbisida","Edit Dosis Herbisida"]);
             setupCheckboxLogic("Kelola User", ["Hapus User", "Edit User", "Create User", "Hak Akses"]);
             setupCheckboxLogic("Agronomi", ["Hapus Agronomi", "Edit Agronomi", "Create Agronomi"]);
             setupCheckboxLogic("HPT", ["Hapus HPT", "Edit HPT", "Create HPT"]);
@@ -561,6 +573,16 @@
                     dropdown: 'mappingDropdown',
                     icon: 'mappingToggleIcon'
                 },
+                {
+                    toggle: 'toggleHerbisida',
+                    dropdown: 'herbisidaDropdown',
+                    icon: 'herbisidaToggleIcon'
+                },
+                {
+                    toggle: 'toggleHerbisidadosage',
+                    dropdown: 'herbisidadosageDropdown',
+                    icon: 'herbisidadosageToggleIcon'
+                    },
                 {
                     toggle: 'toggleKelolaUser',
                     dropdown: 'kelolaUserDropdown',

@@ -8,12 +8,18 @@ class Herbisida extends Model
 {
     protected $table = 'herbisida';
 
+    public $timestamps = false;
+
+    protected $primaryKey = 'itemcode';
+    public $incrementing = false;        // kalau key-nya string/non-numeric
+    protected $keyType = 'string';
+
     protected $fillable = [
         'itemcode',
         'itemname',
         'measure',
         'dosageperha',
-        'company_code',
+        'companycode',
         'timestamp',
     ];
 

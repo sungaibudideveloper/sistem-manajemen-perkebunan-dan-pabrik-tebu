@@ -14,7 +14,7 @@ class CheckPermission
     {
 
         if (!Auth::check() || !in_array($permission, json_decode(Auth::user()->permissions ?? '[]'))) {
-            
+            abort(403, 'Unauthorized action.');
         }
 
         return $next($request);
