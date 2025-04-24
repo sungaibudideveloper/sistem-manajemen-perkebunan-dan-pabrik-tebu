@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\MasterData\ActifityController;
 use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MappingController;
@@ -91,11 +92,19 @@ Route::delete('masterdata/herbisida/{companycode}/{itemcode}',[HerbisidaControll
 Route::group(['middleware' => ['auth', 'permission:Dosis Herbisida']], function () {
     Route::get('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('masterdata.herbisida-dosage.index');
     Route::post('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'store'])->name('masterdata.herbisida-dosage.store');
-    
+
 });
 Route::match(['put', 'patch'], 'masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'update'])->name('masterdata.herbisida-dosage.update')->middleware(['auth','permission:Edit Dosis Herbisida']);;
 Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}',[HerbisidaDosageController::class, 'destroy'])->name('masterdata.herbisida-dosage.destroy')->middleware(['auth','permission:Hapus Dosis Herbisida']);;
 
+Route::resource('herbisida-dosage', HerbisidaDosageController::class);
+
+//Route::group(['middleware' => ['auth', 'permission:Aktifitas']], function () {
+    Route::get('masterdata/aktifitas', [ActifityController::class, 'index'])->name('master.aktifitas.index');
+    Route::post('masterdata/aktifitas', [ActifityController::class, 'store'])->name('master.aktifitas.store');
+    Route::put('masterdata/aktifitas/{aktifitas}', [ActifityController::class, 'update'])->name('master.aktifitas.update');//->middleware('permission:Edit Aktifitas');
+    Route::delete('masterdata/aktifitas/{aktifikas}', [ActifityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
+//});
 //Jabatan
 Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
     Route::get('masterdata/jabatan', [JabatanController::class, 'index'])->name('masterdata.jabatan.index');
