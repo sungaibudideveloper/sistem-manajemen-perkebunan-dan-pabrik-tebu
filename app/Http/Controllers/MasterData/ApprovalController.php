@@ -13,7 +13,11 @@ class ApprovalController extends Controller
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
 
-        $query = Approval::query();
+        $query = Approval::with([
+            'jabatanApproval1',
+            'jabatanApproval2',
+            'jabatanApproval3',
+        ]);
 
         if ($search) {
             $query->where(function($q) use ($search) {

@@ -7,10 +7,10 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      form: { idjabatan: '', namajabatan: '' },
+      form: { id: null, namajabatan: '' },
       resetForm() {
         this.mode = 'create';
-        this.form = { idjabatan: '', namajabatan: '' };
+        this.form = { id: null, namajabatan: '' };
         this.open = true;
       }
     }"
@@ -74,7 +74,7 @@
             >
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/jabatan') }}/' + form.idjabatanOriginal
+                      ? '{{ url('masterdata/jabatan') }}/' + form.idjabatan
                       : '{{ url('masterdata/jabatan') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -90,22 +90,7 @@
                   ></h3>
 
                   <div class="mt-4 space-y-4">
-                    <div>
-                      <label for="idjabatan" class="block text-sm font-medium text-gray-700">ID Jabatan</label>
-                      <input
-                        type="number"
-                        name="idjabatan"
-                        id="idjabatan"
-                        x-model="form.idjabatan"
-                        class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        min="1"
-                        required
-                        x-init="form.idjabatan = '{{ old('idjabatan') }}'"
-                      >
-                      @error('idjabatan')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
+                    
 
                     <div>
                       <label for="namajabatan" class="block text-sm font-medium text-gray-700">Nama Jabatan</label>
@@ -172,7 +157,6 @@
                       <button
                         @click="
                           mode = 'edit';
-                          form.idjabatanOriginal = '{{ $data->idjabatan }}';
                           form.idjabatan = {{ $data->idjabatan }};
                           form.namajabatan = '{{ $data->namajabatan }}';
                           open = true

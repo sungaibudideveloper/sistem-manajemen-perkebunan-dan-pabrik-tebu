@@ -174,10 +174,10 @@
                 <td class="py-2 px-4 border-b">{{ $approval->firstItem() + $index }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->activitycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->jumlahapproval }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval1 }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval2 }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval3 }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->jumlahapproval }} </td>
+                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval1 }} - {{ optional($data->jabatanApproval1)->namajabatan }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval2 }} - {{ optional($data->jabatanApproval2)->namajabatan }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval3 }} - {{ optional($data->jabatanApproval3)->namajabatan }}</td>
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
                     @if(auth()->user() && in_array('Edit Approval', json_decode(auth()->user()->permissions ?? '[]')))

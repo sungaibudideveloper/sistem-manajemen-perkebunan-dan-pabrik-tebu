@@ -45,61 +45,29 @@ class JabatanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'idjabatan' => 'required|int|max:999',
             'namajabatan' => 'required|string|max:30',
         ]);
-
-        $exists = Jabatan::where('idjabatan', $request->idjabatan)
-            ->exists();
-
-        if ($exists) {
-        return redirect()->back()
-            ->withInput()
-            ->withErrors([
-                'idjabatan' => 'Duplicate Entry, Item Code already exists'
-            ]);
-        }
-
+            
         Jabatan::create([
-            'idjabatan' => $request->input('idjabatan'),
-            'namajabatan' => $request->input('namajabatan'),
+            'namajabatan' => $request->namajabatan,
         ]);
 
-        return redirect()->back()->with('success', 'Data berhasil disimpan.');
+        return redirect()->back()->with('success', 'Data berhasil dibuat.');
     }
 
     public function update(Request $request, $idjabatan)
     {   
-        $jabatan = Jabatan::where([
-            ['idjabatan', $idjabatan]
-        ])->firstOrFail();
-
-        $validated=$request->validate([
-            'idjabatan' => 'required|int|max:999',
+        $jabatan = Jabatan::findOrFail($idjabatan);
+    
+        $request->validate([
             'namajabatan' => 'required|string|max:30',
         ]);
-        
-        if (
-            (int)$request->idjabatan !== $jabatan->idjabatan){ //Dsini pake (int) karena data dari form adalah string
-
-            $exists = Jabatan::where('idjabatan',  $request->idjabatan)
-                ->exists();
+   
+        $jabatan->update([
+            'namajabatan' => $request->namajabatan,
+        ]);
     
-            if ($exists) {
-                return redirect()->back()
-                    ->withInput()
-                    ->withErrors([
-                        'idjabatan' => 'Duplicate Entry, ID already exists'
-                    ]);
-            }
-        }
-        
-        Jabatan::where([
-            ['idjabatan', $idjabatan]
-        ])->update($validated);
-
-    
-        return redirect()->back()->with('success', 'Data berhasil di‑update.');
+        return redirect()->back()->with('success', 'Data berhasil di-update.');
     }
 
     public function destroy(Request $request, $idjabatan)

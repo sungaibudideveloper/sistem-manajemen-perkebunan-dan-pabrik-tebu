@@ -11,11 +11,8 @@ class Jabatan extends Model
     public $timestamps = false;
 
     protected $primaryKey = 'idjabatan';
-    public $incrementing = false;
-    protected $keyType = 'int';
 
     protected $fillable = [
-        'idjabatan',
         'namajabatan'
     ];
 

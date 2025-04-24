@@ -29,4 +29,17 @@ class Approval extends Model
         'idjabatanapproval2' => 'integer',
         'idjabatanapproval3' => 'integer',
     ];
+
+    public function jabatanApproval1()
+    {
+        return $this->belongsTo(Jabatan::class, 'idjabatanapproval1', 'idjabatan');
+    }
+    public function jabatanApproval2()
+    {
+        return $this->belongsTo(Jabatan::class, 'idjabatanapproval2', 'idjabatan');
+    }
+    public function jabatanApproval3()
+    {
+        return $this->belongsTo(Jabatan::class, 'idjabatanapproval3', 'idjabatan');
+    }
 }
