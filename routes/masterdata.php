@@ -9,6 +9,10 @@ use App\Http\Controllers\MasterData\HerbisidaController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
 use App\Http\Controllers\MasterData\JabatanController;
 use App\Http\Controllers\MasterData\ApprovalController;
+use App\Http\Controllers\MasterData\KategoriController;
+use App\Http\Controllers\MasterData\StatusController;
+use App\Http\Controllers\MasterData\VarietasController;
+use App\Http\Controllers\MasterData\AccountingController;
 
 //company
 Route::group(['middleware' => ['auth', 'permission:Company']], function () {
@@ -120,3 +124,45 @@ Route::group(['middleware' => ['auth', 'permission:Approval']], function () {
 });
 Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
 Route::delete('masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);
+
+
+//Kategori
+Route::group(['middleware' => ['auth', 'permission:Kategori']], function () {
+    Route::get('masterdata/kategori', [KategoriController::class, 'index'])->name('masterdata.kategori.index');
+    Route::post('masterdata/kategori', [KategoriController::class, 'store'])->name('masterdata.kategori.store');
+});
+Route::match(['put','patch'], 'masterdata/kategori/{kodekategori}',[KategoriController::class,'update'])->middleware(['auth','permission:Edit Kategori'])->name('masterdata.kategori.update');
+Route::delete('masterdata/kategori/{kodekategori}',[KategoriController::class,'destroy'])->middleware(['auth','permission:Hapus Kategori'])->name('masterdata.kategori.destroy');
+
+
+
+// Varietas
+Route::group(['middleware' => ['auth', 'permission:Varietas']], function () {
+    Route::get('masterdata/varietas', [VarietasController::class, 'index'])
+        ->name('masterdata.varietas.index');
+    Route::post('masterdata/varietas', [VarietasController::class, 'store'])
+        ->name('masterdata.varietas.store');
+});
+Route::match(['put','patch'], 'masterdata/varietas/{kodevarietas}', [VarietasController::class, 'update'])
+    ->middleware(['auth','permission:Edit Varietas'])
+    ->name('masterdata.varietas.update');
+Route::delete('masterdata/varietas/{kodevarietas}', [VarietasController::class, 'destroy'])
+    ->middleware(['auth','permission:Hapus Varietas'])
+    ->name('masterdata.varietas.destroy');
+
+
+// Accounting
+Route::group(['middleware' => ['auth','permission:Accounting']], function() {
+    Route::get   ('masterdata/accounting',[AccountingController::class,'index'])->name('masterdata.accounting.index');
+    Route::post  ('masterdata/accounting',[AccountingController::class,'store'])->name('masterdata.accounting.store');
+});
+Route::match(['put','patch'], 
+    'masterdata/accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}',
+    [AccountingController::class,'update'])
+    ->middleware(['auth','permission:Edit Accounting'])
+    ->name('masterdata.accounting.update');
+Route::delete(
+    'masterdata/accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}',
+    [AccountingController::class,'destroy'])
+    ->middleware(['auth','permission:Hapus Accounting'])
+    ->name('masterdata.accounting.destroy');

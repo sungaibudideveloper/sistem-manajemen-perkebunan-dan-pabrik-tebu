@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Jabatan;
 
@@ -50,6 +51,8 @@ class JabatanController extends Controller
             
         Jabatan::create([
             'namajabatan' => $request->namajabatan,
+            'inputby'      => Auth::user()->userid,
+            'createdat'    => now(),
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil dibuat.');
@@ -65,6 +68,8 @@ class JabatanController extends Controller
    
         $jabatan->update([
             'namajabatan' => $request->namajabatan,
+            'updateby'  => Auth::user()->userid,
+            'updatedat' => now(),
         ]);
     
         return redirect()->back()->with('success', 'Data berhasil di-update.');

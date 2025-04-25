@@ -22,10 +22,16 @@ class HerbisidaDosage extends Model
         'description',
         'totaldosage',
         'dosageunit',
+        'inputby',
+        'updateby',
+        'createdat',
+        'updatedat',
     ];
 
     protected $casts = [
         'totaldosage' => 'decimal:2',
+        'createdat'   => 'datetime',
+        'updatedat'   => 'datetime',
     ];
 
 }

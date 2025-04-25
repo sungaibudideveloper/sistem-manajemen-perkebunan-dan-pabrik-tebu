@@ -21,6 +21,10 @@ class Approval extends Model
         'idjabatanapproval1',
         'idjabatanapproval2',
         'idjabatanapproval3',
+        'inputby',
+        'updateby',
+        'createdat',
+        'updatedat',
     ];
 
     protected $casts = [
@@ -28,6 +32,8 @@ class Approval extends Model
         'idjabatanapproval1' => 'integer',
         'idjabatanapproval2' => 'integer',
         'idjabatanapproval3' => 'integer',
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime',
     ];
 
     public function jabatanApproval1()

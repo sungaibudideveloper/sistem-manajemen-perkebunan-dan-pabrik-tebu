@@ -5,6 +5,7 @@ namespace App\Http\Controllers\MasterData;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
+use Illuminate\Support\Facades\Auth;
 
 class ApprovalController extends Controller
 {
@@ -74,6 +75,8 @@ class ApprovalController extends Controller
             'idjabatanapproval1' => $request->idjabatanapproval1,
             'idjabatanapproval2' => $request->idjabatanapproval2,
             'idjabatanapproval3' => $request->idjabatanapproval3,
+            'inputby'      => Auth::user()->userid,
+            'createdat'    => now(),
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
@@ -114,7 +117,16 @@ class ApprovalController extends Controller
         Approval::where([
             ['companycode',  $companycode],
             ['activitycode', $activitycode]
-        ])->update($validated);
+        ])->update([
+            'companycode'        => $validated['companycode'],
+            'activitycode'       => $validated['activitycode'],
+            'jumlahapproval'     => $validated['jumlahapproval'],
+            'idjabatanapproval1' => $validated['idjabatanapproval1'],
+            'idjabatanapproval2' => $validated['idjabatanapproval2'],
+            'idjabatanapproval3' => $validated['idjabatanapproval3'],
+            'updateby'     => Auth::user()->userid,
+            'updatedat'    => now(),
+        ]);
 
         return redirect()->back()->with('success', 'Data berhasil di-update.');
     }

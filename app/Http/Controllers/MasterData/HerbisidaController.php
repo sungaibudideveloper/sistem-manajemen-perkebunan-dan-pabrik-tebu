@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Herbisida;
 
@@ -70,6 +71,8 @@ class HerbisidaController extends Controller
             'itemname' => $request->input('itemname'),
             'measure' => $request->input('measure'),
             'dosageperha' => $request->input('dosageperha'),
+            'inputby'      => Auth::user()->userid,
+            'createdat'    => now(),
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
@@ -109,7 +112,15 @@ class HerbisidaController extends Controller
         
         Herbisida::where('companycode', $companycode)
              ->where('itemcode', $itemcode)
-             ->update($validated);
+             ->update([
+                'companycode' => $validated['companycode'],
+                'itemcode' => $validated['itemcode'],
+                'itemname' => $validated['itemname'],
+                'measure' => $validated['measure'],
+                'dosageperha' => $validated['dosageperha'],
+                'updateby' => Auth::user()->userid,
+                'updatedat' => now(),
+             ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');
     }

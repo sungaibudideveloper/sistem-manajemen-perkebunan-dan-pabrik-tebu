@@ -4,22 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Herbisida extends Model
+class Varietas extends Model
 {
-    protected $table = 'herbisida';
-
+    protected $table = 'varietas';
     public $timestamps = false;
 
-    protected $primaryKey = 'itemcode';
-    public $incrementing = false;        // kalau key-nya string/non-numeric
+    protected $primaryKey = 'kodevarietas';
+    public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'itemcode',
-        'itemname',
-        'measure',
-        'dosageperha',
-        'companycode',
+        'kodevarietas',
+        'description',
         'inputby',
         'updateby',
         'createdat',
@@ -27,7 +23,6 @@ class Herbisida extends Model
     ];
 
     protected $casts = [
-        'dosageperha' => 'decimal:2',
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
     ];

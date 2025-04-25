@@ -5,6 +5,7 @@ namespace App\Http\Controllers\MasterData;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\HerbisidaDosage;
 
@@ -32,6 +33,7 @@ class HerbisidaDosageController extends Controller
         }
 
         $herbisidaDosages = $qb
+            ->orderBy('d.companycode')
             ->orderBy('d.activitycode')
             ->paginate($perPage)
             ->appends(compact('perPage','search'));
@@ -78,6 +80,8 @@ class HerbisidaDosageController extends Controller
             'description' => $request->input('description'),
             'totaldosage' => $request->input('totaldosage'),
             'dosageunit' => $request->input('dosageunit'),
+            'inputby'      => Auth::user()->userid,
+            'createdat'    => now(),
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
@@ -132,6 +136,8 @@ class HerbisidaDosageController extends Controller
             'description'   => $validated['description'],
             'totaldosage'   => $validated['totaldosage'],
             'dosageunit'    => $validated['dosageunit'],
+            'updateby'      => Auth::user()->userid,
+            'updatedat'     => now(),
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil diupdate.');

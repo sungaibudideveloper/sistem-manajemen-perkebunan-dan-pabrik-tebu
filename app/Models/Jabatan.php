@@ -13,7 +13,11 @@ class Jabatan extends Model
     protected $primaryKey = 'idjabatan';
 
     protected $fillable = [
-        'namajabatan'
+        'namajabatan',
+        'inputby',
+        'updateby',
+        'createdat',
+        'updatedat',
     ];
 
     protected $casts = [

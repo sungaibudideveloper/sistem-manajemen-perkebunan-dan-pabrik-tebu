@@ -21,6 +21,9 @@
                                             request()->is('herbisida-dosage') ||
                                             request()->is('jabatan') ||
                                             request()->is('approval') ||
+                                            request()->is('kategori') ||
+                                            request()->is('varietas') ||
+                                            request()->is('accounting') ||
                                             request()->is('username') ||
                                             request()->routeIs('master.username.create') ||
                                             request()->routeIs('master.username.access') ||
@@ -35,6 +38,9 @@
                                                     request()->is('herbisida-dosage') ||
                                                     request()->is('jabatan') ||
                                                     request()->is('approval') ||
+                                                    request()->is('kategori') ||
+                                                    request()->is('varietas') ||
+                                                    request()->is('accounting') ||
                                                     request()->is('username') ||
                                                     request()->routeIs('master.username.create') ||
                                                     request()->routeIs('master.username.access') ||
@@ -97,6 +103,21 @@
                                     @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('masterdata.approval.index') }}"
                                             :active="request()->is('approval')">Approval</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
+                                            :active="request()->is('kategori')">Kategori</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
+                                            :active="request()->is('varietas')">Varietas</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
+                                            :active="request()->is('accounting')">Accounting</x-childnav-link>
                                     @endif
 
                                     <x-childnav-link href="{{ route('master.aktifitas.index') }}"
@@ -440,6 +461,9 @@
                                 request()->is('herbisida-dosage') ||
                                 request()->is('jabatan') ||
                                 request()->is('approval') ||
+                                request()->is('kategori') ||
+                                request()->is('varietas') ||
+                                request()->is('accounting') ||
                                 request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
                                 request()->routeIs('master.username.access') ||
@@ -454,6 +478,9 @@
                                         request()->is('herbisida-dosage') ||
                                         request()->is('jabatan') ||
                                         request()->is('approval') ||
+                                        request()->is('kategori') ||
+                                        request()->is('varietas') ||
+                                        request()->is('accounting') ||
                                         request()->is('username') ||
                                         request()->routeIs('master.username.create') ||
                                         request()->routeIs('master.username.access') ||
@@ -515,6 +542,21 @@
                         @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
                         <x-childnav-link href="{{ route('masterdata.approval.index') }}"
                                 :active="request()->is('approval')">Approval</x-childnav-link>
+                        @endif
+
+                        @if (auth()->user() && in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
+                            <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
+                                :active="request()->is('kategori')">Kategori</x-childnav-link>
+                        @endif
+
+                        @if (auth()->user() && in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
+                            <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
+                                :active="request()->is('varietas')">Varietas</x-childnav-link>
+                        @endif
+
+                        @if (auth()->user() && in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                            <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
+                                :active="request()->is('accounting')">Accounting</x-childnav-link>
                         @endif
 
                         @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
