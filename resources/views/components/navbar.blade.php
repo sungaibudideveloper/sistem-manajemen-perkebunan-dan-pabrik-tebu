@@ -143,7 +143,8 @@
                                             request()->routeIs('input.agronomi.create') ||
                                             request()->routeIs('input.agronomi.edit') ||
                                             request()->routeIs('input.hpt.create') ||
-                                            request()->routeIs('input.hpt.edit') }},
+                                            request()->routeIs('input.hpt.edit') ||
+                                            request()->routeIs('input.rkh.edit') }},
                                         'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                             !(
                                                 {{ request()->is('agronomi') ||
@@ -151,7 +152,8 @@
                                                     request()->routeIs('input.agronomi.create') ||
                                                     request()->routeIs('input.agronomi.edit') ||
                                                     request()->routeIs('input.hpt.create') ||
-                                                    request()->routeIs('input.hpt.edit') }}
+                                                    request()->routeIs('input.hpt.edit') ||
+                                                    request()->routeIs('input.rkh.edit') }}
                                             )
                                     }"
                                     class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
@@ -185,6 +187,13 @@
                                             :active="request()->is('hpt') ||
                                                 request()->routeIs('input.hpt.create') ||
                                                 request()->routeIs('input.hpt.edit')">HPT</x-childnav-link>
+                                    @endif
+
+                                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                                        <x-childnav-link href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}"
+                                            :active="request()->is('hpt') ||
+                                                request()->routeIs('input.rkh.create') ||
+                                                request()->routeIs('input.rkh.edit')">Rencana Kerja Harian</x-childnav-link>
                                     @endif
                                 </div>
                             </div>

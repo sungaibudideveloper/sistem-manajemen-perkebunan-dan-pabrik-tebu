@@ -1,6 +1,13 @@
 <?php
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\AgronomiController;
+use App\Http\Controllers\Input\KerjaHarian\RencanaKerjaHarianController;
+use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
+use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
+
+
+
+
 
 Route::group(['middleware' => ['auth', 'permission:Agronomi']], function () {
 
@@ -45,4 +52,17 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
         ->name('input.hpt.update');
     Route::get('input/hpt/{nosample}/{companycode}/{tanggaltanam}/edit', [HPTController::class, 'edit'])
         ->name('input.hpt.edit');
+});
+
+
+//Kerja Harian
+Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
+    Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
+    Route::get('input/kerjaharian/rencanakerjaharian/create', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
+});
+Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
+    Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
+});
+Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
+    Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
 });
