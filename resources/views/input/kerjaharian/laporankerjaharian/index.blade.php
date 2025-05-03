@@ -11,97 +11,92 @@
       <h2 class="text-lg font-semibold mb-4">RKH2904125 - LKH002345</h2>
 
       <!-- Header Fields -->
-      <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="grid grid-cols-4 gap-4 mb-6 w-1/3">
         <div>
-          <label for="tanggal" class="block text-xs font-medium text-gray-700">Hari / Tanggal</label>
-          <input type="text" name="tanggal" id="tanggal" placeholder="__/__/____"
-                 class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <label class="block text-xs font-medium text-gray-700">Mandor</label>
+          <p class="mt-1 text-xs text-gray-900">Gerald</p>
         </div>
         <div>
-          <label for="divisi" class="block text-xs font-medium text-gray-700">Divisi</label>
-          <input type="text" name="divisi" id="divisi" placeholder="Divisi"
-                 class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <label class="block text-xs font-medium text-gray-700">Tanggal</label>
+          <p class="mt-1 text-xs text-gray-900">29/04/2025</p>
         </div>
         <div>
-          <label for="kegiatan" class="block text-xs font-medium text-gray-700">Kegiatan</label>
-          <input type="text" name="kegiatan" id="kegiatan" placeholder="Kegiatan"
-                 class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <label class="block text-xs font-medium text-gray-700">Kegiatan</label>
+          <p class="mt-1 text-xs text-gray-900">W105 - Weeding</p>
         </div>
         <div>
-          <label for="mandor" class="block text-xs font-medium text-gray-700">Mandor</label>
-          <input type="text" name="mandor" id="mandor" placeholder="Mandor"
-                 class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <label class="block text-xs font-medium text-gray-700">Divisi</label>
+          <p class="mt-1 text-xs text-gray-900">Divisi 1</p>
         </div>
+        
       </div>
 
       <!-- Tabel Input -->
       <div class="overflow-x-auto">
-        <table id="rkh-table" class="min-w-full table-auto border-collapse">
+        <table id="rkh-table" class="min-w-full table-fixed border-collapse">
           <thead>
             <tr>
-              <th class="border px-2 py-1 text-xs">No.</th>
-              <th class="border px-2 py-1 text-xs">Nama</th>
-              <th class="border px-2 py-1 text-xs">No KTP</th>
-              <th class="border px-2 py-1 text-xs">Blok</th>
-              <th class="border px-2 py-1 text-xs">Plot</th>
-              <th class="border px-2 py-1 text-xs" colspan="3">Hasil</th>
-              <th class="border px-2 py-1 text-xs" colspan="2">Jam Kerja</th>
-              <th class="border px-2 py-1 text-xs">Premi</th>
-              <th class="border px-2 py-1 text-xs">Rp.</th>
-              <th class="border px-2 py-1 text-xs">Material</th>
+              <th class="border px-2 py-1 text-xs w-[40px]" rowspan="2">No.</th>
+              <th class="border px-2 py-1 text-xs w-[120px]" rowspan="2">Nama</th>
+              <th class="border px-2 py-1 text-xs w-[200px]" rowspan="2">No KTP</th>
+              <th class="border px-2 py-1 text-xs w-[80px]" rowspan="2">Blok</th>
+              <th class="border px-2 py-1 text-xs w-[80px]" rowspan="2">Plot</th>
+              <th class="border px-2 py-1 text-xs text-center w-[240px]" colspan="3">Hasil</th>
+              <th class="border px-2 py-1 text-xs text-center w-[160px]" colspan="2">Jam Kerja</th>
+              <th class="border px-2 py-1 text-xs w-[80px]" rowspan="2">Premi</th>
+              <th class="border px-2 py-1 text-xs w-[100px]" rowspan="2">Rp.</th>
+              <th class="border px-2 py-1 text-xs w-[150px]" rowspan="2">Material</th>
             </tr>
             <tr>
-              <th></th><th></th><th></th><th></th><th></th>
-              <th class="border px-2 py-1 text-xs">Luas</th>
-              <th class="border px-2 py-1 text-xs">Hasil</th>
-              <th class="border px-2 py-1 text-xs">Sisa</th>
-              <th class="border px-2 py-1 text-xs">Jam Datang</th>
-              <th class="border px-2 py-1 text-xs">Jam Pulang</th>
-              <th></th><th></th><th></th>
+              <th class="border px-2 py-1 text-xs w-[80px]">Luas</th>
+              <th class="border px-2 py-1 text-xs w-[80px]">Hasil</th>
+              <th class="border px-2 py-1 text-xs w-[80px]">Sisa</th>
+              <th class="border px-2 py-1 text-xs w-[80px]">Jam Datang</th>
+              <th class="border px-2 py-1 text-xs w-[80px]">Jam Pulang</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="border px-2 py-1 text-xs row-number">1</td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][nama]" value="Budi" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][no_ktp]" value="1234567890123456" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][blok]" value="A1" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][plot]" value="101" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][luas]" value="100" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][hasil]" value="90" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][sisa]" value="10" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][jam_datang]" value="07:00" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][jam_pulang]" value="15:00" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][premi]" value="50" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][rp]" value="90000" class="w-full text-xs border-none focus:ring-0"></td>
+              <td class="border px-2 py-1 text-xs row-number text-center">1</td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][nama]" value="Budi" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][no_ktp]" value="1234567890123456" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][blok]" value="A1" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][plot]" value="A101" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border  text-xs"><input type="number" name="rows[0][luas]" value="100" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[0][hasil]" value="90" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[0][sisa]" value="10" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="time" name="rows[0][jam_datang]" value="07:00" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="time" name="rows[0][jam_pulang]" value="15:00" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[0][premi]" value="50" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border px-4 py-1 text-xs"><input type="text" name="rows[0][rp]" value="{{ number_format(90000, 0, ',', '.') }}" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
               <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][material]" value="Semprotan" class="w-full text-xs border-none focus:ring-0"></td>
             </tr>
             <tr>
-              <td class="border px-2 py-1 text-xs row-number">2</td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][nama]" value="Siti" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][no_ktp]" value="2345678901234567" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][blok]" value="B2" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][plot]" value="202" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][luas]" value="150" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][hasil]" value="140" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][sisa]" value="10" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][jam_datang]" value="08:00" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][jam_pulang]" value="16:00" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][premi]" value="60" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][rp]" value="140000" class="w-full text-xs border-none focus:ring-0"></td>
+              <td class="border px-2 py-1 text-xs row-number text-center"">2</td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][nama]" value="Siti" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][no_ktp]" value="2345678901234567" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][blok]" value="B2" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][plot]" value="B202" class="w-full text-xs border-none focus:ring-0 text-center""></td>
+              <td class="border  text-xs"><input type="number" name="rows[1][luas]" value="150" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[1][hasil]" value="140" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[1][sisa]" value="10" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="time" name="rows[1][jam_datang]" value="08:00" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="time" name="rows[1][jam_pulang]" value="16:00" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border  text-xs"><input type="number" name="rows[1][premi]" value="60" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
+              <td class="border px-4 py-1 text-xs"><input type="text" name="rows[0][rp]" value="{{ number_format(90000, 0, ',', '.') }}" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
               <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][material]" value="Pupuk" class="w-full text-xs border-none focus:ring-0"></td>
             </tr>
           </tbody>
           <tfoot>
             <tr>
-              <td class="border px-2 py-1 text-xs" colspan="5"><strong>Total</strong></td>
-              <td class="border px-2 py-1 text-xs"><strong>250</strong></td>
-              <td class="border px-2 py-1 text-xs"><strong>230</strong></td>
-              <td class="border px-2 py-1 text-xs"><strong>20</strong></td>
-              <td class="border px-2 py-1 text-xs" colspan="2"></td>
+              <td class="border px-2 py-1 text-xs text-right" colspan="5"><strong>Total</strong></td>
+              <td class="border px-4 py-1 text-xs text-right"><strong>250</strong></td>
+              <td class="border px-4 py-1 text-xs text-right"><strong>230</strong></td>
+              <td class="border px-4 py-1 text-xs text-right"><strong>20</strong></td>
+              <td class="border px-4 py-1 text-xs text-right" colspan="2"></td>
               <td class="border px-2 py-1 text-xs"></td>
-              <td class="border px-2 py-1 text-xs"><strong>230000</strong></td>
-              <td class="border px-2 py-1 text-xs"></td>
+              <td class="border px-4 py-1 text-xs text-right"><strong>{{ number_format(180000, 0, ',', '.') }}</strong></td>
+              <td class="border px-4 py-1 text-xs text-right"></td>
             </tr>
           </tfoot>
         </table>
