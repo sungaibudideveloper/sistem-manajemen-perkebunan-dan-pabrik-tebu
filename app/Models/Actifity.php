@@ -29,7 +29,8 @@ class Actifity extends Model
         'createdat',
         'inputby',
         'updatedat',
-        'updatedby'
+        'updatedby',
+        'accno'
     ];
 
     public function setCreatedAt($value)

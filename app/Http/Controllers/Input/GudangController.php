@@ -1,31 +1,28 @@
 <?php
 
-namespace App\Http\Controllers\MasterData;
+namespace App\Http\Controllers\Input;
 use App\Http\Controllers\Controller;
 
-use App\Models\Actifity;
-use App\Models\ActifityGroup;
-use App\Models\Blok;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\DB;
 
-class ActifityController extends Controller
+class GudangController extends Controller
 {
 
     public function __construct()
     {
         View::share([
-            'navbar' => 'Master',
-            'nav' => 'aktifitas',
-            'routeName' => route('master.aktifitas.index'),
+            'navbar' => 'Input',
+            'nav' => 'gudang',
+            'routeName' => route('input.gudang.index'),
         ]);
     }
 
     public function index(Request $request)
     {
-        $title = "Daftar Aktifitas";
+        $title = "Gudang";
 
         if ($request->isMethod('post')) {
             $request->validate(['perPage' => 'required|integer|min:1']);
@@ -33,17 +30,15 @@ class ActifityController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        $actifities = Actifity::with('group')->orderBy('actifitycode', 'asc')->paginate($perPage);
-        $actifityGroup = ActifityGroup::get();
+        //$actifities = Actifity::with('group')->orderBy('actifitycode', 'asc')->paginate($perPage);
+        //$actifityGroup = ActifityGroup::get();
 
-        foreach ($actifities as $index => $item) {
-            $item->no = ($actifities->currentPage() - 1) * $actifities->perPage() + $index + 1;
-        }
-        return view('master.actifity.index')->with([
-            'title'         => 'Daftar Aktifitas',
-            'perPage'       => $perPage,
-            'actifities'    => $actifities,
-            'actifityGroup' => $actifityGroup
+        //foreach ($actifities as $index => $item) {
+        //    $item->no = ($actifities->currentPage() - 1) * $actifities->perPage() + $index + 1;
+        //}
+        return view('input.gudang.index')->with([
+            'title'         => 'Gudang',
+            'perPage'       => $perPage
         ]);
     }
 

@@ -1,6 +1,7 @@
 <?php
-use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\AgronomiController;
+use App\Http\Controllers\Input\HPTController;
+use App\Http\Controllers\Input\GudangController;
 use App\Http\Controllers\Input\KerjaHarian\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
@@ -66,3 +67,7 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
 });
+
+//Route::group(['middleware' => ['auth', 'permission:Gudang']], function () {
+    Route::get('input/gudang', [GudangController::class, 'index'])->name('input.gudang.index');
+//});

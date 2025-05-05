@@ -4,6 +4,7 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
     <div class="mx-auto py-4 bg-white shadow-md rounded-md">
+        @include('errorfile')
         <div class="flex items-center justify-between mx-4 gap-2">
                 <button onclick="openCreateModal()"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
@@ -22,7 +23,6 @@
                     class="w-10 p-2 border border-gray-300 rounded-md text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
             </form>
         </div>
-
         <div class="mx-auto px-4 py-4">
             <div class="overflow-x-auto rounded-md border border-gray-300">
                 <table class="min-w-full bg-white text-sm text-center">
@@ -54,12 +54,12 @@
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var3 }} - {{ $actifity->satuan3 }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var4 }} - {{ $actifity->satuan4 }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var5 }} - {{ $actifity->satuan5 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingmaterial == 1 ? 'YES' : 'NO' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingvehicle == 1 ? 'YES' : 'NO' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                   <div class="flex items-center justify-center">
                                           <button
-                                              onclick="openEditModal('{{ $actifity->actifitycode }}', '{{ $actifity->actifityname }}', '{{ $actifity->jurnalno }}', '{{ $actifity->var1 }}', '{{ $actifity->satuan1 }}', '{{ $actifity->var2 }}', '{{ $actifity->satuan2 }}', '{{ $actifity->var3 }}', '{{ $actifity->satuan3 }}', '{{ $actifity->var4 }}', '{{ $actifity->satuan4 }}', '{{ $actifity->var5 }}', '{{ $actifity->satuan5 }}', '{{ $actifity->usingmaterial }}', '{{ $actifity->usingvehicle }}')"
+                                              onclick="openEditModal('{{ $actifity->actifitygroup }}','{{ $actifity->actifitycode }}', '{{ $actifity->actifityname }}', '{{ $actifity->var1 }}', '{{ $actifity->satuan1 }}', '{{ $actifity->var2 }}', '{{ $actifity->satuan2 }}', '{{ $actifity->var3 }}', '{{ $actifity->satuan3 }}', '{{ $actifity->var4 }}', '{{ $actifity->satuan4 }}', '{{ $actifity->var5 }}', '{{ $actifity->satuan5 }}', '{{ $actifity->usingmaterial }}', '{{ $actifity->usingvehicle }}', '{{ $actifity->description }}')"
                                               class="group flex items-center edit-button"><svg
                                                   class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                   aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -82,29 +82,25 @@
                                               </svg>
                                               <span class="w-0.5"></span>
                                           </button>
-                                          <form class="inline">
-                                              @csrf
-                                              @method('DELETE')
-                                              <button type="button" class="group flex delete-button"
-                                                  data-actifitycode="{{ $actifity->actifitycode }}"
-                                                  <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                                      aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                      width="24" height="24" fill="none"
-                                                      viewBox="0 0 24 24">
-                                                      <path stroke="currentColor" stroke-linecap="round"
-                                                          stroke-linejoin="round" stroke-width="2"
-                                                          d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
-                                                  </svg>
-                                                  <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                                      aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                      width="24" height="24" fill="currentColor"
-                                                      viewBox="0 0 24 24">
-                                                      <path fill-rule="evenodd"
-                                                          d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
-                                                          clip-rule="evenodd" />
-                                                  </svg>
-                                              </button>
-                                          </form>
+                                          <button type="button" class="group flex delete-button"
+                                              data-actifitycode="{{ $actifity->actifitycode }}">
+                                              <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
+                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                                  width="24" height="24" fill="none"
+                                                  viewBox="0 0 24 24">
+                                                  <path stroke="currentColor" stroke-linecap="round"
+                                                      stroke-linejoin="round" stroke-width="2"
+                                                      d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
+                                              </svg>
+                                              <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
+                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                                  width="24" height="24" fill="currentColor"
+                                                  viewBox="0 0 24 24">
+                                                  <path fill-rule="evenodd"
+                                                      d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
+                                                      clip-rule="evenodd" />
+                                              </svg>
+                                          </button>
                                   </div>
                             </td>
                         </tr>
@@ -137,12 +133,12 @@
                 </div>
                 <form class="p-4 md:p-5" id="crud-form" action="" method="POST">
                     @csrf
-                    <input type="hidden" name="_method" id="crud-method" value="POST">
+                    <input type="hidden" id="crud-method" name="_method" value="POST">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <div class="mb-4">
                                 <label class="block text-md">Grup Aktifitas</label>
-                                <select class="rounded-md p-2 w-full border border-gray-300" id="actifitygroup" name="actifitygroup">
+                                <select class="rounded-md p-2 w-full border border-gray-300" id="actifitygroup" name="grupaktifitas">
                                     @foreach($actifityGroup as $group)
                                         <option value="{{ $group->actifitygroup }}" @if( old('actifitygroup') == $group->actifitygroup ) selected @endif>
                                             {{ $group->actifitygroup }} - {{ $group->groupname }}
@@ -181,14 +177,14 @@
                                     <div class="flex flex-wrap gap-3 variable-row w-full mb-4">
                                         <div class="flex-1 min-w-[150px] text-center">
                                           <label class="block text-md">Var <span class="input-var">1</span></label>
-                                          <input type="text" name="Keterangan" id="Keterangan-var1"
+                                          <input type="text" name="var[]"
                                                  class="rounded-md p-2 w-full border border-gray-300" required>
                                         </div>
 
                                         <!-- SATUAN 1 -->
                                         <div class="flex-1 min-w-[150px] text-center">
                                           <label class="block text-md">Satuan <span class="input-var">1</span></label>
-                                          <input type="text" name="Satuan" id="Keterangan-satuan1"
+                                          <input type="text" name="satuan[]"
                                                  class="rounded-md p-2 w-full border border-gray-300" required>
                                         </div>
 
@@ -261,7 +257,29 @@
         document.querySelectorAll('.delete-button').forEach(button => {
             button.addEventListener('click', function() {
                 if (confirm('Yakin ingin menghapus data ini?')) {
-
+                  let actifitycode = this.getAttribute('data-actifitycode');
+                  fetch(`{{ route('master.aktifitas.destroy', ['aktifitas' => '__actifitycode__']) }}`
+                          .replace('__actifitycode__', actifitycode), {
+                              method: 'POST',
+                              headers: {
+                                  'X-CSRF-TOKEN': document.querySelector(
+                                          'meta[name="csrf-token"]')
+                                      .getAttribute('content'),
+                                  'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                  _method: 'DELETE'
+                              })
+                          })
+                      .then(response => response.json())
+                      .then(data => {
+                          if (data.success) {
+                              location.reload();
+                          } else {
+                              alert('Gagal menghapus data');
+                          }
+                      })
+                      .catch(error => console.error('Error:', error));
                 }
             });
         });
@@ -270,17 +288,15 @@
         const modal = document.getElementById("crud-modal");
         const form = document.getElementById("crud-form");
         const modalTitle = document.getElementById("modal-title");
-        const actifitygroup = document.getElementById("actifitygroup");
-        const actifitycode = document.getElementById("blok");
-        const kdCompInput = document.getElementById("companycode");
         const crudMethod = document.getElementById("crud-method");
 
         function openCreateModal() {
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.blok.handle') }}";
+            form.action = "{{ route('master.aktifitas.store') }}";
             crudMethod.value = "POST";
+            $('input[name="nama"]').attr('readonly','false');
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
@@ -297,14 +313,56 @@
             }, 300);
         }
 
-        function openEditModal(actifitygroup,actifitycode,actifityname,jurnalno,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingvehicle,usingmaterial) {
+        function openEditModal(actifitygroup,actifitycode,actifityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingvehicle,usingmaterial,keterangan) {
+            resetRow();
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute = "{{ route('master.aktifitas.update', ['aktifitas' => '__actifitycode__']) }}";
-            form.action = editRoute.replace('aktifitas', actifitycode);
-            crudMethod.value = "PUT";
-            actifitycode.value = actifitycode;
+            const form = $('#crud-form');
+            form.attr('action', editRoute.replace('__actifitycode__', actifitycode));
+            form.find('input[name="kodeaktifitas"]').attr('readonly','true');
+            form.find('input[name="_method"]').val('PUT');
+            form.find('input[name="grupaktifitas"]').val(actifitygroup).trigger('change');
+            form.find('input[name="kodeaktifitas"]').val(actifitycode)
+            form.find('input[name="namaaktifitas"]').val(actifityname)
+            if( usingmaterial == 1 ){
+              form.find('input[name="material"][value="1"]').prop('checked', true)
+            }else{
+              form.find('input[name="material"][value="0"]').prop('checked', true)
+            }
+
+            if( usingvehicle == 1 ){
+              form.find('input[name="vehicle"][value="1"]').prop('checked', true)
+            }else{
+              form.find('input[name="vehicle"][value="0"]').prop('checked', true)
+            }
+            form.find('input[name="keterangan"]').val(keterangan)
+            form.find('input[name="var[]"]').eq(0).val(var1)
+            form.find('input[name="satuan[]"]').eq(0).val(satuan1)
+            if( var2 != '' ){
+              $('#btn-tambah-variable').click();
+              form.find('input[name="var[]"]').eq(1).val(var2)
+              form.find('input[name="satuan[]"]').eq(1).val(satuan2)
+            }
+            if( var3 != '' ){
+              $('#btn-tambah-variable').click();
+              form.find('input[name="var[]"]').eq(2).val(var3)
+              form.find('input[name="satuan[]"]').eq(2).val(satuan3)
+            }
+
+            if( var4 != '' ){
+              $('#btn-tambah-variable').click();
+              form.find('input[name="var[]"]').eq(3).val(var3)
+              form.find('input[name="satuan[]"]').eq(3).val(satuan3)
+            }
+
+            if( var5 != '' ){
+              $('#btn-tambah-variable').click();
+              form.find('input[name="var[]"]').eq(4).val(var4)
+              form.find('input[name="satuan[]"]').eq(4).val(satuan4)
+            }
+
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
@@ -334,97 +392,15 @@
             }
         }
 
-        form.addEventListener("submit", function(event) {
-            if (crudMethod.value === "POST") {
-                event.preventDefault();
+        function resetRow()
+        {
+          $('.variable-row').each(function(i, v){
+            if( i > 0 ){
+              $('.variable-row').eq(i).remove();
             }
-            const formData = new FormData(form);
-            fetch(form.action, {
-                    method: crudMethod.value,
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert("Data berhasil disimpan!");
-                        updateTable(data.newData);
-                        form.reset();
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => console.error("Error:", error));
-        });
-
-        function updateTable(newData) {
-            const tableBody = document.querySelector("tbody");
-
-            let newRow = document.createElement("tr");
-            newRow.innerHTML = `
-                <td class="py-2 px-4 border-b border-gray-300 w-fit">
-                    <span class="bg-red-600 text-white text-xs rounded-md font-medium py-0.5 px-1 w-fit">
-                        ${newData.no}
-                    </span>
-                </td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.blok}</td>
-                <td class="py-2 px-4 border-b border-gray-300">${newData.companycode}</td>
-                @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
-                <td class="py-2 px-4 border-b border-gray-300">
-                    <div class="flex items-center justify-center">
-                        @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.blok}','${newData.companycode}')">
-                            <svg
-                                class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round"
-                                    stroke-linejoin="round" stroke-width="2"
-                                    d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
-                            </svg>
-                            <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                    d="M11.32 6.176H5c-1.105 0-2 .949-2 2.118v10.588C3 20.052 3.895 21 5 21h11c1.105 0 2-.948 2-2.118v-7.75l-3.914 4.144A2.46 2.46 0 0 1 12.81 16l-2.681.568c-1.75.37-3.292-1.263-2.942-3.115l.536-2.839c.097-.512.335-.983.684-1.352l2.914-3.086Z"
-                                    clip-rule="evenodd" />
-                                <path fill-rule="evenodd"
-                                    d="M19.846 4.318a2.148 2.148 0 0 0-.437-.692 2.014 2.014 0 0 0-.654-.463 1.92 1.92 0 0 0-1.544 0 2.014 2.014 0 0 0-.654.463l-.546.578 2.852 3.02.546-.579a2.14 2.14 0 0 0 .437-.692 2.244 2.244 0 0 0 0-1.635ZM17.45 8.721 14.597 5.7 9.82 10.76a.54.54 0 0 0-.137.27l-.536 2.84c-.07.37.239.696.588.622l2.682-.567a.492.492 0 0 0 .255-.145l4.778-5.06Z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                        @endif
-                        <span class="w-0.5"></span>
-                        @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                        <button class="group flex delete-button" data-blok="${newData.blok}" data-companycode="${newData.companycode}">
-                            <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round"
-                                    stroke-linejoin="round" stroke-width="2"
-                                    d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
-                            </svg>
-                            <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                    d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                        @endif
-                    </div>
-                </td>
-                @endif
-            `;
-            tableBody.prepend(newRow);
-            newRow.querySelector(".delete-button").addEventListener("click", function() {
-                deleteRow(this.dataset.blok, this.dataset.companycode, newRow);
-            });
+          })
         }
+
 
         document.addEventListener("DOMContentLoaded", () => {
             const inputElement = document.getElementById("perPage");
@@ -438,6 +414,7 @@
           if( $('.variable-row').length < 5 ){
             var temp = $('.div-variable .variable-row').first().clone();
             $(temp).find('.item-end').removeClass('hidden');
+            $(temp).find('input').val('')
             var count = $('.div-variable .variable-row').length+1;
             $(temp).find('.input-var').html(count);
             $(temp).find('.items-end').removeClass('hidden');

@@ -3,6 +3,7 @@ use App\Http\Controllers\MasterData\ActifityController;
 use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MappingController;
+use App\Http\Controllers\MasterData\MasterListController;
 use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\UsernameController;
 use App\Http\Controllers\MasterData\HerbisidaController;
@@ -107,8 +108,9 @@ Route::resource('herbisida-dosage', HerbisidaDosageController::class);
     Route::get('masterdata/aktifitas', [ActifityController::class, 'index'])->name('master.aktifitas.index');
     Route::post('masterdata/aktifitas', [ActifityController::class, 'store'])->name('master.aktifitas.store');
     Route::put('masterdata/aktifitas/{aktifitas}', [ActifityController::class, 'update'])->name('master.aktifitas.update');//->middleware('permission:Edit Aktifitas');
-    Route::delete('masterdata/aktifitas/{aktifikas}', [ActifityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
+    Route::delete('masterdata/aktifitas/{aktifitas}', [ActifityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
 //});
+
 //Jabatan
 Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
     Route::get('masterdata/jabatan', [JabatanController::class, 'index'])->name('masterdata.jabatan.index');
@@ -156,7 +158,7 @@ Route::group(['middleware' => ['auth','permission:Accounting']], function() {
     Route::get   ('masterdata/accounting',[AccountingController::class,'index'])->name('masterdata.accounting.index');
     Route::post  ('masterdata/accounting',[AccountingController::class,'store'])->name('masterdata.accounting.store');
 });
-Route::match(['put','patch'], 
+Route::match(['put','patch'],
     'masterdata/accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}',
     [AccountingController::class,'update'])
     ->middleware(['auth','permission:Edit Accounting'])
@@ -166,3 +168,8 @@ Route::delete(
     [AccountingController::class,'destroy'])
     ->middleware(['auth','permission:Hapus Accounting'])
     ->name('masterdata.accounting.destroy');
+
+
+//Route::group(['middleware' => ['auth','permission:MasterList']], function() {
+    Route::get('masterdata/master-list',[MasterListController::class,'index'])->name('master.master-list.index');
+//});

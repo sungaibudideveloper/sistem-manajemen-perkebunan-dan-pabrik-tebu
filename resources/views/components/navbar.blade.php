@@ -85,6 +85,9 @@
                                             :active="request()->is('mapping')">Mapping</x-childnav-link>
                                     @endif
 
+                                        <x-childnav-link href="{{ route('master.master-list.index') }}"
+                                            :active="request()->is('master-list')">Master List</x-childnav-link>
+
                                     @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                         <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
                                             :active="request()->is('herbisida')">Herbisida</x-childnav-link>
@@ -195,6 +198,9 @@
                                                 request()->routeIs('input.rkh.create') ||
                                                 request()->routeIs('input.rkh.edit')">Rencana Kerja Harian</x-childnav-link>
                                     @endif
+
+                                    <x-childnav-link href="{{ route('input.gudang.index') }}"
+                                        :active="request()->is('gudang')">Gudang</x-childnav-link>
                                 </div>
                             </div>
                         @endif
