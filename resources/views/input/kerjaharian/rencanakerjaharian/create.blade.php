@@ -79,7 +79,8 @@
         <th class="border px-2 py-1 text-xs w-[60px]" rowspan="2">Luas (ha)</th>
         <th class="border px-2 py-1 text-xs text-center w-[180px]" colspan="3">Tenaga</th>
         <th class="border px-2 py-1 text-xs w-[80px]" rowspan="2">Estimasi Waktu</th>
-        <th class="border px-2 py-1 text-xs w-[200px]" rowspan="2">Keterangan</th>
+        <th class="border px-2 py-1 text-xs w-[40px]" rowspan="2">Material</th>
+        <th class="border px-2 py-1 text-xs w-[160px]" rowspan="2">Keterangan</th>
       </tr>
       <tr>
         <th class="border px-2 py-1 text-xs w-[20px]">L</th>
@@ -100,6 +101,7 @@
             <td class="border text-xs"><input type="number" name="rows[0][perempuan]" value="3" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
             <td class="border text-xs"><input type="number" name="rows[0][jumlah_tenaga]" value="5" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
             <td class="border text-xs"><input type="text" name="rows[0][estimasiwaktu]" value="7 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
+            <td class="border text-xs text-center">Yes</td>
             <td class="border text-xs"><input type="text" name="rows[0][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
           </tr>
           <!-- Baris 2 -->
@@ -113,6 +115,7 @@
             <td class="border text-xs"><input type="number" name="rows[1][perempuan]" value="1" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
             <td class="border text-xs"><input type="number" name="rows[1][jumlah_tenaga]" value="5" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
             <td class="border text-xs"><input type="text" name="rows[1][estimasiwaktu]" value="1 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
+            <td class="border text-xs text-center">Yes</td>
             <td class="border text-xs"><input type="text" name="rows[1][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
           </tr>
           <!-- Baris 3 -->
@@ -126,6 +129,7 @@
             <td class="border text-xs"><input type="number" name="rows[2][perempuan]" value="15" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
             <td class="border text-xs"><input type="number" name="rows[2][jumlah_tenaga]" value="16" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
             <td class="border text-xs"><input type="text" name="rows[2][estimasiwaktu]" value="10 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
+            <td class="border text-xs text-center">No</td>
             <td class="border text-xs"><input type="text" name="rows[2][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
           </tr>
         </tbody>
