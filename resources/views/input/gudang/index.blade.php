@@ -86,8 +86,8 @@
                             <td class="py-2 px-4 "><a href="#" onclick="openCreateModal()" class="text-blue-600 hover:underline">#VOC2904125</a></td>
                             <td class="py-2 px-4 ">RKH2904125</td>
                             <td class="py-2 px-4 ">29/04/2025</td>
-                            <td class="py-2 px-4 ">DOLOMITE</td>
-                            <td class="py-2 px-4 ">4.5 HA</td>
+                            <td class="py-2 px-4 ">Late Pre Emergance</td>
+                            <td class="py-2 px-4 ">2.6 HA</td>
                             <td class="py-2 px-4 ">Paijo</td>
                             <td class="py-2 px-4 ">
                               <span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full">
@@ -194,7 +194,7 @@
                         Nama Mandor : Paijo
                       </div>
                       <div>
-                        Nama Kegiatan : Dolomite
+                        Nama Kegiatan : Late Pre Emergance
                       </div>
                     </div>
                     <table class="min-w-full bg-white text-sm text-center mb-5">
@@ -235,15 +235,26 @@
                             <tr>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1" colspan="2" align="center">Pupuk Yang perlu disiapkan</th>
                             </tr>
+                            <tr>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1" colspan="2" align="center">Paket 2</th>
+                            </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td class="py-2 px-4 ">Pupuk A</td>
-                                <td class="py-2 px-4 ">1 Liter</td>
+                                <td class="py-2 px-4 ">Duron</td>
+                                <td class="py-2 px-4 ">6.5 KG</td>
                             </tr>
                             <tr>
-                                <td class="py-2 px-4 ">Pupuk B</td>
-                                <td class="py-2 px-4 ">5 Kg</td>
+                                <td class="py-2 px-4 ">Ametrin</td>
+                                <td class="py-2 px-4 ">3.9 L</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-4 ">Paraquat</td>
+                                <td class="py-2 px-4 ">0.65 L</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-4 ">Perekat</td>
+                                <td class="py-2 px-4 ">1.3 L</td>
                             </tr>
                           </tbody>
                     </table>

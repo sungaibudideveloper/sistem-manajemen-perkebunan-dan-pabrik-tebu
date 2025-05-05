@@ -32,7 +32,7 @@ class ActifityController extends Controller
             $request->session()->put('perPage', $request->input('perPage'));
         }
 
-        $perPage = $request->session()->get('perPage', 10);
+        $perPage = $request->session()->get('perPage', 50);
         $actifities = Actifity::with('group')->orderBy('actifitycode', 'asc')->paginate($perPage);
         $actifityGroup = ActifityGroup::get();
 
