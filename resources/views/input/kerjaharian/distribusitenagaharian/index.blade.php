@@ -1,322 +1,283 @@
-<x-layout>
-  <x-slot:title>{{ $title }}</x-slot:title>
-  <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
-  <x-slot:nav>{{ $nav }}</x-slot:nav>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Laporan DTH & Borongan</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
 
-  <!-- Tabs Navigation -->
-  <div class="mx-auto mt-6">
-    <ul class="flex border-b">
-      <li class="-mb-px mr-1">
-        <a href="#" id="tab-daily" class="bg-white inline-block py-2 px-4 font-semibold text-blue-700 border-l border-t border-r rounded-t">
-          DT Harian
-        </a>
-      </li>
-      <li class="mr-1">
-        <a href="#" id="tab-borongan" class="bg-white inline-block py-2 px-4 font-semibold text-blue-500 hover:text-blue-700">
-          DT Borongan
-        </a>
-      </li>
-    </ul>
-  </div>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
 
-  <!-- Tab Contents -->
-  <div class="mx-auto bg-white rounded-md shadow-md p-6 mt-4">
-    {{-- DT Harian --}}
-    <div id="content-daily">
-      <form action="{{ url()->current() }}" method="POST">
-        @csrf
-        <h2 class="text-lg font-semibold mb-4">RKH No: RKH2904125 (DT Harian)</h2>
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20mm;
+      box-sizing: border-box;
+    }
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <label for="tanggal" class="block text-xs font-medium text-gray-700">Hari / Tanggal</label>
-            <input type="text" name="tanggal" id="tanggal" placeholder="__/__/____"
-                   class="mt-1 block w-full text-xs border rounded-md focus:ring-blue-500 focus:border-blue-500">
-          </div>
-          <div>
-            <label for="divisi" class="block text-xs font-medium text-gray-700">Divisi</label>
-            <input type="text" name="divisi" id="divisi" placeholder="Divisi"
-                   class="mt-1 block w-full text-xs border rounded-md focus:ring-blue-500 focus:border-blue-500">
-          </div>
-        </div>
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
 
-        <div class="overflow-x-auto">
-          <table id="table-daily" class="min-w-full table-auto border-collapse mb-2">
-            <thead>
-              <tr>
-                <th class="border px-2 py-1 text-xs">No.</th>
-                <th class="border px-2 py-1 text-xs">Mandor</th>
-                <th class="border px-2 py-1 text-xs">Kegiatan</th>
-                <th class="border px-2 py-1 text-xs">Blok</th>
-                <th class="border px-2 py-1 text-xs">Plot</th>
-                <th class="border px-2 py-1 text-xs">RKH</th>
-                <th class="border px-2 py-1 text-xs text-center" colspan="3">Tenaga</th>
-                <th class="border px-2 py-1 text-xs">Keterangan</th>
-              </tr>
-              <tr>
-                <th></th><th></th><th></th><th></th><th></th><th></th>
-                <th class="border px-2 py-1 text-xs">Laki-laki</th>
-                <th class="border px-2 py-1 text-xs">Perempuan</th>
-                <th class="border px-2 py-1 text-xs">Total</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">1</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][mandor]" value="Pak Budi" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][kegiatan]" value="Pengecatan" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][blok]" value="A1" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][plot]" value="101" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][rkh]" value="100" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[0][laki]" value="5" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[0][perempuan]" value="2" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[0][total]" value="7" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">2</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][mandor]" value="Ibu Siti" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][kegiatan]" value="Keramik" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][blok]" value="B2" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][plot]" value="202" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][rkh]" value="150" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[1][laki]" value="4" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[1][perempuan]" value="3" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[1][total]" value="7" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">3</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][mandor]" value="Pak Tono" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][kegiatan]" value="Listrik" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][blok]" value="C3" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][plot]" value="303" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][rkh]" value="80" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[2][laki]" value="3" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[2][perempuan]" value="1" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="rows[2][total]" value="4" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td class="border px-2 py-1 text-xs text-right" colspan="5"><strong>Total:</strong></td>
-                <td class="border px-2 py-1 text-xs" id="sum-rkh">330</td>
-                <td class="border px-2 py-1 text-xs" id="sum-laki">12</td>
-                <td class="border px-2 py-1 text-xs" id="sum-perempuan">6</td>
-                <td class="border px-2 py-1 text-xs" id="sum-total">18</td>
-                <td class="border px-2 py-1 text-xs"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+    .header-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-        <div class="flex space-x-2 mb-4">
-          <button type="button" id="add-row-daily" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-xs">Add Row</button>
-          <button type="button" id="remove-row-daily" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-xs">Remove Last Row</button>
-        </div>
+    .header-left a button,
+    .header-left button {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
 
-        <div class="mt-4 flex justify-center space-x-6">
-          <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Preview</button>
-          <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Print</button>
-          <button type="button" onclick="window.history.back()" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Back</button>
-        </div>
-        <div class="mt-4 flex justify-center space-x-6">
-          <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-12 py-3 rounded-md text-sm">Submit</button>
-        </div>
-      </form>
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 18px;
+      margin: 20px 0 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 20px;
+      table-layout: fixed;
+    }
+
+    table, th, td {
+      border: 1px solid #000;
+    }
+
+    th, td {
+      padding: 4px;
+      text-align: center;
+      word-wrap: break-word;
+    }
+
+    tfoot td {
+      font-weight: bold;
+    }
+
+    .footer {
+      margin-top: 80px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      text-align: center;
+    }
+
+    .footer .signature {
+      width: 30%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <a href="{{ url()->previous() }}"><button>Kembali</button></a>
+        <button onclick="window.print()">Cetak</button>
+        <a href="#"><button>Export PDF</button></a>
+        <a href="#"><button>Export Excel</button></a>
+      </div>
+      <div class="header-right">
+        <div class="date">Tanggal: <span id="report-date"></span></div>
+        <div class="revision">Revisi: 1</div>
+      </div>
     </div>
 
-    {{-- DT Borongan --}}
-    <div id="content-borongan" class="hidden">
-      <form action="{{ url()->current() }}" method="POST">
-        @csrf
-        <h2 class="text-lg font-semibold mb-4">RKH No: RKH2904125 (DT Borongan)</h2>
+    <h2 class="section-title">DISTRIBUSI TENAGA HARIAN</h2>
+    <table>
+    <colgroup>
+        <col style="width: 5%;">
+        <col style="width: 15%;">
+        <col style="width: 20%;">
+        <col style="width: 6%;">
+        <col style="width: 6%;">
+        <col style="width: 6%;">
+        <col style="width: 5%;">
+        <col style="width: 5%;">
+        <col style="width: 6%;">
+        <col style="width: 12%;">
+      </colgroup>
+      <thead>
+  <tr>
+    <th rowspan="2">No.</th>
+    <th rowspan="2">Mandor</th>
+    <th rowspan="2">Kegiatan</th>
+    <th rowspan="2">Blok</th>
+    <th rowspan="2">Plot</th>
+    <th rowspan="2">RKH</th>
+    <th colspan="3">Tenaga</th>
+    <th rowspan="2">Keterangan</th>
+  </tr>
+  <tr>
+    <th>L</th>
+    <th>P</th>
+    <th>Total</th>
+  </tr>
+</thead>
+      <tbody id="dth-rows"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">TOTAL</td>
+          <td id="sum-laki"></td>
+          <td id="sum-perempuan"></td>
+          <td id="sum-total"></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <label for="tanggal_b" class="block text-xs font-medium text-gray-700">Hari / Tanggal</label>
-            <input type="text" name="tanggal_b" id="tanggal_b" placeholder="__/__/____"
-                   class="mt-1 block w-full text-xs border rounded-md focus:ring-blue-500 focus:border-blue-500">
-          </div>
-          <div>
-            <label for="divisi_b" class="block text-xs font-medium text-gray-700">Divisi</label>
-            <input type="text" name="divisi_b" id="divisi_b" placeholder="Divisi"
-                   class="mt-1 block w-full text-xs border rounded-md focus:ring-blue-500 focus:border-blue-500">
-          </div>
-        </div>
+    <h2 class="section-title">DISTRIBUSI TENAGA BORONGAN</h2>
+    <table>
+      <colgroup>
+        <col style="width: 5%;">
+        <col style="width: 15%;">
+        <col style="width: 20%;">
+        <col style="width: 6%;">
+        <col style="width: 6%;">
+        <col style="width: 6%;">
+        <col style="width: 5%;">
+        <col style="width: 5%;">
+        <col style="width: 6%;">
+        <col style="width: 12%;">
+      </colgroup>
+      <thead>
+  <tr>
+    <th rowspan="2">No.</th>
+    <th rowspan="2">Mandor</th>
+    <th rowspan="2">Kegiatan</th>
+    <th rowspan="2">Blok</th>
+    <th rowspan="2">Plot</th>
+    <th rowspan="2">RKH</th>
+    <th colspan="3">Tenaga</th>
+    <th rowspan="2">Keterangan</th>
+  </tr>
+  <tr>
+    <th>L</th>
+    <th>P</th>
+    <th>Total</th>
+  </tr>
+</thead>
+      <tbody id="borongan-rows"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">TOTAL</td>
+          <td id="sum-laki-borongan"></td>
+          <td id="sum-perempuan-borongan"></td>
+          <td id="sum-total-borongan"></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
 
-        <div class="overflow-x-auto">
-          <table id="table-borongan" class="min-w-full table-auto border-collapse mb-2">
-            <thead>
-              <tr>
-                <th class="border px-2 py-1 text-xs">No.</th>
-                <th class="border px-2 py-1 text-xs">Mandor</th>
-                <th class="border px-2 py-1 text-xs">Kegiatan</th>
-                <th class="border px-2 py-1 text-xs">Blok</th>
-                <th class="border px-2 py-1 text-xs">Plot</th>
-                <th class="border px-2 py-1 text-xs">RKH</th>
-                <th class="border px-2 py-1 text-xs text-center" colspan="3">Tenaga</th>
-                <th class="border px-2 py-1 text-xs">Keterangan</th>
-              </tr>
-              <tr>
-                <th></th><th></th><th></th><th></th><th></th><th></th>
-                <th class="border px-2 py-1 text-xs">Laki-laki</th>
-                <th class="border px-2 py-1 text-xs">Perempuan</th>
-                <th class="border px-2 py-1 text-xs">Total</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">1</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][mandor]" value="Pak Wawan" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][kegiatan]" value="Pengaspalan" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][blok]" value="D4" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][plot]" value="404" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][rkh]" value="200" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[0][laki]" value="6" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[0][perempuan]" value="3" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[0][total]" value="9" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[0][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">2</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][mandor]" value="Ibu Indah" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][kegiatan]" value="Pagar" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][blok]" value="E5" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][plot]" value="505" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][rkh]" value="120" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[1][laki]" value="4" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[1][perempuan]" value="2" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[1][total]" value="6" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[1][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-              <tr>
-                <td class="border px-2 py-1 text-xs row-number">3</td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][mandor]" value="Pak Agus" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][kegiatan]" value="Penimbunan" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][blok]" value="F6" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][plot]" value="606" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][rkh]" value="180" class="w-full text-xs border-none focus:ring-0"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[2][laki]" value="7" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[2][perempuan]" value="1" class="w-full text-xs border-none focus:ring-0 tenaga"></td>
-                <td class="border px-2 py-1 text-xs"><input type="number" name="brows[2][total]" value="8" class="w-full text-xs border-none focus:ring-0 total-tenaga" readonly></td>
-                <td class="border px-2 py-1 text-xs"><input type="text" name="brows[2][keterangan]" value="-" class="w-full text-xs border-none focus:ring-0"></td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td class="border px-2 py-1 text-xs text-right" colspan="5"><strong>Total:</strong></td>
-                <td class="border px-2 py-1 text-xs" id="bsum-rkh">500</td>
-                <td class="border px-2 py-1 text-xs" id="bsum-laki">17</td>
-                <td class="border px-2 py-1 text-xs" id="bsum-perempuan">6</td>
-                <td class="border px-2 py-1 text-xs" id="bsum-total">23</td>
-                <td class="border px-2 py-1 text-xs"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="flex space-x-2 mb-4">
-          <button type="button" id="add-row-bor" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-xs">Add Row</button>
-          <button type="button" id="remove-row-bor" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-xs">Remove Last Row</button>
-        </div>
-
-        <div class="mt-4 flex justify-center space-x-6">
-          <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Preview</button>
-          <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Print</button>
-          <button type="button" onclick="window.history.back()" class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm">Back</button>
-        </div>
-        <div class="mt-4 flex justify-center space-x-6">
-          <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-12 py-3 rounded-md text-sm">Submit</button>
-        </div>
-      </form>
+    <div class="footer">
+      <div class="signature">Mengetahui<br><br><br><br><br>Asisten Lapangan</div>
+      <div class="signature">Diperiksa<br><br><br><br><br>Asisten Kepala</div>
+      <div class="signature">Disiapkan<br><br><br><br><br>PPC</div>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Tab switch
-      const tabDaily = document.getElementById('tab-daily');
-      const tabBor = document.getElementById('tab-borongan');
-      const contentDaily = document.getElementById('content-daily');
-      const contentBor = document.getElementById('content-borongan');
-      tabDaily.addEventListener('click', e => {
-        e.preventDefault();
-        contentDaily.classList.remove('hidden');
-        contentBor.classList.add('hidden');
-        tabDaily.classList.add('text-blue-700','border-l','border-t','border-r');
-        tabBor.classList.remove('text-blue-700','border-l','border-t','border-r');
-      });
-      tabBor.addEventListener('click', e => {
-        e.preventDefault();
-        contentBor.classList.remove('hidden');
-        contentDaily.classList.add('hidden');
-        tabBor.classList.add('text-blue-700','border-l','border-t','border-r');
-        tabDaily.classList.remove('text-blue-700','border-l','border-t','border-r');
-      });
+    // Tanggal hari ini
+    document.getElementById('report-date').textContent = new Date().toLocaleDateString('id-ID');
 
-      // Generic row handlers
-      function setupTable(tableId, addBtnId, removeBtnId, sumIdsPrefix) {
-        const table = document.getElementById(tableId);
-        const tbody = table.querySelector('tbody');
-        const addBtn = document.getElementById(addBtnId);
-        const removeBtn = document.getElementById(removeBtnId);
+    // Data DTH
+    const dthData = [
+      {no: 1, mandor: 'Puspadi', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A12', rkh: '12 ha', laki: 3, perempuan: 1, keterangan: ''},
+      {no: 2, mandor: 'Endang S.', kegiatan: 'Pembakaran Api', blok: 'B', plot: 'B43', rkh: '15 ha', laki: 10, perempuan: 0, keterangan: ''},
+      {no: 3, mandor: 'Amin', kegiatan: 'Herbisida Jalan', blok: 'C', plot: 'C27', rkh: '10 ha', laki: 4, perempuan: 2, keterangan: ''},
+      {no: 4, mandor: 'Undang R.', kegiatan: 'Drainase', blok: 'D', plot: 'D08', rkh: '8 ha', laki: 2, perempuan: 0, keterangan: ''},
+      {no: 5, mandor: 'Kusmawan', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A35', rkh: '14 ha', laki: 5, perempuan: 1, keterangan: ''},
+      {no: 6, mandor: 'Edi R.', kegiatan: 'Weeding', blok: 'B', plot: 'B19', rkh: '11 ha', laki: 3, perempuan: 4, keterangan: ''},
+      {no: 7, mandor: 'Chepien R.', kegiatan: 'Pengamatan Hama', blok: 'C', plot: 'C05', rkh: '9 ha', laki: 4, perempuan: 0, keterangan: ''},
+      {no: 8, mandor: 'Sadli', kegiatan: 'Weeding', blok: 'D', plot: 'D22', rkh: '13 ha', laki: 8, perempuan: 6, keterangan: ''},
+      {no: 9, mandor: 'Yunanto', kegiatan: 'Sanitasi', blok: 'A', plot: 'A47', rkh: '7 ha', laki: 6, perempuan: 0, keterangan: ''},
+      {no:10, mandor: 'Yunanto', kegiatan: 'Welding', blok: 'B', plot: 'B30', rkh: '5 ha', laki: 9, perempuan: 0, keterangan: ''}
+    ];
 
-        function updateRowNumbers() {
-          tbody.querySelectorAll('tr').forEach((row, i) => {
-            row.querySelector('.row-number').textContent = i+1;
-            row.querySelectorAll('input').forEach(input => {
-              input.name = input.name.replace(/\[\\d+\]/, `[${i}]`);
-            });
-          });
-        }
-
-        function updateTotals() {
-          let sumR = 0, sumL=0, sumP=0, sumT=0;
-          tbody.querySelectorAll('tr').forEach(row => {
-            const r = parseFloat(row.querySelector('input[name$="[rkh]"]').value)||0;
-            const l = parseInt(row.querySelector('input[name$="[laki]"]').value)||0;
-            const p = parseInt(row.querySelector('input[name$="[perempuan]"]').value)||0;
-            const t = l+p;
-            sumR += r; sumL += l; sumP += p; sumT += t;
-            row.querySelector('.total-tenaga').value = t;
-          });
-          document.getElementById(sumIdsPrefix+'-rkh').textContent = sumR;
-          document.getElementById(sumIdsPrefix+'-laki').textContent = sumL;
-          document.getElementById(sumIdsPrefix+'-perempuan').textContent = sumP;
-          document.getElementById(sumIdsPrefix+'-total').textContent = sumT;
-        }
-
-        // Listeners
-        addBtn.addEventListener('click', () => {
-          const clone = tbody.querySelector('tr').cloneNode(true);
-          clone.querySelectorAll('input').forEach(inp => inp.value = '');
-          tbody.appendChild(clone);
-          updateRowNumbers();
-          setupTenagaListeners(clone);
-          updateTotals();
-        });
-        removeBtn.addEventListener('click', () => {
-          const rows = tbody.querySelectorAll('tr');
-          if (rows.length>1) { rows[rows.length-1].remove(); updateTotals(); updateRowNumbers(); }
-        });
-
-        function setupTenagaListeners(row) {
-          row.querySelectorAll('.tenaga').forEach(inp => {
-            inp.addEventListener('input', updateTotals);
-          });
-        }
-        // init
-        tbody.querySelectorAll('tr').forEach(r => setupTenagaListeners(r));
-        updateTotals();
-      }
-
-      setupTable('table-daily','add-row-daily','remove-row-daily','sum');
-      setupTable('table-borongan','add-row-bor','remove-row-bor','bsum');
+    const dthBody = document.getElementById('dth-rows');
+    let totalL = 0, totalP = 0;
+    dthData.forEach(item => {
+      const row = document.createElement('tr');
+      const total = item.laki + item.perempuan;
+      row.innerHTML = `
+        <td>${item.no}</td>
+        <td>${item.mandor}</td>
+        <td>${item.kegiatan}</td>
+        <td>${item.blok}</td>
+        <td>${item.plot}</td>
+        <td>${item.rkh}</td>
+        <td>${item.laki}</td>
+        <td>${item.perempuan}</td>
+        <td>${total}</td>
+        <td>${item.keterangan}</td>
+      `;
+      dthBody.appendChild(row);
+      totalL += item.laki;
+      totalP += item.perempuan;
     });
+
+    document.getElementById('sum-laki').textContent = totalL;
+    document.getElementById('sum-perempuan').textContent = totalP;
+    document.getElementById('sum-total').textContent = totalL + totalP;
+
+    // Data Borongan
+    const boronganData = [
+      {no: 1, mandor: 'Suhardi', kegiatan: 'Pemanenan Buah', blok: 'E', plot: 'E01', rkh: '20 ha', laki: 12, perempuan: 0, keterangan: ''},
+      {no: 2, mandor: 'Darto', kegiatan: 'Pemangkasan', blok: 'F', plot: 'F07', rkh: '18 ha', laki: 6, perempuan: 3, keterangan: ''},
+      {no: 3, mandor: 'Samsul', kegiatan: 'Pemupukan', blok: 'G', plot: 'G15', rkh: '22 ha', laki: 7, perempuan: 2, keterangan: ''},
+      {no: 4, mandor: 'Budi S.', kegiatan: 'Perawatan Jalan', blok: 'H', plot: 'H09', rkh: '16 ha', laki: 5, perempuan: 1, keterangan: ''},
+      {no: 5, mandor: 'Tatang R.', kegiatan: 'Pembersihan Parit', blok: 'I', plot: 'I04', rkh: '19 ha', laki: 8, perempuan: 2, keterangan: ''}
+    ];
+
+    const boronganBody = document.getElementById('borongan-rows');
+    let totalBorL = 0, totalBorP = 0;
+    boronganData.forEach(item => {
+      const row = document.createElement('tr');
+      const total = item.laki + item.perempuan;
+      row.innerHTML = `
+        <td>${item.no}</td>
+        <td>${item.mandor}</td>
+        <td>${item.kegiatan}</td>
+        <td>${item.blok}</td>
+        <td>${item.plot}</td>
+        <td>${item.rkh}</td>
+        <td>${item.laki}</td>
+        <td>${item.perempuan}</td>
+        <td>${total}</td>
+        <td>${item.keterangan}</td>
+      `;
+      boronganBody.appendChild(row);
+      totalBorL += item.laki;
+      totalBorP += item.perempuan;
+    });
+
+    document.getElementById('sum-laki-borongan').textContent = totalBorL;
+    document.getElementById('sum-perempuan-borongan').textContent = totalBorP;
+    document.getElementById('sum-total-borongan').textContent = totalBorL + totalBorP;
   </script>
-</x-layout>
+</body>
+</html>
