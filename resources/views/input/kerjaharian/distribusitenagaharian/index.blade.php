@@ -206,16 +206,14 @@
 
     // Data DTH
     const dthData = [
-      {no: 1, mandor: 'Puspadi', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A12', rkh: '12 ha', laki: 3, perempuan: 1, keterangan: ''},
-      {no: 2, mandor: 'Endang S.', kegiatan: 'Pembakaran Api', blok: 'B', plot: 'B43', rkh: '15 ha', laki: 10, perempuan: 0, keterangan: ''},
-      {no: 3, mandor: 'Amin', kegiatan: 'Herbisida Jalan', blok: 'C', plot: 'C27', rkh: '10 ha', laki: 4, perempuan: 2, keterangan: ''},
-      {no: 4, mandor: 'Undang R.', kegiatan: 'Drainase', blok: 'D', plot: 'D08', rkh: '8 ha', laki: 2, perempuan: 0, keterangan: ''},
-      {no: 5, mandor: 'Kusmawan', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A35', rkh: '14 ha', laki: 5, perempuan: 1, keterangan: ''},
-      {no: 6, mandor: 'Edi R.', kegiatan: 'Weeding', blok: 'B', plot: 'B19', rkh: '11 ha', laki: 3, perempuan: 4, keterangan: ''},
-      {no: 7, mandor: 'Chepien R.', kegiatan: 'Pengamatan Hama', blok: 'C', plot: 'C05', rkh: '9 ha', laki: 4, perempuan: 0, keterangan: ''},
-      {no: 8, mandor: 'Sadli', kegiatan: 'Weeding', blok: 'D', plot: 'D22', rkh: '13 ha', laki: 8, perempuan: 6, keterangan: ''},
-      {no: 9, mandor: 'Yunanto', kegiatan: 'Sanitasi', blok: 'A', plot: 'A47', rkh: '7 ha', laki: 6, perempuan: 0, keterangan: ''},
-      {no:10, mandor: 'Yunanto', kegiatan: 'Welding', blok: 'B', plot: 'B30', rkh: '5 ha', laki: 9, perempuan: 0, keterangan: ''}
+      {no: 1, mandor: 'Gerald', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A12', rkh: '12 ha', laki: 3, perempuan: 1, keterangan: ''},
+      {no: 2, mandor: 'Gerald', kegiatan: 'Pembakaran Api', blok: 'B', plot: 'B43', rkh: '15 ha', laki: 10, perempuan: 0, keterangan: ''},
+      {no: 3, mandor: 'Gerald', kegiatan: 'Herbisida Jalan', blok: 'C', plot: 'C27', rkh: '10 ha', laki: 4, perempuan: 2, keterangan: ''},
+      {no: 4, mandor: 'Nathan', kegiatan: 'Drainase', blok: 'D', plot: 'D08', rkh: '8 ha', laki: 2, perempuan: 0, keterangan: ''},
+      {no: 5, mandor: 'Nathan', kegiatan: 'Perbaikan Jalan', blok: 'A', plot: 'A35', rkh: '14 ha', laki: 5, perempuan: 1, keterangan: ''},
+      {no: 6, mandor: 'Nathan', kegiatan: 'Weeding', blok: 'B', plot: 'B19', rkh: '11 ha', laki: 3, perempuan: 4, keterangan: ''},
+      {no: 7, mandor: 'Angky', kegiatan: 'Pengamatan Hama', blok: 'C', plot: 'C05', rkh: '9 ha', laki: 4, perempuan: 0, keterangan: ''},
+      {no: 8, mandor: 'Angky', kegiatan: 'Weeding', blok: 'D', plot: 'D22', rkh: '13 ha', laki: 8, perempuan: 6, keterangan: ''}
     ];
 
     const dthBody = document.getElementById('dth-rows');

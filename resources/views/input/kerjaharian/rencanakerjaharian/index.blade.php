@@ -167,7 +167,7 @@ dthDate: '{{ date("Y-m-d") }}',
                         <tr class="text-xs">
                             <td class="border px-2 py-1">1</td>
                             <td class="border px-2 py-1">RKH2904125</td>
-                            <td class="border px-2 py-1">29/04/2025</td>
+                            <td class="border px-2 py-1">06/05/2025</td>
                             <td class="border px-2 py-1">Gerald</td>
                             <td class="border px-2 py-1">1/1</td>
                             <td class="border px-2 py-1">
@@ -258,7 +258,7 @@ dthDate: '{{ date("Y-m-d") }}',
                         <tr class="text-xs">
                             <td class="border px-2 py-1">2</td>
                             <td class="border px-2 py-1">RKH2904126</td>
-                            <td class="border px-2 py-1">28/04/2025</td>
+                            <td class="border px-2 py-1">06/05/2025</td>
                             <td class="border px-2 py-1">Nathan</td>
                             <td class="border px-2 py-1">0/2</td>
                             <td class="border px-2 py-1">
@@ -343,7 +343,7 @@ dthDate: '{{ date("Y-m-d") }}',
                         <tr class="text-xs">
                             <td class="border px-2 py-1">3</td>
                             <td class="border px-2 py-1">RKH2904127</td>
-                            <td class="border px-2 py-1">27/04/2025</td>
+                            <td class="border px-2 py-1">06/05/2025</td>
                             <td class="border px-2 py-1">Angky</td>
                             <td class="border px-2 py-1">2/3</td>
                             <td class="border px-2 py-1">
@@ -425,8 +425,98 @@ dthDate: '{{ date("Y-m-d") }}',
                                 </div>
                             </td>
                         </tr>
+                        </tr>
+                        {{-- row 4 --}}
+                        <tr class="text-xs">
+                            <td class="border px-2 py-1">4</td>
+                            <td class="border px-2 py-1 bg-red-300">RKH2304125</td>
+                            <td class="border px-2 py-1">23/04/2025</td>
+                            <td class="border px-2 py-1">Udin</td>
+                            <td class="border px-2 py-1">1/3</td>
+                            <td class="border px-2 py-1">
+                            <span class="px-2 py-0.5 text-xs font-semibold text-green-800 bg-green-100 rounded">Approved</span>
+                            </td>
+                            <td class="border px-2 py-1 text-center">
+                                <a href="#" class="text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded text-xs">LKH</a>
+                            </td>
+                            <td class="border px-2 py-1 text-center">
+                                <select
+                                    name="status"
+                                    class="text-xs border border-gray-300 rounded p-1"
+                                    data-old="On Progress"
+                                    onchange="confirmStatusChange(this)"
+                                >
+                                    <option value="Done">Done</option>
+                                    <option value="On Progress" selected>On Progress</option>
+                                </select>
+                            </td>
+                            <td class="border px-2 py-1">
+                                <div class="flex items-center justify-center space-x-2">
+                                    {{-- Edit Button --}}
+                                <button
+                                    type="button"
+                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
+                                >
+                                    <svg
+                                        class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <use xlink:href="#icon-edit-outline" />
+                                    </svg>
+                                    <svg
+                                        class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        fill="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <use xlink:href="#icon-edit-solid" />
+                                        <use xlink:href="#icon-edit-solid2" />
+                                    </svg>
+                                </button>
+                                {{-- Delete Button --}}
+                                <button
+                                    type="button"
+                                    class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
+                                >
+                                    <svg
+                                        class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <use xlink:href="#icon-trash-outline" />
+                                    </svg>
+                                    <svg
+                                        class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        fill="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <use xlink:href="#icon-trash-solid" />
+                                    </svg>
+                                </button>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
+                <div class="mt-2 text-sm text-red-600 font-medium">
+    RKH Merah = Melewati Estimasi Waktu
+</div>
             </div>
             
             <!-- Absen Modal -->
