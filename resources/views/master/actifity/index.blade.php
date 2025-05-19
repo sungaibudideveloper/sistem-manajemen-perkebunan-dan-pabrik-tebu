@@ -25,7 +25,7 @@
         </div>
         <div class="mx-auto px-4 py-4">
             <div class="overflow-x-auto rounded-md border border-gray-300">
-                <table class="min-w-full bg-white text-sm text-center">
+                <table class="min-w-full bg-white text-sm">
                     <thead>
                         <tr>
                           <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">GROUP</th>
@@ -39,6 +39,7 @@
                           <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR5</th>
                           <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">MATERIAL</th>
                           <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VEHICLE</th>
+                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">JENIS TK</th>
                           <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">ACTION</th>
                         </tr>
                     </thead>
@@ -46,7 +47,7 @@
                       @foreach( $actifities as $actifity )
                         <tr>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $actifity->actifitygroup }} - {{ $actifity->group->groupname }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->actifitycode }}</td>
+                            <td class="text-center py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->actifitycode }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->actifityname }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->jurnalno }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var1 }} - {{ $actifity->satuan1 }}</td>
@@ -56,6 +57,7 @@
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var5 }} - {{ $actifity->satuan5 }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->jenistenagakerja == 1 ? 'HARIAN' : 'BORONGAN' }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                   <div class="flex items-center justify-center">
                                           <button
