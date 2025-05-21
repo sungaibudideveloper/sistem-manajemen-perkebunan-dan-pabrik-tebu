@@ -11,13 +11,13 @@
   <div class="w-1/5">
     <label for="no_rkh" class="block text-xs font-medium text-gray-700">No RKH</label>
     <input
-      type="text"
-      name="no_rkh"
-      id="no_rkh"
-      placeholder="No RKH"
-      value="RKH2904125"
-      class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-    >
+  type="text"
+  name="rkhno"
+  id="rkhno"
+  value="{{ $rkhno }}"
+  class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm bg-gray-100"
+  readonly
+>
   </div>
 
   <!-- Summary Absen -->
@@ -51,17 +51,6 @@
       name="tanggal"
       id="tanggal"
       value="{{ date('Y-m-d') }}"
-      class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-    >
-  </div>
-  <div>
-    <label for="divisi" class="block text-xs font-medium text-gray-700">Divisi</label>
-    <input
-      type="text"
-      name="divisi"
-      id="divisi"
-      value="Divisi 1"
-      placeholder="Divisi"
       class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
     >
   </div>

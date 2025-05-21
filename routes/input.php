@@ -59,7 +59,8 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 //Kerja Harian
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
-    Route::get('input/kerjaharian/rencanakerjaharian/create', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
+    Route::post('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
+    Route::get('input/kerjaharian/rencanakerjaharian/create', [RencanaKerjaHarianController::class, 'create'])->name('input.kerjaharian.rencanakerjaharian.create');
 });
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
