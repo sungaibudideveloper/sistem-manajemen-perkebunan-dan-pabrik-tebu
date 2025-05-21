@@ -44,24 +44,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                      @foreach( $actifities as $actifity )
+                      @foreach( $activities as $activity )
                         <tr>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $actifity->actifitygroup }} - {{ $actifity->group->groupname }}</td>
-                            <td class="text-center py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->actifitycode }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->actifityname }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->jurnalno }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var1 }} - {{ $actifity->satuan1 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var2 }} - {{ $actifity->satuan2 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var3 }} - {{ $actifity->satuan3 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var4 }} - {{ $actifity->satuan4 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->var5 }} - {{ $actifity->satuan5 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $actifity->jenistenagakerja == 1 ? 'HARIAN' : 'BORONGAN' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $activity->activitygroup }} - {{ $activity->group->groupname }}</td>
+                            <td class="text-center py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->activitycode }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->activityname }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->jurnalno }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var1 }} - {{ $activity->satuan1 }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var2 }} - {{ $activity->satuan2 }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var3 }} - {{ $activity->satuan3 }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var4 }} - {{ $activity->satuan4 }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var5 }} - {{ $activity->satuan5 }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
+                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->jenistenagakerja == 1 ? 'HARIAN' : 'BORONGAN' }}</td>
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                   <div class="flex items-center justify-center">
                                           <button
-                                              onclick="openEditModal('{{ $actifity->actifitygroup }}','{{ $actifity->actifitycode }}', '{{ $actifity->actifityname }}', '{{ $actifity->var1 }}', '{{ $actifity->satuan1 }}', '{{ $actifity->var2 }}', '{{ $actifity->satuan2 }}', '{{ $actifity->var3 }}', '{{ $actifity->satuan3 }}', '{{ $actifity->var4 }}', '{{ $actifity->satuan4 }}', '{{ $actifity->var5 }}', '{{ $actifity->satuan5 }}', '{{ $actifity->usingmaterial }}', '{{ $actifity->usingvehicle }}', '{{ $actifity->description }}')"
+                                              onclick="openEditModal('{{ $activity->activitygroup }}','{{ $activity->activitycode }}', '{{ $activity->activityname }}', '{{ $activity->var1 }}', '{{ $activity->satuan1 }}', '{{ $activity->var2 }}', '{{ $activity->satuan2 }}', '{{ $activity->var3 }}', '{{ $activity->satuan3 }}', '{{ $activity->var4 }}', '{{ $activity->satuan4 }}', '{{ $activity->var5 }}', '{{ $activity->satuan5 }}', '{{ $activity->usingmaterial }}', '{{ $activity->usingvehicle }}', '{{ $activity->description }}')"
                                               class="group flex items-center edit-button"><svg
                                                   class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                   aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -85,7 +85,7 @@
                                               <span class="w-0.5"></span>
                                           </button>
                                           <button type="button" class="group flex delete-button"
-                                              data-actifitycode="{{ $actifity->actifitycode }}">
+                                              data-activitycode="{{ $activity->activitycode }}">
                                               <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                                   aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                                   width="24" height="24" fill="none"
@@ -140,10 +140,10 @@
                         <div>
                             <div class="mb-4">
                                 <label class="block text-md">Grup Aktifitas</label>
-                                <select class="rounded-md p-2 w-full border border-gray-300" id="actifitygroup" name="grupaktifitas">
-                                    @foreach($actifityGroup as $group)
-                                        <option value="{{ $group->actifitygroup }}" @if( old('actifitygroup') == $group->actifitygroup ) selected @endif>
-                                            {{ $group->actifitygroup }} - {{ $group->groupname }}
+                                <select class="rounded-md p-2 w-full border border-gray-300" id="activitygroup" name="grupaktifitas">
+                                    @foreach($activityGroup as $group)
+                                        <option value="{{ $group->activitygroup }}" @if( old('activitygroup') == $group->activitygroup ) selected @endif>
+                                            {{ $group->activitygroup }} - {{ $group->groupname }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -259,9 +259,9 @@
         document.querySelectorAll('.delete-button').forEach(button => {
             button.addEventListener('click', function() {
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                  let actifitycode = this.getAttribute('data-actifitycode');
-                  fetch(`{{ route('master.aktifitas.destroy', ['aktifitas' => '__actifitycode__']) }}`
-                          .replace('__actifitycode__', actifitycode), {
+                  let activitycode = this.getAttribute('data-activitycode');
+                  fetch(`{{ route('master.aktifitas.destroy', ['aktifitas' => '__activitycode__']) }}`
+                          .replace('__activitycode__', activitycode), {
                               method: 'POST',
                               headers: {
                                   'X-CSRF-TOKEN': document.querySelector(
@@ -315,19 +315,19 @@
             }, 300);
         }
 
-        function openEditModal(actifitygroup,actifitycode,actifityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingvehicle,usingmaterial,keterangan) {
+        function openEditModal(activitygroup,activitycode,activityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingvehicle,usingmaterial,keterangan) {
             resetRow();
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
-            var editRoute = "{{ route('master.aktifitas.update', ['aktifitas' => '__actifitycode__']) }}";
+            var editRoute = "{{ route('master.aktifitas.update', ['aktifitas' => '__activitycode__']) }}";
             const form = $('#crud-form');
-            form.attr('action', editRoute.replace('__actifitycode__', actifitycode));
+            form.attr('action', editRoute.replace('__activitycode__', activitycode));
             form.find('input[name="kodeaktifitas"]').attr('readonly','true');
             form.find('input[name="_method"]').val('PUT');
-            form.find('input[name="grupaktifitas"]').val(actifitygroup).trigger('change');
-            form.find('input[name="kodeaktifitas"]').val(actifitycode)
-            form.find('input[name="namaaktifitas"]').val(actifityname)
+            form.find('input[name="grupaktifitas"]').val(activitygroup).trigger('change');
+            form.find('input[name="kodeaktifitas"]').val(activitycode)
+            form.find('input[name="namaaktifitas"]').val(activityname)
             if( usingmaterial == 1 ){
               form.find('input[name="material"][value="1"]').prop('checked', true)
             }else{

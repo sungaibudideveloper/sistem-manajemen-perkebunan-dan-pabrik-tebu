@@ -4,14 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Actifity extends Model
+class Activity extends Model
 {
     public $incrementing = false;
-    protected $table = 'actifity';
-    protected $primaryKey = ['actifitycode'];
+    protected $table = 'activity';
+    protected $primaryKey = ['activitycode'];
     protected $fillable = [
-        'actifitycode',
-        'actifitygroup',
+        'activitycode',
+        'activitygroup',
         'tanggaltanam',
         'description',
         'jurnalno',
@@ -45,7 +45,7 @@ class Actifity extends Model
 
     public function group()
     {
-        return $this->belongsTo(ActifityGroup::class, 'actifitygroup', 'actifitygroup');
+        return $this->belongsTo(ActivityGroup::class, 'activitygroup', 'activitygroup');
     }
 
 }
