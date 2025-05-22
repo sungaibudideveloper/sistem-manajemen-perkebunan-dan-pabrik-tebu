@@ -56,7 +56,7 @@ dthDate: '{{ date("Y-m-d") }}',
                         </button>
                     </form>
                     <a
-                        href="{{ route('input.kerjaharian.rencanakerjaharian.store') }}"
+                        href="{{ route('input.kerjaharian.rencanakerjaharian.create') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-xs rounded"
                     >
                         Create RKH

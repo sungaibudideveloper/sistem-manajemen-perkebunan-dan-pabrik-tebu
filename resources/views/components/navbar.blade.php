@@ -278,25 +278,25 @@
                                             </div>
                                         </div>
 
-                                        <!-- 7. Aktifitas -->
-                                        <div @mouseenter="activeMenu = 'aktifitas'" @mouseleave="activeMenu = null" class="relative">
+                                        <!-- 7. Aktivitas -->
+                                        <div @mouseenter="activeMenu = 'aktivitas'" @mouseleave="activeMenu = null" class="relative">
                                             <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Aktifitas</span>
+                                                <span>Aktivitas</span>
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
                                             
-                                            <!-- Submenu (empty for Aktifitas but consistent structure) -->
-                                            <div x-show="activeMenu === 'aktifitas'" 
+                                            <!-- Submenu (empty for Aktivitas but consistent structure) -->
+                                            <div x-show="activeMenu === 'aktivitas'" 
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
                                                 class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                 <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.aktifitas.index') }}" 
-                                                        :active="request()->is('aktifitas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Aktifitas
+                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}" 
+                                                        :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
+                                                        Aktivitas
                                                     </x-childnav-link>
                                                 </div>
                                             </div>

@@ -75,7 +75,7 @@
 
                 <div class="mt-4 space-y-4">
                 <div>
-                    <label for="activitycode" class="block text-sm font-medium text-gray-700">Kode Aktifitas</label>
+                    <label for="activitycode" class="block text-sm font-medium text-gray-700">Kode Aktivitas</label>
                     <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode"
                         x-init="form.activitycode = '{{ old('activitycode') }}'"
                         @input="form.activitycode = form.activitycode.toUpperCase()"

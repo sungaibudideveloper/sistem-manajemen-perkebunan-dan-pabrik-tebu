@@ -14,6 +14,7 @@ use App\Http\Controllers\MasterData\KategoriController;
 use App\Http\Controllers\MasterData\StatusController;
 use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
+use App\Http\Controllers\MasterData\MandorController;
 
 //company
 Route::group(['middleware' => ['auth', 'permission:Company']], function () {
@@ -104,11 +105,11 @@ Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcod
 
 Route::resource('herbisida-dosage', HerbisidaDosageController::class);
 
-//Route::group(['middleware' => ['auth', 'permission:Aktifitas']], function () {
-    Route::get('masterdata/aktifitas', [ActivityController::class, 'index'])->name('master.aktifitas.index');
-    Route::post('masterdata/aktifitas', [ActivityController::class, 'store'])->name('master.aktifitas.store');
-    Route::put('masterdata/aktifitas/{aktifitas}', [ActivityController::class, 'update'])->name('master.aktifitas.update');//->middleware('permission:Edit Aktifitas');
-    Route::delete('masterdata/aktifitas/{aktifitas}', [ActivityController::class, 'destroy'])->name('master.aktifitas.destroy');//->middleware('permission:Hapus Aktifitas');
+//Route::group(['middleware' => ['auth', 'permission:Aktivitas']], function () {
+    Route::get('masterdata/aktivitas', [ActivityController::class, 'index'])->name('master.aktivitas.index');
+    Route::post('masterdata/aktivitas', [ActivityController::class, 'store'])->name('master.aktivitas.store');
+    Route::put('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'update'])->name('master.aktivitas.update');//->middleware('permission:Edit Aktivitas');
+    Route::delete('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'destroy'])->name('master.aktivitas.destroy');//->middleware('permission:Hapus Aktivitas');
 //});
 
 //Jabatan
@@ -173,3 +174,19 @@ Route::delete(
 //Route::group(['middleware' => ['auth','permission:MasterList']], function() {
     Route::get('masterdata/master-list',[MasterListController::class,'index'])->name('master.master-list.index');
 //});
+
+
+// Mandor Routes
+Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
+    // List and Create
+    Route::get('masterdata/mandor', [MandorController::class, 'index'])
+         ->name('masterdata.mandor.index');
+    Route::post('masterdata/mandor', [MandorController::class, 'store'])
+         ->name('masterdata.mandor.store');
+});
+Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
+     ->name('masterdata.mandor.update')
+     ->middleware(['auth', 'permission:Edit Mandor']);
+Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
+     ->name('masterdata.mandor.destroy')
+     ->middleware(['auth', 'permission:Hapus Mandor']);

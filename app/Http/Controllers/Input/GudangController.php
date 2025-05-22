@@ -55,9 +55,9 @@ class GudangController extends Controller
     protected function requestValidated(): array
     {
         return [
-          'kodeaktifitas' => 'required',
-          'grupaktifitas' => 'required|exists:activitygroup,activitygroup',
-          'namaaktifitas' => 'required',
+          'kodeaktivitas' => 'required',
+          'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
+          'namaaktivitas' => 'required',
           'keterangan' => 'max:150',
           'var.*'       => 'required',
           'satuan.*'    => 'required'
@@ -67,10 +67,10 @@ class GudangController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if ($exists) {
-            Parent::h_flash('Kode aktifitas sudah ada dalam database.','danger');
+            Parent::h_flash('Kode aktivitas sudah ada dalam database.','danger');
             return redirect()->back()->withInput();
         }
 
@@ -78,9 +78,9 @@ class GudangController extends Controller
         $inputVar    = $request->var;
         $inputSatuan = $request->satuan;
         $input = [
-            'activitycode'  => $request->kodeaktifitas,
-            'activitygroup' => $request->grupaktifitas,
-            'activityname'  => $request->namaaktifitas,
+            'activitycode'  => $request->kodeaktivitas,
+            'activitygroup' => $request->grupaktivitas,
+            'activityname'  => $request->namaaktivitas,
             'description'   => $request->keterangan,
             'usingmaterial' => $request->material,
             'usingvehicle'  => $request->vehicle,
@@ -113,7 +113,7 @@ class GudangController extends Controller
     {
         $request->validate($this->requestValidated());
 
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if (!$exists) {
             Parent::h_flash('Data Tidak Ditemukan.','danger');
@@ -123,9 +123,9 @@ class GudangController extends Controller
         DB::transaction(function () use ($request, $activityCode) {
 
           $input = [
-              'activitycode'  => $request->kodeaktifitas,
-              'activitygroup' => $request->grupaktifitas,
-              'activityname'  => $request->namaaktifitas,
+              'activitycode'  => $request->kodeaktivitas,
+              'activitygroup' => $request->grupaktivitas,
+              'activityname'  => $request->namaaktivitas,
               'description'   => $request->keterangan,
               'jumlahvar'     => count($request->var),
               'usingmaterial' => $request->material,
@@ -146,7 +146,7 @@ class GudangController extends Controller
 
         });
 
-        return redirect()->route('master.aktifitas.index')->with('success1', 'Data updated successfully.');
+        return redirect()->route('master.aktivitas.index')->with('success1', 'Data updated successfully.');
     }
 
     public function destroy($activityCode)

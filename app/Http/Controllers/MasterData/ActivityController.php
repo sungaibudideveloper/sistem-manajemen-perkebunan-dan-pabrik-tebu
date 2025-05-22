@@ -18,14 +18,14 @@ class ActivityController extends Controller
     {
         View::share([
             'navbar' => 'Master',
-            'nav' => 'aktifitas',
-            'routeName' => route('master.aktifitas.index'),
+            'nav' => 'aktivitas',
+            'routeName' => route('master.aktivitas.index'),
         ]);
     }
 
     public function index(Request $request)
     {
-        $title = "Daftar Aktifitas";
+        $title = "Daftar Aktivitas";
 
         if ($request->isMethod('post')) {
             $request->validate(['perPage' => 'required|integer|min:1']);
@@ -40,7 +40,7 @@ class ActivityController extends Controller
             $item->no = ($activities->currentPage() - 1) * $activities->perPage() + $index + 1;
         }
         return view('master.activity.index')->with([
-            'title'         => 'Daftar Aktifitas',
+            'title'         => 'Daftar Aktivitas',
             'perPage'       => $perPage,
             'activities'    => $activities,
             'activityGroup' => $activityGroup
@@ -60,9 +60,9 @@ class ActivityController extends Controller
     protected function requestValidated(): array
     {
         return [
-          'kodeaktifitas' => 'required',
-          'grupaktifitas' => 'required|exists:activitygroup,activitygroup',
-          'namaaktifitas' => 'required',
+          'kodeaktivitas' => 'required',
+          'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
+          'namaaktivitas' => 'required',
           'keterangan' => 'max:150',
           'var.*'       => 'required',
           'satuan.*'    => 'required'
@@ -72,10 +72,10 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if ($exists) {
-            Parent::h_flash('Kode aktifitas sudah ada dalam database.','danger');
+            Parent::h_flash('Kode aktivitas sudah ada dalam database.','danger');
             return redirect()->back()->withInput();
         }
 
@@ -83,9 +83,9 @@ class ActivityController extends Controller
         $inputVar    = $request->var;
         $inputSatuan = $request->satuan;
         $input = [
-            'activitycode'  => $request->kodeaktifitas,
-            'activitygroup' => $request->grupaktifitas,
-            'activityname'  => $request->namaaktifitas,
+            'activitycode'  => $request->kodeaktivitas,
+            'activitygroup' => $request->grupaktivitas,
+            'activityname'  => $request->namaaktivitas,
             'description'   => $request->keterangan,
             'usingmaterial' => $request->material,
             'usingvehicle'  => $request->vehicle,
@@ -118,7 +118,7 @@ class ActivityController extends Controller
     {
         $request->validate($this->requestValidated());
 
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if (!$exists) {
             Parent::h_flash('Data Tidak Ditemukan.','danger');
@@ -128,9 +128,9 @@ class ActivityController extends Controller
         DB::transaction(function () use ($request, $activityCode) {
 
           $input = [
-              'activitycode'  => $request->kodeaktifitas,
-              'activitygroup' => $request->grupaktifitas,
-              'activityname'  => $request->namaaktifitas,
+              'activitycode'  => $request->kodeaktivitas,
+              'activitygroup' => $request->grupaktivitas,
+              'activityname'  => $request->namaaktivitas,
               'description'   => $request->keterangan,
               'jumlahvar'     => count($request->var),
               'usingmaterial' => $request->material,
@@ -151,7 +151,7 @@ class ActivityController extends Controller
 
         });
 
-        return redirect()->route('master.aktifitas.index')->with('success1', 'Data updated successfully.');
+        return redirect()->route('master.aktivitas.index')->with('success1', 'Data updated successfully.');
     }
 
     public function destroy($activityCode)

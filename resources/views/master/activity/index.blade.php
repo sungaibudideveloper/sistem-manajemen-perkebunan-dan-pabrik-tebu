@@ -139,8 +139,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <div class="mb-4">
-                                <label class="block text-md">Grup Aktifitas</label>
-                                <select class="rounded-md p-2 w-full border border-gray-300" id="activitygroup" name="grupaktifitas">
+                                <label class="block text-md">Grup Aktivitas</label>
+                                <select class="rounded-md p-2 w-full border border-gray-300" id="activitygroup" name="grupaktivitas">
                                     @foreach($activityGroup as $group)
                                         <option value="{{ $group->activitygroup }}" @if( old('activitygroup') == $group->activitygroup ) selected @endif>
                                             {{ $group->activitygroup }} - {{ $group->groupname }}
@@ -149,12 +149,12 @@
                                 </select>
                             </div>
                             <div class="mb-4">
-                                <label class="block text-md">Kode Aktifitas</label>
-                                <input type="text" name="kodeaktifitas" id="kodeaktifitas" maxlength="3"  @if(old('kodeaktifitas')) value="{{ old('kodeaktifitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
+                                <label class="block text-md">Kode Aktivitas</label>
+                                <input type="text" name="kodeaktivitas" id="kodeaktivitas" maxlength="3"  @if(old('kodeaktivitas')) value="{{ old('kodeaktivitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
                             </div>
                             <div class="mb-4">
-                                <label class="block text-md">Nama Aktifitas</label>
-                                <input type="text" name="namaaktifitas" id="namaaktifitas" @if(old('namaaktifitas')) value="{{ old('namaaktifitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
+                                <label class="block text-md">Nama Aktivitas</label>
+                                <input type="text" name="namaaktivitas" id="namaaktivitas" @if(old('namaaktivitas')) value="{{ old('namaaktivitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
                             </div>
                             <div class="mb-4">
                                 <label class="block text-md">Menggunakan Material ?</label>
@@ -170,11 +170,11 @@
 
                         <div>
                             <div class="mb-4">
-                              <label class="block text-md">Keterangan Aktifitas</label>
+                              <label class="block text-md">Keterangan Aktivitas</label>
                               <input type="text" name="keterangan" id="keterangan" class="rounded-md p-2 w-full border border-gray-300" required>
                             </div>
                             <div>
-                                <h4 class="text-2xl font-bold text-blue-800 text-center mb-4">Hasil Aktifitas</h4>
+                                <h4 class="text-2xl font-bold text-blue-800 text-center mb-4">Hasil Aktivitas</h4>
                                 <div class="div-variable">
                                     <div class="flex flex-wrap gap-3 variable-row w-full mb-4">
                                         <div class="flex-1 min-w-[150px] text-center">
@@ -192,7 +192,7 @@
 
                                         <!-- TOMBOL -->
                                         <div class="flex items-end hidden ">
-                                          <button type="button" onclick="deleteAktifitasRow(this)"
+                                          <button type="button" onclick="deleteAktivitasRow(this)"
                                             class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
                                             <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
                                                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -260,7 +260,7 @@
             button.addEventListener('click', function() {
                 if (confirm('Yakin ingin menghapus data ini?')) {
                   let activitycode = this.getAttribute('data-activitycode');
-                  fetch(`{{ route('master.aktifitas.destroy', ['aktifitas' => '__activitycode__']) }}`
+                  fetch(`{{ route('master.aktivitas.destroy', ['aktivitas' => '__activitycode__']) }}`
                           .replace('__activitycode__', activitycode), {
                               method: 'POST',
                               headers: {
@@ -296,7 +296,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.aktifitas.store') }}";
+            form.action = "{{ route('master.aktivitas.store') }}";
             crudMethod.value = "POST";
             $('input[name="nama"]').attr('readonly','false');
             setTimeout(() => {
@@ -320,14 +320,14 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
-            var editRoute = "{{ route('master.aktifitas.update', ['aktifitas' => '__activitycode__']) }}";
+            var editRoute = "{{ route('master.aktivitas.update', ['aktivitas' => '__activitycode__']) }}";
             const form = $('#crud-form');
             form.attr('action', editRoute.replace('__activitycode__', activitycode));
-            form.find('input[name="kodeaktifitas"]').attr('readonly','true');
+            form.find('input[name="kodeaktivitas"]').attr('readonly','true');
             form.find('input[name="_method"]').val('PUT');
-            form.find('input[name="grupaktifitas"]').val(activitygroup).trigger('change');
-            form.find('input[name="kodeaktifitas"]').val(activitycode)
-            form.find('input[name="namaaktifitas"]').val(activityname)
+            form.find('input[name="grupaktivitas"]').val(activitygroup).trigger('change');
+            form.find('input[name="kodeaktivitas"]').val(activitycode)
+            form.find('input[name="namaaktivitas"]').val(activityname)
             if( usingmaterial == 1 ){
               form.find('input[name="material"][value="1"]').prop('checked', true)
             }else{
@@ -426,7 +426,7 @@
           }
         });
 
-        function deleteAktifitasRow(div)
+        function deleteAktivitasRow(div)
         {
           $(div).parent().parent().remove();
            setVariableLable()

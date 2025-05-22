@@ -69,6 +69,8 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
 });
 
+
+//Gudang
 //Route::group(['middleware' => ['auth', 'permission:Gudang']], function () {
     Route::get('input/gudang', [GudangController::class, 'index'])->name('input.gudang.index');
 //});
