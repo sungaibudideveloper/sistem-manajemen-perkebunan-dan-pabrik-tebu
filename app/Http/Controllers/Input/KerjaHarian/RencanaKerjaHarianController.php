@@ -10,6 +10,8 @@ use Carbon\Carbon;
 
 use App\Models\RkhHdr;
 use App\Models\Mandor;
+use App\Models\Activity;
+use App\Models\ActivityGroup;
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -48,7 +50,7 @@ class RencanaKerjaHarianController extends Controller
         $month = $today->format('m');
         $year = $today->format('y');
 
-        // Select all RKH today from DB
+        // Database table: rkhhdr
         $lastRkh = DB::table('rkhhdr')
             ->whereDate('rkhdate', $today)
             ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
@@ -64,7 +66,11 @@ class RencanaKerjaHarianController extends Controller
 
         $generatedNoRkh = "RKH{$day}{$month}{$newNumber}{$year}";
 
+        // Database table: mandor
         $mandors = Mandor::orderBy('companycode')->orderBy('id')->get();
+
+        // Database table : activity
+        $activities = Activity::with('group')->orderBy('activitycode')->get();
 
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
@@ -72,6 +78,7 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhno' => $generatedNoRkh,
             'mandors'   => $mandors,
+            'activities' => $activities,
         ]);
     }
 

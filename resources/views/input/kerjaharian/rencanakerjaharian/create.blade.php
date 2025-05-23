@@ -3,41 +3,24 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <div class="mx-auto bg-white rounded-md shadow-md p-6">
-    <form method="POST" action="{{ route('input.kerjaharian.rencanakerjaharian.store') }}">
-      @csrf
+<div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
+  <div class="flex justify-between items-start">
+    <!-- KIRI: No RKH + Mandor + Tanggal -->
+    <div class="flex flex-col space-y-6 w-2/3">
       
-      <!-- Baris 1: No RKH (kiri) + Summary (kanan) -->
-      <div class="flex justify-between items-start mb-2">
-        <!-- No RKH -->
-        <div class="w-1/5">
-          <label for="no_rkh" class="block text-xs font-medium text-gray-700">No RKH</label>
-          <input
-            type="text"
-            name="rkhno"
-            id="rkhno"
-            value="{{ $rkhno ?? '' }}"
-            class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm bg-gray-100"
-            readonly
-          >
-        </div>
+      <!-- No RKH -->
+      <div>
+  <label for="rkhno" class="block text-sm font-semibold text-gray-700 mb-2">No RKH</label>
+  <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
+  {{ $rkhno ?? '-' }}
+</p>
+</div>
 
-        <!-- Summary Absen -->
-        <div class="text-right text-xs bg-gray-100 p-4 rounded-md shadow-sm w-80">
-          <p class="font-semibold mb-2">Jumlah Absen Tenaga Gerald - {{ date('d/m/Y') }}</p>
-          <div class="flex justify-between text-left gap-4">
-            <p>Laki-laki: <span id="summary-laki">8</span></p>
-            <p>Perempuan: <span id="summary-perempuan">21</span></p>
-            <p class="font-semibold">Total: <span id="summary-total">29</span></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Baris 2: Mandor, Tanggal -->
-      <div x-data="mandorPicker()" class="grid grid-cols-3 gap-4 mb-6 w-1/3">
-        {{-- Input Mandor --}}
+      <!-- Mandor & Tanggal -->
+      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md">
+        <!-- Input Mandor -->
         <div>
-          <label for="mandor" class="block text-xs font-medium text-gray-700">Mandor</label>
+          <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-2">Mandor</label>
           <input
             type="text"
             name="mandor"
@@ -46,267 +29,191 @@
             placeholder="Pilih Mandor"
             @click="open = true"
             :value="selected.id && selected.name ? `${selected.id} – ${selected.name}` : ''"
-            class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white"
+            class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <input type="hidden" name="mandor_id" x-model="selected.id">
         </div>
 
-        {{-- SECTION - Modal Mandor - START--}}
-        <div
-          x-show="open"
-          x-cloak
-          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-          style="display: none;"
-          x-transition:enter="transition ease-out duration-300"
-          x-transition:enter-start="opacity-0"
-          x-transition:enter-end="opacity-100"
-          x-transition:leave="transition ease-in duration-200"
-          x-transition:leave-start="opacity-100"
-          x-transition:leave-end="opacity-0"
-        >
-          <div
-            @click.away="open = false"
-            class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 transform scale-95"
-            x-transition:enter-end="opacity-100 transform scale-100"
-            x-transition:leave="transition ease-in duration-200"
-            x-transition:leave-start="opacity-100 transform scale-100"
-            x-transition:leave-end="opacity-0 transform scale-95"
-          >
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
-                    </svg>
-                  </div>
-                  <h2 class="text-lg font-semibold text-gray-900">Pilih Mandor</h2>
-                </div>
-                <button 
-                  @click="open = false" 
-                  type="button" 
-                  class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Cari nama atau ID mandor..."
-                  x-model="searchQuery"
-                  class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                >
-              </div>
-            </div>
-            
-            <!-- Content Area -->
-            <div class="flex-1 overflow-hidden">
-              <div class="overflow-y-auto" style="max-height: 400px;">
-                <table class="w-full">
-                  <thead class="bg-gray-100 sticky top-0">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mandor</th>
-                    </tr>
-                  </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                    <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.id">
-                      <tr
-                        @click="selectMandor(mandor)"
-                        class="hover:bg-blue-50 cursor-pointer transition-colors duration-150 group"
-                      >
-                        <td class="px-6 py-4 whitespace-nowrap">
-                          <div class="flex items-center">
-                            
-                            <span class="text-sm font-medium text-gray-900" x-text="mandor.id"></span>
-                          </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                          <div class="text-sm text-gray-900 font-medium" x-text="mandor.name"></div>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-                
-                <!-- Empty State -->
-                <template x-if="filteredMandors.length === 0">
-                  <div class="text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.467-.881-6.072-2.327"></path>
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada mandor ditemukan</h3>
-                    <p class="mt-1 text-sm text-gray-500">Coba ubah kata kunci pencarian Anda.</p>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <!-- Footer (Optional) -->
-            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
-              <div class="flex justify-between items-center text-xs text-gray-500">
-                <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
-                <span>Klik untuk memilih</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        {{-- SECTION - Modal Mandor - END--}}
-        
+        <!-- Input Tanggal -->
         <div>
-          <label for="tanggal" class="block text-xs font-medium text-gray-700">Tanggal</label>
+          <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
           <input
             type="date"
             name="tanggal"
             id="tanggal"
             value="{{ date('Y-m-d') }}"
-            class="mt-1 block w-full text-xs border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
+        </div>
+
+        <!-- include modal di sini jika perlu -->
+        @include('input.kerjaharian.rencanakerjaharian.modal-mandor')
+      </div>
+    </div>
+
+    <!-- KANAN: Ringkasan Tenaga Kerja -->
+    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 min-w-[320px]">
+      <div class="flex items-center mb-4">
+        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+        <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+      </div>
+      <p class="text-xs text-gray-600 mb-3">{{ date('d F Y') }}</p>
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div class="bg-blue-50 rounded-lg p-3">
+                <div class="text-lg font-bold" id="summary-laki">0</div>
+                <div class="text-xs text-gray-600">Laki-laki</div>
+              </div>
+              <div class="bg-pink-50 rounded-lg p-3">
+                <div class="text-lg font-bold" id="summary-perempuan">0</div>
+                <div class="text-xs text-gray-600">Perempuan</div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-3">
+                <div class="text-lg font-bold" id="summary-total">0</div>
+                <div class="text-xs text-gray-600">Total</div>
+              </div>
+      </div>
+    </div>
+  </div>
+
+      <!-- Modern Table -->
+      <div class="bg-white mt-12 rounded-xl p-6 border border-gray-300 border-r shadow-md">
+        <div class="overflow-x-auto">
+          <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+            <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
+              <tr>
+                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">No.</th>
+                <th class="px-4 py-4 text-xs font-semibold w-60" rowspan="2">Aktivitas</th>
+                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Blok</th>
+                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Plot</th>
+                <th class="px-4 py-4 text-xs font-semibold w-16" rowspan="2">Luas<br>(ha)</th>
+                <th class="px-4 py-4 text-xs font-semibold text-center w-32" colspan="3">Tenaga Kerja</th>
+                <th class="px-4 py-4 text-xs font-semibold w-24" rowspan="2">Estimasi<br>Waktu</th>
+                <th class="px-4 py-4 text-xs font-semibold w-20" rowspan="2">Material</th>
+                <th class="px-4 py-4 text-xs font-semibold w-32" rowspan="2">Keterangan</th>
+              </tr>
+              <tr class="bg-gray-700">
+                <th class="px-4 py-3 text-xs font-medium">L</th>
+                <th class="px-4 py-3 text-xs font-medium">P</th>
+                <th class="px-4 py-3 text-xs font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @for ($i = 0; $i < 8; $i++)
+                <tr class="rkh-row hover:bg-blue-50 transition-colors">
+                  <td class="px-4 py-4 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
+                  <td class="px-4 py-4" x-data="activityPicker()">
+                    <div class="relative">
+                      <input
+                        type="text"
+                        readonly
+                        placeholder=""
+                        @click="open = true"
+                        :value="selected.activitycode && selected.activityname ? `${selected.activitycode} – ${selected.activityname}` : ''"
+                        class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        :class="selected.activitycode ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-500'"
+                      >
+                      <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <input type="hidden" name="rows[{{ $i }}][nama]" x-model="selected.activitycode">
+                    @include('input.kerjaharian.rencanakerjaharian.modal-activity')
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="text" name="rows[{{ $i }}][blok]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="text" name="rows[{{ $i }}][plot]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="number" name="rows[{{ $i }}][luas]" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right bg-gray-50 font-semibold text-gray-700" readonly>
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="text" name="rows[{{ $i }}][estimasiwaktu]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-4 py-4 text-center">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                      Ya
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <input type="text" name="rows[{{ $i }}][keterangan]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                </tr>
+              @endfor
+            </tbody>
+            <tfoot class="bg-gray-100">
+              <tr class="border-t-2 border-gray-200">
+                <td colspan="4" class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider text-gray-700 bg-gray-100">Total</td>
+                <td id="total-luas" class="px-4 py-4 text-center text-sm font-bold bg-gray-50">0</td>
+                <td id="total-laki" class="px-4 py-4 text-center text-sm font-bold bg-blue-50">0</td>
+                <td id="total-perempuan" class="px-4 py-4 text-center text-sm font-bold bg-red-50">0</td>
+                <td id="total-tenaga" class="px-4 py-4 text-center text-sm font-bold bg-green-50">0</td>
+                <td colspan="3" class="px-4 py-4 bg-gray-100"></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
-      <!-- Tabel Input -->
-      <div class="overflow-x-auto">
-        <table id="rkh-table" class="min-w-full table-fixed border-collapse">
-          <thead>
-            <tr>
-              <th class="border px-2 py-1 text-xs w-[48px]" rowspan="2">No.</th>
-              <th class="border px-2 py-1 text-xs w-[200px]" rowspan="2">Kegiatan</th>
-              <th class="border px-2 py-1 text-xs w-[60px]" rowspan="2">Blok</th>
-              <th class="border px-2 py-1 text-xs w-[60px]" rowspan="2">Plot</th>
-              <th class="border px-2 py-1 text-xs w-[60px]" rowspan="2">Luas (ha)</th>
-              <th class="border px-2 py-1 text-xs text-center w-[180px]" colspan="3">Tenaga</th>
-              <th class="border px-2 py-1 text-xs w-[80px]" rowspan="2">Estimasi Waktu</th>
-              <th class="border px-2 py-1 text-xs w-[40px]" rowspan="2">Material</th>
-              <th class="border px-2 py-1 text-xs w-[160px]" rowspan="2">Keterangan</th>
-            </tr>
-            <tr>
-              <th class="border px-2 py-1 text-xs w-[20px]">L</th>
-              <th class="border px-2 py-1 text-xs w-[20px]">P</th>
-              <th class="border text-xs w-[10px]">Jumlah Tenaga</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Baris Input Data -->
-            <!-- Baris 1 -->
-            <tr class="rkh-row">
-              <td class="border px-2 py-1 text-xs row-number text-center">1</td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[0][nama]" value="W105 - Weeding" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border text-xs"><input type="text" name="rows[0][blok]" value="A" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="text" name="rows[0][plot]" value="A10" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="number" name="rows[0][luas]" value="18" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
-              <td class="border text-xs"><input type="number" name="rows[0][laki_laki]" value="2" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[0][perempuan]" value="3" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[0][jumlah_tenaga]" value="5" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
-              <td class="border text-xs"><input type="text" name="rows[0][estimasiwaktu]" value="7 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
-              <td class="border text-xs text-center">Yes</td>
-              <td class="border text-xs"><input type="text" name="rows[0][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
-            </tr>
-            <!-- Baris 2 -->
-            <tr class="rkh-row">
-              <td class="border px-2 py-1 text-xs row-number text-center">2</td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[1][nama]" value="M102 - Sanitasi" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border text-xs"><input type="text" name="rows[1][blok]" value="B" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="text" name="rows[1][plot]" value="B23" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="number" name="rows[1][luas]" value="22" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
-              <td class="border text-xs"><input type="number" name="rows[1][laki_laki]" value="4" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[1][perempuan]" value="1" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[1][jumlah_tenaga]" value="5" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
-              <td class="border text-xs"><input type="text" name="rows[1][estimasiwaktu]" value="1 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
-              <td class="border text-xs text-center">Yes</td>
-              <td class="border text-xs"><input type="text" name="rows[1][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
-            </tr>
-            <!-- Baris 3 -->
-            <tr class="rkh-row">
-              <td class="border px-2 py-1 text-xs row-number text-center">3</td>
-              <td class="border px-2 py-1 text-xs"><input type="text" name="rows[2][nama]" value="D45 - Drainase" class="w-full text-xs border-none focus:ring-0"></td>
-              <td class="border text-xs"><input type="text" name="rows[2][blok]" value="D" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="text" name="rows[2][plot]" value="D43" class="w-full text-xs border-none focus:ring-0 text-center"></td>
-              <td class="border text-xs"><input type="number" name="rows[2][luas]" value="22" class="w-full text-xs border-none focus:ring-0 text-right p-0"></td>
-              <td class="border text-xs"><input type="number" name="rows[2][laki_laki]" value="1" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[2][perempuan]" value="15" class="w-full text-xs border-none focus:ring-0 text-right p-0" min="0"></td>
-              <td class="border text-xs"><input type="number" name="rows[2][jumlah_tenaga]" value="16" class="w-full text-xs border-none focus:ring-0 text-right p-0" readonly></td>
-              <td class="border text-xs"><input type="text" name="rows[2][estimasiwaktu]" value="10 Hari" class="w-full text-xs border-none focus:ring-0 text-right"></td>
-              <td class="border text-xs text-center">No</td>
-              <td class="border text-xs"><input type="text" name="rows[2][keterangan]" class="w-full text-xs border-none focus:ring-0"></td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4" class="text-right text-xs font-bold border px-2 py-1">Total</td>
-              <td id="total-luas" class="border text-xs text-right font-bold px-4 py-1">0</td>
-              <td id="total-laki" class="border text-xs text-right font-bold px-4 py-1">0</td>
-              <td id="total-perempuan" class="border text-xs text-right font-bold px-4 py-1">0</td>
-              <td id="total-tenaga" class="border text-xs text-right font-bold px-4 py-1">0</td>
-              <td colspan="3" class="border px-2 py-1"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <!-- Tombol Add & Remove Rows -->
-      <div class="mt-2 space-x-2">
-        <button
-          type="button"
-          id="add-row"
-          class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-xs"
-        >
-          Add Row
-        </button>
-        <button
-          type="button"
-          id="remove-row"
-          class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-xs"
-        >
-          Remove Last Row
-        </button>
-      </div>
-
-      <!-- Tombol Preview, Print & Back -->
-      <div class="mt-6 flex justify-center space-x-6">
-        <button
-          type="button"
-          class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm"
-        >
-          Preview
-        </button>
-        <button
-          type="button"
-          class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm"
-        >
-          Print
-        </button>
-        <button
-          type="button"
-          onclick="window.history.back()"
-          class="bg-gray-500 hover:bg-gray-600 text-white px-12 py-3 rounded-md text-sm"
-        >
-          Back
-        </button>
-      </div>
-      
-      <!-- Tombol Submit -->
-      <div class="mt-6 flex justify-center">
+      <!-- Action Buttons -->
+      <div class="mt-8 flex flex-col items-center space-y-4">
+        <!-- Secondary Actions -->
+        <div class="flex justify-center space-x-4">
+          <button
+            type="button"
+            class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            Preview
+          </button>
+          <button
+            type="button"
+            class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            Print
+          </button>
+          <button
+            type="button"
+            onclick="window.history.back()"
+            class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Kembali
+          </button>
+        </div>
+        
+        <!-- Primary Submit Button -->
         <button
           type="submit"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-16 py-4 rounded-md text-sm"
+          class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
         >
-          Submit
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Submit RKH
         </button>
       </div>
     </form>
@@ -314,154 +221,46 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const tbody = document.querySelector('#rkh-table tbody');
-      const addBtn = document.getElementById('add-row');
-      const removeBtn = document.getElementById('remove-row');
-
-      const totalLuas = document.getElementById('total-luas');
-      const totalLaki = document.getElementById('total-laki');
-      const totalPerempuan = document.getElementById('total-perempuan');
-      const totalTenaga = document.getElementById('total-tenaga');
-
-      const summaryLaki = document.getElementById('summary-laki');
-      const summaryPerempuan = document.getElementById('summary-perempuan');
-      const summaryTotal = document.getElementById('summary-total');
-
-      function calculateRow(row) {
-        const laki = row.querySelector('input[name$="[laki_laki]"]');
-        const perempuan = row.querySelector('input[name$="[perempuan]"]');
-        const jumlah = row.querySelector('input[name$="[jumlah_tenaga]"]');
-        
-        if (laki && perempuan && jumlah) {
-          jumlah.value = (parseInt(laki.value) || 0) + (parseInt(perempuan.value) || 0);
-        }
-      }
-
-      function calculateTotals() {
-        let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
-        
-        tbody.querySelectorAll('tr').forEach(row => {
-          const luasInput = row.querySelector('input[name$="[luas]"]');
-          const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
-          const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
-          
-          if (luasInput && lakiInput && perempuanInput) {
-            const luas = parseFloat(luasInput.value) || 0;
-            const laki = parseInt(lakiInput.value) || 0;
-            const perempuan = parseInt(perempuanInput.value) || 0;
-            const jumlah = laki + perempuan;
-
-            luasSum += luas;
-            lakiSum += laki;
-            perempuanSum += perempuan;
-            tenagaSum += jumlah;
-
-            const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
-            if (jumlahInput) {
-              jumlahInput.value = jumlah;
-            }
-          }
-        });
-
-        if (totalLuas) totalLuas.textContent = luasSum;
-        if (totalLaki) totalLaki.textContent = lakiSum;
-        if (totalPerempuan) totalPerempuan.textContent = perempuanSum;
-        if (totalTenaga) totalTenaga.textContent = tenagaSum;
-
-        // Update summary
-        if (summaryLaki) summaryLaki.textContent = lakiSum;
-        if (summaryPerempuan) summaryPerempuan.textContent = perempuanSum;
-        if (summaryTotal) summaryTotal.textContent = tenagaSum;
-      }
-
-      function attachListeners(row) {
-        ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
-          const input = row.querySelector(`input[name$="${suffix}"]`);
-          if (input) {
-            input.addEventListener('input', () => {
-              calculateRow(row);
-              calculateTotals();
-            });
-          }
-        });
-      }
-
-      function updateRowNumbers() {
-        tbody.querySelectorAll('tr').forEach((row, i) => {
-          const rowNumber = row.querySelector('.row-number');
-          if (rowNumber) {
-            rowNumber.textContent = i + 1;
-          }
-          
-          row.querySelectorAll('input').forEach(input => {
-            if (input.name) {
-              input.name = input.name.replace(/rows\[\d+\]/, `rows[${i}]`);
-            }
-          });
-        });
-      }
-
-      // Inisialisasi baris awal
-      tbody.querySelectorAll('tr').forEach(row => {
-        attachListeners(row);
-      });
+      const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+      rows.forEach(row => attachListeners(row));
       calculateTotals();
-
-      if (addBtn) {
-        addBtn.addEventListener('click', () => {
-          const rows = tbody.querySelectorAll('tr');
-          if (rows.length > 0) {
-            const newRow = rows[0].cloneNode(true);
-
-            newRow.querySelectorAll('input').forEach(input => {
-              if (input.type !== 'hidden') {
-                input.value = '';
-              }
-            });
-            
-            tbody.appendChild(newRow);
-            attachListeners(newRow);
-            updateRowNumbers();
-            calculateTotals();
-          }
-        });
-      }
-
-      if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-          const rows = tbody.querySelectorAll('tr');
-          if (rows.length > 1) {
-            rows[rows.length - 1].remove();
-            updateRowNumbers();
-            calculateTotals();
-          }
-        });
-      }
     });
 
-    function mandorPicker() {
-      return {
-        open: false,
-        searchQuery: '',
-        mandors: @json($mandors ?? []),
-        selected: { companycode: '', id: '', name: '' },
+    function calculateRow(row) {
+      const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
+      const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
+      const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
+      const laki = parseInt(lakiInput.value) || 0;
+      const perempuan = parseInt(perempuanInput.value) || 0;
+      if (jumlahInput) jumlahInput.value = laki + perempuan;
+    }
 
-        get filteredMandors() {
-          if (!this.searchQuery) {
-            return this.mandors;
-          }
-          const q = this.searchQuery.toString().toUpperCase();
-          return this.mandors.filter(m =>
-            m.name.toUpperCase().includes(q) ||
-            m.id.toString().toUpperCase().includes(q)
-          );
-        },
+    function calculateTotals() {
+      let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
+      document.querySelectorAll('#rkh-table tbody tr.rkh-row').forEach(row => {
+        const luas = parseFloat(row.querySelector('input[name$="[luas]"]').value) || 0;
+        const laki = parseInt(row.querySelector('input[name$="[laki_laki]"]').value) || 0;
+        const perempuan = parseInt(row.querySelector('input[name$="[perempuan]"]').value) || 0;
+        luasSum += luas;
+        lakiSum += laki;
+        perempuanSum += perempuan;
+        tenagaSum += laki + perempuan;
+        calculateRow(row);
+      });
+      document.getElementById('total-luas').textContent = `${luasSum.toFixed(2)} ha`;
+      document.getElementById('total-laki').textContent = lakiSum;
+      document.getElementById('total-perempuan').textContent = perempuanSum;
+      document.getElementById('total-tenaga').textContent = tenagaSum;
+      document.getElementById('summary-laki').textContent = lakiSum;
+      document.getElementById('summary-perempuan').textContent = perempuanSum;
+      document.getElementById('summary-total').textContent = tenagaSum;
+    }
 
-        selectMandor(mandor) {
-          this.selected = mandor;
-          this.open = false;
-        },
-      }
+    function attachListeners(row) {
+      ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
+        const input = row.querySelector(`input[name$="${suffix}"]`);
+        if (input) input.addEventListener('input', () => calculateTotals());
+      });
     }
   </script>
 </x-layout>
