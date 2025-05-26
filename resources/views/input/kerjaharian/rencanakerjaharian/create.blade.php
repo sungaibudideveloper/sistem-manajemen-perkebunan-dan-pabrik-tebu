@@ -99,12 +99,16 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
+              {{-- Modifikasi untuk bagian table rows --}}
               @for ($i = 0; $i < 8; $i++)
                 <tr class="rkh-row hover:bg-blue-50 transition-colors">
+
+                  <!-- #No -->
                   <td class="px-4 py-4 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
                   
-                 <td class="px-4 py-4">
-                    <div x-data="blokPicker()" class="relative">
+                  <!-- #Blok -->
+                  <td class="px-4 py-4">
+                    <div x-data="blokPicker({{ $i }})" class="relative">
                       <input
                         type="text"
                         readonly
@@ -114,14 +118,35 @@
                       >
                       <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.id">
 
-                      {{-- Include modal-blok jika belum dimasukkan global --}}
+                      {{-- Include modal-blok --}}
                       @include('input.kerjaharian.rencanakerjaharian.modal-blok')
                     </div>
                   </td>
 
+                  <!-- #Plot -->
                   <td class="px-4 py-4">
-                    <input type="text" name="rows[{{ $i }}][plot]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <div x-data="plotPicker({{ $i }})" class="relative">
+                      <input
+                        type="text"
+                        readonly
+                        @click="isBlokSelected ? (open = true) : null"
+                        :value="selected.plot ? selected.plot : ''"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': isBlokSelected,
+                          'cursor-not-allowed bg-gray-100': !isBlokSelected,
+                          'border-gray-200': isBlokSelected,
+                          'border-gray-300': !isBlokSelected
+                        }"
+                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                      <input type="hidden" name="rows[{{ $i }}][plot]" x-model="selected.plot">
+
+                      @include('input.kerjaharian.rencanakerjaharian.modal-plot')
+                    </div>
                   </td>
+
+                  {{-- Sisa kolom tetap sama --}}
+                  <!-- #Activity -->
                   <td class="px-4 py-4" x-data="activityPicker()">
                     <div class="relative">
                       <input
@@ -130,7 +155,7 @@
                         placeholder=""
                         @click="open = true"
                         :value="selected.activitycode && selected.activityname ? `${selected.activitycode} – ${selected.activityname}` : ''"
-                        class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         :class="selected.activitycode ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-500'"
                       >
                       <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -235,47 +260,61 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-      rows.forEach(row => attachListeners(row));
-      calculateTotals();
-    });
 
-    function calculateRow(row) {
-      const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
-      const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
-      const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
-      const laki = parseInt(lakiInput.value) || 0;
-      const perempuan = parseInt(perempuanInput.value) || 0;
-      if (jumlahInput) jumlahInput.value = laki + perempuan;
-    }
 
-    function calculateTotals() {
-      let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
-      document.querySelectorAll('#rkh-table tbody tr.rkh-row').forEach(row => {
-        const luas = parseFloat(row.querySelector('input[name$="[luas]"]').value) || 0;
-        const laki = parseInt(row.querySelector('input[name$="[laki_laki]"]').value) || 0;
-        const perempuan = parseInt(row.querySelector('input[name$="[perempuan]"]').value) || 0;
-        luasSum += luas;
-        lakiSum += laki;
-        perempuanSum += perempuan;
-        tenagaSum += laki + perempuan;
-        calculateRow(row);
-      });
-      document.getElementById('total-luas').textContent = `${luasSum.toFixed(2)} ha`;
-      document.getElementById('total-laki').textContent = lakiSum;
-      document.getElementById('total-perempuan').textContent = perempuanSum;
-      document.getElementById('total-tenaga').textContent = tenagaSum;
-      document.getElementById('summary-laki').textContent = lakiSum;
-      document.getElementById('summary-perempuan').textContent = perempuanSum;
-      document.getElementById('summary-total').textContent = tenagaSum;
-    }
+// Pastikan data tersedia secara global
+document.addEventListener('DOMContentLoaded', function() {
+  // Jika data dikirim dari controller, simpan ke variabel global
+  if (typeof bloksData !== 'undefined') {
+    window.bloksData = bloksData;
+  }
+  if (typeof masterlistData !== 'undefined') {
+    window.masterlistData = masterlistData;
+  }
+  
+  // Existing code untuk calculate totals
+  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+  rows.forEach(row => attachListeners(row));
+  calculateTotals();
+});
 
-    function attachListeners(row) {
-      ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
-        const input = row.querySelector(`input[name$="${suffix}"]`);
-        if (input) input.addEventListener('input', () => calculateTotals());
-      });
-    }
+// Sisanya tetap sama (calculateRow, calculateTotals, attachListeners)
+function calculateRow(row) {
+  const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
+  const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
+  const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
+  const laki = parseInt(lakiInput.value) || 0;
+  const perempuan = parseInt(perempuanInput.value) || 0;
+  if (jumlahInput) jumlahInput.value = laki + perempuan;
+}
+
+function calculateTotals() {
+  let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
+  document.querySelectorAll('#rkh-table tbody tr.rkh-row').forEach(row => {
+    const luas = parseFloat(row.querySelector('input[name$="[luas]"]').value) || 0;
+    const laki = parseInt(row.querySelector('input[name$="[laki_laki]"]').value) || 0;
+    const perempuan = parseInt(row.querySelector('input[name$="[perempuan]"]').value) || 0;
+    luasSum += luas;
+    lakiSum += laki;
+    perempuanSum += perempuan;
+    tenagaSum += laki + perempuan;
+    calculateRow(row);
+  });
+  document.getElementById('total-luas').textContent = `${luasSum.toFixed(2)} ha`;
+  document.getElementById('total-laki').textContent = lakiSum;
+  document.getElementById('total-perempuan').textContent = perempuanSum;
+  document.getElementById('total-tenaga').textContent = tenagaSum;
+  document.getElementById('summary-laki').textContent = lakiSum;
+  document.getElementById('summary-perempuan').textContent = perempuanSum;
+  document.getElementById('summary-total').textContent = tenagaSum;
+}
+
+function attachListeners(row) {
+  ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
+    const input = row.querySelector(`input[name$="${suffix}"]`);
+    if (input) input.addEventListener('input', () => calculateTotals());
+  });
+}
+
   </script>
 </x-layout>

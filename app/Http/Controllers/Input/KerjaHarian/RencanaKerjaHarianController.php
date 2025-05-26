@@ -13,6 +13,7 @@ use App\Models\Mandor;
 use App\Models\Activity;
 use App\Models\ActivityGroup;
 use App\Models\Blok;
+use App\Models\Masterlist;
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -76,6 +77,9 @@ class RencanaKerjaHarianController extends Controller
         // Database table : blok
         $bloks = Blok::orderBy('blok')->get();
 
+        // Database table : masterlist
+        $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
             'navbar' => 'Input',
@@ -84,6 +88,7 @@ class RencanaKerjaHarianController extends Controller
             'mandors'   => $mandors,
             'activities' => $activities,
             'bloks' => $bloks,
+            'masterlist' => $masterlist,
         ]);
     }
 

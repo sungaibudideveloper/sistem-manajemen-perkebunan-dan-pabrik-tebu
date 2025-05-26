@@ -91,37 +91,110 @@
     </div>
 
     {{-- Footer --}}
-    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
-      <div class="flex justify-between items-center text-xs text-gray-500">
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500">
+      <!-- Clear button -->
+      
+
+      <div class="flex space-x-4">
         <span x-text="`${filteredBloks.length} blok tersedia`"></span>
-        <span>Klik untuk memilih</span>
       </div>
+      <button
+        type="button"
+        @click="clear()"
+        class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+      >
+        Clear Selected Blok
+      </button>
     </div>
   </div>
 </div>
 
 @push('scripts')
 <script>
-  function blokPicker() {
-    return {
-      open: false,
-      searchQuery: '',
-      bloks: @json($bloks ?? []),
-      selected: { blok: '' },
+  document.addEventListener('alpine:init', () => {
+  // Store global untuk menyimpan blok yang dipilih per baris
+  Alpine.store('blokPerRow', {
+    selected: {}, // { 0: 'A01', 1: 'B02', ... }
+    
+    setBlok(rowIndex, blok) {
+      this.selected[rowIndex] = blok;
+    },
+    
+    getBlok(rowIndex) {
+      return this.selected[rowIndex] || '';
+    },
+    
+    hasBlok(rowIndex) {
+      return !!this.selected[rowIndex];
+    }
+  });
+});
 
-      get filteredBloks() {
-        if (!this.searchQuery) return this.bloks;
-        const q = this.searchQuery.toUpperCase();
-        return this.bloks.filter(b =>
-          b.blok && b.blok.toUpperCase().includes(q)
-        );
-      },
+// Komponen blokPicker yang diperbarui dengan parameter rowIndex
+function blokPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    bloks: window.bloksData || [], // Pastikan data bloks tersedia secara global
+    selected: { blok: '', id: '' },
+    rowIndex: rowIndex,
 
-      selectBlok(blok) {
-        this.selected = blok;
-        this.open = false;
-      },
-    };
+    get filteredBloks() {
+      if (!this.searchQuery) return this.bloks;
+      const q = this.searchQuery.toUpperCase();
+      return this.bloks.filter(b =>
+        b.blok && b.blok.toUpperCase().includes(q)
+      );
+    },
+
+    selectBlok(item) {
+      this.selected = item;
+      // Simpan blok yang dipilih untuk baris ini
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, item.blok);
+      
+      // Reset plot selection untuk baris ini
+      const plotPicker = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotPicker && plotPicker._x_dataStack) {
+        const plotComponent = plotPicker._x_dataStack[0];
+        if (plotComponent.selected) {
+          plotComponent.selected = { plot: '' };
+        }
+      }
+      
+      this.open = false;
+    },
+
+    init() {
+      // Restore nilai yang tersimpan jika ada
+      const savedBlok = Alpine.store('blokPerRow').getBlok(this.rowIndex);
+      if (savedBlok) {
+        const foundBlok = this.bloks.find(b => b.blok === savedBlok);
+        if (foundBlok) {
+          this.selected = foundBlok;
+        }
+      }
+    },
+
+          clear() {
+      // clear this component’s selection
+      this.selected = { blok: '', id: '' };
+      // clear the global store so plotPicker knows there's no blok
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
+      // also clear any plot selection within the same row
+      const plotEl = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotEl && plotEl._x_dataStack) {
+        plotEl._x_dataStack[0].selected = { plot: '' };
+      }
+      
+      this.open = false;
+    }
   }
+}
+
+  // Pastikan data bloks tersedia secara global
+  @if(isset($bloks))
+    window.bloksData = @json($bloks);
+  @endif
 </script>
 @endpush
+

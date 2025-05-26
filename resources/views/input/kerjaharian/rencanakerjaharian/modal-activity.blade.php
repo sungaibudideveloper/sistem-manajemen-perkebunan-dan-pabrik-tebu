@@ -273,9 +273,16 @@
         <!-- Footer -->
         <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
           <div class="flex justify-between items-center text-xs text-gray-500">
+
             <span x-show="!selectedGroup" x-text="`${filteredGroups.length} grup tersedia`"></span>
             <span x-show="selectedGroup" x-text="`${filteredActivities.length} aktivitas tersedia`"></span>
-            <span>Klik untuk memilih</span>
+            <button
+              type="button"
+              @click.stop="clear()"
+              class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+            >
+              Clear Selected Activity
+            </button>
           </div>
         </div>
       </div>
@@ -298,150 +305,116 @@
 
       get activityGroups() {
         const groups = {}
-
-        this.activities.forEach(activity => {
-          const code = activity.activitygroup || 'Uncategorized'
+        this.activities.forEach(a => {
+          const code = a.activitygroup || 'Uncategorized'
           if (!groups[code]) {
             groups[code] = {
               code,
-              groupName: activity.group?.groupname || code,
+              groupName: a.group?.groupname || code,
               activities: []
             }
           }
-          groups[code].activities.push(activity)
+          groups[code].activities.push(a)
         })
-
-        // Convert object ke array, plus hitung count-nya di sini
         return Object.values(groups).map(g => ({
           code:      g.code,
           groupName: g.groupName,
           activities:g.activities,
-          count:     g.activities.length   // <-- tambahkan ini
+          count:     g.activities.length
         }))
       },
 
       get subGroups() {
-  if (!this.selectedGroup) return [];
-
-  // ambil semua aktivitas di grup terpilih
-  const list = this.activities.filter(a => a.activitygroup === this.selectedGroup);
-
-  // cari semua prefix 3‐level unik
-  const prefixes = [...new Set(
-    list.map(a => a.activitycode.split('.').slice(0,3).join('.'))
-  )];
-
-  // bangun array sub‐grup
-  const subs = prefixes.map(code => {
-    // exact match atau direct child (kode + dot)
-    const subList = list.filter(a =>
-      a.activitycode === code ||
-      a.activitycode.startsWith(code + '.')
-    );
-
-    const childOnlyCount = subList.filter(a =>
-  a.activitycode.startsWith(code + '.')
-).length;
-
-    return {
-      code,
-      activityname: subList[0].activityname,
-      count: childOnlyCount
-    };
-  });
-
-  // (opsional) urutkan numerik
-  subs.sort((a, b) => {
-    const [, majA, minA] = a.code.split('.');
-    const [, majB, minB] = b.code.split('.');
-    if (+majA !== +majB) return +majA - +majB;
-    return +minA - +minB;
-  });
-
-  return subs;
-},
-
+        if (!this.selectedGroup) return []
+        const list = this.activities.filter(a => a.activitygroup === this.selectedGroup)
+        const prefixes = [...new Set(list.map(a => a.activitycode.split('.').slice(0,3).join('.')))]
+        const subs = prefixes.map(code => {
+          const subList = list.filter(a =>
+            a.activitycode === code ||
+            a.activitycode.startsWith(code + '.')
+          )
+          const childCount = subList.filter(a => a.activitycode.startsWith(code + '.')).length
+          return {
+            code,
+            activityname: subList[0].activityname,
+            count:        childCount
+          }
+        })
+        subs.sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}))
+        return subs
+      },
 
       get filteredGroups() {
-        const q = this.searchQuery.toUpperCase();
-        return this.searchQuery
-          ? this.activityGroups.filter(g => g.code.toUpperCase().includes(q)|| (g.groupName && g.groupName.toUpperCase().includes(q)))
-          : this.activityGroups;
+        const q = this.searchQuery.toUpperCase()
+        return q
+          ? this.activityGroups.filter(g =>
+              g.code.toUpperCase().includes(q) ||
+              g.groupName.toUpperCase().includes(q)
+            )
+          : this.activityGroups
       },
 
       get filteredSubGroups() {
-  const q = this.searchQuery.toUpperCase();
-  // kalau belum ada search, tampilkan semua subGroups
-  if (!this.searchQuery) return this.subGroups;
-  return this.subGroups.filter(sg =>
-    sg.code.toUpperCase().includes(q) ||
-    (sg.activityname && sg.activityname.toUpperCase().includes(q))
-  );
-},
+        const q = this.searchQuery.toUpperCase()
+        return this.subGroups.filter(sg =>
+          sg.code.toUpperCase().includes(q) ||
+          sg.activityname.toUpperCase().includes(q)
+        )
+      },
 
       get filteredActivities() {
-        if (!this.selectedSubGroup) return [];
-
-        const list = this.activities
-          .filter(a => a.activitycode.startsWith(this.selectedSubGroup+'.'))
-          .filter(a => {
-            const q = this.searchQuery.toUpperCase();
-            return !q
-              || a.activitycode.toUpperCase().includes(q)
-              || a.activityname.toUpperCase().includes(q);
-          });
-
-        // sort string secara “numeric aware”
-        list.sort((a, b) =>
-          a.activitycode.localeCompare(b.activitycode, undefined, { numeric: true })
-        );
-
-        return list;
+        if (!this.selectedSubGroup) return []
+        const q = this.searchQuery.toUpperCase()
+        return this.activities
+          .filter(a => a.activitycode.startsWith(this.selectedSubGroup + '.'))
+          .filter(a =>
+            !q ||
+            a.activitycode.toUpperCase().includes(q) ||
+            a.activityname.toUpperCase().includes(q)
+          )
+          .sort((a,b) => a.activitycode.localeCompare(b.activitycode, undefined, {numeric: true}))
       },
 
       selectGroup(code) {
-        this.selectedGroup = code;
-        this.searchQuery = '';
+        this.selectedGroup = code
+        this.searchQuery = ''
       },
-      
-      selectSubGroup(code) {
-        // cari semua aktivitas yang kodenya diawali prefix ini
-        const matched = this.activities.filter(a => a.activitycode.startsWith(code));
 
-        // jika cuma ada satu, dan itu exact match (leaf), langsung pilih
-        if (
-          matched.length === 1 &&
-          matched[0].activitycode === code
-        ) {
-          this.selectActivity(matched[0]);
-        } else {
-          // kalau bukan leaf, lanjut ke view sub-grup
-          this.selectedSubGroup = code;
-          this.searchQuery = '';
+      selectSubGroup(code) {
+        const matched = this.activities.filter(a => a.activitycode.startsWith(code))
+        if (matched.length === 1 && matched[0].activitycode === code) {
+          return this.selectActivity(matched[0])
         }
+        this.selectedSubGroup = code
+        this.searchQuery = ''
       },
-      
+
       backToGroups() {
-        this.selectedGroup = '';
-        this.selectedSubGroup = '';
-        this.searchQuery = '';
+        this.selectedGroup = ''
+        this.selectedSubGroup = ''
+        this.searchQuery = ''
       },
-      
+
       backToSubGroups() {
-        this.selectedSubGroup = '';
-        this.searchQuery = '';
+        this.selectedSubGroup = ''
+        this.searchQuery = ''
       },
 
       selectActivity(activity) {
-        this.selected = activity;
-        this.closeModal();
+        this.selected = activity
+        this.closeModal()
       },
 
       closeModal() {
-        this.open = false;
-        this.selectedGroup = '';
-        this.selectedSubGroup = '';
-        this.searchQuery = '';
+        this.open = false
+        this.selectedGroup = ''
+        this.selectedSubGroup = ''
+        this.searchQuery = ''
+      },
+
+      clear() {
+        this.selected = { activitycode: '', activityname: '' }
+        this.closeModal()
       }
     }
   }
