@@ -82,9 +82,10 @@
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
               <tr>
                 <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">No.</th>
-                <th class="px-4 py-4 text-xs font-semibold w-60" rowspan="2">Aktivitas</th>
+                
                 <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Blok</th>
                 <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Plot</th>
+                <th class="px-4 py-4 text-xs font-semibold w-60" rowspan="2">Aktivitas</th>
                 <th class="px-4 py-4 text-xs font-semibold w-16" rowspan="2">Luas<br>(ha)</th>
                 <th class="px-4 py-4 text-xs font-semibold text-center w-32" colspan="3">Tenaga Kerja</th>
                 <th class="px-4 py-4 text-xs font-semibold w-24" rowspan="2">Estimasi<br>Waktu</th>
@@ -101,6 +102,26 @@
               @for ($i = 0; $i < 8; $i++)
                 <tr class="rkh-row hover:bg-blue-50 transition-colors">
                   <td class="px-4 py-4 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
+                  
+                 <td class="px-4 py-4">
+                    <div x-data="blokPicker()" class="relative">
+                      <input
+                        type="text"
+                        readonly
+                        @click="open = true"
+                        :value="selected.blok ? selected.blok : ''"
+                        class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                      <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.id">
+
+                      {{-- Include modal-blok jika belum dimasukkan global --}}
+                      @include('input.kerjaharian.rencanakerjaharian.modal-blok')
+                    </div>
+                  </td>
+
+                  <td class="px-4 py-4">
+                    <input type="text" name="rows[{{ $i }}][plot]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
                   <td class="px-4 py-4" x-data="activityPicker()">
                     <div class="relative">
                       <input
@@ -120,12 +141,6 @@
                     </div>
                     <input type="hidden" name="rows[{{ $i }}][nama]" x-model="selected.activitycode">
                     @include('input.kerjaharian.rencanakerjaharian.modal-activity')
-                  </td>
-                  <td class="px-4 py-4">
-                    <input type="text" name="rows[{{ $i }}][blok]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  </td>
-                  <td class="px-4 py-4">
-                    <input type="text" name="rows[{{ $i }}][plot]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                   <td class="px-4 py-4">
                     <input type="number" name="rows[{{ $i }}][luas]" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">

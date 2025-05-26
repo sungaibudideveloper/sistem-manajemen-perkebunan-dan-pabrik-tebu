@@ -12,6 +12,7 @@ use App\Models\RkhHdr;
 use App\Models\Mandor;
 use App\Models\Activity;
 use App\Models\ActivityGroup;
+use App\Models\Blok;
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -72,6 +73,9 @@ class RencanaKerjaHarianController extends Controller
         // Database table : activity
         $activities = Activity::with('group')->orderBy('activitycode')->get();
 
+        // Database table : blok
+        $bloks = Blok::orderBy('blok')->get();
+
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
             'navbar' => 'Input',
@@ -79,6 +83,7 @@ class RencanaKerjaHarianController extends Controller
             'rkhno' => $generatedNoRkh,
             'mandors'   => $mandors,
             'activities' => $activities,
+            'bloks' => $bloks,
         ]);
     }
 
