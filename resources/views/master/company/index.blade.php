@@ -41,6 +41,8 @@
                             </th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Periode
                             </th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Gudang
+                            </th>
                             @if (auth()->user() &&
                                     collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Company'])->isNotEmpty())
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-32">Aksi
@@ -61,13 +63,15 @@
                                     {{ $item->address }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companyperiod }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                    {{ $item->companyinventory }}</td>
                                 @if (auth()->user() &&
                                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Company'])->isNotEmpty())
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-32">
                                         <div class="flex items-center justify-center">
                                             @if (auth()->user() && in_array('Edit Company', json_decode(auth()->user()->permissions ?? '[]')))
                                                 <button
-                                                    onclick="openEditModal('{{ $item->companycode }}', '{{ $item->name }}', '{{ $item->companyperiod }}', '{{ $item->address }}')"
+                                                    onclick="openEditModal('{{ $item->companycode }}', '{{ $item->name }}', '{{ $item->companyperiod }}', '{{ $item->address }}', '{{ $item->companyinventory }}')"
                                                     class="group flex items-center edit-button"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -161,7 +165,11 @@
                         <textarea id="alamat" name="alamat" class="border rounded-md border-gray-300 p-2 w-full max-w-[50ch]"
                             rows="5" value="" required></textarea>
                     </div>
-
+                    <div class="mb-4">
+                        <label class="block">Kode Gudang</label>
+                        <input type="text" id="companyinventory" name="companyinventory" value="" autocomplete="off"
+                            maxlength="4" class="rounded-md p-2 w-full max-w-[12ch] border-gray-300" required>
+                    </div>
                     <div class="mt-6 flex gap-2">
                         <button type="submit"
                             class="text-white inline-flex space-x-2 items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
@@ -221,13 +229,14 @@
             namaInput.value = "";
             tglInput.value = "";
             alamatInput.value = "";
+            companyinventory.value = "";
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
             }, 50);
         }
 
-        function openEditModal(kdComp, nama, tgl, alamat) {
+        function openEditModal(kdComp, nama, tgl, alamat, inventory) {
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
@@ -239,6 +248,7 @@
             namaInput.value = nama;
             tglInput.value = tgl;
             alamatInput.value = alamat;
+            companyinventory.value = inventory;
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
@@ -291,10 +301,11 @@
                 <td class="py-2 px-4 border-b border-gray-300">${newData.name}</td>
                 <td class="py-2 px-4 border-b border-gray-300">${newData.address}</td>
                 <td class="py-2 px-4 border-b border-gray-300">${newData.companyperiod}</td>
+                <td class="py-2 px-4 border-b border-gray-300">${newData.companyinventory}</td>
                 @if (auth()->user() && in_array('Edit Company', json_decode(auth()->user()->permissions ?? '[]')))
                 <td class="py-2 px-4 border-b border-gray-300">
                     <div class="flex items-center justify-center">
-                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.companycode}', '${newData.name}', '${newData.companyperiod}', '${newData.address}')">
+                        <button class="group flex items-center edit-button" onclick="openEditModal('${newData.companycode}', '${newData.name}', '${newData.companyperiod}', '${newData.address}', '${newData.companyinventory}')">
                             <svg
                                 class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
