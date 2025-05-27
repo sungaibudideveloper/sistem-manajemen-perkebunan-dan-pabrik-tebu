@@ -88,13 +88,10 @@ class RencanaKerjaHarianController extends Controller
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
 
 
-        // Database table : herbisidadosage
-        $herbisidagroups = Herbisidagroup::orderBy('herbisidagroupid')->get();
-        $rows  = $herbisidadosages->getFullHerbisidaGroupData(
+        // Database table : herbisidadosage, herbisidagroup, herbisida
+        $herbisidagroups  = $herbisidadosages->getFullHerbisidaGroupData(
             session('companycode')
         );
-
-        dd($rows);
 
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
@@ -105,6 +102,7 @@ class RencanaKerjaHarianController extends Controller
             'activities' => $activities,
             'bloks' => $bloks,
             'masterlist' => $masterlist,
+            'herbisidagroups' => $herbisidagroups,
         ]);
     }
 
