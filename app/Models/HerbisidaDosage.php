@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class HerbisidaDosage extends Model
 {
@@ -34,4 +35,17 @@ class HerbisidaDosage extends Model
         'updatedat'   => 'datetime',
     ];
 
+
+    public function getFullHerbisidaGroupData($companycode)
+    {
+        return DB::select(
+            "SELECT a.companycode, a.herbisidagroupid, c.herbisidagroupname, c.activitycode, a.itemcode, a.dosageperha, b.itemname, b.measure, c.description 
+            FROM herbisidadosage a
+            JOIN herbisida b ON (a.itemcode = b.itemcode)
+            JOIN herbisidagroup c ON (a.herbisidagroupid = c.herbisidagroupid)
+            WHERE a.companycode = ? AND b.companycode = ?",
+            [$companycode,$companycode]
+        );
+    }
+    
 }

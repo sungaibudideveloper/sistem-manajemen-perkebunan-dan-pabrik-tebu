@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Input\KerjaHarian;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -14,6 +15,10 @@ use App\Models\Activity;
 use App\Models\ActivityGroup;
 use App\Models\Blok;
 use App\Models\Masterlist;
+use App\Models\Herbisidadosage;
+use App\Models\Herbisidagroup;
+
+
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -47,6 +52,8 @@ class RencanaKerjaHarianController extends Controller
 
     public function create()
     {
+        $herbisidadosages = new Herbisidadosage;
+
         $today = Carbon::today();
         $day = $today->format('d');
         $month = $today->format('m');
@@ -79,6 +86,15 @@ class RencanaKerjaHarianController extends Controller
 
         // Database table : masterlist
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+
+
+        // Database table : herbisidadosage
+        $herbisidagroups = Herbisidagroup::orderBy('herbisidagroupid')->get();
+        $rows  = $herbisidadosages->getFullHerbisidaGroupData(
+            session('companycode')
+        );
+
+        dd($rows);
 
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
