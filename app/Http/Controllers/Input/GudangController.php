@@ -30,11 +30,11 @@ class GudangController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        //$actifities = Actifity::with('group')->orderBy('actifitycode', 'asc')->paginate($perPage);
-        //$actifityGroup = ActifityGroup::get();
+        //$activities = Activity::with('group')->orderBy('activitycode', 'asc')->paginate($perPage);
+        //$activityGroup = ActivityGroup::get();
 
-        //foreach ($actifities as $index => $item) {
-        //    $item->no = ($actifities->currentPage() - 1) * $actifities->perPage() + $index + 1;
+        //foreach ($activities as $index => $item) {
+        //    $item->no = ($activities->currentPage() - 1) * $activities->perPage() + $index + 1;
         //}
         return view('input.gudang.index')->with([
             'title'         => 'Gudang',
@@ -55,9 +55,9 @@ class GudangController extends Controller
     protected function requestValidated(): array
     {
         return [
-          'kodeaktifitas' => 'required',
-          'grupaktifitas' => 'required|exists:actifitygroup,actifitygroup',
-          'namaaktifitas' => 'required',
+          'kodeaktivitas' => 'required',
+          'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
+          'namaaktivitas' => 'required',
           'keterangan' => 'max:150',
           'var.*'       => 'required',
           'satuan.*'    => 'required'
@@ -67,10 +67,10 @@ class GudangController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->requestValidated());
-        $exists = DB::table('actifity')->where('actifitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if ($exists) {
-            Parent::h_flash('Kode aktifitas sudah ada dalam database.','danger');
+            Parent::h_flash('Kode aktivitas sudah ada dalam database.','danger');
             return redirect()->back()->withInput();
         }
 
@@ -78,9 +78,9 @@ class GudangController extends Controller
         $inputVar    = $request->var;
         $inputSatuan = $request->satuan;
         $input = [
-            'actifitycode'  => $request->kodeaktifitas,
-            'actifitygroup' => $request->grupaktifitas,
-            'actifityname'  => $request->namaaktifitas,
+            'activitycode'  => $request->kodeaktivitas,
+            'activitygroup' => $request->grupaktivitas,
+            'activityname'  => $request->namaaktivitas,
             'description'   => $request->keterangan,
             'usingmaterial' => $request->material,
             'usingvehicle'  => $request->vehicle,
@@ -97,7 +97,7 @@ class GudangController extends Controller
 
         try {
           DB::transaction(function () use ($input) {
-              DB::table('actifity')->insert($input);
+              DB::table('activity')->insert($input);
           });
           Parent::h_flash('Berhasil menambahkan data.','success');
           return redirect()->back();
@@ -109,23 +109,23 @@ class GudangController extends Controller
         return redirect()->back();
     }
 
-    public function update(Request $request, $actifityCode)
+    public function update(Request $request, $activityCode)
     {
         $request->validate($this->requestValidated());
 
-        $exists = DB::table('actifity')->where('actifitycode', $request->kodeaktifitas)->exists();
+        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
 
         if (!$exists) {
             Parent::h_flash('Data Tidak Ditemukan.','danger');
             return redirect()->back()->withInput();
         }
 
-        DB::transaction(function () use ($request, $actifityCode) {
+        DB::transaction(function () use ($request, $activityCode) {
 
           $input = [
-              'actifitycode'  => $request->kodeaktifitas,
-              'actifitygroup' => $request->grupaktifitas,
-              'actifityname'  => $request->namaaktifitas,
+              'activitycode'  => $request->kodeaktivitas,
+              'activitygroup' => $request->grupaktivitas,
+              'activityname'  => $request->namaaktivitas,
               'description'   => $request->keterangan,
               'jumlahvar'     => count($request->var),
               'usingmaterial' => $request->material,
@@ -142,17 +142,17 @@ class GudangController extends Controller
 
           $input = array_merge($input, $hasil);
 
-          DB::table('actifity')->where('actifitycode', $actifityCode)->update($input);
+          DB::table('activity')->where('activitycode', $activityCode)->update($input);
 
         });
 
-        return redirect()->route('master.aktifitas.index')->with('success1', 'Data updated successfully.');
+        return redirect()->route('master.aktivitas.index')->with('success1', 'Data updated successfully.');
     }
 
-    public function destroy($actifityCode)
+    public function destroy($activityCode)
     {
-        DB::transaction(function () use ($actifityCode) {
-            DB::table('actifity')->where('actifitycode', $actifityCode)->delete();
+        DB::transaction(function () use ($activityCode) {
+            DB::table('activity')->where('activitycode', $activityCode)->delete();
         });
         Parent::h_flash('Berhasil menghapus data.', 'success');
         return response()->json([

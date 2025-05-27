@@ -18,7 +18,7 @@
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700">Tanggal</label>
-          <p class="mt-1 text-xs text-gray-900">29/04/2025</p>
+          <p class="mt-1 text-xs text-gray-900">06/05/2025</p>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700">Kegiatan</label>

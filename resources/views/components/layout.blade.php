@@ -82,6 +82,7 @@
         <x-footer></x-footer>
     </div>
     <x-sprite-svg />
+    @stack('scripts')
 </body>
 <x-script></x-script>
 <x-style></x-style>
