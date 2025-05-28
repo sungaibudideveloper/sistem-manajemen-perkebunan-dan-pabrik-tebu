@@ -63,7 +63,10 @@
         </div>
 
         <!-- Breadcrumb -->
-        <div class="px-6 py-2 bg-gray-50 border-b border-gray-200" x-show="selectedGroup">
+        <div
+  x-show="selectedGroup"
+  class="px-6 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between"
+>
           <nav class="flex items-center space-x-2 text-sm">
             <!-- Activity Groups -->
             <button 
@@ -104,7 +107,36 @@
               </div>
             </template>
           </nav>
-        </div>
+        
+           <!-- Back Button -->
+    <div class="flex items-center space-x-2">
+      <!-- Back to Sub Groups (when in activities view) -->
+      <button 
+        x-show="selectedSubGroup"
+        type="button"
+        @click="backToSubGroups()"
+        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+      >
+        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Sub Groups
+      </button>
+      
+      <!-- Back to Groups (when in subgroups view) -->
+      <button 
+        x-show="selectedGroup && !selectedSubGroup"
+        type="button"
+        @click="backToGroups()"
+        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+      >
+        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Groups
+      </button>
+    </div>
+  </div>
         
         <!-- Content Area -->
         <div class="flex-1 overflow-y-auto">
@@ -274,8 +306,24 @@
         <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
           <div class="flex justify-between items-center text-xs text-gray-500">
 
-            <span x-show="!selectedGroup" x-text="`${filteredGroups.length} grup tersedia`"></span>
-            <span x-show="selectedGroup" x-text="`${filteredActivities.length} aktivitas tersedia`"></span>
+            <!-- 1. Grup view -->
+            <span
+              x-show="!selectedGroup"
+              x-text="`${filteredGroups.length} grup tersedia`"
+            ></span>
+
+            <!-- 2. Sub-group view -->
+            <span
+              x-show="selectedGroup && !selectedSubGroup"
+              x-text="`${filteredSubGroups.length} sub-grup tersedia`"
+            ></span>
+
+            <!-- 3. Aktivitas view -->
+            <span
+              x-show="selectedSubGroup"
+              x-text="`${filteredActivities.length} aktivitas tersedia`"
+            ></span>
+
             <button
               type="button"
               @click.stop="clear()"
@@ -285,6 +333,7 @@
             </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -294,132 +343,190 @@
 
 @push('scripts')
 <script>
-  function activityPicker() {
-    return {
-      open: false,
-      searchQuery: '',
-      selectedGroup: '',
-      selectedSubGroup: '',
-      activities: @json($activities ?? []),
-      selected: { activitycode: '', activityname: '' },
+function activityPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    selectedGroup: '',
+    selectedSubGroup: '',
+    activities: @json($activities ?? []),
+    selected: { 
+      activitycode: '', 
+      activityname: '',
+      usingvehicle: null,
+      jenistenagakerja: null 
+    },
+    rowIndex: rowIndex || 0,
 
-      get activityGroups() {
-        const groups = {}
-        this.activities.forEach(a => {
-          const code = a.activitygroup || 'Uncategorized'
-          if (!groups[code]) {
-            groups[code] = {
-              code,
-              groupName: a.group?.groupname || code,
-              activities: []
-            }
-          }
-          groups[code].activities.push(a)
-        })
-        return Object.values(groups).map(g => ({
-          code:      g.code,
-          groupName: g.groupName,
-          activities:g.activities,
-          count:     g.activities.length
-        }))
-      },
-
-      get subGroups() {
-        if (!this.selectedGroup) return []
-        const list = this.activities.filter(a => a.activitygroup === this.selectedGroup)
-        const prefixes = [...new Set(list.map(a => a.activitycode.split('.').slice(0,3).join('.')))]
-        const subs = prefixes.map(code => {
-          const subList = list.filter(a =>
-            a.activitycode === code ||
-            a.activitycode.startsWith(code + '.')
-          )
-          const childCount = subList.filter(a => a.activitycode.startsWith(code + '.')).length
-          return {
+    get activityGroups() {
+      const groups = {}
+      this.activities.forEach(a => {
+        const code = a.activitygroup || 'Uncategorized'
+        if (!groups[code]) {
+          groups[code] = {
             code,
-            activityname: subList[0].activityname,
-            count:        childCount
+            groupName: a.group?.groupname || code,
+            activities: []
           }
-        })
-        subs.sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}))
-        return subs
-      },
-
-      get filteredGroups() {
-        const q = this.searchQuery.toUpperCase()
-        return q
-          ? this.activityGroups.filter(g =>
-              g.code.toUpperCase().includes(q) ||
-              g.groupName.toUpperCase().includes(q)
-            )
-          : this.activityGroups
-      },
-
-      get filteredSubGroups() {
-        const q = this.searchQuery.toUpperCase()
-        return this.subGroups.filter(sg =>
-          sg.code.toUpperCase().includes(q) ||
-          sg.activityname.toUpperCase().includes(q)
-        )
-      },
-
-      get filteredActivities() {
-        if (!this.selectedSubGroup) return []
-        const q = this.searchQuery.toUpperCase()
-        return this.activities
-          .filter(a => a.activitycode.startsWith(this.selectedSubGroup + '.'))
-          .filter(a =>
-            !q ||
-            a.activitycode.toUpperCase().includes(q) ||
-            a.activityname.toUpperCase().includes(q)
-          )
-          .sort((a,b) => a.activitycode.localeCompare(b.activitycode, undefined, {numeric: true}))
-      },
-
-      selectGroup(code) {
-        this.selectedGroup = code
-        this.searchQuery = ''
-      },
-
-      selectSubGroup(code) {
-        const matched = this.activities.filter(a => a.activitycode.startsWith(code))
-        if (matched.length === 1 && matched[0].activitycode === code) {
-          return this.selectActivity(matched[0])
         }
-        this.selectedSubGroup = code
-        this.searchQuery = ''
-      },
+        groups[code].activities.push(a)
+      })
+      return Object.values(groups).map(g => ({
+        code:      g.code,
+        groupName: g.groupName,
+        activities:g.activities,
+        count:     g.activities.length
+      }))
+    },
 
-      backToGroups() {
-        this.selectedGroup = ''
-        this.selectedSubGroup = ''
-        this.searchQuery = ''
-      },
+    get subGroups() {
+      if (!this.selectedGroup) return []
+      const list = this.activities.filter(a => a.activitygroup === this.selectedGroup)
+      const prefixes = [...new Set(list.map(a => a.activitycode.split('.').slice(0,3).join('.')))]
+      const subs = prefixes.map(code => {
+        const subList = list.filter(a =>
+          a.activitycode === code ||
+          a.activitycode.startsWith(code + '.')
+        )
+        const childCount = subList.filter(a => a.activitycode.startsWith(code + '.')).length
+        return {
+          code,
+          activityname: subList[0].activityname,
+          count:        childCount
+        }
+      })
+      subs.sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}))
+      return subs
+    },
 
-      backToSubGroups() {
-        this.selectedSubGroup = ''
-        this.searchQuery = ''
-      },
+    get filteredGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return q
+        ? this.activityGroups.filter(g =>
+            g.code.toUpperCase().includes(q) ||
+            g.groupName.toUpperCase().includes(q)
+          )
+        : this.activityGroups
+    },
 
-      selectActivity(activity) {
-        this.selected = activity
-        this.closeModal()
-      },
+    get filteredSubGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return this.subGroups.filter(sg =>
+        sg.code.toUpperCase().includes(q) ||
+        sg.activityname.toUpperCase().includes(q)
+      )
+    },
 
-      closeModal() {
-        this.open = false
-        this.selectedGroup = ''
-        this.selectedSubGroup = ''
-        this.searchQuery = ''
-      },
+    get filteredActivities() {
+      if (!this.selectedSubGroup) return []
+      const q = this.searchQuery.toUpperCase()
+      return this.activities
+        .filter(a => a.activitycode.startsWith(this.selectedSubGroup + '.'))
+        .filter(a =>
+          !q ||
+          a.activitycode.toUpperCase().includes(q) ||
+          a.activityname.toUpperCase().includes(q)
+        )
+        .sort((a,b) => a.activitycode.localeCompare(b.activitycode, undefined, {numeric: true}))
+    },
 
-      clear() {
-        this.selected = { activitycode: '', activityname: '' }
-        this.closeModal()
+    selectGroup(code) {
+      this.selectedGroup = code
+      this.searchQuery = ''
+    },
+
+    
+    selectSubGroup(code) {
+      const matched = this.activities.filter(a => a.activitycode.startsWith(code))
+      
+      // Cek apakah ada child activities (activities yang dimulai dengan code + '.')
+      const children = this.activities.filter(a => a.activitycode.startsWith(code + '.'))
+      
+      // Jika tidak ada children, langsung pilih aktivitas yang cocok
+      if (children.length === 0 && matched.length > 0) {
+        // Cari yang exact match dulu, kalau tidak ada ambil yang pertama
+        const exactMatch = matched.find(a => a.activitycode === code)
+        return this.selectActivity(exactMatch || matched[0])
+      }
+      
+      // Jika ada children, tampilkan daftar children
+      this.selectedSubGroup = code
+      this.searchQuery = ''
+    },
+
+    backToGroups() {
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    backToSubGroups() {
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    selectActivity(activity) {
+      this.selected = {
+        activitycode: activity.activitycode,
+        activityname: activity.activityname,
+        usingvehicle: activity.usingvehicle,
+        jenistenagakerja: activity.jenistenagakerja
+      };
+      
+      // Update field kendaraan berdasarkan usingvehicle
+      this.updateKendaraanField();
+      this.updateJenisField();
+      
+      this.closeModal();
+    },
+
+    updateKendaraanField() {
+      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
+      if (kendaraanField) {
+        if (this.selected.usingvehicle === 1) {
+          kendaraanField.value = 'Ya';
+        } else if (this.selected.usingvehicle === null || this.selected.usingvehicle === 0) {
+          kendaraanField.value = 'Tidak';
+        }
+      }
+    },
+
+    updateJenisField() {
+    const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+    if (jenisField) {  // ✅ BENAR: menggunakan jenisField
+      if (this.selected.jenistenagakerja === 1) {
+        jenisField.value = 'Harian';  
+      } else if (this.selected.jenistenagakerja === 2) {
+        jenisField.value = 'Borongan';  
+      } else if (this.selected.jenistenagakerja === 3) {
+        jenisField.value = 'Operator'; 
+      }
+    }
+  },
+
+    closeModal() {
+      this.open = false
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    clear() {
+      this.selected = { activitycode: '', activityname: '', usingvehicle: null, jenistenagakerja: null };
+      // Reset kendaraan field when clearing
+      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
+      if (kendaraanField) {
+        kendaraanField.value = '-';
       }
 
-      
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      if (jenisField) {
+        jenisField.value = '-';
+      }
 
+      this.closeModal()
     }
   }
+}
 </script>
 @endpush

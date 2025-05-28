@@ -93,6 +93,7 @@ class RencanaKerjaHarianController extends Controller
             session('companycode')
         );
 
+
         return view('input.kerjaharian.rencanakerjaharian.create', [
             'title' => 'Form RKH',
             'navbar' => 'Input',

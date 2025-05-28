@@ -3,18 +3,17 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-<div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
-  <div class="flex justify-between items-start">
-    <!-- KIRI: No RKH + Mandor + Tanggal -->
-    <div class="flex flex-col space-y-6 w-2/3">
-      
-      <!-- No RKH -->
-      <div>
-  <label for="rkhno" class="block text-sm font-semibold text-gray-700 mb-2">No RKH</label>
-  <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
-  {{ $rkhno ?? '-' }}
-</p>
-</div>
+  <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
+    <div class="flex justify-between items-start">
+      <!-- KIRI: No RKH + Mandor + Tanggal -->
+      <div class="flex flex-col space-y-6 w-2/3">
+        <!-- No RKH -->
+        <div>
+          <label for="rkhno" class="block text-sm font-semibold text-gray-700 mb-2">No RKH</label>
+          <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
+            {{ $rkhno ?? '-' }}
+          </p>
+        </div>
 
       <!-- Mandor & Tanggal -->
       <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md">
@@ -79,43 +78,61 @@
       <div class="bg-white mt-12 rounded-xl p-6 border border-gray-300 border-r shadow-md">
         <div class="overflow-x-auto">
           <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+            <colgroup>
+              <col style="width: 32px"><!-- No. -->
+              <col style="width: 32px"><!-- Blok -->
+              <col style="width: 48px"><!-- Plot -->
+              <col style="width: 208px"><!-- Aktivitas -->
+              <col style="width: 48px"><!-- Luas -->
+              <col style="width: 32px"><!-- L -->
+              <col style="width: 32px"><!-- P -->
+              <col style="width: 32px"><!-- Total -->
+              <col style="width: 55px"><!-- Jenis -->
+              <col style="width: 105px"><!-- Material -->
+              <col style="width: 40px"><!-- Kendaraan -->
+              <col style="width: 150px"><!-- Keterangan -->
+            </colgroup>
+
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
               <tr>
-                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">No.</th>
-                
-                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Blok</th>
-                <th class="px-4 py-4 text-xs font-semibold w-12" rowspan="2">Plot</th>
-                <th class="px-4 py-4 text-xs font-semibold w-60" rowspan="2">Aktivitas</th>
-                <th class="px-4 py-4 text-xs font-semibold w-16" rowspan="2">Luas<br>(ha)</th>
-                <th class="px-4 py-4 text-xs font-semibold text-center w-32" colspan="3">Tenaga Kerja</th>
-                <th class="px-4 py-4 text-xs font-semibold w-40" rowspan="2">Material</th>
-                <th class="px-4 py-4 text-xs font-semibold w-36" rowspan="2">Keterangan</th>
+                <th rowspan="2">No.</th>
+                <th rowspan="2">Blok</th>
+                <th rowspan="2">Plot</th>
+                <th rowspan="2">Aktivitas</th>
+                <th rowspan="2">Luas<br>(ha)</th>
+                <th colspan="4" class="text-center">Tenaga Kerja</th>
+                <th rowspan="2">Material</th>
+                <th rowspan="2">Kendaraan</th>
+                <th rowspan="2">Keterangan</th>
               </tr>
               <tr class="bg-gray-700">
-                <th class="px-4 py-3 text-xs font-medium">L</th>
-                <th class="px-4 py-3 text-xs font-medium">P</th>
-                <th class="px-4 py-3 text-xs font-medium">Total</th>
+                <th>L</th>
+                <th>P</th>
+                <th>Total</th>
+                <th>Jenis</th>
               </tr>
             </thead>
+
             <tbody class="divide-y divide-gray-100">
               {{-- Modifikasi untuk bagian table rows --}}
               @for ($i = 0; $i < 8; $i++)
                 <tr class="rkh-row hover:bg-blue-50 transition-colors">
 
                   <!-- #No -->
-                  <td class="px-4 py-4 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
+                  <td class="px-1 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
                   
                   <!-- #Blok -->
-                  <td class="px-4 py-4">
+                  <td class="px-1 py-3">
                     <div x-data="blokPicker({{ $i }})" class="relative">
                       <input
                         type="text"
                         readonly
+                        required
                         @click="open = true"
                         :value="selected.blok ? selected.blok : ''"
                         class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                      <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.id">
+                      <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.blok">
 
                       {{-- Include modal-blok --}}
                       @include('input.kerjaharian.rencanakerjaharian.modal-blok')
@@ -123,7 +140,7 @@
                   </td>
 
                   <!-- #Plot -->
-                  <td class="px-4 py-4">
+                  <td class="px-1 py-3">
                     <div x-data="plotPicker({{ $i }})" class="relative">
                       <input
                         type="text"
@@ -146,7 +163,7 @@
 
                   {{-- Sisa kolom tetap sama --}}
                   <!-- #Activity -->
-                  <td class="px-4 py-4" x-data="activityPicker()">
+                  <td class="px-1 py-3" x-data="activityPicker({{ $i }})">
                     <div class="relative">
                       <input
                         type="text"
@@ -163,32 +180,54 @@
                         </svg>
                       </div>
                     </div>
-                    <!-- PERBAIKAN: Pastikan hidden input ter-update -->
+                    <!-- Hidden inputs -->
                     <input 
                       type="hidden" 
                       name="rows[{{ $i }}][nama]" 
                       x-model="selected.activitycode"
                       x-ref="activityInput"
                     >
+                    <input 
+                      type="hidden" 
+                      name="rows[{{ $i }}][usingvehicle]" 
+                      x-model="selected.usingvehicle"
+                    >
                     @include('input.kerjaharian.rencanakerjaharian.modal-activity')
                   </td>
 
-                  <td class="px-4 py-4">
+                  <!-- #Luas -->
+                  <td class="px-1 py-3">
                     <input type="number" name="rows[{{ $i }}][luas]" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
-                  <td class="px-4 py-4">
-                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  </td>
-                  <td class="px-4 py-4">
-                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  </td>
-                  <td class="px-4 py-4">
-                    <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right bg-gray-50 font-semibold text-gray-700" readonly>
-                  </td>
+
+                  <!-- #Tenaga Kerja -->
                   
 
-                  <!-- #Material - BAGIAN YANG DIPERBAIKI -->
-                  <td class="px-4 py-4" x-data="materialPicker({{ $i }})">
+                  <td class="px-1 py-3">
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-1 py-3">
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  </td>
+                  <td class="px-1 py-3">
+                    <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-300 rounded-lg px-3 py-2 text-right bg-gray-100 font-semibold text-gray-700" readonly placeholder="-">
+                  </td>
+                  <td class="px-1 py-3">
+                    <input 
+                      type="text" 
+                      name="rows[{{ $i }}][jenistenagakerja]" 
+                      readonly 
+                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
+                      placeholder="-"
+                      id="jenistenagakerja-{{ $i }}"
+                    >
+                  </td>
+
+
+                  
+
+                  <!-- #Material  -->
+                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})">
                     <div class="relative">
                       <div 
                         @click="checkMaterial()"
@@ -201,7 +240,11 @@
                         }"
                         class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
                       >
-                        <div x-show="!hasMaterial" class="text-gray-500 text-xs">Tidak Ada</div>
+                        <!-- 1. Default sebelum pilih activity -->
+                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+
+                        <!-- 2. Sudah pilih activity tapi kosong grup -->
+                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
                         <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
                           <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -221,7 +264,19 @@
                     @include('input.kerjaharian.rencanakerjaharian.modal-material')
                   </td>
 
-                  <td class="px-4 py-4">
+                  <!-- #Kendaraan -->
+                  <td class="px-1 py-3">
+                    <input 
+                      type="text" 
+                      name="rows[{{ $i }}][kendaraan]" 
+                      readonly 
+                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
+                      placeholder="-"
+                      id="kendaraan-{{ $i }}"
+                    >
+                  </td>
+
+                  <td class="px-1 py-3">
                     <input type="text" name="rows[{{ $i }}][keterangan]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                 </tr>
@@ -229,12 +284,12 @@
             </tbody>
             <tfoot class="bg-gray-100">
               <tr class="border-t-2 border-gray-200">
-                <td colspan="4" class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider text-gray-700 bg-gray-100">Total</td>
-                <td id="total-luas" class="px-4 py-4 text-center text-sm font-bold bg-gray-50">0</td>
-                <td id="total-laki" class="px-4 py-4 text-center text-sm font-bold bg-blue-50">0</td>
-                <td id="total-perempuan" class="px-4 py-4 text-center text-sm font-bold bg-red-50">0</td>
-                <td id="total-tenaga" class="px-4 py-4 text-center text-sm font-bold bg-green-50">0</td>
-                <td colspan="2" class="px-4 py-4 bg-gray-100"></td>
+                <td colspan="4" class="px-1 py-3 text-center text-sm font-bold uppercase tracking-wider text-gray-700 bg-gray-100">Total</td>
+                <td id="total-luas" class="px-1 py-3 text-center text-sm font-bold bg-gray-50">0</td>
+                <td id="total-laki" class="px-1 py-3 text-center text-sm font-bold bg-blue-50">0</td>
+                <td id="total-perempuan" class="px-1 py-3 text-center text-sm font-bold bg-red-50">0</td>
+                <td id="total-tenaga" class="px-1 py-3 text-center text-sm font-bold bg-green-50">0</td>
+                <td colspan="4" class="px-1 py-3 bg-gray-100"></td>
               </tr>
             </tfoot>
           </table>
@@ -286,6 +341,16 @@
           </svg>
           Submit RKH
         </button>
+
+<!-- Debug Submit Button -->
+<button
+  type="button"
+  id="debug-submit"
+  class="bg-yellow-500 hover:bg-yellow-600 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
+>
+  Debug Submit
+</button>
+
       </div>
     </form>
   </div>
@@ -311,6 +376,41 @@ document.addEventListener('DOMContentLoaded', function() {
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   rows.forEach(row => attachListeners(row));
   calculateTotals();
+
+  document.getElementById('debug-submit').addEventListener('click', () => {
+    const data = [];
+
+    const nomorRKH = document.getElementById('rkhno').textContent.trim();
+  const mandor = document.querySelector('input[name="mandor_id"]').value;
+  const tanggal = document.querySelector('input[name="tanggal"]').value;
+
+    rows.forEach((row, index) => {
+      const rowData = {
+        no: index + 1,
+        blok: row.querySelector('input[name$="[blok]"]').value,
+        plot: row.querySelector('input[name$="[plot]"]').value,
+        aktivitas: row.querySelector('input[name$="[nama]"]').value,
+        luas: row.querySelector('input[name$="[luas]"]').value,
+        laki_laki: row.querySelector('input[name$="[laki_laki]"]').value,
+        perempuan: row.querySelector('input[name$="[perempuan]"]').value,
+        jumlah_tenaga: row.querySelector('input[name$="[jumlah_tenaga]"]').value,
+        jenis_tenagakerja: row.querySelector('input[name$="[jenistenagakerja]"]').value,
+        material_group_id: row.querySelector('input[name$="[material_group_id]"]').value,
+        material_group_name: row.querySelector('input[name$="[material_group_name]"]').value,
+        kendaraan: row.querySelector('input[name$="[kendaraan]"]').value,
+        keterangan: row.querySelector('input[name$="[keterangan]"]').value,
+      };
+      data.push(rowData);
+    });
+
+    const debugData = {
+    nomor_rkh: nomorRKH,
+    mandor_id: mandor,
+    tanggal: tanggal,
+    rows: data,
+  };
+    console.log('Debug Data:', debugData);
+  });
 });
 
 // Sisanya tetap sama (calculateRow, calculateTotals, attachListeners)
@@ -318,9 +418,17 @@ function calculateRow(row) {
   const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
   const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
   const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
-  const laki = parseInt(lakiInput.value) || 0;
+  
+    const laki      = parseInt(lakiInput.value)      || 0;
   const perempuan = parseInt(perempuanInput.value) || 0;
-  if (jumlahInput) jumlahInput.value = laki + perempuan;
+  const total     = laki + perempuan;
+
+  if (total > 0) {
+    jumlahInput.value = total;
+  } else {
+    // kosongkan value agar placeholder muncul
+    jumlahInput.value = '';
+  }
 }
 
 function calculateTotals() {
