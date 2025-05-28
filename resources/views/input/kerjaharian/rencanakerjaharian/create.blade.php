@@ -88,9 +88,8 @@
                 <th class="px-4 py-4 text-xs font-semibold w-60" rowspan="2">Aktivitas</th>
                 <th class="px-4 py-4 text-xs font-semibold w-16" rowspan="2">Luas<br>(ha)</th>
                 <th class="px-4 py-4 text-xs font-semibold text-center w-32" colspan="3">Tenaga Kerja</th>
-                <th class="px-4 py-4 text-xs font-semibold w-24" rowspan="2">Estimasi<br>Waktu</th>
-                <th class="px-4 py-4 text-xs font-semibold w-20" rowspan="2">Material</th>
-                <th class="px-4 py-4 text-xs font-semibold w-32" rowspan="2">Keterangan</th>
+                <th class="px-4 py-4 text-xs font-semibold w-40" rowspan="2">Material</th>
+                <th class="px-4 py-4 text-xs font-semibold w-36" rowspan="2">Keterangan</th>
               </tr>
               <tr class="bg-gray-700">
                 <th class="px-4 py-3 text-xs font-medium">L</th>
@@ -164,9 +163,16 @@
                         </svg>
                       </div>
                     </div>
-                    <input type="hidden" name="rows[{{ $i }}][nama]" x-model="selected.activitycode">
+                    <!-- PERBAIKAN: Pastikan hidden input ter-update -->
+                    <input 
+                      type="hidden" 
+                      name="rows[{{ $i }}][nama]" 
+                      x-model="selected.activitycode"
+                      x-ref="activityInput"
+                    >
                     @include('input.kerjaharian.rencanakerjaharian.modal-activity')
                   </td>
+
                   <td class="px-4 py-4">
                     <input type="number" name="rows[{{ $i }}][luas]" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
@@ -179,17 +185,42 @@
                   <td class="px-4 py-4">
                     <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right bg-gray-50 font-semibold text-gray-700" readonly>
                   </td>
-                  <td class="px-4 py-4">
-                    <input type="text" name="rows[{{ $i }}][estimasiwaktu]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  
+
+                  <!-- #Material - BAGIAN YANG DIPERBAIKI -->
+                  <td class="px-4 py-4" x-data="materialPicker({{ $i }})">
+                    <div class="relative">
+                      <div 
+                        @click="checkMaterial()"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
+                          'cursor-not-allowed bg-gray-100': !hasMaterial,
+                          'border-green-500 bg-green-50': hasMaterial && selectedGroup,
+                          'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
+                          'border-gray-300': !hasMaterial
+                        }"
+                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
+                      >
+                        <div x-show="!hasMaterial" class="text-gray-500 text-xs">Tidak Ada</div>
+                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Pilih Grup
+                        </div>
+                        <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
+                          <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
+                        </div>
+                      </div>
+                      
+                      <!-- Hidden inputs untuk menyimpan selected group -->
+                      <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''">
+                      <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''">
+                    </div>
+                    
+                    @include('input.kerjaharian.rencanakerjaharian.modal-material')
                   </td>
-                  <td class="px-4 py-4 text-center">
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                      </svg>
-                      Ya
-                    </span>
-                  </td>
+
                   <td class="px-4 py-4">
                     <input type="text" name="rows[{{ $i }}][keterangan]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
@@ -203,7 +234,7 @@
                 <td id="total-laki" class="px-4 py-4 text-center text-sm font-bold bg-blue-50">0</td>
                 <td id="total-perempuan" class="px-4 py-4 text-center text-sm font-bold bg-red-50">0</td>
                 <td id="total-tenaga" class="px-4 py-4 text-center text-sm font-bold bg-green-50">0</td>
-                <td colspan="3" class="px-4 py-4 bg-gray-100"></td>
+                <td colspan="2" class="px-4 py-4 bg-gray-100"></td>
               </tr>
             </tfoot>
           </table>
@@ -265,6 +296,10 @@
 // Pastikan data tersedia secara global
 document.addEventListener('DOMContentLoaded', function() {
   // Jika data dikirim dari controller, simpan ke variabel global
+    if (typeof herbisidagroups !== 'undefined') {
+    window.herbisidaData = herbisidagroups;
+  }
+
   if (typeof bloksData !== 'undefined') {
     window.bloksData = bloksData;
   }
@@ -315,6 +350,11 @@ function attachListeners(row) {
     if (input) input.addEventListener('input', () => calculateTotals());
   });
 }
+
+  // Pass data PHP ke JavaScript
+  window.herbisidaData = @json($herbisidagroups ?? []);
+  
+  console.log('Herbisida data loaded:', window.herbisidaData); // De
 
   </script>
 </x-layout>

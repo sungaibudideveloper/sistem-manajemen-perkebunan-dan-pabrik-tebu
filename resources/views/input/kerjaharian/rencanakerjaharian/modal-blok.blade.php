@@ -195,6 +195,23 @@ function blokPicker(rowIndex) {
   @if(isset($bloks))
     window.bloksData = @json($bloks);
   @endif
+
+  // Tambahkan sebelum closing script tag
+document.addEventListener('alpine:init', () => {
+  // Store untuk menyimpan activity yang dipilih per baris
+  Alpine.store('activityPerRow', {
+    selected: {},
+    
+    setActivity(rowIndex, activity) {
+      this.selected[rowIndex] = activity;
+    }
+  });
+});
+
+// Pastikan data herbisida tersedia secara global
+@if(isset($herbisidagroups))
+  window.herbisidaData = @json($herbisidagroups);
+@endif
 </script>
 @endpush
 

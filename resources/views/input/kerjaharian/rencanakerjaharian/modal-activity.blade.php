@@ -14,7 +14,7 @@
     >
       <div
         @click.away="open = false"
-        class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+        class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 transform scale-95"
         x-transition:enter-end="opacity-100 transform scale-100"
@@ -107,8 +107,8 @@
         </div>
         
         <!-- Content Area -->
-        <div class="flex-1 overflow-hidden">
-          <div class="overflow-y-auto" style="max-height: 400px;">
+        <div class="flex-1 overflow-y-auto">
+          <div style="max-height: 400px;">
             
             <!-- Activity Groups View -->
             <div x-show="!selectedGroup">
@@ -416,6 +416,9 @@
         this.selected = { activitycode: '', activityname: '' }
         this.closeModal()
       }
+
+      
+
     }
   }
 </script>
