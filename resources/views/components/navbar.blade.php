@@ -71,7 +71,7 @@
                                     class="absolute z-10 mt-2 w-[24rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
 
                                     <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenu: null }">
-                                        
+
                                         <!-- 1. Company -->
                                         @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
                                             <div @mouseenter="activeMenu = 'company'" @mouseleave="activeMenu = null" class="relative">
@@ -81,15 +81,15 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                     </svg>
                                                 </button>
-                                                
+
                                                 <!-- Submenu (empty for Company, but consistent structure) -->
-                                                <div x-show="activeMenu === 'company'" 
+                                                <div x-show="activeMenu === 'company'"
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 transform scale-95"
                                                     x-transition:enter-end="opacity-100 transform scale-100"
                                                     class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                     <div class="py-2">
-                                                        <x-childnav-link href="{{ route('master.company.index') }}" 
+                                                        <x-childnav-link href="{{ route('master.company.index') }}"
                                                             :active="request()->is('company')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Company
                                                         </x-childnav-link>
@@ -106,35 +106,42 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
-                                            
+
                                             <!-- Submenu -->
-                                            <div x-show="activeMenu === 'lahan'" 
+                                            <div x-show="activeMenu === 'lahan'"
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
                                                 class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                 <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.master-list.index') }}" 
+                                                    <x-childnav-link href="{{ route('master.master-list.index') }}"
                                                         :active="request()->is('master-list')" class="block px-4 py-2 hover:bg-gray-100">
                                                         Master List
                                                     </x-childnav-link>
-                                                    
+
+                                                    @if (in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                                        <x-childnav-link href="{{ route('master.blok.index') }}"
+                                                            :active="request()->is('blok')" class="block px-4 py-2 hover:bg-gray-100">
+                                                            Blok
+                                                        </x-childnav-link>
+                                                    @endif
+
                                                     @if (in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.plotting.index') }}" 
+                                                        <x-childnav-link href="{{ route('master.plotting.index') }}"
                                                             :active="request()->is('plotting')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Plotting
                                                         </x-childnav-link>
                                                     @endif
-                                                    
+
                                                     @if (in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.mapping.index') }}" 
+                                                        <x-childnav-link href="{{ route('master.mapping.index') }}"
                                                             :active="request()->is('mapping')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Mapping
                                                         </x-childnav-link>
                                                     @endif
-                                                    
+
                                                     @if (in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.kategori.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
                                                             :active="request()->is('kategori')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Kategori
                                                         </x-childnav-link>
@@ -151,30 +158,30 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
-                                            
+
                                             <!-- Submenu -->
-                                            <div x-show="activeMenu === 'agronomi'" 
+                                            <div x-show="activeMenu === 'agronomi'"
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
                                                 class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                 <div class="py-2">
                                                     @if (in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.herbisida.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
                                                             :active="request()->is('herbisida')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Herbisida
                                                         </x-childnav-link>
                                                     @endif
-                                                    
+
                                                     @if (in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
                                                             :active="request()->is('herbisida-dosage')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Dosis Herbisida
                                                         </x-childnav-link>
                                                     @endif
-                                                    
+
                                                     @if (in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.varietas.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
                                                             :active="request()->is('varietas')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Varietas
                                                         </x-childnav-link>
@@ -191,9 +198,9 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
-                                            
+
                                             <!-- Submenu -->
-                                            <div x-show="activeMenu === 'karyawan'" 
+                                            <div x-show="activeMenu === 'karyawan'"
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
@@ -208,9 +215,9 @@
                                                     <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
                                                         Operator
                                                     </x-childnav-link>
-                                                    
+
                                                     @if (in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
                                                             :active="request()->is('jabatan')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Jabatan
                                                         </x-childnav-link>
@@ -228,15 +235,15 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                     </svg>
                                                 </button>
-                                                
+
                                                 <!-- Submenu (empty for Accounting but consistent structure) -->
-                                                <div x-show="activeMenu === 'accounting'" 
+                                                <div x-show="activeMenu === 'accounting'"
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 transform scale-95"
                                                     x-transition:enter-end="opacity-100 transform scale-100"
                                                     class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                     <div class="py-2">
-                                                        <x-childnav-link href="{{ route('masterdata.accounting.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
                                                             :active="request()->is('accounting')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Accounting
                                                         </x-childnav-link>
@@ -253,23 +260,23 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
-                                            
+
                                             <!-- Submenu -->
-                                            <div x-show="activeMenu === 'user'" 
+                                            <div x-show="activeMenu === 'user'"
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
                                                 class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                 <div class="py-2">
                                                     @if (in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.username.index') }}" 
+                                                        <x-childnav-link href="{{ route('master.username.index') }}"
                                                             :active="request()->is('username') || request()->routeIs('master.username.*')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Kelola User
                                                         </x-childnav-link>
                                                     @endif
-                                                    
+
                                                     @if (in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.approval.index') }}" 
+                                                        <x-childnav-link href="{{ route('masterdata.approval.index') }}"
                                                             :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
                                                             Approval
                                                         </x-childnav-link>
@@ -286,21 +293,55 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </button>
-                                            
+
                                             <!-- Submenu (empty for Aktivitas but consistent structure) -->
-                                            <div x-show="activeMenu === 'aktivitas'" 
+                                            <div x-show="activeMenu === 'aktivitas'"
                                                 x-transition:enter="transition ease-out duration-100"
                                                 x-transition:enter-start="opacity-0 transform scale-95"
                                                 x-transition:enter-end="opacity-100 transform scale-100"
                                                 class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                                 <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}" 
+                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}"
                                                         :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
                                                         Aktivitas
                                                     </x-childnav-link>
                                                 </div>
                                             </div>
                                         </div>
+
+
+                                        <!-- 8. Applikasi -->
+                                        <div @mouseenter="activeMenu = 'applikasi'" @mouseleave="activeMenu = null" class="relative">
+                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                                <span>Aplikasi</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </button>
+
+                                            <!-- Submenu (empty for Aktivitas but consistent structure) -->
+                                            <div x-show="activeMenu === 'applikasi'"
+                                                x-transition:enter="transition ease-out duration-100"
+                                                x-transition:enter-start="opacity-0 transform scale-95"
+                                                x-transition:enter-end="opacity-100 transform scale-100"
+                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                                <div class="py-2">
+                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}"
+                                                        :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
+                                                        Menu
+                                                    </x-childnav-link>
+                                                    <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                                                        :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
+                                                        Submenu
+                                                    </x-childnav-link>
+                                                    <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                                                        :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
+                                                        Subsubmenu
+                                                    </x-childnav-link>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
 
