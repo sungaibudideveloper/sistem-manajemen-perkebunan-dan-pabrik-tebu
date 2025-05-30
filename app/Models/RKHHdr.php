@@ -9,7 +9,7 @@ class Rkhhdr extends Model
 {
     protected $table = 'rkhhdr';
 
-    protected $primaryKey = ['companycode', 'rkhno'];
+    protected $primaryKey = 'rkhno';
     public $incrementing = false; // karena primary key bukan auto increment
     public $timestamps = false; // karena pakai createdat & updatedat custom
 
@@ -44,6 +44,4 @@ class Rkhhdr extends Model
         return $date->format('Y-m-d H:i:s');
     }
 
-    // Kalau kamu butuh composite primary key, butuh trait tambahan atau override
-    // Tapi biasanya untuk operasi insert/update pakai manual query
 }

@@ -474,22 +474,11 @@ function activityPicker(rowIndex) {
       };
       
       // Update field kendaraan berdasarkan usingvehicle
-      this.updateKendaraanField();
       this.updateJenisField();
       
       this.closeModal();
     },
 
-    updateKendaraanField() {
-      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
-      if (kendaraanField) {
-        if (this.selected.usingvehicle === 1) {
-          kendaraanField.value = 'Ya';
-        } else if (this.selected.usingvehicle === null || this.selected.usingvehicle === 0) {
-          kendaraanField.value = 'Tidak';
-        }
-      }
-    },
 
     updateJenisField() {
     const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);

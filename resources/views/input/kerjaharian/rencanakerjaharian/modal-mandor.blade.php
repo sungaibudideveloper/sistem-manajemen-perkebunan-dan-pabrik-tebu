@@ -101,7 +101,13 @@
     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
       <div class="flex justify-between items-center text-xs text-gray-500">
         <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
-        <span>Klik untuk memilih</span>
+        <button
+              type="button"
+              @click.stop="clear()"
+              class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+            >
+              Clear Selected Mandor
+            </button>
       </div>
     </div>
   </div>
@@ -109,27 +115,58 @@
 
 @push('scripts')
 <script>
-  function mandorPicker() {
-    return {
-      open: false,
-      searchQuery: '',
-      mandors: @json($mandors ?? []),
-      selected: { companycode: '', id: '', name: '' },
+   function mandorPicker() {
+  return {
+    open: false,
+    searchQuery: '',
+    mandors: @json($mandors ?? []),
+    selected: { companycode: '', id: '', name: '' },
 
-      get filteredMandors() {
-        if (!this.searchQuery) return this.mandors;
-        const q = this.searchQuery.toString().toUpperCase();
-        return this.mandors.filter(m =>
-          m.name.toUpperCase().includes(q) ||
-          m.id.toString().toUpperCase().includes(q)
-        );
-      },
+    get filteredMandors() {
+      if (!this.searchQuery) return this.mandors;
+      const q = this.searchQuery.toString().toUpperCase();
+      return this.mandors.filter(m =>
+        m.name.toUpperCase().includes(q) ||
+        m.id.toString().toUpperCase().includes(q)
+      );
+    },
 
-      selectMandor(mandor) {
-        this.selected = mandor;
-        this.open = false;
-      },
+    selectMandor(mandor) {
+      this.selected = mandor;
+      this.open = false;
+      
+      // Update absen summary dengan semua parameter yang diperlukan
+      updateAbsenSummary(mandor.id, mandor.id, mandor.name);
+    },
+
+    clear() {
+      // Reset the selected mandor
+      this.selected = { companycode: '', id: '', name: '' };
+      // Optionally clear the search query
+      this.searchQuery = '';
+      // Reset the absen summary
+      updateAbsenSummary(null);
+    },
+
+    init() {
+      // Watch untuk perubahan selected mandor
+      this.$watch('selected.id', (newMandorId) => {
+        if (newMandorId) {
+          // Cari data mandor lengkap berdasarkan ID
+          const mandorData = this.mandors.find(m => m.id === newMandorId);
+          if (mandorData) {
+            updateAbsenSummary(newMandorId, mandorData.id, mandorData.name);
+          }
+        } else {
+          // Reset summary jika mandor di-unselect
+          updateAbsenSummary(null);
+        }
+      });
     }
+
+   
+    
   }
+}
 </script>
 @endpush

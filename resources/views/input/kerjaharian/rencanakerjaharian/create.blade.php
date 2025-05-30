@@ -3,6 +3,69 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
+  <form action="{{ route('input.kerjaharian.rencanakerjaharian.store') }}" method="POST">
+    @csrf
+
+       {{-- ERROR HANDLING - TARUH DI SINI --}}
+    @if ($errors->any())
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">
+                        Terdapat {{ $errors->count() }} kesalahan yang perlu diperbaiki:
+                    </h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <ul class="list-disc pl-5 space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if (session('success'))
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded-lg shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-green-800">
+                        {{ session('success') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-red-800">
+                        {{ session('error') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+    {{-- END ERROR HANDLING --}}
+
   <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
     <div class="flex justify-between items-start">
       <!-- KIRI: No RKH + Mandor + Tanggal -->
@@ -13,10 +76,18 @@
           <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
             {{ $rkhno ?? '-' }}
           </p>
+          <input type="hidden" name="rkhno" value="{{ $rkhno }}">
         </div>
 
       <!-- Mandor & Tanggal -->
-      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md">
+      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
+    @if(old('mandor_id'))
+        selected = {
+            id: '{{ old('mandor_id') }}',
+            name: '{{ old('mandor') }}'
+        }
+    @endif
+">
         <!-- Input Mandor -->
         <div>
           <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-2">Mandor</label>
@@ -28,22 +99,31 @@
             placeholder="Pilih Mandor"
             @click="open = true"
             :value="selected.id && selected.name ? `${selected.id} – ${selected.name}` : ''"
-            class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <input type="hidden" name="mandor_id" x-model="selected.id">
         </div>
 
         <!-- Input Tanggal -->
+        @php
+          $todayFormatted = \Carbon\Carbon::now()->format('d/m/Y');
+        @endphp
+
         <div>
           <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
-          <input
-            type="date"
-            name="tanggal"
-            id="tanggal"
-            value="{{ date('Y-m-d') }}"
-            class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
+<input
+  type="date"
+  name="tanggal"
+  id="tanggal"
+  value="{{ old('tanggal', \Carbon\Carbon::now()->format('Y-m-d')) }}"
+  class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium"
+  readonly
+/>
+@error('tanggal')
+  <p class="mt-1 text-red-600 text-sm">{{ $message }}</p>
+@enderror
         </div>
+        
 
         <!-- include modal di sini jika perlu -->
         @include('input.kerjaharian.rencanakerjaharian.modal-mandor')
@@ -56,7 +136,7 @@
         <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
         <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
       </div>
-      <p class="text-xs text-gray-600 mb-3">{{ date('d F Y') }}</p>
+      <p class="text-xs text-gray-600 mb-3" id="absen-info">{{ date('d/m/Y') }}</p>
       <div class="grid grid-cols-3 gap-4 text-center">
         <div class="bg-blue-50 rounded-lg p-3">
                 <div class="text-lg font-bold" id="summary-laki">0</div>
@@ -116,7 +196,7 @@
             <tbody class="divide-y divide-gray-100">
               {{-- Modifikasi untuk bagian table rows --}}
               @for ($i = 0; $i < 8; $i++)
-                <tr class="rkh-row hover:bg-blue-50 transition-colors">
+                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors">
 
                   <!-- #No -->
                   <td class="px-1 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
@@ -163,7 +243,7 @@
 
                   {{-- Sisa kolom tetap sama --}}
                   <!-- #Activity -->
-                  <td class="px-1 py-3" x-data="activityPicker({{ $i }})">
+                  <td class="px-1 py-3" ">
                     <div class="relative">
                       <input
                         type="text"
@@ -197,17 +277,17 @@
 
                   <!-- #Luas -->
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][luas]" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ old('rows.'.$i.'.luas') }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
 
                   <!-- #Tenaga Kerja -->
                   
 
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ old('rows.'.$i.'.laki_laki') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ old('rows.'.$i.'.perempuan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                   <td class="px-1 py-3">
                     <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-300 rounded-lg px-3 py-2 text-right bg-gray-100 font-semibold text-gray-700" readonly placeholder="-">
@@ -266,19 +346,35 @@
 
                   <!-- #Kendaraan -->
                   <td class="px-1 py-3">
+                    <!-- hidden input untuk usingvehicle, terikat ke Alpine -->
+                    <input 
+                      type="hidden" 
+                      name="rows[{{ $i }}][usingvehicle]" 
+                      x-model.number="selected.usingvehicle"
+                    >
+
+                    <!-- kolom Kendaraan -->
                     <input 
                       type="text" 
                       name="rows[{{ $i }}][kendaraan]" 
                       readonly 
+                      x-bind:value="
+                      selected.usingvehicle === 1 
+                        ? 'Ya' 
+                        : (selected.usingvehicle === 0 
+                            ? 'Tidak' 
+                            : '-'
+                          )
+                    "
                       class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
-                      placeholder="-"
                       id="kendaraan-{{ $i }}"
                     >
                   </td>
 
                   <td class="px-1 py-3">
-                    <input type="text" name="rows[{{ $i }}][keterangan]" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ old('rows.'.$i.'.keterangan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
+
                 </tr>
               @endfor
             </tbody>
@@ -352,14 +448,23 @@
 </button>
 
       </div>
-    </form>
+    
   </div>
+</form>
+
+
 
   <script>
 
+window.bloksData = @json($bloks ?? []);
+window.masterlistData = @json($masterlist ?? []);
+window.herbisidaData = @json($herbisidagroups ?? []);
+window.absenData = @json($absentenagakerja ?? []);
 
 // Pastikan data tersedia secara global
 document.addEventListener('DOMContentLoaded', function() {
+
+
   // Jika data dikirim dari controller, simpan ke variabel global
     if (typeof herbisidagroups !== 'undefined') {
     window.herbisidaData = herbisidagroups;
@@ -447,9 +552,6 @@ function calculateTotals() {
   document.getElementById('total-laki').textContent = lakiSum;
   document.getElementById('total-perempuan').textContent = perempuanSum;
   document.getElementById('total-tenaga').textContent = tenagaSum;
-  document.getElementById('summary-laki').textContent = lakiSum;
-  document.getElementById('summary-perempuan').textContent = perempuanSum;
-  document.getElementById('summary-total').textContent = tenagaSum;
 }
 
 function attachListeners(row) {
@@ -463,6 +565,94 @@ function attachListeners(row) {
   window.herbisidaData = @json($herbisidagroups ?? []);
   
   console.log('Herbisida data loaded:', window.herbisidaData); // De
+
+
+
+  // Validasi Checkin data form diisi
+
+  document.querySelector('form').addEventListener('submit', function(e) {
+    console.log('Form is being submitted');
+    
+    // Check if mandor is selected
+    const mandorId = document.querySelector('input[name="mandor_id"]').value;
+    if (!mandorId) {
+        e.preventDefault();
+        alert('Please select a Mandor');
+        return;
+    }
+    
+    // Check if at least one row has data
+    const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+    let hasData = false;
+    rows.forEach(row => {
+        const blok = row.querySelector('input[name$="[blok]"]').value;
+        const plot = row.querySelector('input[name$="[plot]"]').value;
+        const activity = row.querySelector('input[name$="[nama]"]').value;
+        if (blok && plot && activity) {
+            hasData = true;
+        }
+    });
+    
+    if (!hasData) {
+        e.preventDefault();
+        alert('Please fill at least one complete row');
+        return;
+    }
+});
+
+// Update function untuk menghitung absen berdasarkan mandor
+function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
+    if (!selectedMandorId || !window.absenData) {
+        // Reset ke 0 jika tidak ada mandor dipilih
+        document.getElementById('summary-laki').textContent = '0';
+        document.getElementById('summary-perempuan').textContent = '0';
+        document.getElementById('summary-total').textContent = '0';
+        // Reset absen info ke tanggal saja
+        const today = new Date().toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric'
+        });
+        document.getElementById('absen-info').textContent = today;
+        return;
+    }
+
+    // Update absen info dengan nama mandor
+    const today = new Date().toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric'
+    });
+    
+    if (selectedMandorCode && selectedMandorName) {
+        document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${today}`;
+    }
+
+    // Filter data absen berdasarkan mandor yang dipilih
+    const filteredAbsen = window.absenData.filter(absen => 
+        absen.idmandor === selectedMandorId
+    );
+
+    // Hitung jumlah berdasarkan gender
+    let lakiCount = 0;
+    let perempuanCount = 0;
+
+    filteredAbsen.forEach(absen => {
+        if (absen.gender === 'L') {
+            lakiCount++;
+        } else if (absen.gender === 'P') {
+            perempuanCount++;
+        }
+    });
+
+    const totalCount = lakiCount + perempuanCount;
+
+    // Update tampilan
+    document.getElementById('summary-laki').textContent = lakiCount;
+    document.getElementById('summary-perempuan').textContent = perempuanCount;
+    document.getElementById('summary-total').textContent = totalCount;
+}
+
 
   </script>
 </x-layout>
