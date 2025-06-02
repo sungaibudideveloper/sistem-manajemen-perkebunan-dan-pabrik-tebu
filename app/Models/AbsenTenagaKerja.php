@@ -20,23 +20,46 @@ class AbsenTenagaKerja extends Model
         'idmandor',
     ];
 
-        public function getDataAbsenFull($companycode,$date)
-    {
-        return DB::select(
-            "SELECT 
+        public function getDataAbsenFull($companycode, $date, $mandorId = null)
+{
+    $sql = "SELECT 
                 a.companycode,
                 a.absentime,
-                a.idtenagakerja,
+                a.idtenagakerja as id,
                 a.idmandor,
                 b.nama,
                 b.gender,
-                b.jenistenagakerja
+                b.jenistenagakerja,
+                m.name as mandor_nama,
+                TIME(a.absentime) as jam_absen
             FROM absentenagakerja a
             JOIN tenagakerja b ON a.idtenagakerja = b.idtenagakerja
+            LEFT JOIN mandor m ON a.idmandor = m.id
             WHERE a.companycode = ?
-            AND DATE(a.absentime) = ?",
-            [$companycode,$date]
-        );
+            AND DATE(a.absentime) = ?";
+    
+    $params = [$companycode, $date];
+    
+    if ($mandorId) {
+        $sql .= " AND a.idmandor = ?";
+        $params[] = $mandorId;
     }
+    
+    $sql .= " ORDER BY a.absentime";
+    
+    return DB::select($sql, $params);
+}
+
+public function getMandorList($companycode, $date)
+{
+    return DB::select(
+        "SELECT DISTINCT m.id, m.name
+         FROM absentenagakerja a
+         JOIN mandor m ON a.idmandor = m.id
+         WHERE a.companycode = ? AND DATE(a.absentime) = ?
+         ORDER BY m.name",
+        [$companycode, $date]
+    );
+}
 
 }
