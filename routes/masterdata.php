@@ -191,3 +191,6 @@ Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorCo
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
      ->name('masterdata.mandor.destroy')
      ->middleware(['auth', 'permission:Hapus Mandor']);
+
+
+Route::get('masterdata/menu', [AplikasiController::class, 'index'])->name('masterdata.menu.index');

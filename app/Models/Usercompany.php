@@ -3,36 +3,35 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
-class Usercompany extends Model
+class UserCompany extends Model
 {
-    public $incrementing = false;
     protected $table = 'usercompany';
-    // protected $primaryKey = ['usernm', 'companycode'];
-    protected $keyType = 'char';
-    protected $fillable = ['usernm', 'companycode', 'inputby', 'createdat', 'updatedat'];
 
-    public function setCreatedAt($value)
+    protected $primaryKey = 'userid';
+    public $incrementing = false;
+    public $timestamps = false;
+
+    protected $keyType = 'string';
+
+    protected $fillable = [
+        'userid',
+        'companycode',
+        'inputby',
+        'createdat',
+        'updatedat',
+    ];
+
+    protected $casts = [
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime',
+    ];
+
+    protected function serializeDate(\DateTimeInterface $date)
     {
-        $this->attributes['createdat'] = $value;
+        return $date->format('Y-m-d H:i:s');
     }
 
-    public function getCreatedAtAttribute()
-    {
-        return $this->attributes['createdat'];
-    }
-
-    protected function setKeysForSaveQuery($query)
-    {
-        $query->where('usernm', $this->getAttribute('usernm'))
-              ->where('companycode', $this->getAttribute('companycode'));
-
-        return $query;
-    }
-
-    public function company()
-    {
-        return $this->belongsTo(company::class, 'companycode', 'companycode');
-    }
 
 }

@@ -11,7 +11,7 @@ class company extends Model
     protected $table = 'company';
     protected $primaryKey = 'companycode';
     protected $keyType = 'char';
-    protected $fillable = ['companycode', 'nama', 'alamat', 'companyperiod', 'inputby', 'createdat', 'updatedat'];
+    protected $fillable = ['companycode', 'nama', 'alamat', 'companyperiod', 'inputby', 'companyinventory', 'createdat', 'updatedat'];
 
     public function setCreatedAt($value)
     {
@@ -31,6 +31,6 @@ class company extends Model
 
     public function usercomp()
     {
-        return $this->belongsTo(Usercompany::class, 'companycode', 'companycode');
+        return $this->belongsTo(UserCompany::class, 'companycode', 'companycode');
     }
 }

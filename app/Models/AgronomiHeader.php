@@ -62,6 +62,6 @@ class AgronomiHeader extends Model
 
     public function userComp()
     {
-        return $this->belongsTo(Usercompany::class, 'companycode', 'companycode');
+        return $this->belongsTo(UserCompany::class, 'companycode', 'companycode');
     }
 }

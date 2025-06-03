@@ -90,6 +90,7 @@ class CompanyController extends Controller
 
         DB::transaction(function () use ($request) {
             DB::table('company')->insert([
+                'companyinventory' => $request->companyinventory,
                 'companycode' => $request->companycode,
                 'name' => $request->nama,
                 'address' => $request->alamat,
@@ -114,7 +115,8 @@ class CompanyController extends Controller
                 'companycode' => $request->companycode,
                 'name' => $request->nama,
                 'address' => $request->alamat,
-                'companuperiod' => $request->tgl,
+                'companyperiod' => $request->tgl,
+                'companyinventory' => $request->companyinventory,
             ]
         ]);
     }
@@ -128,6 +130,7 @@ class CompanyController extends Controller
                 'name' => $request->nama,
                 'address' => $request->alamat,
                 'companyperiod' => $request->tgl,
+                'companyinventory' => $request->companyinventory,
                 'updatedat' => now()
             ]);
         });

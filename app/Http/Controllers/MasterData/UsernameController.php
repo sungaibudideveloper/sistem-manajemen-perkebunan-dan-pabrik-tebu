@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\MasterData;
 use App\Http\Controllers\Controller;
 
-use App\Models\Usercompany;
+use App\Models\UserCompany;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Http\Request;
