@@ -10,8 +10,8 @@ class Rkhhdr extends Model
     protected $table = 'rkhhdr';
 
     protected $primaryKey = 'rkhno';
-    public $incrementing = false; // karena primary key bukan auto increment
-    public $timestamps = false; // karena pakai createdat & updatedat custom
+    public $incrementing = false;
+    public $timestamps = false;
 
     protected $keyType = 'string';
 
@@ -22,26 +22,43 @@ class Rkhhdr extends Model
         'manpower',
         'totalluas',
         'mandorid',
-        'approval',
+        'jumlahapproval',
+        'approval1idjabatan',
+        'approval1userid',
+        'approval1date',
+        'approval2idjabatan',
+        'approval2userid',
+        'approval2date',
+        'approvali3djabatan',
+        'approval3userid',
+        'approval3date',
         'status',
         'inputby',
         'createdat',
         'updateby',
-        'updatedat'
+        'updatedat',
     ];
 
     protected $casts = [
-        'rkhdate'   => 'date',
-        'createdat' => 'datetime',
-        'updatedat' => 'datetime',
-        'manpower'  => 'integer',
-        'totalluas' => 'float',
+        'rkhdate'            => 'date',
+        'manpower'           => 'integer',
+        'totalluas'          => 'float',
+        'jumlahapproval'     => 'integer',
+        'approval1idjabatan' => 'integer',
+        'approval1date'      => 'datetime',
+        'approval2idjabatan' => 'integer',
+        'approval2date'      => 'datetime',
+        'approvali3djabatan' => 'integer',
+        'approval3date'      => 'datetime',
+        'createdat'          => 'datetime',
+        'updatedat'          => 'datetime',
     ];
 
-    // Gunakan Carbon instance
     protected function serializeDate(\DateTimeInterface $date)
     {
         return $date->format('Y-m-d H:i:s');
     }
+
+    
 
 }

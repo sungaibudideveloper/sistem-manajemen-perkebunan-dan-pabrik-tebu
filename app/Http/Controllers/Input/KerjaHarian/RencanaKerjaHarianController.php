@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+use App\Models\User;
 use App\Models\RkhHdr;
 use App\Models\Mandor;
 use App\Models\Activity;
@@ -296,7 +297,7 @@ $filteredRows = collect($request->input('rows', []))
         $generatedNoRkh = "RKH{$day}{$month}{$newNumber}{$year}";
 
         // Database table: mandor
-        $mandors = Mandor::orderBy('companycode')->orderBy('id')->get();
+        $mandors = User::getMandorByCompany(session('companycode'));
 
         // Database table : activity
         $activities = Activity::with('group')->orderBy('activitycode')->get();
