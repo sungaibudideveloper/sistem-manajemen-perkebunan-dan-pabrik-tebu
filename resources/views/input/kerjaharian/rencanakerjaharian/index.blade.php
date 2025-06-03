@@ -3,35 +3,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-<div x-data="{
-  showLKHModal: false,
-  showAbsenModal: false,
-  showGenerateDTHModal: false,
-  dthDate: '{{ request('filter_date', date('Y-m-d')) }}',
-  selectedRkhno: '',
-  lkhData: [],
-  absenDate: '{{ request('filter_date', date('Y-m-d')) }}',
-  absenList: @json($absentenagakerja ?? []),
-    selectedMandor: '',
-  mandorList: [],
-  
-  async loadAbsenData(date) {
-    try {
-        const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.loadAbsenByDate') }}?date=${date}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            this.absenList = data.data || [];
-        } else {
-            alert('Gagal memuat data absen: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat memuat data absen');
-    }
-  }
-}" class="relative">
-
+<div x-data="mainData()" class="relative">
 
         <div class="mx-auto bg-white rounded-md shadow-md p-6">
             {{-- Search & Filters --}}
@@ -529,7 +501,84 @@
         });
 
 
-        // Tambahkan fungsi ini ke dalam script section di file blade
+        function mainData() {
+        return {
+            showLKHModal: false,
+            showAbsenModal: false,
+            showGenerateDTHModal: false,
+            dthDate: '{{ request('filter_date', date('Y-m-d')) }}',
+            selectedRkhno: '',
+            lkhData: [],
+            absenDate: '{{ request('filter_date', date('Y-m-d')) }}',
+            absenList: @json($absentenagakerja ?? []),
+            selectedMandor: '',
+            mandorList: [],
+
+            async loadAbsenData(date, mandorId = '') {
+                try {
+                    const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.loadAbsenByDate') }}?date=${date}&mandor_id=${mandorId}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.absenList = data.data || [];
+                        this.mandorList = data.mandor_list || [];
+                    } else {
+                        alert('Gagal memuat data absen: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat memuat data absen');
+                }
+            },
+
+            async loadLKHData(rkhno) {
+                try {
+                    const response = await fetch(`/input/kerjaharian/rencanakerjaharian/${rkhno}/lkh`);
+                    const data = await response.json();
+                    if (data.success) {
+                        this.lkhData = data.lkh_data || [];
+                    } else {
+                        alert('Gagal memuat data LKH: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat memuat data LKH');
+                }
+            },
+
+            async generateDTH() {
+                if (!this.dthDate) {
+                    alert('Silakan pilih tanggal terlebih dahulu');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.generateDTH") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            date: this.dthDate
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('DTH berhasil di-generate');
+                        this.showGenerateDTHModal = false;
+                    } else {
+                        alert('Gagal generate DTH: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat generate DTH');
+                }
+            }
+        };
+    }
 
     </script>
 </x-layout>

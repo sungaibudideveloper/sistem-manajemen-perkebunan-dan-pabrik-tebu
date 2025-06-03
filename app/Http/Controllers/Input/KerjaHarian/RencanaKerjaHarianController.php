@@ -115,11 +115,6 @@ class RencanaKerjaHarianController extends Controller
             Carbon::parse($filterDate ?? Carbon::today())
         );
 
-        $mandorList = $absentenagakerjamodel->getMandorList(
-    $companycode,
-    Carbon::parse($filterDate ?? Carbon::today())
-);
-
 
         return view('input.kerjaharian.rencanakerjaharian.index', [
             'title' => 'Rencana Kerja Harian',
@@ -133,7 +128,6 @@ class RencanaKerjaHarianController extends Controller
             'allDate' => $allDate,
             'rkhData' => $rkhData,
             'absentenagakerja' => $absentenagakerja,
-            'mandorList' => $mandorList, // Tambahkan ini
         ]);
     }
 

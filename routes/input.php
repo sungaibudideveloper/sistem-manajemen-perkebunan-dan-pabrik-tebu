@@ -56,7 +56,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 });
 
 
-//Kerja Harian
+//Rencana Kerja Harian
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
     Route::post('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
