@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\DB;
 
+use App\Models\Use_hdr;
+use App\Models\Use_lst;
+
 class GudangController extends Controller
 {
-
+ 
     public function __construct()
     {
         View::share([
@@ -39,6 +42,40 @@ class GudangController extends Controller
         return view('input.gudang.index')->with([
             'title'         => 'Gudang',
             'perPage'       => $perPage
+        ]);
+    }
+
+    public function home(Request $request)
+    {   $Use_hdr = new Use_hdr; 
+        $usehdr= $Use_hdr->selectuse(session('companycode'));
+        
+        $title = "Gudang";
+
+        if ($request->isMethod('post')) {
+            $request->validate(['perPage' => 'required|integer|min:1']);
+            $request->session()->put('perPage', $request->input('perPage'));
+        }
+
+        $perPage = $request->session()->get('perPage', 10);
+
+        $usehdr = Use_hdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
+        
+        return view('input.gudang.home')->with([
+            'title'         => 'Gudang',
+            'usehdr'        => $usehdr,
+            'perPage'       => $perPage
+        ]);
+    }
+
+    public function detail(Request $request)
+    {   $Use_hdr = new Use_hdr; 
+        $usedoc= $Use_hdr->selectuse(session('companycode'),1);
+        
+        $title = "Gudang";
+dd($usedoc);
+        return view('input.gudang.detail')->with([
+            'title'         => 'Gudang',
+            'usedoc'        => $usedoc,
         ]);
     }
 

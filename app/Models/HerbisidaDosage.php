@@ -10,17 +10,14 @@ class HerbisidaDosage extends Model
 
     public $timestamps = false;
 
-    protected $primaryKey = 'activitycode';
     public $incrementing = false;        // kalau key-nya string/non-numeric
     protected $keyType = 'string';
 
     protected $fillable = [
         'companycode',
-        'activitycode',
+        'herbisidagroupid',
         'itemcode',
-        'time',
-        'description',
-        'totaldosage',
+        'dosageperha',
         'dosageunit',
         'inputby',
         'updateby',
@@ -29,7 +26,7 @@ class HerbisidaDosage extends Model
     ];
 
     protected $casts = [
-        'totaldosage' => 'decimal:2',
+        'dosageperha' => 'decimal:2',
         'createdat'   => 'datetime',
         'updatedat'   => 'datetime',
     ];

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
 use App\Models\Herbisida;
+use App\Models\Herbisidagroup;
 
 class HerbisidaController extends Controller
 {
@@ -126,7 +127,7 @@ class HerbisidaController extends Controller
     }
 
     public function destroy(Request $request, $companycode, $itemcode)
-{
+    {
 
     Herbisida::where([
         ['companycode', $companycode],
@@ -134,5 +135,12 @@ class HerbisidaController extends Controller
     ])->delete();
 
     return redirect()->back()->with('success','Data berhasil di‑hapus.');
-}
+    }
+
+    public function group(Request $request){ 
+        // return Herbisidagroup::where('herbisidagroupid', $request->herbisidagroupid)->select('herbisidagroupid','herbisidagroupname')->get();
+        return Herbisidagroup::get();
+     }
+
+
 }

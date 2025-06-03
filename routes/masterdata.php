@@ -86,6 +86,7 @@ Route::group(['middleware' => ['auth', 'permission:Hak Akses']], function () {
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('masterdata/herbisida', [HerbisidaController::class, 'index'])->name('masterdata.herbisida.index');
     Route::post('masterdata/herbisida', [HerbisidaController::class, 'store'])->name('masterdata.herbisida.store');
+    Route::get('masterdata/herbisida/group', [HerbisidaController::class, 'group'])->name('masterdata.herbisida.group');
     Route::get('masterdata/herbisida/items', function (\Illuminate\Http\Request $request) {
         return \App\Models\Herbisida::where('companycode', $request->companycode)
             ->select('itemcode','itemname')->orderBy('itemcode')->get();})->name('masterdata.herbisida.items'); // Route untuk mengambil itemcode & itemname (loadtems()) dalam array JSON
