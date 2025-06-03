@@ -73,11 +73,11 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.id">
+            <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.userid">
               <tr @click="selectMandor(mandor)"
                 class="hover:bg-blue-50 cursor-pointer transition-colors duration-150 group">
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-medium text-gray-900" x-text="mandor.id"></span>
+                  <span class="text-sm font-medium text-gray-900" x-text="mandor.userid"></span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900 font-medium" x-text="mandor.name"></div>
@@ -120,14 +120,14 @@
     open: false,
     searchQuery: '',
     mandors: @json($mandors ?? []),
-    selected: { companycode: '', id: '', name: '' },
+    selected: { companycode: '', userid: '', name: '' },
 
     get filteredMandors() {
       if (!this.searchQuery) return this.mandors;
       const q = this.searchQuery.toString().toUpperCase();
       return this.mandors.filter(m =>
         m.name.toUpperCase().includes(q) ||
-        m.id.toString().toUpperCase().includes(q)
+        m.userid.toString().toUpperCase().includes(q)
       );
     },
 
@@ -136,33 +136,19 @@
       this.open = false;
       
       // Update absen summary dengan semua parameter yang diperlukan
-      updateAbsenSummary(mandor.id, mandor.id, mandor.name);
+      updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
     },
 
     clear() {
       // Reset the selected mandor
-      this.selected = { companycode: '', id: '', name: '' };
+      this.selected = { companycode: '', userid: '', name: '' };
       // Optionally clear the search query
       this.searchQuery = '';
       // Reset the absen summary
       updateAbsenSummary(null);
     },
 
-    init() {
-      // Watch untuk perubahan selected mandor
-      this.$watch('selected.id', (newMandorId) => {
-        if (newMandorId) {
-          // Cari data mandor lengkap berdasarkan ID
-          const mandorData = this.mandors.find(m => m.id === newMandorId);
-          if (mandorData) {
-            updateAbsenSummary(newMandorId, mandorData.id, mandorData.name);
-          }
-        } else {
-          // Reset summary jika mandor di-unselect
-          updateAbsenSummary(null);
-        }
-      });
-    }
+    
 
    
     

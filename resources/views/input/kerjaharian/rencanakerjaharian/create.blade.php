@@ -83,7 +83,7 @@
       <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
     @if(old('mandor_id'))
         selected = {
-            id: '{{ old('mandor_id') }}',
+            userid: '{{ old('mandor_id') }}',
             name: '{{ old('mandor') }}'
         }
     @endif
@@ -98,10 +98,10 @@
             readonly
             placeholder="Pilih Mandor"
             @click="open = true"
-            :value="selected.id && selected.name ? `${selected.id} – ${selected.name}` : ''"
+            :value="selected.userid && selected.name ? `${selected.userid} – ${selected.name}` : ''"
             class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-          <input type="hidden" name="mandor_id" x-model="selected.id">
+          <input type="hidden" name="mandor_id" x-model="selected.userid">
         </div>
 
         <!-- Input Tanggal -->
@@ -623,7 +623,7 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
         month: '2-digit', 
         year: 'numeric'
     });
-    
+
     if (selectedMandorCode && selectedMandorName) {
         document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${today}`;
     }

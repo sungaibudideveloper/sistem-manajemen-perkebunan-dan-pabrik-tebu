@@ -35,22 +35,22 @@ class RencanaKerjaHarianController extends Controller
 
         // Query dasar
         $query = DB::table('rkhhdr as r')
-            ->leftJoin('mandor as m', 'r.mandorid', '=', 'm.id')
-            ->where('r.companycode', $companycode)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                DB::raw('CASE 
-                    WHEN r.approval IS NULL THEN "Waiting"
-                    WHEN r.approval = "1" THEN "Approved" 
-                    WHEN r.approval = "0" THEN "Decline"
-                    ELSE "Waiting"
-                END as approval_status'),
-                DB::raw('CASE 
-                    WHEN r.status = "Done" THEN "Done"
-                    ELSE "On Progress"
-                END as current_status')
-            ]);
+        ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid') // <- ini diperbaiki
+        ->where('r.companycode', $companycode)
+        ->select([
+            'r.*',
+            'm.name as mandor_nama',
+            DB::raw('CASE 
+                WHEN r.approval1flag IS NULL THEN "Waiting"
+                WHEN r.approval1flag = "1" THEN "Approved" 
+                WHEN r.approval1flag = "0" THEN "Decline"
+                ELSE "Waiting"
+            END as approval_status'),
+            DB::raw('CASE 
+                WHEN r.status = "Done" THEN "Done"
+                ELSE "On Progress"
+            END as current_status')
+        ]);
 
         // Filter pencarian
         if ($search) {
@@ -61,13 +61,13 @@ class RencanaKerjaHarianController extends Controller
         if ($filterApproval) {
             switch ($filterApproval) {
                 case 'Approved':
-                    $query->where('r.approval', '1');
+                    $query->where('r.approval1flag', '1');
                     break;
                 case 'Waiting':
-                    $query->whereNull('r.approval');
+                    $query->whereNull('r.approva1flagl');
                     break;
                 case 'Decline':
-                    $query->where('r.approval', '0');
+                    $query->where('r.approval1flag', '0');
                     break;
             }
         }
@@ -186,7 +186,7 @@ $filteredRows = collect($request->input('rows', []))
         try {
         $request->validate([
             'rkhno'                  => 'required|string',
-            'mandor_id'              => 'required|exists:mandor,id',
+            'mandor_id'              => 'required|exists:user,userid',
             'tanggal'                => 'required|date',
             'rows'                   => 'required|array|min:1',
             'rows.*.blok'            => 'required|string',
