@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Controller; 
 use App\Models\Accounting;
 use Illuminate\Support\Facades\Auth;
 

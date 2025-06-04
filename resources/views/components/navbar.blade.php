@@ -10,9 +10,9 @@
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-2">
                         @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
-                            <div class="relative" x-data="{ isMasterOpen: false }">
-                                <button @click="isMasterOpen = !isMasterOpen"
-                                    :class="{
+                        <div class="relative" x-data="{ isMasterOpen: false }">
+                            <button @click="isMasterOpen = !isMasterOpen"
+                                :class="{
                                         'bg-red-1000 text-white': {{ request()->is('company') ||
                                             request()->is('blok') ||
                                             request()->is('plotting') ||
@@ -47,310 +47,312 @@
                                                     request()->routeIs('master.username.edit') }}
                                             )
                                     }"
-                                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                                    Master
-                                    <!-- Arrow Icon -->
-                                    <svg class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                        :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
+                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                Master
+                                <!-- Arrow Icon -->
+                                <svg class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
 
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <!-- Dropdown Content -->
-                                <!-- Mega Menu - Side Panel Structure -->
-                                <div x-show="isMasterOpen" @click.away="isMasterOpen = false" style="display: none;"
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 transform scale-100"
-                                    x-transition:leave-end="opacity-0 transform scale-95"
-                                    class="absolute z-10 mt-2 w-[24rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Content -->
+                            <!-- Mega Menu - Side Panel Structure -->
+                            <div x-show="isMasterOpen" @click.away="isMasterOpen = false" style="display: none;"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 transform scale-100"
+                                x-transition:leave-end="opacity-0 transform scale-95"
+                                class="absolute z-10 mt-2 w-[24rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
 
-                                    <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenu: null }">
+                                <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenu: null }">
 
-                                        <!-- 1. Company -->
-                                        @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                                            <div @mouseenter="activeMenu = 'company'" @mouseleave="activeMenu = null" class="relative">
-                                                <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                    <span>Company</span>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </button>
+                                    <!-- 1. Company -->
+                                    @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
+                                    <div @mouseenter="activeMenu = 'company'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Company</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
 
-                                                <!-- Submenu (empty for Company, but consistent structure) -->
-                                                <div x-show="activeMenu === 'company'"
-                                                    x-transition:enter="transition ease-out duration-100"
-                                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                                    class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                    <div class="py-2">
-                                                        <x-childnav-link href="{{ route('master.company.index') }}"
-                                                            :active="request()->is('company')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Company
-                                                        </x-childnav-link>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endif
-
-                                        <!-- 2. Master Lahan -->
-                                        <div @mouseenter="activeMenu = 'lahan'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Master Lahan</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu -->
-                                            <div x-show="activeMenu === 'lahan'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.master-list.index') }}"
-                                                        :active="request()->is('master-list')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Master List
-                                                    </x-childnav-link>
-
-                                                    @if (in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.blok.index') }}"
-                                                            :active="request()->is('blok')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Blok
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.plotting.index') }}"
-                                                            :active="request()->is('plotting')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Plotting
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.mapping.index') }}"
-                                                            :active="request()->is('mapping')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Mapping
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
-                                                            :active="request()->is('kategori')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Kategori
-                                                        </x-childnav-link>
-                                                    @endif
-                                                </div>
+                                        <!-- Submenu (empty for Company, but consistent structure) -->
+                                        <div x-show="activeMenu === 'company'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="{{ route('master.company.index') }}"
+                                                    :active="request()->is('company')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Company
+                                                </x-childnav-link>
                                             </div>
                                         </div>
-
-                                        <!-- 3. Agronomi -->
-                                        <div @mouseenter="activeMenu = 'agronomi'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Agronomi</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu -->
-                                            <div x-show="activeMenu === 'agronomi'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    @if (in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
-                                                            :active="request()->is('herbisida')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Herbisida
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
-                                                            :active="request()->is('herbisida-dosage')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Dosis Herbisida
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
-                                                            :active="request()->is('varietas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Varietas
-                                                        </x-childnav-link>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- 4. Karyawan & Tenaga Kerja -->
-                                        <div @mouseenter="activeMenu = 'karyawan'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Karyawan & Tenaga Kerja</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu -->
-                                            <div x-show="activeMenu === 'karyawan'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Mandor
-                                                    </x-childnav-link>
-                                                    <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Tenaga Kerja
-                                                    </x-childnav-link>
-                                                    <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Operator
-                                                    </x-childnav-link>
-
-                                                    @if (in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
-                                                            :active="request()->is('jabatan')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Jabatan
-                                                        </x-childnav-link>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- 5. Accounting -->
-                                        @if (in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
-                                            <div @mouseenter="activeMenu = 'accounting'" @mouseleave="activeMenu = null" class="relative">
-                                                <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                    <span>Accounting</span>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </button>
-
-                                                <!-- Submenu (empty for Accounting but consistent structure) -->
-                                                <div x-show="activeMenu === 'accounting'"
-                                                    x-transition:enter="transition ease-out duration-100"
-                                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                                    class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                    <div class="py-2">
-                                                        <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
-                                                            :active="request()->is('accounting')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Accounting
-                                                        </x-childnav-link>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endif
-
-                                        <!-- 6. User & Approval -->
-                                        <div @mouseenter="activeMenu = 'user'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>User & Approval</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu -->
-                                            <div x-show="activeMenu === 'user'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    @if (in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('master.username.index') }}"
-                                                            :active="request()->is('username') || request()->routeIs('master.username.*')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Kelola User
-                                                        </x-childnav-link>
-                                                    @endif
-
-                                                    @if (in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                                                        <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                                            :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
-                                                            Approval
-                                                        </x-childnav-link>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- 7. Aktivitas -->
-                                        <div @mouseenter="activeMenu = 'aktivitas'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Aktivitas</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu (empty for Aktivitas but consistent structure) -->
-                                            <div x-show="activeMenu === 'aktivitas'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}"
-                                                        :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Aktivitas
-                                                    </x-childnav-link>
-                                                </div>
-                                            </div>
-                                        </div>
-
-
-                                        <!-- 8. Applikasi -->
-                                        <div @mouseenter="activeMenu = 'applikasi'" @mouseleave="activeMenu = null" class="relative">
-                                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                                <span>Aplikasi</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Submenu (empty for Aktivitas but consistent structure) -->
-                                            <div x-show="activeMenu === 'applikasi'"
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 transform scale-95"
-                                                x-transition:enter-end="opacity-100 transform scale-100"
-                                                class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                                <div class="py-2">
-                                                    <x-childnav-link href="{{ route('master.aktivitas.index') }}"
-                                                        :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Menu
-                                                    </x-childnav-link>
-                                                    <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                                        :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Submenu
-                                                    </x-childnav-link>
-                                                    <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                                        :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
-                                                        Subsubmenu
-                                                    </x-childnav-link>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                     </div>
-                                </div>
+                                    @endif
 
+                                    <!-- 2. Master Lahan -->
+                                    <div @mouseenter="activeMenu = 'lahan'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Master Lahan</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu -->
+                                        <div x-show="activeMenu === 'lahan'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="{{ route('master.master-list.index') }}"
+                                                    :active="request()->is('master-list')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Master List
+                                                </x-childnav-link>
+
+                                                @if (in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('master.blok.index') }}"
+                                                    :active="request()->is('blok')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Blok
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('master.plotting.index') }}"
+                                                    :active="request()->is('plotting')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Plotting
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('master.mapping.index') }}"
+                                                    :active="request()->is('mapping')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Mapping
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
+                                                    :active="request()->is('kategori')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Kategori
+                                                </x-childnav-link>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. Agronomi -->
+                                    <div @mouseenter="activeMenu = 'agronomi'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Agronomi</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu -->
+                                        <div x-show="activeMenu === 'agronomi'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                @if (in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
+                                                    :active="request()->is('herbisida')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Herbisida
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
+                                                    :active="request()->is('herbisida-dosage')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Dosis Herbisida
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
+                                                    :active="request()->is('varietas')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Varietas
+                                                </x-childnav-link>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Karyawan & Tenaga Kerja -->
+                                    <div @mouseenter="activeMenu = 'karyawan'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Karyawan & Tenaga Kerja</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu -->
+                                        <div x-show="activeMenu === 'karyawan'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Mandor
+                                                </x-childnav-link>
+                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Tenaga Kerja
+                                                </x-childnav-link>
+                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Operator
+                                                </x-childnav-link>
+
+                                                @if (in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
+                                                    :active="request()->is('jabatan')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Jabatan
+                                                </x-childnav-link>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 5. Accounting -->
+                                    @if (in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                                    <div @mouseenter="activeMenu = 'accounting'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Accounting</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu (empty for Accounting but consistent structure) -->
+                                        <div x-show="activeMenu === 'accounting'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
+                                                    :active="request()->is('accounting')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Accounting
+                                                </x-childnav-link>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <!-- 6. User & Approval -->
+                                    <div @mouseenter="activeMenu = 'user'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>User & Approval</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu -->
+                                        <div x-show="activeMenu === 'user'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                @if (in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('master.username.index') }}"
+                                                    :active="request()->is('username') || request()->routeIs('master.username.*')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Kelola User
+                                                </x-childnav-link>
+                                                @endif
+
+                                                @if (in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
+                                                <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                                                    :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Approval
+                                                </x-childnav-link>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 7. Aktivitas -->
+                                    <div @mouseenter="activeMenu = 'aktivitas'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Aktivitas</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu (empty for Aktivitas but consistent structure) -->
+                                        <div x-show="activeMenu === 'aktivitas'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="{{ route('master.aktivitas.index') }}"
+                                                    :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Aktivitas
+                                                </x-childnav-link>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <!-- 8. Applikasi -->
+                                    <div @mouseenter="activeMenu = 'applikasi'" @mouseleave="activeMenu = null" class="relative">
+                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
+                                            <span>Aplikasi</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Submenu (empty for Aktivitas but consistent structure) -->
+                                        <div x-show="activeMenu === 'applikasi'"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                            <div class="py-2">
+                                                <x-childnav-link href="{{ route('aplikasi.menu.index') }}"
+                                                    :active="request()->is('aplikasi/menu*')"
+                                                    class="block px-4 py-2 hover:bg-gray-100">
+                                                    Menu
+                                                </x-childnav-link>
+
+                                                <x-childnav-link href="{{ route('aplikasi.submenu.index') }}"
+                                                    :active="request()->is('aplikasi/submenu*')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Submenu
+                                                </x-childnav-link>
+                                                <x-childnav-link href="{{ route('aplikasi.subsubmenu.index') }}"
+                                                    :active="request()->is('aplikasi/subsubmenu*')" class="block px-4 py-2 hover:bg-gray-100">
+                                                    Subsubmenu
+                                                </x-childnav-link>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
                             </div>
+
+                        </div>
                         @endif
                         @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
-                            <div class="relative" x-data="{ isInputOpen: false }">
-                                <button @click="isInputOpen = !isInputOpen"
-                                    :class="{
+                        <div class="relative" x-data="{ isInputOpen: false }">
+                            <button @click="isInputOpen = !isInputOpen"
+                                :class="{
                                         'bg-red-1000 text-white': {{ request()->is('agronomi') ||
                                             request()->is('hpt') ||
                                             request()->routeIs('input.agronomi.create') ||
@@ -369,189 +371,189 @@
                                                     request()->routeIs('input.rkh.edit') }}
                                             )
                                     }"
-                                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                                    Input Data
-                                    <!-- Arrow Icon -->
-                                    <svg :class="{ 'rotate-180': isInputOpen, 'rotate-0': !isInputOpen }"
-                                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <!-- Dropdown Content -->
-                                <div x-show="isInputOpen" @click.away="isInputOpen = false" style="display: none;"
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 transform scale-100"
-                                    x-transition:leave-end="opacity-0 transform scale-95"
-                                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                    @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('input.agronomi.index') }}"
-                                            :active="request()->is('agronomi') ||
+                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                Input Data
+                                <!-- Arrow Icon -->
+                                <svg :class="{ 'rotate-180': isInputOpen, 'rotate-0': !isInputOpen }"
+                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Content -->
+                            <div x-show="isInputOpen" @click.away="isInputOpen = false" style="display: none;"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 transform scale-100"
+                                x-transition:leave-end="opacity-0 transform scale-95"
+                                class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('input.agronomi.index') }}"
+                                    :active="request()->is('agronomi') ||
                                                 request()->routeIs('input.agronomi.create') ||
                                                 request()->routeIs('input.agronomi.edit')">Agronomi</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('input.hpt.index') }}"
-                                            :active="request()->is('hpt') ||
+                                @endif
+                                @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('input.hpt.index') }}"
+                                    :active="request()->is('hpt') ||
                                                 request()->routeIs('input.hpt.create') ||
                                                 request()->routeIs('input.hpt.edit')">HPT</x-childnav-link>
-                                    @endif
+                                @endif
 
-                                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}"
-                                            :active="request()->is('hpt') ||
+                                @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}"
+                                    :active="request()->is('hpt') ||
                                                 request()->routeIs('input.rkh.create') ||
                                                 request()->routeIs('input.rkh.edit')">Rencana Kerja Harian</x-childnav-link>
-                                    @endif
+                                @endif
 
-                                    <x-childnav-link href="{{ route('input.gudang.index') }}"
-                                        :active="request()->is('gudang')">Gudang</x-childnav-link>
-                                </div>
+                                <x-childnav-link href="{{ route('input.gudang.index') }}"
+                                    :active="request()->is('gudang')">Gudang</x-childnav-link>
                             </div>
+                        </div>
                         @endif
                         @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
-                            <div class="relative" x-data="{ isReportOpen: false }">
-                                <button @click="isReportOpen = !isReportOpen"
-                                    :class="{
+                        <div class="relative" x-data="{ isReportOpen: false }">
+                            <button @click="isReportOpen = !isReportOpen"
+                                :class="{
                                         'bg-red-1000 text-white': {{ request()->is('agronomireport') || request()->is('hptreport') }},
                                         'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                             !(
                                                 {{ request()->is('agronomireport') || request()->is('hptreport') }}
                                             )
                                     }"
-                                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                                    Report
-                                    <!-- Arrow Icon -->
-                                    <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
-                                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <!-- Dropdown Content -->
-                                <div x-show="isReportOpen" @click.away="isReportOpen = false" style="display: none;"
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 transform scale-100"
-                                    x-transition:leave-end="opacity-0 transform scale-95"
-                                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                    @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('report.agronomi.index') }}"
-                                            :active="request()->is('agronomireport')">Agronomi</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('report.hpt.index') }}"
-                                            :active="request()->is('hptreport')">HPT</x-childnav-link>
-                                    @endif
-                                </div>
+                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                Report
+                                <!-- Arrow Icon -->
+                                <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
+                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Content -->
+                            <div x-show="isReportOpen" @click.away="isReportOpen = false" style="display: none;"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 transform scale-100"
+                                x-transition:leave-end="opacity-0 transform scale-95"
+                                class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('report.agronomi.index') }}"
+                                    :active="request()->is('agronomireport')">Agronomi</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('report.hpt.index') }}"
+                                    :active="request()->is('hptreport')">HPT</x-childnav-link>
+                                @endif
                             </div>
+                        </div>
                         @endif
 
                         @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
-                            <div class="relative" x-data="{ isDashboardOpen: false }">
-                                <button @click="isDashboardOpen = !isDashboardOpen"
-                                    :class="{
+                        <div class="relative" x-data="{ isDashboardOpen: false }">
+                            <button @click="isDashboardOpen = !isDashboardOpen"
+                                :class="{
                                         'bg-red-1000 text-white': {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }},
                                         'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                             !(
                                                 {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }}
                                             )
                                     }"
-                                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                                    Dashboard
-                                    <!-- Arrow Icon -->
-                                    <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
-                                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <!-- Dropdown Content -->
-                                <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
-                                    style="display: none;" x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 transform scale-100"
-                                    x-transition:leave-end="opacity-0 transform scale-95"
-                                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                    @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('dashboard.agronomi') }}"
-                                            :active="request()->is('agronomidashboard')">Agronomi</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('dashboard.hpt') }}"
-                                            :active="request()->is('hptdashboard')">HPT</x-childnav-link>
-                                    @endif
-                                </div>
+                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                Dashboard
+                                <!-- Arrow Icon -->
+                                <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
+                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Content -->
+                            <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
+                                style="display: none;" x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 transform scale-100"
+                                x-transition:leave-end="opacity-0 transform scale-95"
+                                class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('dashboard.agronomi') }}"
+                                    :active="request()->is('agronomidashboard')">Agronomi</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('dashboard.hpt') }}"
+                                    :active="request()->is('hptdashboard')">HPT</x-childnav-link>
+                                @endif
                             </div>
+                        </div>
                         @endif
 
                         @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
-                            <div class="relative" x-data="{ isProcessOpen: false }">
-                                <button @click="isProcessOpen = !isProcessOpen"
-                                    :class="{
+                        <div class="relative" x-data="{ isProcessOpen: false }">
+                            <button @click="isProcessOpen = !isProcessOpen"
+                                :class="{
                                         'bg-red-1000 text-white': {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }},
                                         'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                             !(
                                                 {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }}
                                             )
                                     }"
-                                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                                    Process
-                                    <!-- Arrow Icon -->
-                                    <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
-                                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <!-- Dropdown Content -->
-                                <div x-show="isProcessOpen" @click.away="isProcessOpen = false"
-                                    style="display: none;" x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 transform scale-100"
-                                    x-transition:leave-end="opacity-0 transform scale-95"
-                                    class="absolute z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                    @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('process.posting') }}"
-                                            :active="request()->is('posting')">Posting</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('process.unposting') }}"
-                                            :active="request()->is('unposting')">Unposting</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('upload.gpx.view') }}"
-                                            :active="request()->is('uploadgpx')">Upload
-                                            GPX File</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('export.kml.view') }}"
-                                            :active="request()->is('exportkml')">Export
-                                            KML File</x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
-                                        <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
-                                            onclick="return confirm('Yakin closing periode sekarang?')">Closing</x-childnav-link>
-                                    @endif
-                                </div>
+                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                Process
+                                <!-- Arrow Icon -->
+                                <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
+                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Content -->
+                            <div x-show="isProcessOpen" @click.away="isProcessOpen = false"
+                                style="display: none;" x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 transform scale-100"
+                                x-transition:leave-end="opacity-0 transform scale-95"
+                                class="absolute z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('process.posting') }}"
+                                    :active="request()->is('posting')">Posting</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('process.unposting') }}"
+                                    :active="request()->is('unposting')">Unposting</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('upload.gpx.view') }}"
+                                    :active="request()->is('uploadgpx')">Upload
+                                    GPX File</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('export.kml.view') }}"
+                                    :active="request()->is('exportkml')">Export
+                                    KML File</x-childnav-link>
+                                @endif
+                                @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
+                                <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
+                                    onclick="return confirm('Yakin closing periode sekarang?')">Closing</x-childnav-link>
+                                @endif
                             </div>
+                        </div>
                         @endif
                     </div>
                 </div>
@@ -560,9 +562,9 @@
             <div class="hidden md:block">
                 <div class="ml-4 flex items-center md:ml-6">
                     @php
-                        $compName = DB::table('company')
-                            ->where('companycode', '=', session('companycode'))
-                            ->value('name');
+                    $compName = DB::table('company')
+                    ->where('companycode', '=', session('companycode'))
+                    ->value('name');
                     @endphp
                     <div class="mr-3 text-right">
                         <div class="text-sm font-medium leading-none text-white opacity-70">
@@ -675,9 +677,9 @@
         <div class="flex px-2 pb-3 pt-2 flex-wrap">
 
             @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
-                <div class="relative" x-data="{ isMasterOpen: false }">
-                    <button @click="isMasterOpen = !isMasterOpen; isMasterActive = !isMasterActive"
-                        :class="{
+            <div class="relative" x-data="{ isMasterOpen: false }">
+                <button @click="isMasterOpen = !isMasterOpen; isMasterActive = !isMasterActive"
+                    :class="{
                             'bg-red-1000 text-white': {{ request()->is('company') ||
                                 request()->is('blok') ||
                                 request()->is('plotting') ||
@@ -712,92 +714,92 @@
                                         request()->routeIs('master.username.edit') }}
                                 )
                         }"
-                        class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        Master
-                        <!-- Arrow Icon -->
-                        <svg :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
-                            class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown Content -->
-                    <div x-show="isMasterOpen" @click.away="isMasterOpen = false"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                        class="absolute z-10 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                        @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.company.index') }}"
-                                :active="request()->is('company')">Company</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.blok.index') }}"
-                                :active="request()->is('blok')">Blok</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.plotting.index') }}"
-                                :active="request()->is('plotting')">Plotting</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.mapping.index') }}"
-                                :active="request()->is('mapping')">Mapping</x-childnav-link>
+                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    Master
+                    <!-- Arrow Icon -->
+                    <svg :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
+                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <!-- Dropdown Content -->
+                <div x-show="isMasterOpen" @click.away="isMasterOpen = false"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="absolute z-10 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('master.company.index') }}"
+                        :active="request()->is('company')">Company</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('master.blok.index') }}"
+                        :active="request()->is('blok')">Blok</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('master.plotting.index') }}"
+                        :active="request()->is('plotting')">Plotting</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('master.mapping.index') }}"
+                        :active="request()->is('mapping')">Mapping</x-childnav-link>
 
-                        @endif
-                        @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
-                                :active="request()->is('herbisida')">Herbisida</x-childnav-link>
-                        @endif
+                    @endif
+                    @if (auth()->user() && in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
+                        :active="request()->is('herbisida')">Herbisida</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
-                                :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
+                        :active="request()->is('herbisida-dosage')">Dosis Herbisida</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
-                                :active="request()->is('jabatan')">Jabatan</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
+                        :active="request()->is('jabatan')">Jabatan</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                :active="request()->is('approval')">Approval</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.approval.index') }}"
+                        :active="request()->is('approval')">Approval</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
-                                :active="request()->is('kategori')">Kategori</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
+                        :active="request()->is('kategori')">Kategori</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
-                                :active="request()->is('varietas')">Varietas</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
+                        :active="request()->is('varietas')">Varietas</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
-                                :active="request()->is('accounting')">Accounting</x-childnav-link>
-                        @endif
+                    @if (auth()->user() && in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
+                        :active="request()->is('accounting')">Accounting</x-childnav-link>
+                    @endif
 
-                        @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('master.username.index') }}" :active="request()->is('username') ||
+                    @if (auth()->user() && in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('master.username.index') }}" :active="request()->is('username') ||
                                 request()->routeIs('master.username.create') ||
                                 request()->routeIs('master.username.access') ||
                                 request()->routeIs('master.username.edit')">Kelola
-                                User</x-childnav-link>
-                        @endif
-                    </div>
+                        User</x-childnav-link>
+                    @endif
                 </div>
+            </div>
             @endif
             @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
-                <div class="relative" x-data="{ isInputDataOpen: false }">
-                    <button @click="isInputDataOpen = !isInputDataOpen; isInputDataActive = !isInputDataActive"
-                        :class="{
+            <div class="relative" x-data="{ isInputDataOpen: false }">
+                <button @click="isInputDataOpen = !isInputDataOpen; isInputDataActive = !isInputDataActive"
+                    :class="{
                             'bg-red-1000 text-white': {{ request()->is('agronomi') ||
                                 request()->is('hpt') ||
                                 request()->routeIs('input.agronomi.create') ||
@@ -814,177 +816,177 @@
                                         request()->routeIs('input.hpt.edit') }}
                                 )
                         }"
-                        class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        Input Data
-                        <!-- Arrow Icon -->
-                        <svg :class="{ 'rotate-180': isInputDataOpen, 'rotate-0': !isInputDataOpen }"
-                            class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown Content -->
-                    <div x-show="isInputDataOpen" @click.away="isInputDataOpen = false"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                        class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                        @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('input.agronomi.index') }}"
-                                :active="request()->is('agronomi') ||
+                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    Input Data
+                    <!-- Arrow Icon -->
+                    <svg :class="{ 'rotate-180': isInputDataOpen, 'rotate-0': !isInputDataOpen }"
+                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <!-- Dropdown Content -->
+                <div x-show="isInputDataOpen" @click.away="isInputDataOpen = false"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('input.agronomi.index') }}"
+                        :active="request()->is('agronomi') ||
                                     request()->routeIs('input.agronomi.create') ||
                                     request()->routeIs('input.agronomi.edit')">Agronomi</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('input.hpt.index') }}"
-                                :active="request()->is('hpt') ||
+                    @endif
+                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('input.hpt.index') }}"
+                        :active="request()->is('hpt') ||
                                     request()->routeIs('input.hpt.create') ||
                                     request()->routeIs('input.hpt.edit')">HPT</x-childnav-link>
-                        @endif
-                    </div>
+                    @endif
                 </div>
+            </div>
             @endif
             @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
-                <div class="relative" x-data="{ isReportOpen: false }">
-                    <button @click="isReportOpen = !isReportOpen"
-                        :class="{
+            <div class="relative" x-data="{ isReportOpen: false }">
+                <button @click="isReportOpen = !isReportOpen"
+                    :class="{
                             'bg-red-1000 text-white': {{ request()->is('agronomireport') || request()->is('hptreport') }},
                             'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                 !(
                                     {{ request()->is('agronomireport') || request()->is('hptreport') }}
                                 )
                         }"
-                        class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        Report
-                        <!-- Arrow Icon -->
-                        <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
-                            class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown Content -->
-                    <div x-show="isReportOpen" @click.away="isReportOpen = false"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                        class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                        @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('report.agronomi.index') }}"
-                                :active="request()->is('agronomireport')">Agronomi</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('report.hpt.index') }}"
-                                :active="request()->is('hptreport')">HPT</x-childnav-link>
-                        @endif
-                    </div>
+                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    Report
+                    <!-- Arrow Icon -->
+                    <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
+                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <!-- Dropdown Content -->
+                <div x-show="isReportOpen" @click.away="isReportOpen = false"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('report.agronomi.index') }}"
+                        :active="request()->is('agronomireport')">Agronomi</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('report.hpt.index') }}"
+                        :active="request()->is('hptreport')">HPT</x-childnav-link>
+                    @endif
                 </div>
+            </div>
             @endif
 
             @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
-                <div class="relative" x-data="{ isDashboardOpen: false }">
-                    <button @click="isDashboardOpen = !isDashboardOpen"
-                        :class="{
+            <div class="relative" x-data="{ isDashboardOpen: false }">
+                <button @click="isDashboardOpen = !isDashboardOpen"
+                    :class="{
                             'bg-red-1000 text-white': {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }},
                             'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                 !(
                                     {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }}
                                 )
                         }"
-                        class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        Dashboard
-                        <!-- Arrow Icon -->
-                        <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
-                            class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown Content -->
-                    <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                        class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                        @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('dashboard.agronomi') }}"
-                                :active="request()->is('agronomidashboard')">Agronomi</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('dashboard.hpt') }}"
-                                :active="request()->is('hptdashboard')">HPT</x-childnav-link>
-                        @endif
-                    </div>
+                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    Dashboard
+                    <!-- Arrow Icon -->
+                    <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
+                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <!-- Dropdown Content -->
+                <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('dashboard.agronomi') }}"
+                        :active="request()->is('agronomidashboard')">Agronomi</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('dashboard.hpt') }}"
+                        :active="request()->is('hptdashboard')">HPT</x-childnav-link>
+                    @endif
                 </div>
+            </div>
             @endif
             @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
-                <div class="relative" x-data="{ isProcessOpen: false }">
-                    <button @click="isProcessOpen = !isProcessOpen"
-                        :class="{
+            <div class="relative" x-data="{ isProcessOpen: false }">
+                <button @click="isProcessOpen = !isProcessOpen"
+                    :class="{
                             'bg-red-1000 text-white': {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }},
                             'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
                                 !(
                                     {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }}
                                 )
                         }"
-                        class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                        Process
-                        <!-- Arrow Icon -->
-                        <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
-                            class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown Content -->
-                    <div x-show="isProcessOpen" @click.away="isProcessOpen = false" style="display: none;"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                        class="absolute right-0 z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                        @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('process.posting') }}"
-                                :active="request()->is('posting')">Posting</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('process.unposting') }}"
-                                :active="request()->is('unposting')">Unposting</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('upload.gpx.view') }}" :active="request()->is('uploadgpx')">Upload
-                                GPX File</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('export.kml.view') }}" :active="request()->is('exportkml')">Export
-                                KML File</x-childnav-link>
-                        @endif
-                        @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
-                            <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
-                                onclick="return confirm('Yakin closing periode sekarang?')">Closing</x-childnav-link>
-                        @endif
+                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    Process
+                    <!-- Arrow Icon -->
+                    <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
+                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <!-- Dropdown Content -->
+                <div x-show="isProcessOpen" @click.away="isProcessOpen = false" style="display: none;"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="absolute right-0 z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('process.posting') }}"
+                        :active="request()->is('posting')">Posting</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('process.unposting') }}"
+                        :active="request()->is('unposting')">Unposting</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('upload.gpx.view') }}" :active="request()->is('uploadgpx')">Upload
+                        GPX File</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('export.kml.view') }}" :active="request()->is('exportkml')">Export
+                        KML File</x-childnav-link>
+                    @endif
+                    @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
+                    <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
+                        onclick="return confirm('Yakin closing periode sekarang?')">Closing</x-childnav-link>
+                    @endif
 
-                    </div>
                 </div>
+            </div>
             @endif
 
         </div>
