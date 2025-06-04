@@ -14,7 +14,7 @@ class AccountingController extends Controller
         $perPage = (int)$request->input('perPage', 10);
         $search  = $request->input('search');
 
-        $query = Accounting::query();
+        $query = Accounting::query();  
         if ($search) {
             $query->where(fn($q) =>
                 $q->where('activitycode', 'like', "%{$search}%")
