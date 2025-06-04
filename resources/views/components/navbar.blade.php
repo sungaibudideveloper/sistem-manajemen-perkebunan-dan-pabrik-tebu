@@ -206,10 +206,10 @@
                                             x-transition:enter-end="opacity-100 transform scale-100"
                                             class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                                             <div class="py-2">
-                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                <x-childnav-link href="{{ route('masterdata.mandor.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
                                                     Mandor
                                                 </x-childnav-link>
-                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                <x-childnav-link href="{{ route('masterdata.jabatan.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
                                                     Tenaga Kerja
                                                 </x-childnav-link>
                                                 <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">

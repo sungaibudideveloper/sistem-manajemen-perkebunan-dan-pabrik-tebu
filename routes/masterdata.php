@@ -132,8 +132,8 @@ Route::group(['middleware' => ['auth', 'permission:Approval']], function () {
     Route::get('masterdata/approval', [ApprovalController::class, 'index'])->name('masterdata.approval.index');
     Route::post('masterdata/approval', [ApprovalController::class, 'store'])->name('masterdata.approval.store');
 });
-Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
-Route::delete('masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);
+Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
+Route::delete('masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);
 
 
 //Kategori
@@ -187,13 +187,13 @@ Route::get('masterdata/master-list', [MasterListController::class, 'index'])->na
 
 
 // Mandor Routes
-Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
+//Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
     // List and Create
     Route::get('masterdata/mandor', [MandorController::class, 'index'])
         ->name('masterdata.mandor.index');
     Route::post('masterdata/mandor', [MandorController::class, 'store'])
         ->name('masterdata.mandor.store');
-});
+//});
 Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
     ->name('masterdata.mandor.update')
     ->middleware(['auth', 'permission:Edit Mandor']);

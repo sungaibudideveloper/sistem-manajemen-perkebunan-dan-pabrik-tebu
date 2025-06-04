@@ -10,13 +10,14 @@ class Approval extends Model
 
     public $timestamps = false;
 
-    protected $primaryKey = 'activitycode';
+    protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'int';
 
     protected $fillable = [
+        'id',
         'companycode',
-        'activitycode',
+        'category',
         'jumlahapproval',
         'idjabatanapproval1',
         'idjabatanapproval2',
