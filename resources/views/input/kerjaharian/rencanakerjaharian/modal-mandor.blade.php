@@ -73,11 +73,11 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.id">
+            <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.userid">
               <tr @click="selectMandor(mandor)"
                 class="hover:bg-blue-50 cursor-pointer transition-colors duration-150 group">
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-medium text-gray-900" x-text="mandor.id"></span>
+                  <span class="text-sm font-medium text-gray-900" x-text="mandor.userid"></span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900 font-medium" x-text="mandor.name"></div>
@@ -101,7 +101,13 @@
     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
       <div class="flex justify-between items-center text-xs text-gray-500">
         <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
-        <span>Klik untuk memilih</span>
+        <button
+              type="button"
+              @click.stop="clear()"
+              class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+            >
+              Clear Selected Mandor
+            </button>
       </div>
     </div>
   </div>
@@ -109,27 +115,44 @@
 
 @push('scripts')
 <script>
-  function mandorPicker() {
-    return {
-      open: false,
-      searchQuery: '',
-      mandors: @json($mandors ?? []),
-      selected: { companycode: '', id: '', name: '' },
+   function mandorPicker() {
+  return {
+    open: false,
+    searchQuery: '',
+    mandors: @json($mandors ?? []),
+    selected: { companycode: '', userid: '', name: '' },
 
-      get filteredMandors() {
-        if (!this.searchQuery) return this.mandors;
-        const q = this.searchQuery.toString().toUpperCase();
-        return this.mandors.filter(m =>
-          m.name.toUpperCase().includes(q) ||
-          m.id.toString().toUpperCase().includes(q)
-        );
-      },
+    get filteredMandors() {
+      if (!this.searchQuery) return this.mandors;
+      const q = this.searchQuery.toString().toUpperCase();
+      return this.mandors.filter(m =>
+        m.name.toUpperCase().includes(q) ||
+        m.userid.toString().toUpperCase().includes(q)
+      );
+    },
 
-      selectMandor(mandor) {
-        this.selected = mandor;
-        this.open = false;
-      },
-    }
+    selectMandor(mandor) {
+      this.selected = mandor;
+      this.open = false;
+      
+      // Update absen summary dengan semua parameter yang diperlukan
+      updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
+    },
+
+    clear() {
+      // Reset the selected mandor
+      this.selected = { companycode: '', userid: '', name: '' };
+      // Optionally clear the search query
+      this.searchQuery = '';
+      // Reset the absen summary
+      updateAbsenSummary(null);
+    },
+
+    
+
+   
+    
   }
+}
 </script>
 @endpush

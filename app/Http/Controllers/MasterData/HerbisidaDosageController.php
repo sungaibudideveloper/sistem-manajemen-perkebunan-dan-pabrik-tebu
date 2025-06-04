@@ -22,11 +22,12 @@ class HerbisidaDosageController extends Controller
             $join->on('d.companycode', '=', 'h.companycode')
                  ->on('d.itemcode',    '=', 'h.itemcode');
         })
-        ->select('d.*', 'h.itemname');
+        ->join('herbisidagroup as g', 'd.herbisidagroupid', '=', 'g.herbisidagroupid')
+        ->select('d.*', 'h.itemname', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
 
         if ($search) {
             $qb->where(function($q) use ($search) {
-                $q->where('d.activitycode', 'like', "%{$search}%")
+                $q->where('d.herbisidagroupid', 'like', "%{$search}%")
                 ->orWhere('d.itemcode',     'like', "%{$search}%")
                 ->orWhere('d.companycode',  'like', "%{$search}%");
             });
@@ -34,7 +35,7 @@ class HerbisidaDosageController extends Controller
 
         $herbisidaDosages = $qb
             ->orderBy('d.companycode')
-            ->orderBy('d.activitycode')
+            ->orderBy('g.herbisidagroupid')
             ->paginate($perPage)
             ->appends(compact('perPage','search'));
 
@@ -52,33 +53,30 @@ class HerbisidaDosageController extends Controller
     {
         $request->validate([
             'companycode' => 'required|string|max:4',
-            'activitycode' => 'required|string|max:50',
+            'herbisidagroupid' => 'required|string|max:4',
             'itemcode' => 'required|string|max:30',
-            'time' => 'required|string|max:50',
-            'description' => 'nullable|string|max:100',
-            'totaldosage' => 'required|numeric',
+            'dosageperha' => 'required|numeric',
             'dosageunit' => 'required|string|max:5',
         ]);
 
         $exists = HerbisidaDosage::where('companycode', $request->companycode)
-            ->where('activitycode', $request->activitycode)
+            ->where('herbisidagroupid', intval($request->herbisidagroupid))
             ->where('itemcode', $request->itemcode)
             ->exists();
+
         if ($exists) {
         return redirect()->back()
             ->withInput()
             ->withErrors([
-                'activitycode' => 'Duplicate Entry, Data already exists'
+                'herbisidagroupid' => 'Duplicate Entry, Data already exists'
             ]);
         }
-
+       
         HerbisidaDosage::create([
             'companycode' => $request->input('companycode'),
-            'activitycode' => $request->input('activitycode'),
+            'herbisidagroupid' => intval($request->input('herbisidagroupid')),
             'itemcode' => $request->input('itemcode'),
-            'time' => $request->input('time'),
-            'description' => $request->input('description'),
-            'totaldosage' => $request->input('totaldosage'),
+            'dosageperha' => $request->input('dosageperha'),
             'dosageunit' => $request->input('dosageunit'),
             'inputby'      => Auth::user()->userid,
             'createdat'    => now(),
@@ -87,54 +85,54 @@ class HerbisidaDosageController extends Controller
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    public function update(Request $request, $companycode, $activitycode, $itemcode)
-    {
+    public function update(Request $request, $companycode, $herbisidagroupid, $itemcode)
+    {   
         $dosage = HerbisidaDosage::where([
             ['companycode', $companycode],
-            ['activitycode', $activitycode],
+            ['herbisidagroupid', $herbisidagroupid],
             ['itemcode', $itemcode]
         ])->firstOrFail();
+        
 
         $validated= $request->validate([
             'companycode'  => 'required|string|max:4',
-            'activitycode' => 'required|string|max:50',
+            'herbisidagroupid' => 'required|string|max:4',
             'itemcode'     => 'required|string|max:30',
-            'time'         => 'required|string|max:50',
             'description'  => 'nullable|string|max:100',
-            'totaldosage'  => 'required|numeric',
+            'dosageperha'  => 'required|numeric',
             'dosageunit'   => 'required|string|max:5',
         ]);
 
         // Check if the companycode, activitycode, or itemcode has changed
         if ($request->companycode !== $dosage->companycode ||
-            $request->activitycode !== $dosage->activitycode ||
+            intval($request->herbisidagroupid) !== $dosage->herbisidagroupid ||
             $request->itemcode !== $dosage->itemcode) {
             
             $exists = HerbisidaDosage::where('companycode',  $request->companycode)
-                ->where('activitycode', $request->activitycode)
+                ->where('herbisidagroupid', $request->herbisidagroupid)
                 ->where('itemcode', $request->itemcode)
                 ->exists();
-    
+            
             if ($exists) {
                 return redirect()->back()
                     ->withInput()
                     ->withErrors([
-                        'activitycode' => 'Duplicate Entry, Data already exists'
+                        'herbisidagroupid' => 'Duplicate Entry, Data already exists'
                     ]);
             }
-        }
+            
+        } 
+        
         // harus ditulis ulang semua agar mengedit baris yang tepat tidak bisa pake $dosage
         HerbisidaDosage::where([
             ['companycode',   $companycode],
-            ['activitycode',  $activitycode],
+            ['herbisidagroupid',  $herbisidagroupid],
             ['itemcode',      $itemcode],
         ])->update([
             'companycode'   => $validated['companycode'],
-            'activitycode'  => $validated['activitycode'],
+            'herbisidagroupid'  => $validated['herbisidagroupid'],
             'itemcode'      => $validated['itemcode'],
-            'time'          => $validated['time'],
-            'description'   => $validated['description'],
-            'totaldosage'   => $validated['totaldosage'],
+            'dosageperha'   => $validated['dosageperha'],
             'dosageunit'    => $validated['dosageunit'],
             'updateby'      => Auth::user()->userid,
             'updatedat'     => now(),
@@ -144,14 +142,15 @@ class HerbisidaDosageController extends Controller
     }
     
 
-    public function destroy(Request $request, $companycode, $activitycode, $itemcode)
-{
+    public function destroy(Request $request, $companycode, $herbisidagroupid, $itemcode)
+    { 
     HerbisidaDosage::where([
         ['companycode', $companycode],
-        ['activitycode', $activitycode],
+        ['herbisidagroupid', $herbisidagroupid],
         ['itemcode', $itemcode]
     ])->delete();
 
     return redirect()->back()->with('success','Data berhasil dihapus.');
-}
+    }
+
 }

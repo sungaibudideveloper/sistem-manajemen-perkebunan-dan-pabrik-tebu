@@ -56,21 +56,35 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 });
 
 
-//Kerja Harian
+//Rencana Kerja Harian
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
     Route::post('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
     Route::get('input/kerjaharian/rencanakerjaharian/create', [RencanaKerjaHarianController::class, 'create'])->name('input.kerjaharian.rencanakerjaharian.create');
+    Route::get('input/kerjaharian/rencanakerjaharian/{rkhno}/edit', [RencanaKerjaHarianController::class, 'edit'])->name('input.kerjaharian.rencanakerjaharian.edit');
+    Route::put('input/kerjaharian/rencanakerjaharian/{rkhno}', [RencanaKerjaHarianController::class, 'update'])->name('input.kerjaharian.rencanakerjaharian.update');
+    Route::delete('input/kerjaharian/rencanakerjaharian/{rkhno}', [RencanaKerjaHarianController::class, 'destroy'])->name('input.kerjaharian.rencanakerjaharian.destroy');
+    Route::post('input/kerjaharian/rencanakerjaharian/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('input.kerjaharian.rencanakerjaharian.updateStatus');
+    Route::get('input/kerjaharian/rencanakerjaharian/{rkhno}/lkh', [RencanaKerjaHarianController::class, 'getLKHData'])->name('input.kerjaharian.rencanakerjaharian.getLKHData');
+    Route::post('input/kerjaharian/rencanakerjaharian/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('input.kerjaharian.rencanakerjaharian.generateDTH');
+    Route::get('/input/kerjaharian/rencanakerjaharian/absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('input.kerjaharian.rencanakerjaharian.loadAbsenByDate');
 });
+
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
 });
+
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
+    Route::get('input/kerjaharian/laporankerjaharian/{lkhno}', [LaporanKerjaHarianController::class, 'show'])->name('input.kerjaharian.laporankerjaharian.show');
 });
+
+
 
 
 //Gudang
 //Route::group(['middleware' => ['auth', 'permission:Gudang']], function () {
     Route::get('input/gudang', [GudangController::class, 'index'])->name('input.gudang.index');
+    Route::get('input/gudang/home', [GudangController::class, 'home'])->name('input.gudang.home');
+    Route::get('input/gudang/detail', [GudangController::class, 'detail'])->name('input.gudang.detail');
 //});
