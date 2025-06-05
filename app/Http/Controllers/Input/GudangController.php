@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 use App\Models\Use_hdr;
 use App\Models\Use_lst;
+use App\Models\HerbisidaDosage;
 
 class GudangController extends Controller
 {
@@ -68,14 +69,24 @@ class GudangController extends Controller
     }
 
     public function detail(Request $request)
-    {   $Use_hdr = new Use_hdr; 
-        $usedoc= $Use_hdr->selectuse(session('companycode'),1);
+    {   
+        $Use_hdr = new Use_hdr;
+        $dosage = new HerbisidaDosage;
+        $details = $Use_hdr->selectuse(session('companycode'), $request->rkhno,1)->get();
         
+        //$dosage = HerbisidaDosage::where('herbisidagroupid', $details[0]->herbisidagroupid)->get();
+
+        $groupIds = $details->pluck('herbisidagroupid')->unique();
+
+        $dosage = HerbisidaDosage::whereIn('herbisidagroupid', $groupIds)->get();
+        
+        // $header
         $title = "Gudang";
-dd($usedoc);
+
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
-            'usedoc'        => $usedoc,
+            'details'        => $details,
+            'dosage'         => $dosage
         ]);
     }
 
