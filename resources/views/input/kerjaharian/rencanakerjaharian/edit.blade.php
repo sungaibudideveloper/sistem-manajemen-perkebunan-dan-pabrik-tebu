@@ -203,16 +203,19 @@
                   $oldPerempuan = old("rows.$i.perempuan", $detail->jumlahperempuan ?? '');
                   $oldUsingVehicle = old("rows.$i.usingvehicle", $detail->usingvehicle ?? 0);
                   $oldMaterialGroupId = old("rows.$i.material_group_id", $detail->herbisidagroupid ?? '');
+                  $oldMaterialGroupName = old("rows.$i.material_group_name", $detail->herbisidagroupname ?? '');
                   $oldKeterangan = old("rows.$i.keterangan", $detail->description ?? '');
                 @endphp
-                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors" x-init="
-                  @if($oldActivity)
-                    selected = {
-                      activitycode: '{{ $oldActivity }}',
-                      activityname: getActivityName('{{ $oldActivity }}'),
-                      usingvehicle: {{ $oldUsingVehicle }}
-                    }
-                  @endif
+                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors" 
+                  x-init="
+                    @if($oldActivity)
+                      selected = {
+                        activitycode: '{{ $oldActivity }}',
+                        activityname: '{{ $detail->activityname ?? '' }}', // Ambil langsung dari detail
+                        usingvehicle: {{ $oldUsingVehicle }},
+                        jenistenagakerja: {{ $detail->jenistenagakerja ?? 'null' }}
+                      }
+                    @endif
                 ">
 
                   <!-- #No -->
@@ -266,7 +269,6 @@
                     </div>
                   </td>
 
-                  {{-- Sisa kolom tetap sama --}}
                   <!-- #Activity -->
                   <td class="px-1 py-3">
                     <div class="relative">
@@ -326,47 +328,59 @@
                     >
                   </td>
 
-                  <!-- #Material  -->
-                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
-                    @if($oldMaterialGroupId)
-                      selectedGroup = getGroupById({{ $oldMaterialGroupId }})
-                    @endif
-                  ">
-                    <div class="relative">
-                      <div 
-                        @click="checkMaterial()"
-                        :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
-                          'cursor-not-allowed bg-gray-100': !hasMaterial,
-                          'border-green-500 bg-green-50': hasMaterial && selectedGroup,
-                          'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
-                          'border-gray-300': !hasMaterial
-                        }"
-                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
-                      >
-                        <!-- 1. Default sebelum pilih activity -->
-                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+                  <!-- #Material -->
+<td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
+  // Set initial activity code
+  currentActivityCode = '{{ $oldActivity }}';
+  
+  // Set selected group jika ada data
+  @if($oldMaterialGroupId && $oldActivity)
+    // Tunggu sampai herbisida data ready
+    const checkAndSetGroup = () => {
+      if (window.herbisidaData) {
+        setSelectedGroup({{ $oldMaterialGroupId }}, '{{ $oldActivity }}');
+      } else {
+        setTimeout(checkAndSetGroup, 100);
+      }
+    };
+    checkAndSetGroup();
+  @endif
+">
+  <div class="relative">
+    <div 
+      @click="checkMaterial()"
+      :class="{
+        'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
+        'cursor-not-allowed bg-gray-100': !hasMaterial,
+        'border-green-500 bg-green-50': hasMaterial && selectedGroup,
+        'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
+        'border-gray-300': !hasMaterial
+      }"
+      class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
+    >
+      <!-- 1. Default sebelum pilih activity -->
+      <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
 
-                        <!-- 2. Sudah pilih activity tapi kosong grup -->
-                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
-                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                          </svg>
-                          Pilih Grup
-                        </div>
-                        <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
-                          <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
-                        </div>
-                      </div>
-                      
-                      <!-- Hidden inputs untuk menyimpan selected group -->
-                      <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''">
-                      <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''">
-                    </div>
-                    
-                    @include('input.kerjaharian.rencanakerjaharian.modal-material')
-                  </td>
+      <!-- 2. Sudah pilih activity tapi kosong grup -->
+      <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
+      <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+        Pilih Grup
+      </div>
+      <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
+        <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
+      </div>
+    </div>
+    
+    <!-- Hidden inputs untuk menyimpan selected group -->
+    <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
+    <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
+  </div>
+  
+  @include('input.kerjaharian.rencanakerjaharian.modal-material')
+</td>
 
                   <!-- #Kendaraan -->
                   <td class="px-1 py-3">
@@ -441,7 +455,7 @@
           </button>
           <button
             type="button"
-            onclick="window.history.back()"
+            onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}';"
             class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -705,153 +719,4 @@ console.log('Herbisida data loaded:', window.herbisidaData);
 
 </script>
 
-{{-- Include semua script Alpine.js yang sama seperti di create --}}
-<script>
-// Alpine.js Components - sama seperti di create.blade.php
-
-// mandorPicker component
-function mandorPicker() {
-  return {
-    open: false,
-    selected: { userid: '', name: '' },
-    mandors: @json($mandors),
-    
-    selectMandor(mandor) {
-      this.selected = {
-        userid: mandor.userid,
-        name: mandor.name
-      };
-      this.open = false;
-      
-      // Update absen summary
-      updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
-    }
-  }
-}
-
-// blokPicker component
-function blokPicker(rowIndex) {
-  return {
-    open: false,
-    selected: { blok: '' },
-    bloks: window.bloksData || [],
-    rowIndex: rowIndex,
-    
-    selectBlok(blok) {
-      this.selected = { blok: blok.blok };
-      this.open = false;
-      
-      // Reset plot ketika blok berubah
-      const plotPicker = document.querySelector(`tr:nth-child(${rowIndex + 1}) [x-data*="plotPicker"]`);
-      if (plotPicker && plotPicker._x_dataStack) {
-        plotPicker._x_dataStack[0].selected = { plot: '' };
-        plotPicker._x_dataStack[0].plots = [];
-      }
-    }
-  }
-}
-
-// plotPicker component
-function plotPicker(rowIndex) {
-  return {
-    open: false,
-    selected: { plot: '' },
-    plots: [],
-    rowIndex: rowIndex,
-    
-    get isBlokSelected() {
-      const blokInput = document.querySelector(`input[name="rows[${this.rowIndex}][blok]"]`);
-      return blokInput && blokInput.value;
-    },
-    
-    init() {
-      this.$watch('open', (value) => {
-        if (value && this.isBlokSelected) {
-          this.loadPlots();
-        }
-      });
-    },
-    
-    loadPlots() {
-      const blokInput = document.querySelector(`input[name="rows[${this.rowIndex}][blok]"]`);
-      const selectedBlok = blokInput ? blokInput.value : '';
-      
-      if (selectedBlok && window.masterlistData) {
-        this.plots = window.masterlistData.filter(item => item.blok === selectedBlok);
-      }
-    },
-    
-    selectPlot(plot) {
-      this.selected = { plot: plot.plot };
-      this.open = false;
-    }
-  }
-}
-
-// activityPicker component
-function activityPicker(rowIndex) {
-  return {
-    open: false,
-    selected: { activitycode: '', activityname: '', usingvehicle: 0 },
-    activities: @json($activities),
-    rowIndex: rowIndex,
-    
-    getActivityName(code) {
-      const activity = this.activities.find(a => a.activitycode === code);
-      return activity ? activity.activityname : '';
-    },
-    
-    selectActivity(activity) {
-      this.selected = {
-        activitycode: activity.activitycode,
-        activityname: activity.activityname,
-        usingvehicle: activity.usingvehicle || 0
-      };
-      this.open = false;
-      
-      // Update jenis tenaga kerja
-      setTimeout(() => {
-        updateJenisTenaga(this.rowIndex);
-      }, 100);
-    }
-  }
-}
-
-// materialPicker component
-function materialPicker(rowIndex) {
-  return {
-    open: false,
-    selectedGroup: null,
-    groups: window.herbisidaData || [],
-    rowIndex: rowIndex,
-    
-    get currentActivityCode() {
-      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
-      return activityInput ? activityInput.value : '';
-    },
-    
-    get hasMaterial() {
-      if (!this.currentActivityCode) return false;
-      const activities = @json($activities);
-      const activity = activities.find(a => a.activitycode === this.currentActivityCode);
-      return activity && activity.group && activity.group.usingmaterial === 1;
-    },
-    
-    checkMaterial() {
-      if (this.hasMaterial && this.groups.length > 0) {
-        this.open = true;
-      }
-    },
-    
-    getGroupById(id) {
-      return this.groups.find(g => g.herbisidagroupid == id) || null;
-    },
-    
-    selectGroup(group) {
-      this.selectedGroup = group;
-      this.open = false;
-    }
-  }
-}
-</script>
 </x-layout>

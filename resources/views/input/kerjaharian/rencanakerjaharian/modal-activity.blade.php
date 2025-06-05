@@ -479,6 +479,11 @@ function activityPicker(rowIndex) {
       this.closeModal();
     },
 
+    getActivityName(code) {
+      const activity = this.activities.find(a => a.activitycode === code);
+      return activity ? activity.activityname : '';
+    },
+
 
     updateJenisField() {
     const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);

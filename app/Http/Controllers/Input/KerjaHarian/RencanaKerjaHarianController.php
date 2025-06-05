@@ -337,64 +337,75 @@ $filteredRows = collect($request->input('rows', []))
     }
 
     public function edit($rkhno)
-    {
-        $companycode = Session::get('companycode');
-        
-        // Ambil data RKH header
-        $rkhHeader = DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama'
-            ])
-            ->first();
-        
-        if (!$rkhHeader) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('error', 'Data RKH tidak ditemukan');
-        }
-        
-        // Ambil data RKH detail
-        $rkhDetails = DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->get();
-        
-        // Data untuk dropdown - sama seperti di create
-        $herbisidadosages = new Herbisidadosage;
-        $absentenagakerjamodel = new AbsenTenagaKerja;
-        
-        $mandors = User::getMandorByCompany($companycode);
-        $activities = Activity::with('group')->orderBy('activitycode')->get();
-        $bloks = Blok::orderBy('blok')->get();
-        $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
-        
-        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull(
-            $companycode,
-            Carbon::parse($rkhHeader->rkhdate)
-        );
-        
-        $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
-        
-        return view('input.kerjaharian.rencanakerjaharian.edit', [
-            'title' => 'Edit RKH',
-            'navbar' => 'Input',
-            'nav' => 'Rencana Kerja Harian',
-            'rkhHeader' => $rkhHeader,
-            'rkhDetails' => $rkhDetails,
-            'mandors' => $mandors,
-            'activities' => $activities,
-            'bloks' => $bloks,
-            'masterlist' => $masterlist,
-            'herbisidagroups' => $herbisidagroups,
-            'bloksData' => $bloks,
-            'masterlistData' => $masterlist,
-            'absentenagakerja' => $absentenagakerja,
-            'oldInput' => old(),
-        ]);
+{
+    $companycode = Session::get('companycode');
+    
+    // Ambil data RKH header
+    $rkhHeader = DB::table('rkhhdr as r')
+        ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+        ->where('r.companycode', $companycode)
+        ->where('r.rkhno', $rkhno)
+        ->select([
+            'r.*',
+            'm.name as mandor_nama'
+        ])
+        ->first();
+    
+    if (!$rkhHeader) {
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('error', 'Data RKH tidak ditemukan');
     }
+    
+    // Ambil data RKH detail dengan JOIN ke herbisidagroup
+    $rkhDetails = DB::table('rkhlst as r')
+    ->leftJoin('herbisidagroup as hg', function($join) {
+        $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+             ->on('r.activitycode', '=', 'hg.activitycode');
+    })
+    ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode') // Tambah JOIN ke activity
+    ->where('r.companycode', $companycode)
+    ->where('r.rkhno', $rkhno)
+    ->select([
+        'r.*',
+        'hg.herbisidagroupname',
+        'a.activityname', // Tambah activityname
+        'a.jenistenagakerja' // Tambah jenistenagakerja
+    ])
+    ->get();
+    
+    // Data untuk dropdown - sama seperti di create
+    $herbisidadosages = new Herbisidadosage;
+    $absentenagakerjamodel = new AbsenTenagaKerja;
+    
+    $mandors = User::getMandorByCompany($companycode);
+    $activities = Activity::with('group')->orderBy('activitycode')->get();
+    $bloks = Blok::orderBy('blok')->get();
+    $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+    
+    $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull(
+        $companycode,
+        Carbon::parse($rkhHeader->rkhdate)
+    );
+    
+    $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+    
+    return view('input.kerjaharian.rencanakerjaharian.edit', [
+        'title' => 'Edit RKH',
+        'navbar' => 'Input',
+        'nav' => 'Rencana Kerja Harian',
+        'rkhHeader' => $rkhHeader,
+        'rkhDetails' => $rkhDetails,
+        'mandors' => $mandors,
+        'activities' => $activities,
+        'bloks' => $bloks,
+        'masterlist' => $masterlist,
+        'herbisidagroups' => $herbisidagroups,
+        'bloksData' => $bloks,
+        'masterlistData' => $masterlist,
+        'absentenagakerja' => $absentenagakerja,
+        'oldInput' => old(),
+    ]);
+}
 
     public function update(Request $request, $rkhno)
     {

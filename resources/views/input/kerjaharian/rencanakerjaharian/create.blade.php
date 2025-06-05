@@ -241,7 +241,6 @@
                     </div>
                   </td>
 
-                  {{-- Sisa kolom tetap sama --}}
                   <!-- #Activity -->
                   <td class="px-1 py-3" ">
                     <div class="relative">
@@ -417,7 +416,7 @@
           </button>
           <button
             type="button"
-            onclick="window.history.back()"
+            onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}';"
             class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
