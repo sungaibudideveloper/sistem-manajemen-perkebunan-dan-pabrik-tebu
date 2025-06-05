@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Controller; 
 use App\Models\Accounting;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,7 +14,7 @@ class AccountingController extends Controller
         $perPage = (int)$request->input('perPage', 10);
         $search  = $request->input('search');
 
-        $query = Accounting::query();
+        $query = Accounting::query();  
         if ($search) {
             $query->where(fn($q) =>
                 $q->where('activitycode', 'like', "%{$search}%")

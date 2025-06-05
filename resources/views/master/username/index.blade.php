@@ -3,7 +3,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white rounded-md shadow-md">
+    <div class="mx-auto py-4 bg-white rounded-md shadow-md"> 
 
         <div class="flex items-center justify-between mx-4 gap-2">
             @if (auth()->user() && in_array('Create User', json_decode(auth()->user()->permissions ?? '[]')))

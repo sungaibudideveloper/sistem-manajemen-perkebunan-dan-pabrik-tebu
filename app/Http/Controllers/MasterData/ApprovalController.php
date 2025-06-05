@@ -5,6 +5,7 @@ namespace App\Http\Controllers\MasterData;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
+use App\Models\Jabatan;
 use Illuminate\Support\Facades\Auth;
 
 class ApprovalController extends Controller
@@ -28,12 +29,13 @@ class ApprovalController extends Controller
         }
 
         $approval = $query
-            ->orderBy('activitycode')
+            ->orderBy('category')
             ->paginate($perPage)
             ->appends([
                 'perPage' => $perPage,
                 'search'  => $search,
             ]);
+        $jabatan = Jabatan::orderBy('namajabatan','asc')->get();
 
         return view('master.approval.index', [
             'approval'   => $approval,
@@ -42,6 +44,7 @@ class ApprovalController extends Controller
             'nav'        => 'Approval',
             'perPage'    => $perPage,
             'search'     => $search,
+            'jabatan'    => $jabatan
         ]);
     }
 
@@ -49,16 +52,14 @@ class ApprovalController extends Controller
     {
         $request->validate([
             'companycode'        => 'required|string|max:4',
-            'activitycode'       => 'required|string|max:50',
+            'category'           => 'required|string|max:50',
             'jumlahapproval'     => 'required|integer',
             'idjabatanapproval1' => 'nullable|integer',
             'idjabatanapproval2' => 'nullable|integer',
             'idjabatanapproval3' => 'nullable|integer',
         ]);
 
-        $exists = Approval::where('companycode', $request->companycode)
-            ->where('activitycode', $request->activitycode)
-            ->exists();
+        $exists = Approval::where('companycode', $request->companycode)->where('category', $request->category)->exists();
 
         if ($exists) {
             return redirect()->back()
@@ -67,14 +68,15 @@ class ApprovalController extends Controller
                     'activitycode' => 'Duplicate Entry, Approval already exists'
                 ]);
         }
-
+        $lastId = Approval::where('companycode', session('companycode'))->max('id');
         Approval::create([
+            'id'                 => $lastId+1,
             'companycode'        => $request->companycode,
-            'activitycode'       => $request->activitycode,
+            'category'           => $request->category,
             'jumlahapproval'     => $request->jumlahapproval,
             'idjabatanapproval1' => $request->idjabatanapproval1,
-            'idjabatanapproval2' => $request->idjabatanapproval2,
-            'idjabatanapproval3' => $request->idjabatanapproval3,
+            'idjabatanapproval2' => $request->jumlahapproval >= 2 ? $request->idjabatanapproval2 : NULL,
+            'idjabatanapproval3' => $request->jumlahapproval >= 3 ? $request->idjabatanapproval3 : NULL,
             'inputby'      => Auth::user()->userid,
             'createdat'    => now(),
         ]);
@@ -82,48 +84,44 @@ class ApprovalController extends Controller
         return redirect()->back()->with('success', 'Data berhasil disimpan.');
     }
 
-    public function update(Request $request, $companycode, $activitycode)
+    public function update(Request $request, $companycode, $category)
     {
         $approval = Approval::where([
             ['companycode',  $companycode],
-            ['activitycode', $activitycode]
+            ['category', $category]
         ])->firstOrFail();
 
         $validated = $request->validate([
             'companycode'        => 'required|string|max:4',
-            'activitycode'       => 'required|string|max:50',
+            'category'       => 'required|string|max:50',
             'jumlahapproval'     => 'required|integer',
             'idjabatanapproval1' => 'nullable|integer',
             'idjabatanapproval2' => 'nullable|integer',
             'idjabatanapproval3' => 'nullable|integer',
         ]);
 
-        if ($request->companycode !== $approval->companycode ||
-            $request->activitycode !== $approval->activitycode
-        ) {
-            $exists = Approval::where('companycode', $request->companycode)
-                ->where('activitycode', $request->activitycode)
-                ->exists();
+        if ($request->companycode !== $approval->companycode || $request->category !== $approval->category ) {
+            $exists = Approval::where('companycode', $request->companycode)->where('category', $request->category)->exists();
 
             if ($exists) {
                 return redirect()->back()
                     ->withInput()
                     ->withErrors([
-                        'activitycode' => 'Duplicate Entry, Approval already exists'
+                        'category' => 'Duplicate Entry, Approval already exists'
                     ]);
             }
         }
 
         Approval::where([
             ['companycode',  $companycode],
-            ['activitycode', $activitycode]
+            ['category', $category]
         ])->update([
             'companycode'        => $validated['companycode'],
-            'activitycode'       => $validated['activitycode'],
+            'category'           => $validated['category'],
             'jumlahapproval'     => $validated['jumlahapproval'],
             'idjabatanapproval1' => $validated['idjabatanapproval1'],
-            'idjabatanapproval2' => $validated['idjabatanapproval2'],
-            'idjabatanapproval3' => $validated['idjabatanapproval3'],
+            'idjabatanapproval2' => $validated['jumlahapproval'] >= 2 ? $validated['idjabatanapproval2'] : NULL,
+            'idjabatanapproval3' => $validated['jumlahapproval'] == 3 ? $validated['idjabatanapproval3'] : NULL,
             'updateby'     => Auth::user()->userid,
             'updatedat'    => now(),
         ]);
@@ -131,11 +129,11 @@ class ApprovalController extends Controller
         return redirect()->back()->with('success', 'Data berhasil di-update.');
     }
 
-    public function destroy(Request $request, $companycode, $activitycode)
+    public function destroy(Request $request, $companycode, $category)
     {
         Approval::where([
             ['companycode',  $companycode],
-            ['activitycode', $activitycode]
+            ['category', $category]
         ])->delete();
 
         return redirect()->back()->with('success', 'Data berhasil di-hapus.');
