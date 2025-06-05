@@ -37,24 +37,30 @@ class Use_hdr extends Model
 //     );
 //   }
 
-public function selectuse($companycode, $type = 0)
-{
+public function selectuse($companycode, $rkhno = 0, $type = 0)
+{ 
     return \DB::table('use_hdr as a')
-        ->selectRaw('DISTINCT e.herbisidagroupname,' . ($type == 1 ? 'b.*,' : '') . ' a.*')
+        ->selectRaw('DISTINCT g.blok, g.plot, g.luasarea, f.mandorid, h.name AS mandorname, e.activitycode,e.herbisidagroupid, e.herbisidagroupname, a.*')
         ->leftJoin('use_lst as b', 'a.rkhno', '=', 'b.rkhno')
         ->leftJoin('rkhhdr as f', 'a.rkhno', '=', 'f.rkhno')
         ->leftJoin('rkhlst as g', 'a.rkhno', '=', 'g.rkhno')
         ->leftJoin('herbisida as c', function ($join) {
             $join->on('a.companycode', '=', 'c.companycode')
-                 ->on('b.itemcode', '=', 'c.itemcode');
+                ->on('b.itemcode', '=', 'c.itemcode');
         })
         ->leftJoin('herbisidadosage as d', function ($join) {
-            $join->on('a.companycode', '=', 'd.companycode')
-                 ->on('b.itemcode', '=', 'd.itemcode');
+            $join->on('a.companycode', '=', 'd.companycode')  
+                ->on('b.itemcode', '=', 'd.itemcode');        
         })
-        // Correct join based on actual columns
-        ->leftJoin('herbisidagroup as e', 'g.herbisidagroupid', '=', 'e.herbisidagroupid')
-        ->where('a.companycode', $companycode);
+        ->leftJoin('herbisidagroup as e', function ($join) {
+            $join->on('g.herbisidagroupid', '=', 'e.herbisidagroupid');
+        })
+        ->leftJoin('mandor as h', 'f.mandorid', '=', 'h.id')
+        ->when($type == 1, function ($query) use ($rkhno) {
+            $query->where('a.rkhno', $rkhno);
+        }, function ($query) use ($companycode) {
+            $query->where('a.companycode', $companycode);
+        });
 }
     
 
