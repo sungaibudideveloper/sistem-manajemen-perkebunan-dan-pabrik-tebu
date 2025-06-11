@@ -12,34 +12,34 @@ use App\Models\Subsubmenu;
 class SubsubmenuController extends Controller
 {
     public function index(Request $request)
-{
-    $query = Subsubmenu::query()
-        ->join('submenu', 'subsubmenu.submenuid', '=', 'submenu.submenuid')
-        ->select('subsubmenu.*', 'submenu.name as submenu_name'); // ✅ perbaikan
+    {
+        $query = Subsubmenu::query()
+            ->join('submenu', 'subsubmenu.submenuid', '=', 'submenu.submenuid')
+            ->select('subsubmenu.*', 'submenu.name as submenu_name'); // ✅ perbaikan
 
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('subsubmenu.name', 'like', '%' . $search . '%')
-                ->orWhere('submenu.name', 'like', '%' . $search . '%');
-        });
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('subsubmenu.name', 'like', '%' . $search . '%')
+                    ->orWhere('submenu.name', 'like', '%' . $search . '%');
+            });
+        }
+
+        $perPage = $request->get('perPage', 10);
+        $data = $query->orderBy('subsubmenu.subsubmenuid')->paginate($perPage);
+
+        // Ambil semua submenu untuk dropdown (bukan menu)
+        $allMenu = DB::table('submenu')->select('submenuid', 'name')->orderBy('name')->get();
+
+        return view('aplikasi.subsubmenu.index', [
+            'title' => 'Subsubmenu',
+            'navbar' => 'Aplikasi',
+            'nav' => 'Subsubmenu',
+            'data' => $data,
+            'perPage' => $perPage,
+            'allMenu' => $allMenu,
+        ]);
     }
-
-    $perPage = $request->get('perPage', 10);
-    $data = $query->orderBy('subsubmenu.subsubmenuid')->paginate($perPage);
-
-    // Ambil semua submenu untuk dropdown (bukan menu)
-    $allMenu = DB::table('submenu')->select('submenuid', 'name')->orderBy('name')->get();
-
-    return view('aplikasi.subsubmenu.index', [
-        'title' => 'Subsubmenu',
-        'navbar' => 'Aplikasi',
-        'nav' => 'Subsubmenu',
-        'data' => $data,
-        'perPage' => $perPage,
-        'allMenu' => $allMenu,
-    ]);
-}
 
 
 
@@ -68,30 +68,33 @@ class SubsubmenuController extends Controller
         return redirect()->back()->with('success', 'Data Submenu berhasil ditambahkan.');
     }
 
-    // public function update(Request $request, $submenuid)
-    // {
-    //     $request->validate([
-    //         'submenuname' => 'required|unique:submenu,name,' . $submenuid . ',submenuid',
-    //         'slug' => 'required|unique:submenu,slug,' . $submenuid . ',submenuid',
-    //     ]);
+    public function update(Request $request, $subsubmenuid)
+    {
+        $request->validate([
+            'subsubmenuname' => 'required|unique:subsubmenu,name,' . $subsubmenuid . ',subsubmenuid',
+        ]);
 
-    //     if ($request->parentid == null) {
-    //         $parentid = null; // Set parentid to null if not provided
-    //     } else {
-    //         $parentid = $request->parentid;
-    //     }
-        
-    //     $submenu = submenu::where('submenuid', $submenuid)->firstOrFail();
-    //     $submenu->name = $request->input('submenuname');
-    //     $submenu->slug = $request->input('slug');
-    //     $submenu->menuid = $request->input('menuid');
-    //     $submenu->parentid = $parentid;
-    //     $submenu->save();
+        $validate = DB::table('subsubmenu')
+            ->where('name', $request->subsubmenuname)
+            ->where('submenuid', $request->submenuid)
+            ->where('subsubmenuid', $subsubmenuid)
+            ->exists();
 
-    //     Parent::h_flash('Data Berhasil Disimpan!.', 'success');
+        if ($validate) {
+            return redirect()->back()->with('error', 'Nama subsubmenu sudah ada.');
+        }
 
-    //     return redirect()->route('aplikasi.submenu.index')->with('success', 'Submenu berhasil diupdate');
-    // }
+        $subsubmenu = subsubmenu::where('subsubmenuid', $subsubmenuid)->firstOrFail();
+        $subsubmenu->submenuid = $request->input('submenuid');
+        $subsubmenu->name = $request->input('subsubmenuname');
+        $subsubmenu->updatedby = Auth::user()->userid;
+        $subsubmenu->updatedat = now();
+        $subsubmenu->save();
+
+        Parent::h_flash('Data Berhasil Disimpan!.', 'success');
+
+        return redirect()->route('aplikasi.subsubmenu.index')->with('success', 'Submenu berhasil diupdate');
+    }
 
     public function destroy($subsubmenuid, $name)
     {

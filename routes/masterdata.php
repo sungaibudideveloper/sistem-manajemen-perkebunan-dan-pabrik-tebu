@@ -220,6 +220,6 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('aplikasi/subsubmenu', [SubsubmenuController::class, 'index'])->name('aplikasi.subsubmenu.index');
     Route::post('aplikasi/subsubmenu', [SubsubmenuController::class, 'store'])->name('aplikasi.subsubmenu.store');
-    Route::put('aplikasi/subsubmenu/{subsubmenu}', [SubsubmenuController::class, 'update'])->name('aplikasi.subsubmenu.update');
-    Route::delete('aplikasi/subsubmenu/{subsubmenu}/{name}', [SubsubmenuController::class, 'destroy'])->name('aplikasi.subsubmenu.destroy');
+    Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->name('aplikasi.subsubmenu.update');
+    Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->name('aplikasi.subsubmenu.destroy');
 });

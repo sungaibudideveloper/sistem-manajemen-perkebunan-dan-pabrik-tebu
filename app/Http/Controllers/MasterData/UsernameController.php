@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\MasterData;
+
 use App\Http\Controllers\Controller;
 
 use App\Models\UserCompany;
@@ -10,7 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
-
+use App\Models\Menu;
+use App\Models\Submenu;
+use App\Models\Subsubmenu;
 use function Laravel\Prompts\select;
 
 class UsernameController extends Controller
@@ -153,8 +156,18 @@ class UsernameController extends Controller
         $title = 'Set Hak Akses';
         $user = User::findOrFail($usernm);
 
-        return view('master.username.access', compact('user', 'title'));
+        $menu = Menu::orderBy('name')->get();
+        $submenu = Submenu::orderBy('name')->get();
+        $subsubmenu = Subsubmenu::orderBy('name')->get();
+        return view('master.username.access', [
+            'user' => $user,
+            'title' => $title,
+            'menu' => $menu,
+            'submenu' => $submenu,
+            'subsubmenu' => $subsubmenu,
+        ]);
     }
+
 
     public function setaccess(Request $request, $usernm)
     {
@@ -165,11 +178,11 @@ class UsernameController extends Controller
 
         DB::transaction(function () use ($validated, $usernm) {
             DB::table('user')
-            ->where('userid', $usernm)
-            ->update([
-                'userid' => $validated['userid'],
-                'permissions' => $validated['permissions'] ?? null,
-            ]);
+                ->where('userid', $usernm)
+                ->update([
+                    'userid' => $validated['userid'],
+                    'permissions' => $validated['permissions'] ?? null,
+                ]);
         });
 
         return redirect()->route('master.username.index')
