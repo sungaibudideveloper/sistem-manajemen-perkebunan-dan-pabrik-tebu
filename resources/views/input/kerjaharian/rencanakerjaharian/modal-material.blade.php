@@ -120,7 +120,7 @@
 
 @push('scripts')
 <script>
-    // Tambahkan setelah function attachListeners
+// Tambahkan setelah function attachListeners
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -151,6 +151,33 @@ function materialPicker(rowIndex) {
       });
       
       return Object.values(groups);
+    },
+    
+    // Tambahkan function untuk mencari group berdasarkan ID
+    getGroupById(groupId, activityCode) {
+      if (!window.herbisidaData || !groupId || !activityCode) return null;
+      
+      const group = window.herbisidaData.find(item => 
+        item.herbisidagroupid == groupId && 
+        item.activitycode === activityCode
+      );
+      
+      if (group) {
+        return {
+          herbisidagroupid: group.herbisidagroupid,
+          herbisidagroupname: group.herbisidagroupname
+        };
+      }
+      
+      return null;
+    },
+    
+    // Method untuk set selected group dari outside
+    setSelectedGroup(groupId, activityCode) {
+      const group = this.getGroupById(groupId, activityCode);
+      if (group) {
+        this.selectedGroup = group;
+      }
     },
     
     checkMaterial() {
@@ -222,6 +249,9 @@ function materialPicker(rowIndex) {
           this.selectedGroup = null;
           this.clearSelection();
         });
+        
+        // Set initial activity code
+        this.currentActivityCode = activityInput.value || '';
       }
     }
   }

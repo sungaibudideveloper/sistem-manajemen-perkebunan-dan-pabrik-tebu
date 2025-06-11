@@ -83,7 +83,7 @@
                     <tbody>
                         @foreach( $usehdr as $u )
                         <tr>
-                            <td class="py-2 px-4 "><a href="#" onclick="location.href='{{ url('input/gudang/detail') }}'" class="text-blue-600 hover:underline">{{$u->rkhno}}</a></td>
+                            <td class="py-2 px-4 "><a href="#" onclick="location.href='{{ url('input/gudang/detail?rkhno='.$u->rkhno) }}'" class="text-blue-600 hover:underline">{{$u->rkhno}}</a></td>
                             <td class="py-2 px-4 ">{{ date('d M Y',strtotime($u->createdat)) }}</td>
                             <td class="py-2 px-4 ">{{$u->herbisidagroupname}}</td>
                             <td class="py-2 px-4 ">{{$u->totalluas}}</td>

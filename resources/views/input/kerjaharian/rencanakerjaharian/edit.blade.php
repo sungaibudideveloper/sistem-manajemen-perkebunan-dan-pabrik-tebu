@@ -3,8 +3,9 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <form action="{{ route('input.kerjaharian.rencanakerjaharian.store') }}" method="POST">
+  <form action="{{ route('input.kerjaharian.rencanakerjaharian.update', $rkhHeader->rkhno) }}" method="POST">
     @csrf
+    @method('PUT')
 
        {{-- ERROR HANDLING - TARUH DI SINI --}}
     @if ($errors->any())
@@ -74,17 +75,17 @@
         <div>
           <label for="rkhno" class="block text-sm font-semibold text-gray-700 mb-2">No RKH</label>
           <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
-            {{ $rkhno ?? '-' }}
+            {{ $rkhHeader->rkhno ?? '-' }}
           </p>
-          <input type="hidden" name="rkhno" value="{{ $rkhno }}">
+          <input type="hidden" name="rkhno" value="{{ $rkhHeader->rkhno }}">
         </div>
 
       <!-- Mandor & Tanggal -->
       <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
-    @if(old('mandor_id'))
+    @if(old('mandor_id', $rkhHeader->mandorid))
         selected = {
-            userid: '{{ old('mandor_id') }}',
-            name: '{{ old('mandor') }}'
+            userid: '{{ old('mandor_id', $rkhHeader->mandorid) }}',
+            name: '{{ old('mandor', $rkhHeader->mandor_nama) }}'
         }
     @endif
 ">
@@ -105,17 +106,13 @@
         </div>
 
         <!-- Input Tanggal -->
-        @php
-          $todayFormatted = \Carbon\Carbon::now()->format('d/m/Y');
-        @endphp
-
         <div>
           <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
 <input
   type="date"
   name="tanggal"
   id="tanggal"
-  value="{{ old('tanggal', \Carbon\Carbon::now()->format('Y-m-d')) }}"
+  value="{{ old('tanggal', \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('Y-m-d')) }}"
   class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium"
   readonly
 />
@@ -136,7 +133,7 @@
         <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
         <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
       </div>
-      <p class="text-xs text-gray-600 mb-3" id="absen-info">{{ date('d/m/Y') }}</p>
+      <p class="text-xs text-gray-600 mb-3" id="absen-info">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
       <div class="grid grid-cols-3 gap-4 text-center">
         <div class="bg-blue-50 rounded-lg p-3">
                 <div class="text-lg font-bold" id="summary-laki">0</div>
@@ -194,16 +191,43 @@
             </thead>
 
             <tbody class="divide-y divide-gray-100">
-              {{-- Modifikasi untuk bagian table rows --}}
+              {{-- Modifikasi untuk bagian table rows dengan pre-filled data --}}
               @for ($i = 0; $i < 8; $i++)
-                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors">
+                @php
+                  $detail = $rkhDetails->get($i);
+                  $oldBlok = old("rows.$i.blok", $detail->blok ?? '');
+                  $oldPlot = old("rows.$i.plot", $detail->plot ?? '');
+                  $oldActivity = old("rows.$i.nama", $detail->activitycode ?? '');
+                  $oldLuas = old("rows.$i.luas", $detail->luasarea ?? '');
+                  $oldLaki = old("rows.$i.laki_laki", $detail->jumlahlaki ?? '');
+                  $oldPerempuan = old("rows.$i.perempuan", $detail->jumlahperempuan ?? '');
+                  $oldUsingVehicle = old("rows.$i.usingvehicle", $detail->usingvehicle ?? 0);
+                  $oldMaterialGroupId = old("rows.$i.material_group_id", $detail->herbisidagroupid ?? '');
+                  $oldMaterialGroupName = old("rows.$i.material_group_name", $detail->herbisidagroupname ?? '');
+                  $oldKeterangan = old("rows.$i.keterangan", $detail->description ?? '');
+                @endphp
+                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors" 
+                  x-init="
+                    @if($oldActivity)
+                      selected = {
+                        activitycode: '{{ $oldActivity }}',
+                        activityname: '{{ $detail->activityname ?? '' }}', // Ambil langsung dari detail
+                        usingvehicle: {{ $oldUsingVehicle }},
+                        jenistenagakerja: {{ $detail->jenistenagakerja ?? 'null' }}
+                      }
+                    @endif
+                ">
 
                   <!-- #No -->
                   <td class="px-1 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
                   
                   <!-- #Blok -->
                   <td class="px-1 py-3">
-                    <div x-data="blokPicker({{ $i }})" class="relative">
+                    <div x-data="blokPicker({{ $i }})" class="relative" x-init="
+                      @if($oldBlok)
+                        selected = { blok: '{{ $oldBlok }}' }
+                      @endif
+                    ">
                       <input
                         type="text"
                         readonly
@@ -221,7 +245,11 @@
 
                   <!-- #Plot -->
                   <td class="px-1 py-3">
-                    <div x-data="plotPicker({{ $i }})" class="relative">
+                    <div x-data="plotPicker({{ $i }})" class="relative" x-init="
+                      @if($oldPlot)
+                        selected = { plot: '{{ $oldPlot }}' }
+                      @endif
+                    ">
                       <input
                         type="text"
                         readonly
@@ -242,7 +270,7 @@
                   </td>
 
                   <!-- #Activity -->
-                  <td class="px-1 py-3" ">
+                  <td class="px-1 py-3">
                     <div class="relative">
                       <input
                         type="text"
@@ -276,17 +304,15 @@
 
                   <!-- #Luas -->
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ old('rows.'.$i.'.luas') }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ $oldLuas }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
 
                   <!-- #Tenaga Kerja -->
-                  
-
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ old('rows.'.$i.'.laki_laki') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ $oldLaki }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ old('rows.'.$i.'.perempuan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ $oldPerempuan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
                   <td class="px-1 py-3">
                     <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-300 rounded-lg px-3 py-2 text-right bg-gray-100 font-semibold text-gray-700" readonly placeholder="-">
@@ -302,46 +328,59 @@
                     >
                   </td>
 
+                  <!-- #Material -->
+<td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
+  // Set initial activity code
+  currentActivityCode = '{{ $oldActivity }}';
+  
+  // Set selected group jika ada data
+  @if($oldMaterialGroupId && $oldActivity)
+    // Tunggu sampai herbisida data ready
+    const checkAndSetGroup = () => {
+      if (window.herbisidaData) {
+        setSelectedGroup({{ $oldMaterialGroupId }}, '{{ $oldActivity }}');
+      } else {
+        setTimeout(checkAndSetGroup, 100);
+      }
+    };
+    checkAndSetGroup();
+  @endif
+">
+  <div class="relative">
+    <div 
+      @click="checkMaterial()"
+      :class="{
+        'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
+        'cursor-not-allowed bg-gray-100': !hasMaterial,
+        'border-green-500 bg-green-50': hasMaterial && selectedGroup,
+        'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
+        'border-gray-300': !hasMaterial
+      }"
+      class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
+    >
+      <!-- 1. Default sebelum pilih activity -->
+      <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
 
-                  
-
-                  <!-- #Material  -->
-                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})">
-                    <div class="relative">
-                      <div 
-                        @click="checkMaterial()"
-                        :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
-                          'cursor-not-allowed bg-gray-100': !hasMaterial,
-                          'border-green-500 bg-green-50': hasMaterial && selectedGroup,
-                          'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
-                          'border-gray-300': !hasMaterial
-                        }"
-                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
-                      >
-                        <!-- 1. Default sebelum pilih activity -->
-                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
-
-                        <!-- 2. Sudah pilih activity tapi kosong grup -->
-                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
-                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                          </svg>
-                          Pilih Grup
-                        </div>
-                        <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
-                          <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
-                        </div>
-                      </div>
-                      
-                      <!-- Hidden inputs untuk menyimpan selected group -->
-                      <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''">
-                      <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''">
-                    </div>
-                    
-                    @include('input.kerjaharian.rencanakerjaharian.modal-material')
-                  </td>
+      <!-- 2. Sudah pilih activity tapi kosong grup -->
+      <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
+      <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+        Pilih Grup
+      </div>
+      <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
+        <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
+      </div>
+    </div>
+    
+    <!-- Hidden inputs untuk menyimpan selected group -->
+    <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
+    <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
+  </div>
+  
+  @include('input.kerjaharian.rencanakerjaharian.modal-material')
+</td>
 
                   <!-- #Kendaraan -->
                   <td class="px-1 py-3">
@@ -371,7 +410,7 @@
                   </td>
 
                   <td class="px-1 py-3">
-                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ old('rows.'.$i.'.keterangan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ $oldKeterangan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
 
                 </tr>
@@ -426,35 +465,32 @@
           </button>
         </div>
         
-        <!-- Primary Submit Button -->
+        <!-- Primary Update Button -->
         <button
           type="submit"
-          class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
+          class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
-          Submit RKH
+          Update RKH
         </button>
 
-<!-- Debug Submit Button -->
-<button
-  type="button"
-  id="debug-submit"
-  class="bg-yellow-500 hover:bg-yellow-600 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
->
-  Debug Submit
-</button>
+        <!-- Debug Submit Button -->
+        <button
+          type="button"
+          id="debug-submit"
+          class="bg-yellow-500 hover:bg-yellow-600 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
+        >
+          Debug Submit
+        </button>
 
       </div>
     
   </div>
 </form>
 
-
-
-  <script>
-
+<script>
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
@@ -462,10 +498,8 @@ window.absenData = @json($absentenagakerja ?? []);
 
 // Pastikan data tersedia secara global
 document.addEventListener('DOMContentLoaded', function() {
-
-
   // Jika data dikirim dari controller, simpan ke variabel global
-    if (typeof herbisidagroups !== 'undefined') {
+  if (typeof herbisidagroups !== 'undefined') {
     window.herbisidaData = herbisidagroups;
   }
 
@@ -481,12 +515,23 @@ document.addEventListener('DOMContentLoaded', function() {
   rows.forEach(row => attachListeners(row));
   calculateTotals();
 
+  // Inisialisasi jenis tenaga kerja berdasarkan data yang sudah ada
+  rows.forEach((row, index) => {
+    updateJenisTenaga(index);
+  });
+
+  // Update absen summary berdasarkan mandor yang sudah dipilih
+  const selectedMandorId = document.querySelector('input[name="mandor_id"]').value;
+  if (selectedMandorId) {
+    updateAbsenSummary(selectedMandorId);
+  }
+
   document.getElementById('debug-submit').addEventListener('click', () => {
     const data = [];
 
     const nomorRKH = document.getElementById('rkhno').textContent.trim();
-  const mandor = document.querySelector('input[name="mandor_id"]').value;
-  const tanggal = document.querySelector('input[name="tanggal"]').value;
+    const mandor = document.querySelector('input[name="mandor_id"]').value;
+    const tanggal = document.querySelector('input[name="tanggal"]').value;
 
     rows.forEach((row, index) => {
       const rowData = {
@@ -508,33 +553,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const debugData = {
-    nomor_rkh: nomorRKH,
-    mandor_id: mandor,
-    tanggal: tanggal,
-    rows: data,
-  };
+      nomor_rkh: nomorRKH,
+      mandor_id: mandor,
+      tanggal: tanggal,
+      rows: data,
+    };
     console.log('Debug Data:', debugData);
   });
 });
 
-// Sisanya tetap sama (calculateRow, calculateTotals, attachListeners)
+// Function untuk calculate row
 function calculateRow(row) {
   const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
   const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
   const jumlahInput = row.querySelector('input[name$="[jumlah_tenaga]"]');
   
-    const laki      = parseInt(lakiInput.value)      || 0;
+  const laki = parseInt(lakiInput.value) || 0;
   const perempuan = parseInt(perempuanInput.value) || 0;
-  const total     = laki + perempuan;
+  const total = laki + perempuan;
 
   if (total > 0) {
     jumlahInput.value = total;
   } else {
-    // kosongkan value agar placeholder muncul
     jumlahInput.value = '';
   }
 }
 
+// Function untuk calculate totals
 function calculateTotals() {
   let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
   document.querySelectorAll('#rkh-table tbody tr.rkh-row').forEach(row => {
@@ -553,6 +598,7 @@ function calculateTotals() {
   document.getElementById('total-tenaga').textContent = tenagaSum;
 }
 
+// Function untuk attach listeners
 function attachListeners(row) {
   ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
     const input = row.querySelector(`input[name$="${suffix}"]`);
@@ -560,98 +606,117 @@ function attachListeners(row) {
   });
 }
 
-  // Pass data PHP ke JavaScript
-  window.herbisidaData = @json($herbisidagroups ?? []);
+// Function untuk update jenis tenaga berdasarkan total
+function updateJenisTenaga(rowIndex) {
+  const row = document.querySelectorAll('#rkh-table tbody tr.rkh-row')[rowIndex];
+  const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
+  const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
+  const jenisInput = row.querySelector('input[name$="[jenistenagakerja]"]');
   
-  console.log('Herbisida data loaded:', window.herbisidaData); // De
-
-
-
-  // Validasi Checkin data form diisi
-
-  document.querySelector('form').addEventListener('submit', function(e) {
-    console.log('Form is being submitted');
-    
-    // Check if mandor is selected
-    const mandorId = document.querySelector('input[name="mandor_id"]').value;
-    if (!mandorId) {
-        e.preventDefault();
-        alert('Please select a Mandor');
-        return;
-    }
-    
-    // Check if at least one row has data
-    const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-    let hasData = false;
-    rows.forEach(row => {
-        const blok = row.querySelector('input[name$="[blok]"]').value;
-        const plot = row.querySelector('input[name$="[plot]"]').value;
-        const activity = row.querySelector('input[name$="[nama]"]').value;
-        if (blok && plot && activity) {
-            hasData = true;
-        }
-    });
-    
-    if (!hasData) {
-        e.preventDefault();
-        alert('Please fill at least one complete row');
-        return;
-    }
-});
-
-// Update function untuk menghitung absen berdasarkan mandor
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-    if (!selectedMandorId || !window.absenData) {
-        // Reset ke 0 jika tidak ada mandor dipilih
-        document.getElementById('summary-laki').textContent = '0';
-        document.getElementById('summary-perempuan').textContent = '0';
-        document.getElementById('summary-total').textContent = '0';
-        // Reset absen info ke tanggal saja
-        const today = new Date().toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric'
-        });
-        document.getElementById('absen-info').textContent = today;
-        return;
-    }
-
-    // Update absen info dengan nama mandor
-    const today = new Date().toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: '2-digit', 
-        year: 'numeric'
-    });
-
-    if (selectedMandorCode && selectedMandorName) {
-        document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${today}`;
-    }
-
-    // Filter data absen berdasarkan mandor yang dipilih
-    const filteredAbsen = window.absenData.filter(absen => 
-        absen.idmandor === selectedMandorId
-    );
-
-    // Hitung jumlah berdasarkan gender
-    let lakiCount = 0;
-    let perempuanCount = 0;
-
-    filteredAbsen.forEach(absen => {
-        if (absen.gender === 'L') {
-            lakiCount++;
-        } else if (absen.gender === 'P') {
-            perempuanCount++;
-        }
-    });
-
-    const totalCount = lakiCount + perempuanCount;
-
-    // Update tampilan
-    document.getElementById('summary-laki').textContent = lakiCount;
-    document.getElementById('summary-perempuan').textContent = perempuanCount;
-    document.getElementById('summary-total').textContent = totalCount;
+  const laki = parseInt(lakiInput.value) || 0;
+  const perempuan = parseInt(perempuanInput.value) || 0;
+  const total = laki + perempuan;
+  
+  if (total === 0) {
+    jenisInput.value = '';
+  } else if (total <= 10) {
+    jenisInput.value = 'Kecil';
+  } else if (total <= 20) {
+    jenisInput.value = 'Sedang';
+  } else {
+    jenisInput.value = 'Besar';
+  }
 }
 
+// Validasi form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+  console.log('Form is being submitted');
+  
+  // Check if mandor is selected
+  const mandorId = document.querySelector('input[name="mandor_id"]').value;
+  if (!mandorId) {
+    e.preventDefault();
+    alert('Please select a Mandor');
+    return;
+  }
+  
+  // Check if at least one row has data
+  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+  let hasData = false;
+  rows.forEach(row => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const plot = row.querySelector('input[name$="[plot]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    if (blok && plot && activity) {
+      hasData = true;
+    }
+  });
+  
+  if (!hasData) {
+    e.preventDefault();
+    alert('Please fill at least one complete row');
+    return;
+  }
+});
 
-  </script>
+// Function untuk update absen summary berdasarkan mandor
+function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
+  if (!selectedMandorId || !window.absenData) {
+    // Reset ke 0 jika tidak ada mandor dipilih
+    document.getElementById('summary-laki').textContent = '0';
+    document.getElementById('summary-perempuan').textContent = '0';
+    document.getElementById('summary-total').textContent = '0';
+    // Reset absen info ke tanggal saja
+    const today = new Date().toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric'
+    });
+    document.getElementById('absen-info').textContent = today;
+    return;
+  }
+
+  // Update absen info dengan nama mandor
+  const today = new Date().toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  });
+
+  if (selectedMandorCode && selectedMandorName) {
+    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${today}`;
+  }
+
+  // Filter data absen berdasarkan mandor yang dipilih
+  const filteredAbsen = window.absenData.filter(absen => 
+    absen.idmandor === selectedMandorId
+  );
+
+  // Hitung jumlah berdasarkan gender
+  let lakiCount = 0;
+  let perempuanCount = 0;
+
+  filteredAbsen.forEach(absen => {
+    if (absen.gender === 'L') {
+      lakiCount++;
+    } else if (absen.gender === 'P') {
+      perempuanCount++;
+    }
+  });
+
+  const totalCount = lakiCount + perempuanCount;
+
+  // Update tampilan
+  document.getElementById('summary-laki').textContent = lakiCount;
+  document.getElementById('summary-perempuan').textContent = perempuanCount;
+  document.getElementById('summary-total').textContent = totalCount;
+}
+
+// Pass data PHP ke JavaScript untuk herbisida
+window.herbisidaData = @json($herbisidagroups ?? []);
+
+console.log('Herbisida data loaded:', window.herbisidaData);
+
+</script>
+
 </x-layout>

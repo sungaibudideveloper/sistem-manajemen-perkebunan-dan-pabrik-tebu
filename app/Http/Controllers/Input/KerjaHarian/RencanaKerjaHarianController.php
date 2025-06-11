@@ -336,6 +336,183 @@ $filteredRows = collect($request->input('rows', []))
         ]);
     }
 
+    public function edit($rkhno)
+{
+    $companycode = Session::get('companycode');
+    
+    // Ambil data RKH header
+    $rkhHeader = DB::table('rkhhdr as r')
+        ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+        ->where('r.companycode', $companycode)
+        ->where('r.rkhno', $rkhno)
+        ->select([
+            'r.*',
+            'm.name as mandor_nama'
+        ])
+        ->first();
+    
+    if (!$rkhHeader) {
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('error', 'Data RKH tidak ditemukan');
+    }
+    
+    // Ambil data RKH detail dengan JOIN ke herbisidagroup
+    $rkhDetails = DB::table('rkhlst as r')
+    ->leftJoin('herbisidagroup as hg', function($join) {
+        $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+             ->on('r.activitycode', '=', 'hg.activitycode');
+    })
+    ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode') // Tambah JOIN ke activity
+    ->where('r.companycode', $companycode)
+    ->where('r.rkhno', $rkhno)
+    ->select([
+        'r.*',
+        'hg.herbisidagroupname',
+        'a.activityname', // Tambah activityname
+        'a.jenistenagakerja' // Tambah jenistenagakerja
+    ])
+    ->get();
+    
+    // Data untuk dropdown - sama seperti di create
+    $herbisidadosages = new Herbisidadosage;
+    $absentenagakerjamodel = new AbsenTenagaKerja;
+    
+    $mandors = User::getMandorByCompany($companycode);
+    $activities = Activity::with('group')->orderBy('activitycode')->get();
+    $bloks = Blok::orderBy('blok')->get();
+    $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+    
+    $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull(
+        $companycode,
+        Carbon::parse($rkhHeader->rkhdate)
+    );
+    
+    $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+    
+    return view('input.kerjaharian.rencanakerjaharian.edit', [
+        'title' => 'Edit RKH',
+        'navbar' => 'Input',
+        'nav' => 'Rencana Kerja Harian',
+        'rkhHeader' => $rkhHeader,
+        'rkhDetails' => $rkhDetails,
+        'mandors' => $mandors,
+        'activities' => $activities,
+        'bloks' => $bloks,
+        'masterlist' => $masterlist,
+        'herbisidagroups' => $herbisidagroups,
+        'bloksData' => $bloks,
+        'masterlistData' => $masterlist,
+        'absentenagakerja' => $absentenagakerja,
+        'oldInput' => old(),
+    ]);
+}
+
+    public function update(Request $request, $rkhno)
+    {
+        $filteredRows = collect($request->input('rows', []))
+            ->filter(function ($row) {
+                return !empty($row['blok']) || !empty($row['plot']) || !empty($row['nama']);
+            })
+            ->map(function ($row) {
+                return array_map(function ($value) {
+                    return $value ?? '';
+                }, $row);
+            })
+            ->values()
+            ->toArray();
+
+        $request->merge(['rows' => $filteredRows]);
+
+        try {
+            $request->validate([
+                'mandor_id'              => 'required|exists:user,userid',
+                'tanggal'                => 'required|date',
+                'rows'                   => 'required|array|min:1',
+                'rows.*.blok'            => 'required|string',
+                'rows.*.plot'            => 'required|string',
+                'rows.*.nama'            => 'required|string',
+                'rows.*.luas'            => 'required|numeric',
+                'rows.*.laki_laki'       => 'nullable|integer|min:0',
+                'rows.*.perempuan'       => 'nullable|integer|min:0',
+                'rows.*.usingvehicle'    => 'required|boolean',
+                'rows.*.material_group_id' => 'nullable|integer',
+                'rows.*.keterangan'      => 'nullable|string|max:300',
+            ]);
+
+            DB::transaction(function () use ($request, $rkhno) {
+                $companycode = Session::get('companycode');
+                $tanggal     = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
+
+                // Hitung total luas & manpower
+                $totalLuas     = collect($request->rows)->sum('luas');
+                $totalManpower = collect($request->rows)->sum(function ($row) {
+                    $laki      = (int) ($row['laki_laki']   ?? 0);
+                    $perempuan = (int) ($row['perempuan']   ?? 0);
+                    return $laki + $perempuan;
+                });
+
+                // Update header
+                DB::table('rkhhdr')
+                    ->where('companycode', $companycode)
+                    ->where('rkhno', $rkhno)
+                    ->update([
+                        'rkhdate'     => $tanggal,
+                        'totalluas'   => $totalLuas,
+                        'manpower'    => $totalManpower,
+                        'mandorid'    => $request->input('mandor_id'),
+                        'updateby'    => Auth::user()->userid,
+                        'updatedat'   => now(),
+                    ]);
+
+                // Hapus detail lama
+                DB::table('rkhlst')
+                    ->where('companycode', $companycode)
+                    ->where('rkhno', $rkhno)
+                    ->delete();
+
+                // Insert detail baru
+                $details = [];
+                foreach ($request->rows as $row) {
+                    $laki      = (int) ($row['laki_laki']   ?? 0);
+                    $perempuan = (int) ($row['perempuan']   ?? 0);
+
+                    $details[] = [
+                        'companycode'         => $companycode,
+                        'rkhno'               => $rkhno,
+                        'rkhdate'             => $tanggal,
+                        'blok'                => $row['blok'],
+                        'plot'                => $row['plot'],
+                        'activitycode'        => $row['nama'],
+                        'luasarea'            => $row['luas'],
+                        'jumlahlaki'          => $laki,
+                        'jumlahperempuan'     => $perempuan,
+                        'jumlahtenagakerja'   => $laki + $perempuan,
+                        'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
+                        'herbisidagroupid'    => !empty($row['material_group_id'])
+                                            ? (int) $row['material_group_id']
+                                            : null,
+                        'usingvehicle'        => $row['usingvehicle'],
+                        'description'         => $row['keterangan'] ?? null,
+                    ];
+                }
+
+                DB::table('rkhlst')->insert($details);
+            });
+
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('success', 'RKH berhasil diupdate.');
+                
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withInput($request->all())
+                ->withErrors($e->validator);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput($request->all())
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
     public function destroy($rkhno)
     {
         $companycode = Session::get('companycode');

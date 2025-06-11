@@ -16,6 +16,7 @@ use App\Http\Controllers\MasterData\StatusController;
 use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
+use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\AplikasiController;
 use App\Http\Controllers\Aplikasi\MenuController;
 use App\Http\Controllers\Aplikasi\SubmenuController;
@@ -132,8 +133,8 @@ Route::group(['middleware' => ['auth', 'permission:Approval']], function () {
     Route::get('masterdata/approval', [ApprovalController::class, 'index'])->name('masterdata.approval.index');
     Route::post('masterdata/approval', [ApprovalController::class, 'store'])->name('masterdata.approval.store');
 });
-Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
-Route::delete('masterdata/approval/{companycode}/{activitycode}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);
+Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'update'])->name('masterdata.approval.update')->middleware(['auth', 'permission:Edit Approval']);
+Route::delete('masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy')->middleware(['auth', 'permission:Hapus Approval']);
 
 
 //Kategori
@@ -187,20 +188,23 @@ Route::get('masterdata/master-list', [MasterListController::class, 'index'])->na
 
 
 // Mandor Routes
-Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
+//Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
     // List and Create
     Route::get('masterdata/mandor', [MandorController::class, 'index'])
         ->name('masterdata.mandor.index');
     Route::post('masterdata/mandor', [MandorController::class, 'store'])
         ->name('masterdata.mandor.store');
-});
+//});
 Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
-    ->name('masterdata.mandor.update')
-    ->middleware(['auth', 'permission:Edit Mandor']);
+    ->name('masterdata.mandor.update');//->middleware(['auth', 'permission:Edit Mandor']);
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
-    ->name('masterdata.mandor.destroy')
-    ->middleware(['auth', 'permission:Hapus Mandor']);
+    ->name('masterdata.mandor.destroy');//->middleware(['auth', 'permission:Hapus Mandor']);
 
+
+    Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
+        ->name('masterdata.tenagakerja.index');
+    Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
+        ->name('masterdata.tenagakerja.store');
 
 
 Route::middleware('auth')->group(function () {

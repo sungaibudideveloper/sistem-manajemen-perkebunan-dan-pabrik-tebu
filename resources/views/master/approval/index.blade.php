@@ -2,11 +2,10 @@
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
-
   <div
     x-data="{
       open: @json($errors->any()),
-      mode: 'create',
+      mode: '{{ old('category') ? 'edit' : 'create' }}',
       form: {
         companycode: 'TBL1',
         activitycode: '',
@@ -76,18 +75,17 @@
                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
 
             <form method="POST"
-                  :action="mode === 'edit' 
-                    ? '{{ url('masterdata/approval') }}/' + form.companycodeoriginal + '/' + form.activitycodeoriginal 
+                  :action="mode === 'edit'
+                    ? '{{ url('masterdata/approval') }}/' + form.companycodeoriginal + '/' + form.categoryoriginal
                     : '{{ url('masterdata/approval') }}'"
                   class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
               @csrf
               <template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PATCH"></template>
-
               <div class="text-center sm:text-left">
                 <h3 class="text-lg font-medium text-gray-900" id="modal-title"
                     x-text="mode==='edit' ? 'Edit Approval' : 'Create Approval'"></h3>
                 <div class="mt-4 space-y-4">
-
+                  @include('errorfile')
                   <div>
                     <label for="companycode" class="block text-sm font-medium text-gray-700">Company Code</label>
                     <select name="companycode" id="companycode" x-model="form.companycode" x-init="form.companycode = '{{ old('companycode') }}'"
@@ -99,36 +97,51 @@
                   </div>
 
                   <div>
-                    <label for="activitycode" class="block text-sm font-medium text-gray-700">Activity Code</label>
-                    <input type="text" name="activitycode" id="activitycode" x-model="form.activitycode" x-init="form.activitycode = '{{ old('activitycode') }}'"
+                    <label for="activitycode" class="block text-sm font-medium text-gray-700">Category</label>
+                    <input type="text" name="category" id="category" x-model="form.category" x-init="form.category = '{{ old('category') }}'"
                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                            maxlength="50" required>
-                    @error('activitycode')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                    @error('category')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
                   </div>
 
                   <div>
                     <label for="jumlahapproval" class="block text-sm font-medium text-gray-700">Jumlah Approval</label>
                     <input type="number" name="jumlahapproval" id="jumlahapproval" x-model="form.jumlahapproval" x-init="form.jumlahapproval = '{{ old('jumlahapproval') }}'"
                            class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                           min="1" required>
+                           min="1" value="1" required>
                     @error('jumlahapproval')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
                   </div>
 
                   <div class="grid grid-cols-3 gap-4">
                     <div>
                       <label for="idjabatanapproval1" class="block text-sm font-medium text-gray-700">Jabatan 1</label>
-                      <input type="number" name="idjabatanapproval1" id="idjabatanapproval1" x-model="form.idjabatanapproval1" x-init="form.idjabatanapproval1 = '{{ old('idjabatanapproval1') }}'"
+                      <select name="idjabatanapproval1" id="idjabatanapproval1" x-model="form.idjabatanapproval1" x-init="form.idjabatanapproval1 = '{{ old('idjabatanapproval1') }}'"
                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                             <option value="">-</option>
+                             @foreach( $jabatan as $item )
+                             <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                             @endforeach
+                      </select>
                     </div>
                     <div>
                       <label for="idjabatanapproval2" class="block text-sm font-medium text-gray-700">Jabatan 2</label>
-                      <input type="number" name="idjabatanapproval2" id="idjabatanapproval2" x-model="form.idjabatanapproval2" x-init="form.idjabatanapproval2 = '{{ old('idjabatanapproval2') }}'"
-                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                      <select name="idjabatanapproval2" id="idjabatanapproval2" x-model="form.idjabatanapproval2" x-init="form.idjabatanapproval2 = '{{ old('idjabatanapproval2') }}'"
+                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                               <option value="">-</option>
+                               @foreach( $jabatan as $item )
+                               <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                               @endforeach
+                      </select>
                     </div>
                     <div>
                       <label for="idjabatanapproval3" class="block text-sm font-medium text-gray-700">Jabatan 3</label>
-                      <input type="number" name="idjabatanapproval3" id="idjabatanapproval3" x-model="form.idjabatanapproval3" x-init="form.idjabatanapproval3 = '{{ old('idjabatanapproval3') }}'"
-                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                      <select name="idjabatanapproval3" id="idjabatanapproval3" x-model="form.idjabatanapproval3" x-init="form.idjabatanapproval3 = '{{ old('idjabatanapproval3') }}'"
+                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                               <option value="">-</option>
+                               @foreach( $jabatan as $item )
+                               <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                               @endforeach
+                      </select>
                     </div>
                   </div>
 
@@ -160,7 +173,7 @@
             <tr class="bg-gray-100 text-gray-700">
               <th class="py-2 px-4 border-b">No.</th>
               <th class="py-2 px-4 border-b">Company Code</th>
-              <th class="py-2 px-4 border-b">Activity Code</th>
+              <th class="py-2 px-4 border-b">Category</th>
               <th class="py-2 px-4 border-b">Jumlah Approval</th>
               <th class="py-2 px-4 border-b">Approval 1</th>
               <th class="py-2 px-4 border-b">Approval 2</th>
@@ -173,7 +186,7 @@
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border-b">{{ $approval->firstItem() + $index }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->activitycode }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->category }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->jumlahapproval }} </td>
                 <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval1 }} - {{ optional($data->jabatanApproval1)->namajabatan }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval2 }} - {{ optional($data->jabatanApproval2)->namajabatan }}</td>
@@ -185,8 +198,8 @@
                         mode='edit';
                         form.companycodeoriginal='{{ $data->companycode }}';
                         form.companycode='{{ $data->companycode }}';
-                        form.activitycodeoriginal='{{ $data->activitycode }}';
-                        form.activitycode='{{ $data->activitycode }}';
+                        form.categoryoriginal='{{ $data->category }}';
+                        form.category='{{ $data->category }}';
                         form.jumlahapproval='{{ $data->jumlahapproval }}';
                         form.idjabatanapproval1='{{ $data->idjabatanapproval1 }}';
                         form.idjabatanapproval2='{{ $data->idjabatanapproval2 }}';
@@ -203,7 +216,7 @@
                       </button>
                     @endif
                     @if(auth()->user() && in_array('Hapus Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                      <form method="POST" action="{{ url('masterdata/approval/'.$data->companycode.'/'.$data->activitycode) }}"
+                      <form method="POST" action="{{ url('masterdata/approval/'.$data->companycode.'/'.$data->category) }}"
                             onsubmit="return confirm('Yakin ingin menghapus data ini?');">
                         @csrf
                         @method('DELETE')

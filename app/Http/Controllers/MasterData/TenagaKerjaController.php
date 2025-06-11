@@ -6,9 +6,10 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\TenagaKerja;
 use Illuminate\Support\Facades\DB;
 
-class MandorController extends Controller
+class TenagaKerjaController extends Controller
 {
     /**
      * Display a listing of mandor.
@@ -18,32 +19,35 @@ class MandorController extends Controller
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
 
-        $query = User::where('idjabatan',5);
+        $query = TenagaKerja::leftJoin('jenistenagakerja','tenagakerja.jenistenagakerja','jenistenagakerja.idjenistenagakerja')
+        ->leftJoin('user','user.userid','tenagakerja.mandoruserid');
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('companycode', 'like', "%{$search}%")
-                  ->orWhere('userid', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%");
+                $q->where('tenagakerja.nama', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhere('nik', 'like', "%{$search}%");
             });
         }
 
-        $mandor = $query
-            ->orderBy('companycode')
-            ->orderBy('userid')
+        $result = $query
+            ->orderBy('name')->select('tenagakerja.companycode','name','idtenagakerja',\DB::raw('tenagakerja.nama as nama'),'nik','gender','jenistenagakerja', \DB::raw('jenistenagakerja.nama as jenis'), \DB::raw('tenagakerja.isactive'))
             ->paginate($perPage)
             ->appends([
                 'perPage' => $perPage,
                 'search'  => $search,
             ]);
 
-        return view('master.mandor.index', [
-            'mandor'  => $mandor,
-            'title'    => 'Data Mandor',
+        $mandor = User::where('idjabatan',5)->where('isactive',1)->orderBy('name')->get();
+
+        return view('master.tenagakerja.index', [
+            'result'  => $result,
+            'title'    => 'Data Tenaga Kerja',
             'navbar'   => 'Master',
-            'nav'      => 'Mandor',
+            'nav'      => 'Tenaga Kerja',
             'perPage'  => $perPage,
             'search'   => $search,
+            'mandor'   => $mandor
         ]);
     }
 
@@ -120,7 +124,7 @@ class MandorController extends Controller
         $request->validate([
             'name' => 'required|string|max:50',
         ]);
-        
+
         $mandor->update([
             'name'      => $request->name,
             'isactive'  => $request->isactive,
