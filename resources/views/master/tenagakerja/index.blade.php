@@ -19,7 +19,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
       {{-- Create Button --}}
-      {{-- @if(auth()->user() && in_array('Create Mandor', json_decode(auth()->user()->permissions ?? '[]'))) --}}
+      {{-- @if(auth()->user() && in_array('Create Tenaga Kerja', json_decode(auth()->user()->permissions ?? '[]'))) --}}
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
           <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,8 +74,8 @@
             >
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/mandor') }}/' + form.companycode + '/' + form.id
-                      : '{{ url('masterdata/mandor') }}'"
+                      ? '{{ url('masterdata/tenagakerja') }}/' + form.companycode + '/' + form.id
+                      : '{{ url('masterdata/tenagakerja') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
                 <template x-if="mode === 'edit'">
@@ -86,13 +86,13 @@
                   <h3
                     class="text-lg font-medium text-gray-900"
                     id="modal-title"
-                    x-text="mode === 'edit' ? 'Edit Mandor' : 'Create Mandor'"
+                    x-text="mode === 'edit' ? 'Edit Tenaga Kerja' : 'Create Tenaga Kerja'"
                   ></h3>
                   @include('errorfile')
                   <div class="mt-4 space-y-4">
                   <template x-if="mode === 'edit'">
                     <div>
-                      <label for="id" class="block text-sm font-medium text-gray-700">ID Mandor</label>
+                      <label for="id" class="block text-sm font-medium text-gray-700">ID</label>
                       <input
                         type="text"
                         name="id"
@@ -108,7 +108,23 @@
                     </div>
                   </template>
                     <div>
-                      <label for="name" class="block text-sm font-medium text-gray-700">Nama Mandor</label>
+                      <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
+                      <input
+                        type="text"
+                        name="nik"
+                        id="nik"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        maxlength="50"
+                        required
+                        x-model="form.name"
+                        x-init="form.nik = '{{ old('nik') }}'"
+                      >
+                      @error('name')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                      @enderror
+                    </div>
+                    <div>
+                      <label for="name" class="block text-sm font-medium text-gray-700">Nama</label>
                       <input
                         type="text"
                         name="name"
@@ -122,6 +138,21 @@
                       @error('name')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                       @enderror
+                    </div>
+                    <div x-data="{ selectedGender: 'L' }">
+                      <label for="gender">Pilih Gender:</label>
+                      <select id="gender" x-model="selectedGender">
+                        <option value="L">Laki - Laki</option>
+                        <option value="P">Perempuan</option>
+                      </select>
+                    </div>
+                    <div x-data="{ selectedGender: 'L' }">
+                      <label for="gender">Pilih Gender:</label>
+                      <select id="gender" x-model="selectedGender">
+                        @foreach( $mandor )
+                        <option value="L">Laki - Laki</option>
+                        <option value="P">Perempuan</option>
+                      </select>
                     </div>
                     <template x-if="mode === 'edit'">
                       <div>
@@ -174,16 +205,23 @@
                     <th class="w-2/12 py-2 px-4 border-b">Company</th>
                     <th class="w-1/12 py-2 px-4 border-b">ID</th>
                     <th class="w-6/12 py-2 px-4 border-b">Nama Mandor</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Status</th>
-                    <th class="w-3/12 py-2 px-4 border-b">Aksi</th>
+                    <th class="w-6/12 py-2 px-4 border-b">NIK</th>
+                    <th class="w-6/12 py-2 px-4 border-b">Nama</th>
+                    <th class="w-6/12 py-2 px-4 border-b">Gender</th>
+                    <th class="w-3/12 py-2 px-4 border-b">Jenis</th>
+                    <th class="w-3/12 py-2 px-4 border-b">Active</th>
                 </tr>
             </thead>
             <tbody>
-            @foreach($mandor as $data)
+            @foreach($result as $data)
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->userid }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->idtenagakerja }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->name }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->nik }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->nama }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->gender }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->jenis }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->isactive == 1 ? 'Aktif' : 'Tidak Aktif' }}</td>
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
@@ -212,7 +250,7 @@
                     {{-- Delete --}}
                     {{-- @if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))
                       <form
-                        action="{{ url("masterdata/mandor/{$data->companycode}/{$data->userid}") }}"
+                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->userid}") }}"
                         method="POST"
                         onsubmit="return confirm('Yakin ingin menghapus data ini?');"
                         class="inline"
@@ -243,12 +281,12 @@
 
     {{-- Pagination --}}
     <div class="mx-4 my-1">
-      @if($mandor->hasPages())
-        {{ $mandor->appends(['perPage' => $mandor->perPage(), 'search' => $search])->links() }}
+      @if($result->hasPages())
+        {{ $result->appends(['perPage' => $result->perPage(), 'search' => $search])->links() }}
       @else
         <div class="flex items-center justify-between">
           <p class="text-sm text-gray-700">
-            Showing <span class="font-medium">{{ $mandor->count() }}</span> of <span class="font-medium">{{ $mandor->total() }}</span> results
+            Showing <span class="font-medium">{{ $result->count() }}</span> of <span class="font-medium">{{ $result->total() }}</span> results
           </p>
         </div>
       @endif

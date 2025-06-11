@@ -16,6 +16,7 @@ use App\Http\Controllers\MasterData\StatusController;
 use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
+use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\AplikasiController;
 use App\Http\Controllers\Aplikasi\MenuController;
 use App\Http\Controllers\Aplikasi\SubmenuController;
@@ -195,12 +196,15 @@ Route::get('masterdata/master-list', [MasterListController::class, 'index'])->na
         ->name('masterdata.mandor.store');
 //});
 Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
-    ->name('masterdata.mandor.update')
-    ->middleware(['auth', 'permission:Edit Mandor']);
+    ->name('masterdata.mandor.update');//->middleware(['auth', 'permission:Edit Mandor']);
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
-    ->name('masterdata.mandor.destroy')
-    ->middleware(['auth', 'permission:Hapus Mandor']);
+    ->name('masterdata.mandor.destroy');//->middleware(['auth', 'permission:Hapus Mandor']);
 
+
+    Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
+        ->name('masterdata.tenagakerja.index');
+    Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
+        ->name('masterdata.tenagakerja.store');
 
 
 Route::middleware('auth')->group(function () {

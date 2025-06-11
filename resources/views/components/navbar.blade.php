@@ -209,7 +209,7 @@
                                                 <x-childnav-link href="{{ route('masterdata.mandor.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
                                                     Mandor
                                                 </x-childnav-link>
-                                                <x-childnav-link href="{{ route('masterdata.jabatan.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
+                                                <x-childnav-link href="{{ route('masterdata.tenagakerja.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
                                                     Tenaga Kerja
                                                 </x-childnav-link>
                                                 <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">

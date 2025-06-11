@@ -33,5 +33,6 @@ class TenagaKerja extends Model
         'createdat',
         'updateby',
         'updatedat',
+        'isactive'
     ];
 }
