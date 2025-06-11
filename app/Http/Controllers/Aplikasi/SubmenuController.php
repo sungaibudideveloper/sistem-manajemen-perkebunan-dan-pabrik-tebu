@@ -76,17 +76,26 @@ class SubmenuController extends Controller
 
     public function update(Request $request, $submenuid)
     {
-        $request->validate([
-            'submenuname' => 'required|unique:submenu,name,' . $submenuid . ',submenuid',
-            'slug' => 'required|unique:submenu,slug,' . $submenuid . ',submenuid',
-        ]);
+        if ($request->input('submenuname') == null) {
+            return redirect()->back()->with('error', 'Nama submenu tidak boleh kosong.');
+        }
+
+        $validate = DB::table('submenu')
+            ->where('name', $request->submenuname)
+            ->where('menuid', $request->menuid)
+            ->exists();
+
+        if ($validate) {
+            return redirect()->back()->with('error', 'Nama subsubmenu sudah ada.');
+        }
+
 
         if ($request->parentid == null) {
             $parentid = null; // Set parentid to null if not provided
         } else {
             $parentid = $request->parentid;
         }
-        
+
         $submenu = submenu::where('submenuid', $submenuid)->firstOrFail();
         $submenu->name = $request->input('submenuname');
         $submenu->slug = $request->input('slug');
