@@ -29,7 +29,7 @@ class MandorController extends Controller
         }
 
         $mandor = $query
-            ->orderBy('companycode')
+            ->orderBy('isactive','desc')
             ->orderBy('userid')
             ->paginate($perPage)
             ->appends([
@@ -120,7 +120,7 @@ class MandorController extends Controller
         $request->validate([
             'name' => 'required|string|max:50',
         ]);
-        
+
         $mandor->update([
             'name'      => $request->name,
             'isactive'  => $request->isactive,
@@ -138,6 +138,6 @@ class MandorController extends Controller
     {
         User::where('companycode', $companycode)->where('id', $id)->update([ 'isactive' => 0 ]);
 
-        return redirect()->back()->with('success', 'Data berhasil di-hapus.');
+        return redirect()->back()->with('success', 'Data berhasil di non aktifkan.');
     }
 }

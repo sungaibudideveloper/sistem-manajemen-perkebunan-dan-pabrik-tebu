@@ -201,11 +201,14 @@ Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 
     ->name('masterdata.mandor.destroy');//->middleware(['auth', 'permission:Hapus Mandor']);
 
 
-    Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
-        ->name('masterdata.tenagakerja.index');
-    Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
-        ->name('masterdata.tenagakerja.store');
-
+Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
+    ->name('masterdata.tenagakerja.index');
+Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
+    ->name('masterdata.tenagakerja.store');
+Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])
+    ->name('masterdata.tenagakerja.update');
+Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])
+        ->name('masterdata.tenagakerja.destroy');
 
 Route::middleware('auth')->group(function () {
     Route::get('aplikasi/menu', [MenuController::class, 'index'])->name('aplikasi.menu.index');
