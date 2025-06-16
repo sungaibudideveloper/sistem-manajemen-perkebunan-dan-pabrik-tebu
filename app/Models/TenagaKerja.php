@@ -20,10 +20,10 @@ class TenagaKerja extends Model
 
     // Tidak ada kolom created_at / updated_at di tabel ini
     public $timestamps = false;
-
     // Kolom-kolom yang boleh diisi lewat mass assignment
     protected $fillable = [
         'idtenagakerja',
+        'mandoruserid',
         'companycode',
         'nama',
         'nik',

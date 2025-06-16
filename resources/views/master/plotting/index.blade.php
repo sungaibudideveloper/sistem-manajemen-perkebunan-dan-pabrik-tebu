@@ -32,14 +32,11 @@
                     <thead>
                         <tr>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
-                            </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Luas Area
-                            </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Jarak
-                                Tanam</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode
-                                Company</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Luas Area</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">JarakTanam</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Status</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Company</th>
                             @if (auth()->user() &&
                                     collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Aksi
@@ -50,16 +47,12 @@
                     <tbody>
                         @foreach ($plotting as $item)
                             <tr>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-1' }}">
-                                    {{ $item->no }}.</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->plot }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->luasarea }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->jaraktanam }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->companycode }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-1' }}">{{ $item->no }}.</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $item->plot }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $item->luasarea }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $item->jaraktanam }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $item->status }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $item->companycode }}</td>
                                 @if (auth()->user() &&
                                         collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">

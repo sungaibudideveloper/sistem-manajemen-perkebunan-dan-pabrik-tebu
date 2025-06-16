@@ -6,11 +6,11 @@
   <div
     x-data="{
       open: @json($errors->any()),
-      mode: 'create',
-      form: { companycode: '', id: null, name: '' },
+      mode: @if( old('mandor') ) 'edit' @else 'create' @endif,
+      form: { companycode: '', id: null, name: '', gender: 'L', jenis:1 },
       resetForm() {
         this.mode = 'create';
-        this.form = { companycode: '', id: null, name: '' };
+        this.form = { companycode: '', id: null, name: '', gender: 'L', nik: '', jenis:1 };
         this.open = true;
       }
     }"
@@ -58,6 +58,7 @@
       </form>
 
       {{-- Modal Form --}}
+
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div x-show="open" x-transition.opacity class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
         <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -72,9 +73,18 @@
               x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
               class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg"
             >
+            <button
+              @click="open = false"
+              type="button"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors"
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/tenagakerja') }}/' + form.companycode + '/' + form.id
+                      ? '{{ url('masterdata/tenagakerja') }}/{{$companycode}}/' + form.id
                       : '{{ url('masterdata/tenagakerja') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -100,6 +110,7 @@
                         x-model="form.id"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled"
                         required
+                        value="{{ old('id') }}"
                         readonly
                       >
                       @error('id')
@@ -107,6 +118,17 @@
                       @enderror
                     </div>
                   </template>
+                    <div x-data="{ selectedMandor: '' }" style="max-width: 400px;">
+                      <label for="mandor" style="display: block; margin-bottom: 10px;">Pilih Mandor :</label>
+                      <select name="mandor" id="mandor" x-model="selectedMandor" style="padding: 8px; margin-bottom: 10px; width: 300px;">
+                        @foreach( $mandor as $data )
+                        <option value="{{ $data->userid }}"
+                          @if( old('mandor') )
+                            @if( $data->userid == old('mandor') ) selected @endif
+                          @endif >{{ $data->userid }} - {{ $data->name }}</option>
+                        @endforeach
+                      </select>
+                    </div>
                     <div>
                       <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
                       <input
@@ -116,7 +138,7 @@
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         maxlength="50"
                         required
-                        x-model="form.name"
+                        x-model="form.nik"
                         x-init="form.nik = '{{ old('nik') }}'"
                       >
                       @error('name')
@@ -139,20 +161,22 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                       @enderror
                     </div>
-                    <div x-data="{ selectedGender: 'L' }">
-                      <label for="gender">Pilih Gender:</label>
-                      <select id="gender" x-model="selectedGender">
-                        <option value="L">Laki - Laki</option>
-                        <option value="P">Perempuan</option>
-                      </select>
-                    </div>
-                    <div x-data="{ selectedGender: 'L' }">
-                      <label for="gender">Pilih Gender:</label>
-                      <select id="gender" x-model="selectedGender">
-                        @foreach( $mandor )
-                        <option value="L">Laki - Laki</option>
-                        <option value="P">Perempuan</option>
-                      </select>
+                    <div style="display: flex; gap: 20px; max-width: 600px;">
+                      <div x-data="{ form.gender: 'L' }" style="max-width: 150px;">
+                        <label for="gender" style="display: block; margin-bottom: 10px;">Pilih Gender :</label>
+                        <select id="gender" name="gender" x-model="form.gender" style="padding: 8px; margin-bottom: 10px; width: 150px;">
+                          <option value="L">Laki - Laki</option>
+                          <option value="P">Perempuan</option>
+                        </select>
+                      </div>
+                      <div x-data="{ selectedJenis: '1' }" style="max-width: 400px;">
+                        <label for="jenis" style="display: block; margin-bottom: 10px;">Jenis :</label>
+                        <select id="jenis" name="jenis" x-model="selectedJenis" style="padding: 8px; margin-bottom: 10px; width: 200px;">
+                          <option value="1">Tenaga Kerja Harian</option>
+                          <option value="2">Borongan</option>
+                          <option value="3">Operator</option>
+                        </select>
+                      </div>
                     </div>
                     <template x-if="mode === 'edit'">
                       <div>
@@ -210,6 +234,7 @@
                     <th class="w-6/12 py-2 px-4 border-b">Gender</th>
                     <th class="w-3/12 py-2 px-4 border-b">Jenis</th>
                     <th class="w-3/12 py-2 px-4 border-b">Active</th>
+                    <th class="w-3/12 py-2 px-4 border-b"></th>
                 </tr>
             </thead>
             <tbody>
@@ -230,9 +255,12 @@
                       <button
                         @click="
                           mode = 'edit';
+                          form.id = '{{ $data->idtenagakerja }}';
                           form.companycode = '{{ $data->companycode }}';
-                          form.id = '{{ $data->userid }}';
-                          form.name = '{{ $data->name }}';
+                          form.name = '{{ $data->nama }}';
+                          form.nik = '{{ $data->nik }}';
+                          form.gender = '{{ $data->gender }}';
+                          form.jenis = '{{ $data->jenis }}';
                           form.isactive = {{ $data->isactive ?? 0 }} == 1 ? 1 : 0;
                           open = true
                         "
@@ -248,9 +276,9 @@
                     {{-- @endif --}}
 
                     {{-- Delete --}}
-                    {{-- @if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))
+                    {{--@if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))--}}
                       <form
-                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->userid}") }}"
+                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->idtenagakerja}") }}"
                         method="POST"
                         onsubmit="return confirm('Yakin ingin menghapus data ini?');"
                         class="inline"
@@ -269,7 +297,7 @@
                           </svg>
                         </button>
                       </form>
-                  @endif --}}
+                  {{--@endif--}}
                   </div>
                 </td>
               </tr>

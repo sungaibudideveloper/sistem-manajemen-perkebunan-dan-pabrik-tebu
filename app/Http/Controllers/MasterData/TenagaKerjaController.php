@@ -31,7 +31,7 @@ class TenagaKerjaController extends Controller
         }
 
         $result = $query
-            ->orderBy('name')->select('tenagakerja.companycode','name','idtenagakerja',\DB::raw('tenagakerja.nama as nama'),'nik','gender','jenistenagakerja', \DB::raw('jenistenagakerja.nama as jenis'), \DB::raw('tenagakerja.isactive'))
+            ->orderBy('isactive','desc')->orderBy('name')->select('tenagakerja.companycode','name','idtenagakerja',\DB::raw('tenagakerja.nama as nama'),'nik','gender','jenistenagakerja', \DB::raw('jenistenagakerja.nama as jenis'), \DB::raw('tenagakerja.isactive'))
             ->paginate($perPage)
             ->appends([
                 'perPage' => $perPage,
@@ -47,7 +47,8 @@ class TenagaKerjaController extends Controller
             'nav'      => 'Tenaga Kerja',
             'perPage'  => $perPage,
             'search'   => $search,
-            'mandor'   => $mandor
+            'mandor'   => $mandor,
+            'companycode' => session('companycode')
         ]);
     }
 
@@ -57,20 +58,21 @@ class TenagaKerjaController extends Controller
     private function generateNextId($companycode)
     {
         // Get the latest ID for this company
-        $latestMandor = User::where('companycode', $companycode)->where('idjabatan',5)
-                              ->orderByRaw('CAST(SUBSTRING(userid, 2) AS UNSIGNED) DESC')
+        $latestMandor = TenagaKerja::where('companycode', $companycode)
+                              ->orderByRaw('CAST(SUBSTRING(idtenagakerja, 2) AS UNSIGNED) DESC')
                               ->first();
+
         if (!$latestMandor) {
             // No existing mandor for this company, start with M01
-            $latestMandor = 'M001';
+            $latestMandor = 'M0001';
         }
 
         // Extract the numeric part and increment
-        $idNumber = (int) substr($latestMandor->userid, 1);
+        $idNumber = (int) substr($latestMandor->idtenagakerja, 2);
         $nextNumber = $idNumber + 1;
 
         // Format as M01, M02, etc.
-        return 'M' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        return 'M' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -80,30 +82,26 @@ class TenagaKerjaController extends Controller
     {
         $request->validate([
             'name'        => 'required|string|max:50',
+            'nik'         => 'required|numeric|digits_between:1,16|unique:tenagakerja,nik',
         ]);
 
         // Generate the next ID in M01, M02, M03 format
         $nextId = $this->generateNextId( session('companycode') );
-
         // Check if the combination already exists
-        $exists = User::where('companycode', session('companycode'))
-                       ->where('userid', $nextId)
-                       ->exists();
+        $exists = TenagaKerja::where('companycode', session('companycode'))->where('idtenagakerja', $nextId)->exists();
 
         if ($exists) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors([
-                    'id' => 'Duplicate Entry, Mandor ID already exists'
-                ]);
+            return redirect()->back()->withInput()->withErrors([ 'id' => 'Gagal mendapatkan ID' ]);
         }
 
-        User::create([
-            'companycode' => session('companycode'),
-            'userid'      => $nextId,
-            'idjabatan'   => 5,
-            'password'    => bcrypt('sungaibudi'),
-            'name'        => $request->name,
+        TenagaKerja::create([
+            'idtenagakerja' => $nextId,
+            'mandoruserid'  => $request->mandor,
+            'companycode'   => session('companycode'),
+            'nama'          => $request->name,
+            'nik'           => (string)$request->nik,
+            'gender'        => $request->gender,
+            'jenistenagakerja'   => $request->jenis,
             'inputby'     => Auth::user()->userid,
             'createdat'   => now(),
             'isactive'    => 1
@@ -117,19 +115,23 @@ class TenagaKerjaController extends Controller
      */
     public function update(Request $request, $companycode, $id)
     {
-        $mandor = User::where('companycode', $companycode)
-                         ->where('userid', $id)
-                         ->firstOrFail();
+        $TenagaKerja = TenagaKerja::where('companycode', $companycode)->where('idtenagakerja', $id)->firstOrFail();
 
-        $request->validate([
-            'name' => 'required|string|max:50',
-        ]);
+       $request->validate([
+           'name'        => 'required|string|max:50',
+           'nik'         => 'required|numeric|digits_between:1,16|unique:tenagakerja,nik,' . $request->id .',idtenagakerja'
+       ]);
 
-        $mandor->update([
-            'name'      => $request->name,
-            'isactive'  => $request->isactive,
-            'updateby'  => Auth::user()->userid,
-            'updatedat' => now()
+        $TenagaKerja->update([
+          'mandoruserid'  => $request->mandor,
+          'companycode'   => session('companycode'),
+          'nama'          => $request->name,
+          'nik'           => (string)$request->nik,
+          'gender'        => $request->gender,
+          'jenistenagakerja'   => $request->jenis,
+          'updateby'     => Auth::user()->userid,
+          'updatedat'   => now(),
+          'isactive'    => $request->isactive
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil di-update.');
@@ -140,8 +142,8 @@ class TenagaKerjaController extends Controller
      */
     public function destroy(Request $request, $companycode, $id)
     {
-        User::where('companycode', $companycode)->where('id', $id)->update([ 'isactive' => 0 ]);
+        TenagaKerja::where('companycode', $companycode)->where('idtenagakerja', $id)->update([ 'isactive' => 0 ]);
 
-        return redirect()->back()->with('success', 'Data berhasil di-hapus.');
+        return redirect()->back()->with('success', 'Data berhasil di non aktifkan.');
     }
 }
