@@ -156,11 +156,11 @@ class UsernameController extends Controller
         $title = 'Set Hak Akses';
         $user = User::findOrFail($usernm);
 
-        $menu = Menu::orderBy('name')->get();
+        $menu = Menu::orderBy('menuid')->get();
         $submenu = Submenu::orderBy('name')->get();
         $subsubmenu = Subsubmenu::orderBy('name')->get();
         return view('master.username.access', [
-            'user' => $user,
+            'user' => $user,    
             'title' => $title,
             'menu' => $menu,
             'submenu' => $submenu,

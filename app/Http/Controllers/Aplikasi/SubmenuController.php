@@ -49,6 +49,7 @@ class SubmenuController extends Controller
 
         $nameexist = DB::table('submenu')
             ->where('name', $request->submenuname)
+            ->where('menuid', $request->menuid)
             ->exists();
 
         if ($nameexist) {

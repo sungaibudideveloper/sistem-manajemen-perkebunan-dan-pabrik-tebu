@@ -29,7 +29,11 @@ class SubsubmenuController extends Controller
         $data = $query->orderBy('subsubmenu.subsubmenuid')->paginate($perPage);
 
         // Ambil semua submenu untuk dropdown (bukan menu)
-        $allMenu = DB::table('submenu')->select('submenuid', 'name')->orderBy('name')->get();
+        $allMenu = DB::table('submenu')
+            ->join('menu', 'submenu.menuid', '=', 'menu.menuid')
+            ->select('submenu.*', 'menu.name as menuname')
+            ->orderBy('submenu.menuid')
+            ->get();
 
         return view('aplikasi.subsubmenu.index', [
             'title' => 'Subsubmenu',
