@@ -1,4 +1,67 @@
-<nav class="bg-gradient-to-tr from-red-950 to-red-800" x-data="{ isOpen: false, isMasterOpen: false }">
+<nav class="bg-gradient-to-tr from-red-950 to-red-800" x-data="{ 
+    isOpen: false, 
+    isMasterOpen: false,
+    isInputOpen: false,
+    isReportOpen: false,
+    isDashboardOpen: false,
+    isProcessOpen: false,
+    mobileMenuOpen: false,
+    activeMenu: null,
+    activeMenuMobile: null,
+    activeCategoryMobile: null,
+    
+    // Helper function to check if any Master route is active
+    isMasterActive() {
+        return {{ request()->is('company') ||
+            request()->is('blok') ||
+            request()->is('plotting') ||
+            request()->is('mapping') ||
+            request()->is('herbisida') ||
+            request()->is('herbisida-dosage') ||
+            request()->is('jabatan') ||
+            request()->is('approval') ||
+            request()->is('kategori') ||
+            request()->is('varietas') ||
+            request()->is('accounting') ||
+            request()->is('username') ||
+            request()->routeIs('master.username.create') ||
+            request()->routeIs('master.username.access') ||
+            request()->routeIs('master.username.edit') ? 'true' : 'false' }};
+    },
+    
+    // Helper function to check if any Input Data route is active
+    isInputDataActive() {
+        return {{ request()->is('agronomi') ||
+            request()->is('hpt') ||
+            request()->routeIs('input.agronomi.create') ||
+            request()->routeIs('input.agronomi.edit') ||
+            request()->routeIs('input.hpt.create') ||
+            request()->routeIs('input.hpt.edit') ||
+            request()->routeIs('input.rkh.edit') ? 'true' : 'false' }};
+    },
+    
+    // Helper function to check if any Report route is active
+    isReportActive() {
+        return {{ request()->is('agronomireport') || request()->is('hptreport') ? 'true' : 'false' }};
+    },
+    
+    // Helper function to check if any Dashboard route is active
+    isDashboardActiveRoute() {
+        return {{ request()->is('agronomidashboard') || request()->is('hptdashboard') ? 'true' : 'false' }};
+    },
+    
+    // Helper function to check if any Process route is active
+    isProcessActive() {
+        return {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') ? 'true' : 'false' }};
+    },
+    
+    // Helper function to get button classes
+    getButtonClass(isActive) {
+        return isActive 
+            ? 'bg-red-1000 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center'
+            : 'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center';
+    }
+}">
     <div class="mx-auto px-4 sm:px-6 lg:px-12">
         <div class="flex h-16 items-center justify-between">
             <div class="flex items-center">
@@ -7,49 +70,18 @@
                         <img class="h-8 w-8" src="{{ asset('img/Logo-1.png') }}" alt="Sungai Budi">
                     </a>
                 </div>
+                
+                <!-- Desktop Navigation -->
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-2">
+                        
+                        <!-- Master Menu -->
                         @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
                         <div class="relative" x-data="{ isMasterOpen: false }">
                             <button @click="isMasterOpen = !isMasterOpen"
-                                :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('company') ||
-                                            request()->is('blok') ||
-                                            request()->is('plotting') ||
-                                            request()->is('mapping') ||
-                                            request()->is('herbisida') ||
-                                            request()->is('herbisida-dosage') ||
-                                            request()->is('jabatan') ||
-                                            request()->is('approval') ||
-                                            request()->is('kategori') ||
-                                            request()->is('varietas') ||
-                                            request()->is('accounting') ||
-                                            request()->is('username') ||
-                                            request()->routeIs('master.username.create') ||
-                                            request()->routeIs('master.username.access') ||
-                                            request()->routeIs('master.username.edit') }},
-                                        'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                            !(
-                                                {{ request()->is('company') ||
-                                                    request()->is('blok') ||
-                                                    request()->is('plotting') ||
-                                                    request()->is('mapping') ||
-                                                    request()->is('herbisida') ||
-                                                    request()->is('herbisida-dosage') ||
-                                                    request()->is('jabatan') ||
-                                                    request()->is('approval') ||
-                                                    request()->is('kategori') ||
-                                                    request()->is('varietas') ||
-                                                    request()->is('accounting') ||
-                                                    request()->is('username') ||
-                                                    request()->routeIs('master.username.create') ||
-                                                    request()->routeIs('master.username.access') ||
-                                                    request()->routeIs('master.username.edit') }}
-                                            )
-                                    }"
-                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                :class="getButtonClass(isMasterActive())"
+                                class="">
                                 Master
-                                <!-- Arrow Icon -->
                                 <svg class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                                     :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -59,8 +91,6 @@
                                 </svg>
                             </button>
                             
-                            <!-- Dropdown Content -->
-                            <!-- Mega Menu - Side Panel Structure -->
                             <div x-show="isMasterOpen" @click.away="isMasterOpen = false" style="display: none;"
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 transform scale-95"
@@ -72,7 +102,7 @@
 
                                 <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenu: null }">
 
-                                    <!-- 1. Company -->
+                                    <!-- Company -->
                                     @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
                                     <div @mouseenter="activeMenu = 'company'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
@@ -82,7 +112,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu (empty for Company, but consistent structure) -->
                                         <div x-show="activeMenu === 'company'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -98,7 +127,7 @@
                                     </div>
                                     @endif
 
-                                    <!-- 2. Master Lahan -->
+                                    <!-- Master Lahan -->
                                     <div @mouseenter="activeMenu = 'lahan'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>Master Lahan</span>
@@ -107,7 +136,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu -->
                                         <div x-show="activeMenu === 'lahan'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -150,7 +178,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 3. Agronomi -->
+                                    <!-- Agronomi -->
                                     <div @mouseenter="activeMenu = 'agronomi'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>Agronomi</span>
@@ -159,7 +187,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu -->
                                         <div x-show="activeMenu === 'agronomi'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -190,7 +217,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 4. Karyawan & Tenaga Kerja -->
+                                    <!-- Karyawan & Tenaga Kerja -->
                                     <div @mouseenter="activeMenu = 'karyawan'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>Karyawan & Tenaga Kerja</span>
@@ -199,7 +226,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu -->
                                         <div x-show="activeMenu === 'karyawan'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -226,7 +252,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 5. Accounting -->
+                                    <!-- Accounting -->
                                     @if (in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
                                     <div @mouseenter="activeMenu = 'accounting'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
@@ -236,7 +262,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu (empty for Accounting but consistent structure) -->
                                         <div x-show="activeMenu === 'accounting'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -252,7 +277,7 @@
                                     </div>
                                     @endif
 
-                                    <!-- 6. User & Approval -->
+                                    <!-- User & Approval -->
                                     <div @mouseenter="activeMenu = 'user'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>User & Approval</span>
@@ -261,7 +286,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu -->
                                         <div x-show="activeMenu === 'user'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -285,7 +309,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 7. Aktivitas -->
+                                    <!-- Aktivitas -->
                                     <div @mouseenter="activeMenu = 'aktivitas'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>Aktivitas</span>
@@ -294,7 +318,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu (empty for Aktivitas but consistent structure) -->
                                         <div x-show="activeMenu === 'aktivitas'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -309,7 +332,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 8. Applikasi -->
+                                    <!-- Aplikasi -->
                                     <div @mouseenter="activeMenu = 'applikasi'" @mouseleave="activeMenu = null" class="relative">
                                         <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
                                             <span>Aplikasi</span>
@@ -318,7 +341,6 @@
                                             </svg>
                                         </button>
 
-                                        <!-- Submenu (empty for Aktivitas but consistent structure) -->
                                         <div x-show="activeMenu === 'applikasi'"
                                             x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="opacity-0 transform scale-95"
@@ -348,31 +370,13 @@
                         </div>
                         @endif
 
+                        <!-- Input Data Menu -->
                         @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
                         <div class="relative" x-data="{ isInputOpen: false }">
                             <button @click="isInputOpen = !isInputOpen"
-                                :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('agronomi') ||
-                                            request()->is('hpt') ||
-                                            request()->routeIs('input.agronomi.create') ||
-                                            request()->routeIs('input.agronomi.edit') ||
-                                            request()->routeIs('input.hpt.create') ||
-                                            request()->routeIs('input.hpt.edit') ||
-                                            request()->routeIs('input.rkh.edit') }},
-                                        'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                            !(
-                                                {{ request()->is('agronomi') ||
-                                                    request()->is('hpt') ||
-                                                    request()->routeIs('input.agronomi.create') ||
-                                                    request()->routeIs('input.agronomi.edit') ||
-                                                    request()->routeIs('input.hpt.create') ||
-                                                    request()->routeIs('input.hpt.edit') ||
-                                                    request()->routeIs('input.rkh.edit') }}
-                                            )
-                                    }"
-                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                :class="getButtonClass(isInputDataActive())"
+                                class="">
                                 Input Data
-                                <!-- Arrow Icon -->
                                 <svg :class="{ 'rotate-180': isInputOpen, 'rotate-0': !isInputOpen }"
                                     class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -381,7 +385,7 @@
                                         d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <!-- Dropdown Content -->
+                            
                             <div x-show="isInputOpen" @click.away="isInputOpen = false" style="display: none;"
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 transform scale-95"
@@ -430,19 +434,13 @@
                         </div>
                         @endif
 
+                        <!-- Report Menu -->
                         @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
                         <div class="relative" x-data="{ isReportOpen: false }">
                             <button @click="isReportOpen = !isReportOpen"
-                                :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('agronomireport') || request()->is('hptreport') }},
-                                        'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                            !(
-                                                {{ request()->is('agronomireport') || request()->is('hptreport') }}
-                                            )
-                                    }"
-                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                :class="getButtonClass(isReportActive())"
+                                class="">
                                 Report
-                                <!-- Arrow Icon -->
                                 <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
                                     class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -451,7 +449,7 @@
                                         d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <!-- Dropdown Content -->
+                            
                             <div x-show="isReportOpen" @click.away="isReportOpen = false" style="display: none;"
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 transform scale-95"
@@ -481,19 +479,13 @@
                         </div>
                         @endif
 
+                        <!-- Dashboard Menu -->
                         @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
                         <div class="relative" x-data="{ isDashboardOpen: false }">
                             <button @click="isDashboardOpen = !isDashboardOpen"
-                                :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }},
-                                        'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                            !(
-                                                {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }}
-                                            )
-                                    }"
-                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                :class="getButtonClass(isDashboardActiveRoute())"
+                                class="">
                                 Dashboard
-                                <!-- Arrow Icon -->
                                 <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
                                     class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -502,7 +494,7 @@
                                         d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <!-- Dropdown Content -->
+                            
                             <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
                                 style="display: none;" x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 transform scale-95"
@@ -532,19 +524,13 @@
                         </div>
                         @endif
 
+                        <!-- Process Menu -->
                         @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
                         <div class="relative" x-data="{ isProcessOpen: false }">
                             <button @click="isProcessOpen = !isProcessOpen"
-                                :class="{
-                                        'bg-red-1000 text-white': {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }},
-                                        'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                            !(
-                                                {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }}
-                                            )
-                                    }"
-                                class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                :class="getButtonClass(isProcessActive())"
+                                class="">
                                 Process
-                                <!-- Arrow Icon -->
                                 <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
                                     class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -553,7 +539,7 @@
                                         d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <!-- Dropdown Content -->
+                            
                             <div x-show="isProcessOpen" @click.away="isProcessOpen = false"
                                 style="display: none;" x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 transform scale-95"
@@ -700,20 +686,18 @@
                 </a>
                 
                 <!-- Mobile menu button -->
-                <button type="button" @click="isOpen = !isOpen"
+                <button type="button" @click="mobileMenuOpen = !mobileMenuOpen"
                     class="relative inline-flex items-center justify-center rounded-md p-2 text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
                     aria-controls="mobile-menu" aria-expanded="false">
                     <span class="absolute -inset-0.5"></span>
                     <span class="sr-only">Open main menu</span>
-                    <!-- Menu open: "hidden", Menu closed: "block" -->
-                    <svg :class="{ 'hidden': isOpen, blok: !isOpen }" class="block h-6 w-6" fill="none"
+                    <svg :class="{ 'hidden': mobileMenuOpen, 'block': !mobileMenuOpen }" class="h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
                         data-slot="icon">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
-                    <!-- Menu open: "block", Menu closed: "hidden" -->
-                    <svg :class="{ block: isOpen, 'hidden': !isOpen }" class="hidden h-6 w-6" fill="none"
+                    <svg :class="{ 'block': mobileMenuOpen, 'hidden': !mobileMenuOpen }" class="h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
                         data-slot="icon">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -724,51 +708,16 @@
     </div>
 
     <!-- Mobile menu, show/hide based on menu state. -->
-    <div x-show="isOpen" class="md:hidden" id="mobile-menu">
+    <div x-show="mobileMenuOpen" class="md:hidden" id="mobile-menu">
         <div class="flex px-2 pb-3 pt-2 flex-wrap">
 
             @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isMasterOpen: false }">
-                <button @click="isMasterOpen = !isMasterOpen; isMasterActive = !isMasterActive"
-                    :class="{
-                            'bg-red-1000 text-white': {{ request()->is('company') ||
-                                request()->is('blok') ||
-                                request()->is('plotting') ||
-                                request()->is('mapping') ||
-                                request()->is('herbisida') ||
-                                request()->is('herbisida-dosage') ||
-                                request()->is('jabatan') ||
-                                request()->is('approval') ||
-                                request()->is('kategori') ||
-                                request()->is('varietas') ||
-                                request()->is('accounting') ||
-                                request()->is('username') ||
-                                request()->routeIs('master.username.create') ||
-                                request()->routeIs('master.username.access') ||
-                                request()->routeIs('master.username.edit') }},
-                            'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                !(
-                                    {{ request()->is('company') ||
-                                        request()->is('blok') ||
-                                        request()->is('plotting') ||
-                                        request()->is('mapping') ||
-                                        request()->is('herbisida') ||
-                                        request()->is('herbisida-dosage') ||
-                                        request()->is('jabatan') ||
-                                        request()->is('approval') ||
-                                        request()->is('kategori') ||
-                                        request()->is('varietas') ||
-                                        request()->is('accounting') ||
-                                        request()->is('username') ||
-                                        request()->routeIs('master.username.create') ||
-                                        request()->routeIs('master.username.access') ||
-                                        request()->routeIs('master.username.edit') }}
-                                )
-                        }"
-                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+            <div class="relative" x-data="{ isMasterOpenMobile: false }">
+                <button @click="isMasterOpenMobile = !isMasterOpenMobile"
+                    :class="getButtonClass(isMasterActive())"
+                    class="">
                     Master
-                    <!-- Arrow Icon -->
-                    <svg :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
+                    <svg :class="{ 'rotate-180': isMasterOpenMobile, 'rotate-0': !isMasterOpenMobile }"
                         class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -778,7 +727,7 @@
                 </button>
                 
                 <!-- Dropdown Content -->
-                <div x-show="isMasterOpen" @click.away="isMasterOpen = false"
+                <div x-show="isMasterOpenMobile" @click.away="isMasterOpenMobile = false"
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 transform scale-95"
                     x-transition:enter-end="opacity-100 transform scale-100"
@@ -1090,29 +1039,12 @@
             @endif
             
             @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isInputDataOpen: false }">
-                <button @click="isInputDataOpen = !isInputDataOpen; isInputDataActive = !isInputDataActive"
-                    :class="{
-                            'bg-red-1000 text-white': {{ request()->is('agronomi') ||
-                                request()->is('hpt') ||
-                                request()->routeIs('input.agronomi.create') ||
-                                request()->routeIs('input.agronomi.edit') ||
-                                request()->routeIs('input.hpt.create') ||
-                                request()->routeIs('input.hpt.edit') }},
-                            'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                !(
-                                    {{ request()->is('agronomi') ||
-                                        request()->is('hpt') ||
-                                        request()->routeIs('input.agronomi.create') ||
-                                        request()->routeIs('input.agronomi.edit') ||
-                                        request()->routeIs('input.hpt.create') ||
-                                        request()->routeIs('input.hpt.edit') }}
-                                )
-                        }"
-                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+            <div class="relative" x-data="{ isInputDataOpenMobile: false }">
+                <button @click="isInputDataOpenMobile = !isInputDataOpenMobile"
+                    :class="getButtonClass(isInputDataActive())"
+                    class="">
                     Input Data
-                    <!-- Arrow Icon -->
-                    <svg :class="{ 'rotate-180': isInputDataOpen, 'rotate-0': !isInputDataOpen }"
+                    <svg :class="{ 'rotate-180': isInputDataOpenMobile, 'rotate-0': !isInputDataOpenMobile }"
                         class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -1122,7 +1054,7 @@
                 </button>
                 
                 <!-- Dropdown Content -->
-                <div x-show="isInputDataOpen" @click.away="isInputDataOpen = false"
+                <div x-show="isInputDataOpenMobile" @click.away="isInputDataOpenMobile = false"
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 transform scale-95"
                     x-transition:enter-end="opacity-100 transform scale-100"
@@ -1172,19 +1104,12 @@
             @endif
             
             @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isReportOpen: false }">
-                <button @click="isReportOpen = !isReportOpen"
-                    :class="{
-                            'bg-red-1000 text-white': {{ request()->is('agronomireport') || request()->is('hptreport') }},
-                            'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                !(
-                                    {{ request()->is('agronomireport') || request()->is('hptreport') }}
-                                )
-                        }"
-                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+            <div class="relative" x-data="{ isReportOpenMobile: false }">
+                <button @click="isReportOpenMobile = !isReportOpenMobile"
+                    :class="getButtonClass(isReportActive())"
+                    class="">
                     Report
-                    <!-- Arrow Icon -->
-                    <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
+                    <svg :class="{ 'rotate-180': isReportOpenMobile, 'rotate-0': !isReportOpenMobile }"
                         class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -1194,7 +1119,7 @@
                 </button>
                 
                 <!-- Dropdown Content -->
-                <div x-show="isReportOpen" @click.away="isReportOpen = false"
+                <div x-show="isReportOpenMobile" @click.away="isReportOpenMobile = false"
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 transform scale-95"
                     x-transition:enter-end="opacity-100 transform scale-100"
@@ -1224,19 +1149,12 @@
             @endif
 
             @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isDashboardOpen: false }">
-                <button @click="isDashboardOpen = !isDashboardOpen"
-                    :class="{
-                            'bg-red-1000 text-white': {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }},
-                            'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                !(
-                                    {{ request()->is('agronomidashboard') || request()->is('hptdashboard') }}
-                                )
-                        }"
-                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+            <div class="relative" x-data="{ isDashboardOpenMobile: false }">
+                <button @click="isDashboardOpenMobile = !isDashboardOpenMobile"
+                    :class="getButtonClass(isDashboardActiveRoute())"
+                    class="">
                     Dashboard
-                    <!-- Arrow Icon -->
-                    <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
+                    <svg :class="{ 'rotate-180': isDashboardOpenMobile, 'rotate-0': !isDashboardOpenMobile }"
                         class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -1246,7 +1164,7 @@
                 </button>
                 
                 <!-- Dropdown Content -->
-                <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
+                <div x-show="isDashboardOpenMobile" @click.away="isDashboardOpenMobile = false"
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 transform scale-95"
                     x-transition:enter-end="opacity-100 transform scale-100"
@@ -1276,19 +1194,12 @@
             @endif
             
             @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isProcessOpen: false }">
-                <button @click="isProcessOpen = !isProcessOpen"
-                    :class="{
-                            'bg-red-1000 text-white': {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }},
-                            'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white':
-                                !(
-                                    {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') }}
-                                )
-                        }"
-                    class="text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+            <div class="relative" x-data="{ isProcessOpenMobile: false }">
+                <button @click="isProcessOpenMobile = !isProcessOpenMobile"
+                    :class="getButtonClass(isProcessActive())"
+                    class="">
                     Process
-                    <!-- Arrow Icon -->
-                    <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
+                    <svg :class="{ 'rotate-180': isProcessOpenMobile, 'rotate-0': !isProcessOpenMobile }"
                         class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -1298,7 +1209,7 @@
                 </button>
                 
                 <!-- Dropdown Content -->
-                <div x-show="isProcessOpen" @click.away="isProcessOpen = false" style="display: none;"
+                <div x-show="isProcessOpenMobile" @click.away="isProcessOpenMobile = false" style="display: none;"
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 transform scale-95"
                     x-transition:enter-end="opacity-100 transform scale-100"
