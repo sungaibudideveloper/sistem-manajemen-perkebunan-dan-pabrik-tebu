@@ -651,47 +651,97 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    public function generateDTH(Request $request)
-    {
-        $request->validate([
-            'date' => 'required|date'
-        ]);
-
-        $companycode = Session::get('companycode');
-        $date = $request->date;
-        
-        try {
-            // Logika generate DTH - sesuaikan dengan kebutuhan bisnis Anda
-            // Contoh: ambil semua RKH yang approved pada tanggal tersebut
-            $rkhData = DB::table('rkhhdr')
-                ->where('companycode', $companycode)
-                ->whereDate('rkhdate', $date)
-                ->where('approval', '1') // hanya yang approved
-                ->where('status', 'Done') // hanya yang sudah selesai
-                ->get();
-
-            if ($rkhData->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak ada RKH yang approved dan selesai pada tanggal tersebut'
-                ]);
-            }
-
-            // Proses generate DTH di sini
-            // Ini hanya contoh, sesuaikan dengan logika bisnis Anda
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'DTH berhasil di-generate untuk ' . $rkhData->count() . ' RKH'
+    public function getDTHData(Request $request)
+{
+    $date = $request->query('date', date('Y-m-d'));
+    $companycode = Session::get('companycode');
+    
+    \Log::info("DTH Debug - Date: {$date}, Company: {$companycode}");
+    
+    try {
+        // Query untuk mendapatkan data RKH yang sudah approved pada tanggal tertentu
+        $query = DB::table('rkhhdr as h')
+            ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+            ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.rkhdate', $date)
+            ->where('h.approval1flag', '1') // Hanya yang sudah approved
+            ->select([
+                'l.rkhno',
+                'l.blok',
+                'l.plot',
+                'l.luasarea',
+                'l.jumlahlaki',
+                'l.jumlahperempuan',
+                'l.jumlahtenagakerja',
+                'l.jenistenagakerja',
+                'l.description',
+                'u.name as mandor_nama',
+                'a.activityname'
             ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal generate DTH: ' . $e->getMessage()
-            ], 500);
-        }
+
+        $allData = $query->get();
+        
+        \Log::info("DTH Debug - Total records: " . $allData->count());
+        \Log::info("DTH Debug - Sample data: " . $allData->take(2)->toJson());
+
+        // Pisahkan data berdasarkan jenistenagakerja
+        // 1 = Harian, 2 = Borongan, operator dan helper diabaikan
+        $harianData = $allData->where('jenistenagakerja', 1)->values()->toArray();
+        $boronganData = $allData->where('jenistenagakerja', 2)->values()->toArray();
+
+        \Log::info("DTH Debug - Harian count: " . count($harianData) . ", Borongan count: " . count($boronganData));
+
+        return response()->json([
+            'success' => true,
+            'harian' => $harianData,
+            'borongan' => $boronganData,
+            'date' => $date,
+            'debug' => [
+                'total_records' => $allData->count(),
+                'harian_count' => count($harianData),
+                'borongan_count' => count($boronganData)
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error("DTH Error: " . $e->getMessage());
+        \Log::error("DTH Error Trace: " . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengambil data DTH: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+public function showDTHReport(Request $request)
+{
+    $date = $request->query('date', date('Y-m-d'));
+    
+    return view('input.kerjaharian.rencanakerjaharian.dth-report', [
+        'date' => $date
+    ]);
+}
+
+    public function generateDTH(Request $request)
+{
+    $request->validate([
+        'date' => 'required|date'
+    ]);
+
+    $date = $request->date;
+    
+    // Redirect ke halaman DTH report dengan parameter tanggal
+    $url = route('input.kerjaharian.rencanakerjaharian.dth-report', ['date' => $date]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Membuka laporan DTH...',
+        'redirect_url' => $url
+    ]);
+}
 
     public function loadAbsenByDate(Request $request)
     {

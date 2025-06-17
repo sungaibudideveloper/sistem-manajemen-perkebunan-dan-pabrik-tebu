@@ -645,8 +645,9 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            alert('DTH berhasil di-generate');
                             this.showGenerateDTHModal = false;
+                            // Buka di tab baru
+                            window.open(data.redirect_url, '_blank');
                         } else {
                             alert('Gagal generate DTH: ' + data.message);
                         }

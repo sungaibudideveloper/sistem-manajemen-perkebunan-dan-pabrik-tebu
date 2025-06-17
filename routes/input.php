@@ -68,6 +68,9 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/rencanakerjaharian/{rkhno}/lkh', [RencanaKerjaHarianController::class, 'getLKHData'])->name('input.kerjaharian.rencanakerjaharian.getLKHData');
     Route::post('input/kerjaharian/rencanakerjaharian/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('input.kerjaharian.rencanakerjaharian.generateDTH');
     Route::get('/input/kerjaharian/rencanakerjaharian/absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('input.kerjaharian.rencanakerjaharian.loadAbsenByDate');
+    
+    Route::get('input/kerjaharian/rencanakerjaharian/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('input.kerjaharian.rencanakerjaharian.dth-report');
+    Route::get('input/kerjaharian/rencanakerjaharian/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('input.kerjaharian.rencanakerjaharian.dth-data');
 });
 
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
