@@ -576,9 +576,6 @@ document.addEventListener('DOMContentLoaded', function() {
       hideLoadingState();
     });
   });
-
-  // Add validation listeners to form fields
-  addValidationListeners();
 });
 
 // IMPROVED VALIDATION FUNCTION
