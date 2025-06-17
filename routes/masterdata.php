@@ -18,9 +18,9 @@ use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
 use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\AplikasiController;
-use App\Http\Controllers\Aplikasi\MenuController;
-use App\Http\Controllers\Aplikasi\SubmenuController;
-use App\Http\Controllers\Aplikasi\SubsubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\MenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 
 
 
