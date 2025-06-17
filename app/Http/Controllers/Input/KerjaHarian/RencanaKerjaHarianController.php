@@ -85,11 +85,10 @@ class RencanaKerjaHarianController extends Controller
         }
 
         // Filter tanggal
-        if (!$allDate && $filterDate) {
-            $query->whereDate('r.rkhdate', $filterDate);
-        } elseif (!$allDate && !$filterDate) {
-            // Default ke hari ini jika tidak ada filter tanggal dan tidak show all
-            $query->whereDate('r.rkhdate', Carbon::today());
+        if (empty($allDate)) {
+            // Jika tidak show all date
+            $dateToFilter = $filterDate ?: Carbon::today()->format('Y-m-d');
+            $query->whereDate('r.rkhdate', $dateToFilter);
         }
 
         // Hitung total kegiatan per RKH dari tabel rkhlst
