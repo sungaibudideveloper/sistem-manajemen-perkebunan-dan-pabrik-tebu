@@ -31,10 +31,11 @@ class User extends Authenticatable
         'updatedat',
         'divisionid',
         'token_login',
+        'isactive'
     ];
 
     protected $casts = [
-        // 'permissions' => 'array', << tambahin ini kalau mau gaperlu pake json_encode pas manggil 
+        // 'permissions' => 'array', << tambahin ini kalau mau gaperlu pake json_encode pas manggil
         'createdat' => 'date',
         'updatedat' => 'date',
     ];

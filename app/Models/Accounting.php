@@ -16,7 +16,8 @@ class Accounting extends Model
     protected $fillable = [
         'activitycode',
         'jurnalaccno',
-        'jurnalacctype',
+        'materialaccno',
+        'bbmaccno',
         'description',
         'inputby',
         'updateby',

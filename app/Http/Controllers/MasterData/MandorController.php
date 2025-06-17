@@ -29,7 +29,7 @@ class MandorController extends Controller
         }
 
         $mandor = $query
-            ->orderBy('companycode')
+            ->orderBy('isactive','desc')
             ->orderBy('userid')
             ->paginate($perPage)
             ->appends([
@@ -58,7 +58,7 @@ class MandorController extends Controller
                               ->first();
         if (!$latestMandor) {
             // No existing mandor for this company, start with M01
-            return 'M01';
+            $latestMandor = 'M001';
         }
 
         // Extract the numeric part and increment
@@ -114,7 +114,7 @@ class MandorController extends Controller
     public function update(Request $request, $companycode, $id)
     {
         $mandor = User::where('companycode', $companycode)
-                         ->where('id', $id)
+                         ->where('userid', $id)
                          ->firstOrFail();
 
         $request->validate([
@@ -123,8 +123,9 @@ class MandorController extends Controller
 
         $mandor->update([
             'name'      => $request->name,
+            'isactive'  => $request->isactive,
             'updateby'  => Auth::user()->userid,
-            'updatedat' => now(),
+            'updatedat' => now()
         ]);
 
         return redirect()->back()->with('success', 'Data berhasil di-update.');
@@ -137,6 +138,6 @@ class MandorController extends Controller
     {
         User::where('companycode', $companycode)->where('id', $id)->update([ 'isactive' => 0 ]);
 
-        return redirect()->back()->with('success', 'Data berhasil di-hapus.');
+        return redirect()->back()->with('success', 'Data berhasil di non aktifkan.');
     }
 }
