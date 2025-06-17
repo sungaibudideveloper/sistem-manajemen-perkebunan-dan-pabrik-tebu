@@ -229,6 +229,10 @@ class RencanaKerjaHarianController extends Controller
                     $laki = (int) ($row['laki_laki'] ?? 0);
                     $perempuan = (int) ($row['perempuan'] ?? 0);
 
+                    // FIXED: Get jenistenagakerja from Activity model
+                    $activity = Activity::where('activitycode', $row['nama'])->first();
+                    $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+
                     $details[] = [
                         'companycode'         => $companycode,
                         'rkhno'               => $rkhno,
@@ -240,6 +244,7 @@ class RencanaKerjaHarianController extends Controller
                         'jumlahlaki'          => $laki,
                         'jumlahperempuan'     => $perempuan,
                         'jumlahtenagakerja'   => $laki + $perempuan,
+                        'jenistenagakerja'    => $jenistenagakerja, // ADDED: Save jenistenagakerja ID
                         'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                         'herbisidagroupid'    => !empty($row['material_group_id'])
                                              ? (int) $row['material_group_id']
@@ -389,7 +394,7 @@ class RencanaKerjaHarianController extends Controller
 
         // Database queries
         $mandors = User::getMandorByCompany($companycode);
-        $activities = Activity::with('group')->orderBy('activitycode')->get();
+        $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
         $bloks = Blok::orderBy('blok')->get();
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get(); // Add Plot data
@@ -461,7 +466,7 @@ class RencanaKerjaHarianController extends Controller
         $absentenagakerjamodel = new AbsenTenagaKerja;
         
         $mandors = User::getMandorByCompany($companycode);
-        $activities = Activity::with('group')->orderBy('activitycode')->get();
+        $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
         $bloks = Blok::orderBy('blok')->get();
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get(); // Add Plot data
@@ -563,6 +568,10 @@ class RencanaKerjaHarianController extends Controller
                     $laki      = (int) ($row['laki_laki']   ?? 0);
                     $perempuan = (int) ($row['perempuan']   ?? 0);
 
+                    // FIXED: Get jenistenagakerja from Activity model
+                    $activity = Activity::where('activitycode', $row['nama'])->first();
+                    $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+
                     $details[] = [
                         'companycode'         => $companycode,
                         'rkhno'               => $rkhno,
@@ -574,6 +583,7 @@ class RencanaKerjaHarianController extends Controller
                         'jumlahlaki'          => $laki,
                         'jumlahperempuan'     => $perempuan,
                         'jumlahtenagakerja'   => $laki + $perempuan,
+                        'jenistenagakerja'    => $jenistenagakerja, // ADDED: Save jenistenagakerja ID
                         'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                         'herbisidagroupid'    => !empty($row['material_group_id'])
                                             ? (int) $row['material_group_id']
