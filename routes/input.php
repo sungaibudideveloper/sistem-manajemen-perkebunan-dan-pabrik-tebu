@@ -56,6 +56,9 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 });
 
 
+
+
+
 //Rencana Kerja Harian
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
@@ -71,7 +74,20 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     
     Route::get('input/kerjaharian/rencanakerjaharian/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('input.kerjaharian.rencanakerjaharian.dth-report');
     Route::get('input/kerjaharian/rencanakerjaharian/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('input.kerjaharian.rencanakerjaharian.dth-data');
+
+    // approval
+Route::get('/input/kerjaharian/rencanakerjaharian/pending-approvals', [RencanaKerjaHarianController::class, 'getPendingApprovals'])->name('input.kerjaharian.rencanakerjaharian.getPendingApprovals');
+Route::post('/input/kerjaharian/rencanakerjaharian/process-approval', [RencanaKerjaHarianController::class, 'processApproval'])->name('input.kerjaharian.rencanakerjaharian.processApproval');
+Route::get('/input/kerjaharian/rencanakerjaharian/{rkhno}/approval-detail', [RencanaKerjaHarianController::class, 'getApprovalDetail'])->name('input.kerjaharian.rencanakerjaharian.getApprovalDetail');
 });
+
+
+
+
+
+
+
+
 
 Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
     Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
