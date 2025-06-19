@@ -19,6 +19,9 @@ use App\Models\Masterlist;
 use App\Models\Herbisidadosage;
 use App\Models\Herbisidagroup;
 use App\Models\AbsenTenagaKerja;
+use App\Models\Lkhhdr;
+use App\Models\Lkhlst;
+use App\Services\LkhGeneratorService;
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -188,20 +191,6 @@ class RencanaKerjaHarianController extends Controller
         'absentenagakerja' => $absentenagakerja,
     ]);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 public function store(Request $request)
 {
@@ -399,14 +388,6 @@ public function store(Request $request)
             ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
 }
-
-
-
-
-
-
-
-
 
     /**
      * ENHANCED: Generate nomor RKH unik dengan advanced database lock untuk mencegah race condition
@@ -871,13 +852,6 @@ public function showDTHReport(Request $request)
         ]);
     }
 
-
-
-
-
-
-
-
  /**
      * Get pending approvals for current user
      */
@@ -980,7 +954,7 @@ public function showDTHReport(Request $request)
     }
 
     /**
-     * Approve or decline RKH
+     * Process approval untuk RKH dengan auto-generate LKH
      */
     public function processApproval(Request $request)
     {
@@ -1007,7 +981,7 @@ public function showDTHReport(Request $request)
             // Cek apakah RKH ada dan user berhak approve
             $rkh = DB::table('rkhhdr as r')
                 ->leftJoin('approval as app', function($join) use ($companycode) {
-                    $join->on('r.activitygroup', '=', 'app.activitygroup') // FIXED: ganti 'app.category' jadi 'app.activitygroup'
+                    $join->on('r.activitygroup', '=', 'app.activitygroup')
                          ->where('app.companycode', '=', $companycode);
                 })
                 ->where('r.companycode', $companycode)
@@ -1078,9 +1052,52 @@ public function showDTHReport(Request $request)
                     'updatedat' => now()
                 ]);
 
+            $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            // AUTO-GENERATE LKH JIKA SUDAH FULLY APPROVED
+            if ($action === 'approve') {
+                $updatedRkh = DB::table('rkhhdr')
+                    ->where('companycode', $companycode)
+                    ->where('rkhno', $rkhno)
+                    ->first();
+
+                if ($this->isRkhFullyApproved($updatedRkh)) {
+                    try {
+                        $lkhGenerator = new LkhGeneratorService();
+                        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
+                        
+                        if ($lkhResult['success']) {
+                            $responseMessage .= '. LKH telah di-generate otomatis (' . $lkhResult['total_lkh'] . ' LKH)';
+                            
+                            \Log::info("Auto-generated LKH for approved RKH {$rkhno}", [
+                                'generated_lkh' => $lkhResult['generated_lkh'],
+                                'approved_by' => $currentUser->userid,
+                                'approval_level' => $level
+                            ]);
+                        } else {
+                            // Jika gagal generate LKH, tetap berhasil approve tapi kasih warning
+                            $responseMessage .= '. WARNING: Gagal auto-generate LKH - ' . $lkhResult['message'];
+                            
+                            \Log::warning("Failed to auto-generate LKH for approved RKH {$rkhno}", [
+                                'error' => $lkhResult['message'],
+                                'approved_by' => $currentUser->userid
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        // Log error tapi tidak gagalkan approval
+                        \Log::error("Exception during LKH auto-generation for RKH {$rkhno}", [
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        
+                        $responseMessage .= '. WARNING: Error saat auto-generate LKH';
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak')
+                'message' => $responseMessage
             ]);
 
         } catch (\Exception $e) {
@@ -1088,6 +1105,66 @@ public function showDTHReport(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memproses approval: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper method untuk check apakah RKH sudah fully approved
+     */
+    private function isRkhFullyApproved($rkh)
+    {
+        // Jika tidak ada requirement approval, anggap sudah approved
+        if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
+            return true;
+        }
+
+        // Check berdasarkan jumlah approval yang diperlukan
+        switch ($rkh->jumlahapproval) {
+            case 1:
+                return $rkh->approval1flag === '1';
+            case 2:
+                return $rkh->approval1flag === '1' && $rkh->approval2flag === '1';
+            case 3:
+                return $rkh->approval1flag === '1' && 
+                       $rkh->approval2flag === '1' && 
+                       $rkh->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Manual generate LKH (untuk keperluan khusus)
+     */
+    public function manualGenerateLkh(Request $request, $rkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            // Validasi RKH exists dan milik company yang benar
+            $rkh = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->first();
+                
+            if (!$rkh) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RKH tidak ditemukan'
+                ]);
+            }
+
+            $lkhGenerator = new LkhGeneratorService();
+            $result = $lkhGenerator->generateLkhFromRkh($rkhno);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            \Log::error("Manual generate LKH error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal generate LKH: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -1207,6 +1284,217 @@ public function showDTHReport(Request $request)
         return $jabatan ? $jabatan->namajabatan : 'Unknown';
     }
 
+    /**
+     * Get LKH data for specific RKH - UPDATED VERSION
+     */
+    public function getLKHData($rkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            // Ambil data LKH berdasarkan RKH dengan join ke activity
+            $lkhList = DB::table('lkhhdr as h')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->where('h.companycode', $companycode)
+                ->where('h.rkhno', $rkhno)
+                ->select([
+                    'h.lkhno',
+                    'h.activitycode',
+                    'a.activityname',
+                    'h.blok',
+                    'h.plot',
+                    'h.jenistenagakerja',
+                    'h.status',
+                    'h.lkhdate',
+                    'h.totalworkers',
+                    'h.totalhasil',
+                    'h.totalsisa',
+                    'h.createdat'
+                ])
+                ->orderBy('h.lkhno')
+                ->get();
 
+            // Format data untuk modal
+            $formattedData = $lkhList->map(function($lkh) {
+                return [
+                    'lkhno' => $lkh->lkhno,
+                    'activity' => $lkh->activitycode . ' - ' . ($lkh->activityname ?? 'Unknown Activity'),
+                    'location' => "Blok {$lkh->blok}, Plot {$lkh->plot}",
+                    'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
+                    'status' => $lkh->status,
+                    'workers' => $lkh->totalworkers,
+                    'hasil' => $lkh->totalhasil,
+                    'sisa' => $lkh->totalsisa,
+                    'date_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+                    'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
+                    'view_url' => route('input.kerjaharian.rencanakerjaharian.showLKH', $lkh->lkhno),
+                    'edit_url' => route('input.kerjaharian.rencanakerjaharian.editLKH', $lkh->lkhno)
+                ];
+            });
 
+            // Tambahkan informasi apakah RKH sudah approved dan bisa generate LKH
+            $canGenerateLkh = false;
+            $generateMessage = '';
+            
+            $rkhData = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->first();
+                
+            if ($rkhData) {
+                if ($this->isRkhFullyApproved($rkhData)) {
+                    if ($lkhList->isEmpty()) {
+                        $canGenerateLkh = true;
+                        $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
+                    } else {
+                        $generateMessage = 'LKH sudah pernah di-generate';
+                    }
+                } else {
+                    $generateMessage = 'RKH belum fully approved';
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'lkh_data' => $formattedData,
+                'rkhno' => $rkhno,
+                'can_generate_lkh' => $canGenerateLkh,
+                'generate_message' => $generateMessage,
+                'total_lkh' => $lkhList->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting LKH data: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data LKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Show LKH Report
+     */
+    public function showLKH($lkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            // Ambil data LKH Header dengan JOIN ke tabel terkait
+            $lkhData = DB::table('lkhhdr as h')
+                ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->leftJoin('approval as app', function($join) use ($companycode) {
+                    $join->on('h.activitycode', '=', 'app.activitygroup') // Sesuaikan dengan struktur approval
+                         ->where('app.companycode', '=', $companycode);
+                })
+                ->where('h.companycode', $companycode)
+                ->where('h.lkhno', $lkhno)
+                ->select([
+                    'h.*',
+                    'm.name as mandornama',
+                    'a.activityname',
+                    'app.jumlahapproval',
+                    'app.idjabatanapproval1',
+                    'app.idjabatanapproval2',
+                    'app.idjabatanapproval3'
+                ])
+                ->first();
+
+            if (!$lkhData) {
+                return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                    ->with('error', 'Data LKH tidak ditemukan');
+            }
+
+            // Ambil data LKH Detail (workers)
+            $lkhDetails = DB::table('lkhlst')
+                ->where('lkhno', $lkhno)
+                ->orderBy('workersequence')
+                ->get();
+
+            // Ambil data approval settings untuk signature section
+            $approvals = new \stdClass();
+            if ($lkhData->jumlahapproval > 0) {
+                $jabatanData = DB::table('jabatan')
+                    ->whereIn('idjabatan', array_filter([
+                        $lkhData->idjabatanapproval1,
+                        $lkhData->idjabatanapproval2,
+                        $lkhData->idjabatanapproval3
+                    ]))
+                    ->pluck('namajabatan', 'idjabatan');
+
+                $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
+                $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
+                $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
+                $approvals->jabatan4name = null; // Placeholder for consistency
+            }
+
+            return view('input.kerjaharian.rencanakerjaharian.lkh-report', [
+                'title' => 'Laporan Kegiatan Harian (LKH)',
+                'navbar' => 'Input',
+                'nav' => 'Rencana Kerja Harian',
+                'lkhData' => $lkhData,
+                'lkhDetails' => $lkhDetails,
+                'approvals' => $approvals
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error showing LKH: " . $e->getMessage());
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Terjadi kesalahan saat menampilkan LKH: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Edit LKH (placeholder untuk implementasi nanti)
+     */
+    public function editLKH($lkhno)
+    {
+        // TODO: Implementasi edit LKH
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('info', 'Fitur edit LKH belum tersedia');
+    }
+
+    /**
+     * Update status RKH
+     */
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'rkhno' => 'required|string',
+            'status' => 'required|string'
+        ]);
+
+        try {
+            $companycode = Session::get('companycode');
+            
+            $updated = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $request->rkhno)
+                ->update([
+                    'status' => $request->status,
+                    'updateby' => Auth::user()->userid,
+                    'updatedat' => now()
+                ]);
+
+            if ($updated) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Status RKH berhasil diupdate'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RKH tidak ditemukan'
+                ], 404);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("Error updating RKH status: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

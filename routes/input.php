@@ -59,26 +59,38 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 
 
 
-//Rencana Kerja Harian
-Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::get('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'index'])->name('input.kerjaharian.rencanakerjaharian.index');
-    Route::post('input/kerjaharian/rencanakerjaharian', [RencanaKerjaHarianController::class, 'store'])->name('input.kerjaharian.rencanakerjaharian.store');
-    Route::get('input/kerjaharian/rencanakerjaharian/create', [RencanaKerjaHarianController::class, 'create'])->name('input.kerjaharian.rencanakerjaharian.create');
-    Route::get('input/kerjaharian/rencanakerjaharian/{rkhno}/edit', [RencanaKerjaHarianController::class, 'edit'])->name('input.kerjaharian.rencanakerjaharian.edit');
-    Route::put('input/kerjaharian/rencanakerjaharian/{rkhno}', [RencanaKerjaHarianController::class, 'update'])->name('input.kerjaharian.rencanakerjaharian.update');
-    Route::delete('input/kerjaharian/rencanakerjaharian/{rkhno}', [RencanaKerjaHarianController::class, 'destroy'])->name('input.kerjaharian.rencanakerjaharian.destroy');
-    Route::post('input/kerjaharian/rencanakerjaharian/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('input.kerjaharian.rencanakerjaharian.updateStatus');
-    Route::get('input/kerjaharian/rencanakerjaharian/{rkhno}/lkh', [RencanaKerjaHarianController::class, 'getLKHData'])->name('input.kerjaharian.rencanakerjaharian.getLKHData');
-    Route::post('input/kerjaharian/rencanakerjaharian/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('input.kerjaharian.rencanakerjaharian.generateDTH');
-    Route::get('/input/kerjaharian/rencanakerjaharian/absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('input.kerjaharian.rencanakerjaharian.loadAbsenByDate');
-    
-    Route::get('input/kerjaharian/rencanakerjaharian/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('input.kerjaharian.rencanakerjaharian.dth-report');
-    Route::get('input/kerjaharian/rencanakerjaharian/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('input.kerjaharian.rencanakerjaharian.dth-data');
 
-    // approval
-Route::get('/input/kerjaharian/rencanakerjaharian/pending-approvals', [RencanaKerjaHarianController::class, 'getPendingApprovals'])->name('input.kerjaharian.rencanakerjaharian.getPendingApprovals');
-Route::post('/input/kerjaharian/rencanakerjaharian/process-approval', [RencanaKerjaHarianController::class, 'processApproval'])->name('input.kerjaharian.rencanakerjaharian.processApproval');
-Route::get('/input/kerjaharian/rencanakerjaharian/{rkhno}/approval-detail', [RencanaKerjaHarianController::class, 'getApprovalDetail'])->name('input.kerjaharian.rencanakerjaharian.getApprovalDetail');
+// Routes untuk RKH Management - COMPLETE VERSION
+Route::prefix('input/kerjaharian/rencanakerjaharian')->name('input.kerjaharian.rencanakerjaharian.')->group(function () {
+    // Basic CRUD routes
+    Route::get('/', [RencanaKerjaHarianController::class, 'index'])->name('index');
+    Route::get('/create', [RencanaKerjaHarianController::class, 'create'])->name('create');
+    Route::post('/', [RencanaKerjaHarianController::class, 'store'])->name('store');
+    Route::get('/{rkhno}/edit', [RencanaKerjaHarianController::class, 'edit'])->name('edit');
+    Route::put('/{rkhno}', [RencanaKerjaHarianController::class, 'update'])->name('update');
+    Route::delete('/{rkhno}', [RencanaKerjaHarianController::class, 'destroy'])->name('destroy');
+    
+    // Approval routes
+    Route::get('/pending-approvals', [RencanaKerjaHarianController::class, 'getPendingApprovals'])->name('getPendingApprovals');
+    Route::post('/process-approval', [RencanaKerjaHarianController::class, 'processApproval'])->name('processApproval');
+    Route::get('/{rkhno}/approval-detail', [RencanaKerjaHarianController::class, 'getApprovalDetail'])->name('getApprovalDetail');
+    
+    // LKH routes
+    Route::get('/{rkhno}/lkh', [RencanaKerjaHarianController::class, 'getLKHData'])->name('getLKHData');
+    Route::get('/lkh/{lkhno}', [RencanaKerjaHarianController::class, 'showLKH'])->name('showLKH');
+    Route::get('/lkh/{lkhno}/edit', [RencanaKerjaHarianController::class, 'editLKH'])->name('editLKH');
+    Route::post('/{rkhno}/generate-lkh', [RencanaKerjaHarianController::class, 'manualGenerateLkh'])->name('manualGenerateLkh');
+    
+    // DTH routes - FIXED MISSING ROUTE
+    Route::get('/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('dth-report');
+    Route::get('/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('dth-data'); // FIXED: dash instead of camelCase
+    Route::post('/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('generateDTH');
+    
+    // Absen routes
+    Route::get('/absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate'); // RENAMED for consistency
+    
+    // Status update
+    Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
 });
 
 

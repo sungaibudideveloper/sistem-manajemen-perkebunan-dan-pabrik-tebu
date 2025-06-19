@@ -709,50 +709,113 @@
                 </div>
             </div>
 
-            <!-- LKH Modal -->
+            <!-- LKH Modal - UPDATE YANG INI -->
             <div x-show="showLKHModal"
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div x-show="showLKHModal"
                     x-transition.scale
-                    class="bg-white rounded-lg shadow-lg w-11/12 md:w-1/2">
+                    class="bg-white rounded-lg shadow-lg w-11/12 md:w-4/5 lg:w-3/5 max-h-[90vh] flex flex-col">
                     <!-- Header -->
-                    <div class="flex justify-between items-center p-4 border-b">
-                        <h2 class="text-lg font-semibold">List Nomor LKH yang Sudah Diunggah</h2>
+                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-lg font-semibold text-gray-900">Daftar LKH</h2>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            RKH: <span class="font-mono font-medium" x-text="selectedRkhno"></span>
+                        </div>
                         <button @click="showLKHModal = false" class="text-gray-600 hover:text-gray-800 text-2xl leading-none">&times;</button>
                     </div>
+                    
                     <!-- Body -->
-                    <div class="p-4">
-                        <div class="max-h-60 overflow-y-auto">
-                            <table class="min-w-full table-auto text-sm">
-                                <thead>
-                                    <tr class="bg-gray-100">
-                                        <th class="px-2 py-1 text-left">No LKH</th>
-                                        <th class="px-2 py-1 text-left">Kegiatan</th>
-                                        <th class="px-2 py-1 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template x-for="lkh in lkhData" :key="lkh.lkhno">
+                    <div class="p-4 overflow-hidden flex-grow">
+                        <div class="overflow-x-auto">
+                            <div class="max-h-[400px] overflow-y-auto">
+                                <table class="min-w-full table-auto text-sm">
+                                    <thead class="bg-gray-100 sticky top-0">
                                         <tr>
-                                            <td class="border px-2 py-1" x-text="lkh.lkhno"></td>
-                                            <td class="border px-2 py-1" x-text="lkh.activity"></td>
-                                            <td class="border px-2 py-1 text-center">
-                                                <a :href="lkh.check_url" class="underline text-blue-600">Check</a>
+                                            <th class="px-3 py-2 text-left">No LKH</th>
+                                            <th class="px-3 py-2 text-left">Aktivitas</th>
+                                            <th class="px-3 py-2 text-left">Lokasi</th>
+                                            <th class="px-3 py-2 text-center">Jenis</th>
+                                            <th class="px-3 py-2 text-center">Status</th>
+                                            <th class="px-3 py-2 text-center">Pekerja</th>
+                                            <th class="px-3 py-2 text-center">Hasil (Ha)</th>
+                                            <th class="px-3 py-2 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="lkh in lkhData" :key="lkh.lkhno">
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="border px-3 py-2 font-mono text-xs" x-text="lkh.lkhno"></td>
+                                                <td class="border px-3 py-2" x-text="lkh.activity"></td>
+                                                <td class="border px-3 py-2" x-text="lkh.location"></td>
+                                                <td class="border px-3 py-2 text-center">
+                                                    <span class="px-2 py-1 text-xs rounded-full"
+                                                        :class="lkh.jenis_tenaga === 'Harian' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
+                                                        x-text="lkh.jenis_tenaga"></span>
+                                                </td>
+                                                <td class="border px-3 py-2 text-center">
+                                                    <span class="px-2 py-1 text-xs rounded-full"
+                                                        :class="{
+                                                            'bg-green-100 text-green-800': lkh.status === 'COMPLETED',
+                                                            'bg-yellow-100 text-yellow-800': lkh.status === 'DRAFT',
+                                                            'bg-blue-100 text-blue-800': lkh.status === 'SUBMITTED',
+                                                            'bg-purple-100 text-purple-800': lkh.status === 'APPROVED',
+                                                            'bg-gray-100 text-gray-800': lkh.status === 'EMPTY'
+                                                        }"
+                                                        x-text="lkh.status"></span>
+                                                </td>
+                                                <td class="border px-3 py-2 text-center" x-text="lkh.workers"></td>
+                                                <td class="border px-3 py-2 text-right" x-text="parseFloat(lkh.hasil).toFixed(2)"></td>
+                                                <td class="border px-3 py-2 text-center">
+                                                    <div class="flex justify-center space-x-1">
+                                                        <a :href="lkh.view_url" 
+                                                        class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                                                        target="_blank">
+                                                            View
+                                                        </a>
+                                                        <!-- Edit button - disabled for now -->
+                                                        <!-- 
+                                                        <a :href="lkh.edit_url" 
+                                                        class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors">
+                                                            Edit
+                                                        </a>
+                                                        -->
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <tr x-show="lkhData.length === 0">
+                                            <td colspan="8" class="border px-3 py-8 text-center text-gray-500">
+                                                Belum ada LKH yang dibuat untuk RKH ini
                                             </td>
                                         </tr>
-                                    </template>
-                                    <tr x-show="lkhData.length === 0">
-                                        <td colspan="3" class="border px-2 py-4 text-center text-gray-500">
-                                            Belum ada LKH yang diunggah
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="flex justify-between items-center p-4 border-t bg-gray-50">
+                        <div class="text-sm text-gray-600">
+                            Total: <span x-text="lkhData.length"></span> LKH
+                        </div>
+                        <button
+                            @click="showLKHModal = false"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded transition-colors"
+                        >Close</button>
                     </div>
                 </div>
             </div>
+
+
         </div>
     </div>
 
@@ -937,7 +1000,7 @@
 
                 async loadLKHData(rkhno) {
                     try {
-                        const response = await fetch(`/input/kerjaharian/rencanakerjaharian/${rkhno}/lkh`);
+                        const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.index') }}/${rkhno}/lkh`);
                         const data = await response.json();
                         if (data.success) {
                             this.lkhData = data.lkh_data || [];
