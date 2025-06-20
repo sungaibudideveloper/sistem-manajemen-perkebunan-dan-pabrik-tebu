@@ -1157,7 +1157,7 @@
                                 approval_status: lkh.approval_status || 'No Approval Required',
                                 workers: lkh.workers || 0,
                                 hasil: lkh.hasil || 0,
-                                islocked: lkh.islocked || false,
+                                issubmit: lkh.issubmit || false,
                                 can_lock: lkh.can_lock || false,
                                 can_edit: lkh.can_edit || false,
                                 view_url: lkh.view_url || '#',

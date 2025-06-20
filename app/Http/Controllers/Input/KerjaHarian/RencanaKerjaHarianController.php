@@ -946,9 +946,9 @@ class RencanaKerjaHarianController extends Controller
                     'h.totalhasil',
                     'h.totalsisa',
                     'h.createdat',
-                    'h.islocked',
-                    'h.lockedby',
-                    'h.lockedat',
+                    'h.issubmit',
+                    'h.submitby',
+                    'h.submitat',
                     'h.jumlahapproval',
                     'h.approval1flag',
                     'h.approval2flag',
@@ -962,8 +962,8 @@ class RencanaKerjaHarianController extends Controller
 
             $formattedData = $lkhList->map(function($lkh) {
                 $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
-                $canEdit = !$lkh->islocked && !$this->isLKHFullyApproved($lkh);
-                $canLock = !$lkh->islocked && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
+                $canEdit = !$lkh->issubmit && !$this->isLKHFullyApproved($lkh);
+                $canLock = !$lkh->issubmit && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
 
                 return [
                     'lkhno' => $lkh->lkhno,
@@ -972,13 +972,13 @@ class RencanaKerjaHarianController extends Controller
                     'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
                     'status' => $lkh->status ?? 'EMPTY',
                     'approval_status' => $approvalStatus,
-                    'islocked' => (bool) $lkh->islocked,
+                    'issubmit' => (bool) $lkh->issubmit,
                     'workers' => $lkh->totalworkers ?? 0,
                     'hasil' => $lkh->totalhasil ?? 0,
                     'sisa' => $lkh->totalsisa ?? 0,
                     'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
                     'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
-                    'locked_info' => $lkh->lockedat ? 'Locked at ' . Carbon::parse($lkh->lockedat)->format('d/m/Y H:i') : null,
+                    'locked_info' => $lkh->submitat ? 'Locked at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
                     'can_edit' => $canEdit,
                     'can_lock' => $canLock,
                     'view_url' => route('input.kerjaharian.rencanakerjaharian.showLKH', $lkh->lkhno),
@@ -1120,7 +1120,7 @@ class RencanaKerjaHarianController extends Controller
                 ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
                 ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
                 ->where('h.companycode', $companycode)
-                ->where('h.islocked', 1)
+                ->where('h.issubmit', 1)
                 ->where(function($query) use ($currentUser) {
                     $query->where(function($q) use ($currentUser) {
                         $q->where('h.approval1idjabatan', $currentUser->idjabatan)->whereNull('h.approval1flag');
@@ -1305,7 +1305,7 @@ class RencanaKerjaHarianController extends Controller
                 return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
             }
 
-            if ($lkh->islocked) {
+            if ($lkh->issubmit) {
                 return response()->json(['success' => false, 'message' => 'LKH sudah dikunci sebelumnya']);
             }
 
@@ -1318,9 +1318,9 @@ class RencanaKerjaHarianController extends Controller
             }
 
             $updateData = [
-                'islocked' => 1,
-                'lockedby' => $currentUser->userid,
-                'lockedat' => now(),
+                'issubmit' => 1,
+                'submitby' => $currentUser->userid,
+                'submitat' => now(),
                 'status' => 'SUBMITTED',
                 'updateby' => $currentUser->userid,
                 'updatedat' => now()

@@ -78,7 +78,7 @@ class LkhGeneratorService
                     'jamselesaikerja' => null,
                     'totalovertimehours' => 0.00,
                     'status' => 'DRAFT',
-                    'islocked' => 0, // NEW: Default unlocked
+                    'issubmit' => 0, // NEW: Default unlocked
                     'keterangan' => "Auto-generated from RKH {$rkhno}",
                     'inputby' => auth()->user()->userid ?? 'SYSTEM',
                     'createdat' => now(),

@@ -45,9 +45,9 @@ class Lkhhdr extends Model
         'approval3userid',
         'approval3flag',
         'approval3date',
-        'islocked',
-        'lockedby',
-        'lockedat',
+        'issubmit',
+        'submitby',
+        'submitat',
         'inputby',
         'createdat',
         'updateby',
@@ -73,8 +73,8 @@ class Lkhhdr extends Model
         'approval2date' => 'datetime',
         'approval3idjabatan' => 'integer',
         'approval3date' => 'datetime',
-        'islocked' => 'boolean',
-        'lockedat' => 'datetime',
+        'issubmit' => 'boolean',
+        'submitat' => 'datetime',
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
         'mobilecreatedat' => 'datetime',
@@ -191,13 +191,13 @@ class Lkhhdr extends Model
     // NEW: Check apakah LKH bisa di-edit
     public function canBeEdited()
     {
-        return !$this->islocked && !$this->isFullyApproved();
+        return !$this->issubmit && !$this->isFullyApproved();
     }
 
     // NEW: Check apakah LKH bisa di-lock
     public function canBeLocked()
     {
-        return !$this->islocked && ($this->status === 'COMPLETED' || $this->status === 'SUBMITTED');
+        return !$this->issubmit && ($this->status === 'COMPLETED' || $this->status === 'SUBMITTED');
     }
 
     // NEW: Get approval status text
@@ -228,16 +228,16 @@ class Lkhhdr extends Model
     // NEW: Get lock status info
     public function getLockStatusInfoAttribute()
     {
-        if (!$this->islocked) {
+        if (!$this->issubmit) {
             return 'Unlocked';
         }
 
         $info = 'Locked';
-        if ($this->lockedby) {
-            $info .= " by {$this->lockedby}";
+        if ($this->submitby) {
+            $info .= " by {$this->submitby}";
         }
-        if ($this->lockedat) {
-            $info .= " at " . $this->lockedat->format('d/m/Y H:i');
+        if ($this->submitat) {
+            $info .= " at " . $this->submitat->format('d/m/Y H:i');
         }
 
         return $info;
@@ -316,17 +316,17 @@ class Lkhhdr extends Model
 
     public function scopeLocked($query, $locked = true)
     {
-        return $query->where('islocked', $locked);
+        return $query->where('issubmit', $locked);
     }
 
     public function scopeUnlocked($query)
     {
-        return $query->where('islocked', 0);
+        return $query->where('issubmit', 0);
     }
 
     public function scopePendingApproval($query)
     {
-        return $query->where('islocked', 1)
+        return $query->where('issubmit', 1)
                     ->where('status', '!=', 'APPROVED');
     }
 
@@ -338,7 +338,7 @@ class Lkhhdr extends Model
     // NEW: Scope untuk approval berdasarkan jabatan
     public function scopeAwaitingApprovalBy($query, $jabatanId)
     {
-        return $query->where('islocked', 1)
+        return $query->where('issubmit', 1)
                     ->where(function($q) use ($jabatanId) {
                         $q->where(function($sub) use ($jabatanId) {
                             // Level 1 approval
