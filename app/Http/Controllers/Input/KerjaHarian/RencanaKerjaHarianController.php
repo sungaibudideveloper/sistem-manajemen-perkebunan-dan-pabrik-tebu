@@ -591,116 +591,219 @@ public function store(Request $request)
     }
 
     public function update(Request $request, $rkhno)
-    {
-        // Same logic as store - filter by blok trigger
-        $filteredRows = collect($request->input('rows', []))
-            ->filter(function ($row) {
-                return !empty($row['blok']);
-            })
-            ->map(function ($row) {
-                return array_map(function ($value) {
-                    return $value ?? '';
-                }, $row);
-            })
-            ->values()
-            ->toArray();
+{
+    // Same logic as store - filter by blok trigger
+    $filteredRows = collect($request->input('rows', []))
+        ->filter(function ($row) {
+            return !empty($row['blok']);
+        })
+        ->map(function ($row) {
+            return array_map(function ($value) {
+                return $value ?? '';
+            }, $row);
+        })
+        ->values()
+        ->toArray();
 
-        $request->merge(['rows' => $filteredRows]);
+    $request->merge(['rows' => $filteredRows]);
 
-        try {
-            $request->validate([
-                'mandor_id'              => 'required|exists:user,userid',
-                'tanggal'                => 'required|date',
-                'rows'                   => 'required|array|min:1',
-                'rows.*.blok'            => 'required|string',
-                'rows.*.plot'            => 'required|string',
-                'rows.*.nama'            => 'required|string',
-                'rows.*.luas'            => 'required|numeric',
-                'rows.*.laki_laki'       => 'nullable|integer|min:0',
-                'rows.*.perempuan'       => 'nullable|integer|min:0',
-                'rows.*.usingvehicle'    => 'required|boolean',
-                'rows.*.material_group_id' => 'nullable|integer',
-                'rows.*.keterangan'      => 'nullable|string|max:300',
-            ]);
+    try {
+        // Custom validation untuk material
+        $request->validate([
+            'mandor_id'              => 'required|exists:user,userid',
+            'tanggal'                => 'required|date',
+            'rows'                   => 'required|array|min:1',
+            'rows.*.blok'            => 'required|string',
+            'rows.*.plot'            => 'required|string',
+            'rows.*.nama'            => 'required|string',
+            'rows.*.luas'            => 'required|numeric|min:0',
+            'rows.*.laki_laki'       => 'required|integer|min:0',
+            'rows.*.perempuan'       => 'required|integer|min:0',
+            'rows.*.usingvehicle'    => 'required|boolean',
+            'rows.*.material_group_id' => 'nullable|integer',
+            'rows.*.keterangan'      => 'nullable|string|max:300',
+        ], [
+            'rows.*.laki_laki.required' => 'Jumlah laki-laki harus diisi (minimal 0)',
+            'rows.*.perempuan.required' => 'Jumlah perempuan harus diisi (minimal 0)',
+            'rows.*.luas.required' => 'Luas area harus diisi',
+            'rows.*.blok.required' => 'Blok harus dipilih',
+            'rows.*.plot.required' => 'Plot harus dipilih',
+            'rows.*.nama.required' => 'Aktivitas harus dipilih',
+            'rows.min' => 'Minimal satu baris harus diisi dengan lengkap',
+        ]);
 
-            DB::transaction(function () use ($request, $rkhno) {
-                $companycode = Session::get('companycode');
-                $tanggal     = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
+        // CUSTOM VALIDATION untuk material requirement
+        $herbisidadosages = new Herbisidadosage;
+        $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData(Session::get('companycode'));
+        
+        foreach ($request->rows as $index => $row) {
+            $activityCode = $row['nama'];
+            $materialGroupId = $row['material_group_id'] ?? null;
+            
+            // Check if this activity has material options
+            $hasMaterialOptions = collect($herbisidaData)->contains('activitycode', $activityCode);
+            
+            \Log::info("Material validation - Row " . ($index + 1) . ": Activity={$activityCode}, HasMaterial={$hasMaterialOptions}, GroupId={$materialGroupId}");
+            
+            if ($hasMaterialOptions && empty($materialGroupId)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "rows.{$index}.material_group_id" => "Baris " . ($index + 1) . ": Grup material harus dipilih untuk aktivitas ini"
+                ]);
+            }
+        }
 
-                // Hitung total luas & manpower
-                $totalLuas     = collect($request->rows)->sum('luas');
-                $totalManpower = collect($request->rows)->sum(function ($row) {
-                    $laki      = (int) ($row['laki_laki']   ?? 0);
-                    $perempuan = (int) ($row['perempuan']   ?? 0);
-                    return $laki + $perempuan;
-                });
+        DB::transaction(function () use ($request, $rkhno) {
+            $companycode = Session::get('companycode');
+            $tanggal = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
 
-                // Update header
-                DB::table('rkhhdr')
-                    ->where('companycode', $companycode)
-                    ->where('rkhno', $rkhno)
-                    ->update([
-                        'rkhdate'     => $tanggal,
-                        'totalluas'   => $totalLuas,
-                        'manpower'    => $totalManpower,
-                        'mandorid'    => $request->input('mandor_id'),
-                        'updateby'    => Auth::user()->userid,
-                        'updatedat'   => now(),
-                    ]);
-
-                // Hapus detail lama
-                DB::table('rkhlst')
-                    ->where('companycode', $companycode)
-                    ->where('rkhno', $rkhno)
-                    ->delete();
-
-                // Insert detail baru
-                $details = [];
-                foreach ($request->rows as $row) {
-                    $laki      = (int) ($row['laki_laki']   ?? 0);
-                    $perempuan = (int) ($row['perempuan']   ?? 0);
-
-                    // FIXED: Get jenistenagakerja from Activity model
-                    $activity = Activity::where('activitycode', $row['nama'])->first();
-                    $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
-
-                    $details[] = [
-                        'companycode'         => $companycode,
-                        'rkhno'               => $rkhno,
-                        'rkhdate'             => $tanggal,
-                        'blok'                => $row['blok'],
-                        'plot'                => $row['plot'],
-                        'activitycode'        => $row['nama'],
-                        'luasarea'            => $row['luas'],
-                        'jumlahlaki'          => $laki,
-                        'jumlahperempuan'     => $perempuan,
-                        'jumlahtenagakerja'   => $laki + $perempuan,
-                        'jenistenagakerja'    => $jenistenagakerja, // ADDED: Save jenistenagakerja ID
-                        'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
-                        'herbisidagroupid'    => !empty($row['material_group_id'])
-                                            ? (int) $row['material_group_id']
-                                            : null,
-                        'usingvehicle'        => $row['usingvehicle'],
-                        'description'         => $row['keterangan'] ?? null,
-                    ];
-                }
-
-                DB::table('rkhlst')->insert($details);
+            // Hitung total luas & manpower
+            $totalLuas = collect($request->rows)->sum('luas');
+            $totalManpower = collect($request->rows)->sum(function ($row) {
+                $laki = (int) ($row['laki_laki'] ?? 0);
+                $perempuan = (int) ($row['perempuan'] ?? 0);
+                return $laki + $perempuan;
             });
 
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('success', 'RKH berhasil diupdate.');
+            // TAMBAHAN: Ambil activitygroup dari row pertama yang ada datanya (SAMA SEPERTI STORE)
+            $primaryActivityGroup = null;
+            foreach ($request->rows as $row) {
+                if (!empty($row['nama'])) {
+                    $activity = Activity::where('activitycode', $row['nama'])->first();
+                    if ($activity && $activity->activitygroup) {
+                        $primaryActivityGroup = $activity->activitygroup;
+                        break; // Ambil dari aktivitas pertama yang ketemu
+                    }
+                }
+            }
+
+            // TAMBAHAN: Set approval requirements berdasarkan activitygroup (SAMA SEPERTI STORE)
+            $approvalData = [];
+            if ($primaryActivityGroup) {
+                $approvalSetting = DB::table('approval')
+                    ->where('companycode', $companycode)
+                    ->where('activitygroup', $primaryActivityGroup) // FIXED: ganti 'category' jadi 'activitygroup'
+                    ->first();
                 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()
-                ->withInput($request->all())
-                ->withErrors($e->validator);
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput($request->all())
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+                if ($approvalSetting) {
+                    $approvalData = [
+                        'activitygroup' => $primaryActivityGroup, // TAMBAHAN: Update activitygroup
+                        'jumlahapproval' => $approvalSetting->jumlahapproval,
+                        'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
+                        'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
+                        'approvali3djabatan' => $approvalSetting->idjabatanapproval3, // FIXED: kembali ke nama asli
+                        // RESET APPROVAL FLAGS karena activity group berubah
+                        'approval1flag' => null,
+                        'approval2flag' => null,
+                        'approval3flag' => null,
+                        'approval1date' => null,
+                        'approval2date' => null,
+                        'approval3date' => null,
+                        'approval1userid' => null,
+                        'approval2userid' => null,
+                        'approval3userid' => null,
+                    ];
+                }
+            }
+
+            // Update header dengan activitygroup dan approval data (ENHANCED)
+            $updateData = array_merge([
+                'rkhdate'     => $tanggal,
+                'totalluas'   => $totalLuas,
+                'manpower'    => $totalManpower,
+                'mandorid'    => $request->input('mandor_id'),
+                'updateby'    => Auth::user()->userid,
+                'updatedat'   => now(),
+            ], $approvalData);
+
+            DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->update($updateData);
+
+            // Hapus detail lama
+            DB::table('rkhlst')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->delete();
+
+            // Insert detail baru
+            $details = [];
+            foreach ($request->rows as $row) {
+                $laki = (int) ($row['laki_laki'] ?? 0);
+                $perempuan = (int) ($row['perempuan'] ?? 0);
+
+                // FIXED: Get jenistenagakerja from Activity model
+                $activity = Activity::where('activitycode', $row['nama'])->first();
+                $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+
+                $details[] = [
+                    'companycode'         => $companycode,
+                    'rkhno'               => $rkhno,
+                    'rkhdate'             => $tanggal,
+                    'blok'                => $row['blok'],
+                    'plot'                => $row['plot'],
+                    'activitycode'        => $row['nama'],
+                    'luasarea'            => $row['luas'],
+                    'jumlahlaki'          => $laki,
+                    'jumlahperempuan'     => $perempuan,
+                    'jumlahtenagakerja'   => $laki + $perempuan,
+                    'jenistenagakerja'    => $jenistenagakerja, // ADDED: Save jenistenagakerja ID
+                    'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
+                    'herbisidagroupid'    => !empty($row['material_group_id'])
+                                        ? (int) $row['material_group_id']
+                                        : null,
+                    'usingvehicle'        => $row['usingvehicle'],
+                    'description'         => $row['keterangan'] ?? null,
+                ];
+            }
+
+            DB::table('rkhlst')->insert($details);
+        });
+
+        // Response untuk AJAX atau redirect biasa
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "RKH berhasil diupdate!",
+                'rkhno' => $rkhno,
+                'redirect_url' => route('input.kerjaharian.rencanakerjaharian.index')
+            ]);
         }
+
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('success', 'RKH berhasil diupdate!');
+            
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terdapat kesalahan validasi',
+                'errors' => $e->errors()
+            ], 422);
+        }
+
+        return redirect()->back()
+            ->withInput($request->all())
+            ->withErrors($e->validator);
+            
+    } catch (\Exception $e) {
+        \Log::error("Update RKH Error: " . $e->getMessage(), [
+            'rkhno' => $rkhno,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
+
+        return redirect()->back()
+            ->withInput($request->all())
+            ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
+}
 
     public function destroy($rkhno)
     {

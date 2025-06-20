@@ -3,7 +3,90 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <form action="{{ route('input.kerjaharian.rencanakerjaharian.update', $rkhHeader->rkhno) }}" method="POST">
+  <!-- VALIDATION ERROR MODAL -->
+  <div x-data="{ showValidationModal: false, validationErrors: [] }" 
+       x-show="showValidationModal" 
+       x-cloak
+       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+       style="display: none;"
+       @validation-error.window="showValidationModal = true; validationErrors = $event.detail.errors">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
+      <div class="p-6 text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Form Belum Lengkap</h3>
+        <p class="text-sm text-gray-600 mb-4">Mohon lengkapi field yang diperlukan:</p>
+        
+        <!-- Error List -->
+        <div class="text-left bg-red-50 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
+          <ul class="text-sm text-red-700 space-y-1">
+            <template x-for="error in validationErrors" :key="error">
+              <li x-text="error"></li>
+            </template>
+          </ul>
+        </div>
+
+        <button @click="showValidationModal = false; highlightRequiredFields()"
+                class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+          OK, Saya Mengerti
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS/ERROR MODAL -->
+  <div x-data="{ showModal: false, modalType: '', modalMessage: '', modalErrors: [] }" 
+       x-show="showModal" 
+       x-cloak
+       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+       style="display: none;">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
+      <!-- Success Modal -->
+      <div x-show="modalType === 'success'" class="p-6 text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Berhasil!</h3>
+        <p class="text-sm text-gray-600 mb-4" x-html="modalMessage"></p>
+        <button @click="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}'"
+                class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+          OK
+        </button>
+      </div>
+
+      <!-- Error Modal -->
+      <div x-show="modalType === 'error'" class="p-6 text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Terjadi Kesalahan</h3>
+        <p class="text-sm text-gray-600 mb-4" x-text="modalMessage"></p>
+        
+        <!-- Error List -->
+        <div x-show="modalErrors.length > 0" class="text-left bg-red-50 rounded-lg p-3 mb-4">
+          <ul class="text-sm text-red-700 space-y-1">
+            <template x-for="error in modalErrors" :key="error">
+              <li x-text="error"></li>
+            </template>
+          </ul>
+        </div>
+
+        <button @click="showModal = false"
+                class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <form id="rkh-form" action="{{ route('input.kerjaharian.rencanakerjaharian.update', $rkhHeader->rkhno) }}" method="POST">
     @csrf
     @method('PUT')
 
@@ -129,11 +212,16 @@
 
     <!-- KANAN: Ringkasan Tenaga Kerja -->
     <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 min-w-[320px]">
-      <div class="flex items-center mb-4">
-        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-        <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center">
+          <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+          <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+        </div>
+        <!-- Mandor & Tanggal Info (moved to top right) -->
+        <div class="text-right">
+          <p class="text-xs text-gray-600" id="absen-info">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
+        </div>
       </div>
-      <p class="text-xs text-gray-600 mb-3" id="absen-info">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
       <div class="grid grid-cols-3 gap-4 text-center">
         <div class="bg-blue-50 rounded-lg p-3">
                 <div class="text-lg font-bold" id="summary-laki">0</div>
@@ -235,6 +323,7 @@
                         @click="open = true"
                         :value="selected.blok ? selected.blok : ''"
                         class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        data-validation-message="Blok harus dipilih"
                       >
                       <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.blok">
 
@@ -262,6 +351,7 @@
                           'border-gray-300': !isBlokSelected
                         }"
                         class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        data-validation-message="Plot harus dipilih"
                       >
                       <input type="hidden" name="rows[{{ $i }}][plot]" x-model="selected.plot">
 
@@ -280,6 +370,7 @@
                         :value="selected.activitycode && selected.activityname ? `${selected.activitycode} – ${selected.activityname}` : ''"
                         class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         :class="selected.activitycode ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-500'"
+                        data-validation-message="Aktivitas harus dipilih"
                       >
                       <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,15 +395,15 @@
 
                   <!-- #Luas -->
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ $oldLuas }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ $oldLuas }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Luas area harus diisi" data-row-index="{{ $i }}">
                   </td>
 
                   <!-- #Tenaga Kerja -->
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ $oldLaki }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ $oldLaki }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Jumlah laki-laki harus diisi">
                   </td>
                   <td class="px-1 py-3">
-                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ $oldPerempuan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ $oldPerempuan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Jumlah perempuan harus diisi">
                   </td>
                   <td class="px-1 py-3">
                     <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-300 rounded-lg px-3 py-2 text-right bg-gray-100 font-semibold text-gray-700" readonly placeholder="-">
@@ -328,7 +419,8 @@
                     >
                   </td>
 
-                  <!-- #Material -->
+
+<!-- Material Picker - Fixed Version -->
 <td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
   // Set initial activity code
   currentActivityCode = '{{ $oldActivity }}';
@@ -369,14 +461,15 @@
         </svg>
         Pilih Grup
       </div>
+      <!-- FIXED: Added null check for selectedGroup -->
       <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
-        <div class="font-semibold" x-text="selectedGroup.herbisidagroupname"></div>
+        <div class="font-semibold" x-text="selectedGroup && selectedGroup.herbisidagroupname ? selectedGroup.herbisidagroupname : ''"></div>
       </div>
     </div>
     
     <!-- Hidden inputs untuk menyimpan selected group -->
-    <input type="hidden" :name="`rows[{{ $i }}][material_group_id]`" x-model="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
-    <input type="hidden" :name="`rows[{{ $i }}][material_group_name]`" x-model="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
+    <input type="hidden" name="rows[{{ $i }}][material_group_id]" :value="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
+    <input type="hidden" name="rows[{{ $i }}][material_group_name]" :value="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
   </div>
   
   @include('input.kerjaharian.rencanakerjaharian.modal-material')
@@ -468,23 +561,19 @@
         <!-- Primary Update Button -->
         <button
           type="submit"
-          class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
+          id="submit-btn"
+          class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="submit-icon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
-          Update RKH
+          <!-- Loading Spinner (hidden by default) -->
+          <svg class="animate-spin w-5 h-5 mr-2 hidden" fill="none" viewBox="0 0 24 24" id="loading-spinner">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span id="submit-text">Update RKH</span>
         </button>
-
-        <!-- Debug Submit Button -->
-        <button
-          type="button"
-          id="debug-submit"
-          class="bg-yellow-500 hover:bg-yellow-600 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center"
-        >
-          Debug Submit
-        </button>
-
       </div>
     
   </div>
@@ -495,74 +584,300 @@ window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
 window.absenData = @json($absentenagakerja ?? []);
+window.plotsData = @json($plotsData ?? []); // Add plots data
 
-// Pastikan data tersedia secara global
 document.addEventListener('DOMContentLoaded', function() {
-  // Jika data dikirim dari controller, simpan ke variabel global
-  if (typeof herbisidagroups !== 'undefined') {
-    window.herbisidaData = herbisidagroups;
-  }
-
-  if (typeof bloksData !== 'undefined') {
-    window.bloksData = bloksData;
-  }
-  if (typeof masterlistData !== 'undefined') {
-    window.masterlistData = masterlistData;
-  }
-  
-  // Existing code untuk calculate totals
+  // Initialize calculations
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   rows.forEach(row => attachListeners(row));
   calculateTotals();
 
-  // Inisialisasi jenis tenaga kerja berdasarkan data yang sudah ada
-  rows.forEach((row, index) => {
-    updateJenisTenaga(index);
-  });
+  // MODERN FORM SUBMISSION with AJAX
+  document.getElementById('rkh-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Clear previous validation errors
+    clearValidationErrors();
+    
+    // CLIENT-SIDE VALIDATION
+    const validationResult = validateForm();
+    if (!validationResult.isValid) {
+      showValidationModal(validationResult.errors);
+      return;
+    }
 
-  // Update absen summary berdasarkan mandor yang sudah dipilih
-  const selectedMandorId = document.querySelector('input[name="mandor_id"]').value;
-  if (selectedMandorId) {
-    updateAbsenSummary(selectedMandorId);
-  }
+    // Show loading state
+    showLoadingState();
 
-  document.getElementById('debug-submit').addEventListener('click', () => {
-    const data = [];
+    // Prepare form data
+    const formData = new FormData(this);
 
-    const nomorRKH = document.getElementById('rkhno').textContent.trim();
-    const mandor = document.querySelector('input[name="mandor_id"]').value;
-    const tanggal = document.querySelector('input[name="tanggal"]').value;
-
-    rows.forEach((row, index) => {
-      const rowData = {
-        no: index + 1,
-        blok: row.querySelector('input[name$="[blok]"]').value,
-        plot: row.querySelector('input[name$="[plot]"]').value,
-        aktivitas: row.querySelector('input[name$="[nama]"]').value,
-        luas: row.querySelector('input[name$="[luas]"]').value,
-        laki_laki: row.querySelector('input[name$="[laki_laki]"]').value,
-        perempuan: row.querySelector('input[name$="[perempuan]"]').value,
-        jumlah_tenaga: row.querySelector('input[name$="[jumlah_tenaga]"]').value,
-        jenis_tenagakerja: row.querySelector('input[name$="[jenistenagakerja]"]').value,
-        material_group_id: row.querySelector('input[name$="[material_group_id]"]').value,
-        material_group_name: row.querySelector('input[name$="[material_group_name]"]').value,
-        kendaraan: row.querySelector('input[name$="[kendaraan]"]').value,
-        keterangan: row.querySelector('input[name$="[keterangan]"]').value,
-      };
-      data.push(rowData);
+    // AJAX submission
+    fetch(this.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success modal
+        showModal('success', data.message);
+      } else {
+        // Show error modal
+        const errors = data.errors ? Object.values(data.errors).flat() : [];
+        showModal('error', data.message || 'Terjadi kesalahan saat menyimpan data', errors);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showModal('error', 'Terjadi kesalahan sistem');
+    })
+    .finally(() => {
+      hideLoadingState();
     });
-
-    const debugData = {
-      nomor_rkh: nomorRKH,
-      mandor_id: mandor,
-      tanggal: tanggal,
-      rows: data,
-    };
-    console.log('Debug Data:', debugData);
   });
 });
 
-// Function untuk calculate row
+// IMPROVED VALIDATION FUNCTION
+function validateForm() {
+  const errors = [];
+  
+  const mandorId = document.querySelector('input[name="mandor_id"]').value;
+  if (!mandorId) {
+    errors.push('Silakan pilih Mandor terlebih dahulu');
+  }
+
+  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+  let hasCompleteRow = false;
+
+  rows.forEach((row, index) => {
+    const blokInput = row.querySelector('input[name$="[blok]"]');
+    const plotInput = row.querySelector('input[name$="[plot]"]');
+    const activityInput = row.querySelector('input[name$="[nama]"]');
+    const luasInput = row.querySelector('input[name$="[luas]"]');
+    const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
+    const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
+
+    const blok = blokInput.value;
+    const plot = plotInput.value;
+    const activity = activityInput.value;
+    const luas = luasInput.value;
+    const laki = lakiInput.value;
+    const perempuan = perempuanInput.value;
+
+    // Check if blok is filled (trigger field)
+    if (blok) {
+      hasCompleteRow = true;
+      const rowNum = index + 1;
+      
+      // If blok is filled, all required fields must be filled
+      if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
+      if (!activity) errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
+      if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
+      if (laki === '' || laki === null) errors.push(`Baris ${rowNum}: Jumlah laki-laki harus diisi`);
+      if (perempuan === '' || perempuan === null) errors.push(`Baris ${rowNum}: Jumlah perempuan harus diisi`);
+      
+      // Check material requirement - ENHANCED DEBUG
+      if (activity) {
+        const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activity);
+        console.log(`Row ${rowNum} - Activity: ${activity}, hasMaterialOptions: ${hasMaterialOptions}`);
+        
+        if (hasMaterialOptions) {
+          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+          const materialValue = materialGroupInput ? materialGroupInput.value : '';
+          console.log(`Row ${rowNum} - Material group value: '${materialValue}'`);
+          console.log(`Row ${rowNum} - Material input exists: ${!!materialGroupInput}`);
+          
+          if (!materialGroupInput || !materialGroupInput.value) {
+            const errorMsg = `Baris ${rowNum}: Grup material harus dipilih untuk aktivitas ini`;
+            errors.push(errorMsg);
+            console.log(`Row ${rowNum} - Added error: ${errorMsg}`);
+          }
+        }
+      }
+    }
+  });
+
+  if (!hasCompleteRow) {
+    errors.push('Minimal satu baris harus diisi dengan lengkap');
+  }
+
+  console.log('Validation errors:', errors);
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+// SHOW VALIDATION MODAL
+function showValidationModal(errors) {
+  // Dispatch custom event to show validation modal
+  window.dispatchEvent(new CustomEvent('validation-error', {
+    detail: { errors: errors }
+  }));
+}
+
+// HIGHLIGHT REQUIRED FIELDS
+function highlightRequiredFields() {
+  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+  
+  rows.forEach((row, index) => {
+    const blokInput = row.querySelector('input[name$="[blok]"]');
+    const blok = blokInput.value;
+    
+    if (blok) {
+      // If blok is filled, highlight empty required fields
+      const requiredFields = [
+        row.querySelector('input[name$="[plot]"]'),
+        row.querySelector('input[name$="[nama]"]'),
+        row.querySelector('input[name$="[luas]"]'),
+        row.querySelector('input[name$="[laki_laki]"]'),
+        row.querySelector('input[name$="[perempuan]"]')
+      ];
+      
+      requiredFields.forEach(field => {
+        if (field && (!field.value || field.value === '')) {
+          addValidationError(field);
+        }
+      });
+      
+      // Check material requirement
+      const activityInput = row.querySelector('input[name$="[nama]"]');
+      if (activityInput && activityInput.value) {
+        const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activityInput.value);
+        if (hasMaterialOptions) {
+          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+          if (!materialGroupInput || !materialGroupInput.value) {
+            const materialDiv = row.querySelector('td:nth-child(10) > div > div');
+            if (materialDiv) {
+              materialDiv.classList.add('border-red-500', 'bg-red-50');
+              materialDiv.classList.remove('border-gray-300', 'border-green-300');
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// VALIDATION HELPER FUNCTIONS
+function addValidationError(input) {
+  // Add error styling
+  input.classList.add('border-red-500', 'bg-red-50');
+  input.classList.remove('border-gray-200', 'border-gray-300');
+  
+  // Clear error on input
+  input.addEventListener('input', function() {
+    clearFieldError(this);
+  }, { once: true });
+}
+
+function clearFieldError(input) {
+  input.classList.remove('border-red-500', 'bg-red-50');
+  input.classList.add('border-gray-200');
+}
+
+function clearValidationErrors() {
+  const errorFields = document.querySelectorAll('.border-red-500');
+  errorFields.forEach(field => {
+    field.classList.remove('border-red-500', 'bg-red-50');
+    field.classList.add('border-gray-200');
+  });
+}
+
+// LOADING STATE FUNCTIONS
+function showLoadingState() {
+  const submitBtn = document.getElementById('submit-btn');
+  const submitText = document.getElementById('submit-text');
+  const submitIcon = document.getElementById('submit-icon');
+  const loadingSpinner = document.getElementById('loading-spinner');
+  
+  submitBtn.disabled = true;
+  submitText.textContent = 'Updating...';
+  submitIcon.classList.add('hidden');
+  loadingSpinner.classList.remove('hidden');
+}
+
+function hideLoadingState() {
+  const submitBtn = document.getElementById('submit-btn');
+  const submitText = document.getElementById('submit-text');
+  const submitIcon = document.getElementById('submit-icon');
+  const loadingSpinner = document.getElementById('loading-spinner');
+  
+  submitBtn.disabled = false;
+  submitText.textContent = 'Update RKH';
+  submitIcon.classList.remove('hidden');
+  loadingSpinner.classList.add('hidden');
+}
+
+// MODAL FUNCTIONS - SIMPLIFIED
+function showModal(type, message, errors = []) {
+  // Use Alpine.js event system for modals
+  if (type === 'success') {
+    // For success, trigger Alpine data update
+    const modalElement = document.querySelector('[x-data*="showModal"]');
+    if (modalElement && modalElement._x_dataStack && modalElement._x_dataStack[0]) {
+      modalElement._x_dataStack[0].showModal = true;
+      modalElement._x_dataStack[0].modalType = type;
+      modalElement._x_dataStack[0].modalMessage = message;
+      modalElement._x_dataStack[0].modalErrors = errors;
+    }
+  } else {
+    // For error, use validation modal
+    showValidationModal([message, ...errors]);
+  }
+}
+
+// Plot change listener - GLOBAL
+window.addEventListener('plot-changed', function(e) {
+  const { plotCode, rowIndex } = e.detail;
+  updateLuasFromPlot(plotCode, rowIndex);
+});
+
+// Absen summary function
+function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
+  if (!selectedMandorId || !window.absenData) {
+    document.getElementById('summary-laki').textContent = '0';
+    document.getElementById('summary-perempuan').textContent = '0';
+    document.getElementById('summary-total').textContent = '0';
+    const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+    document.getElementById('absen-info').textContent = selectedDate;
+    return;
+  }
+
+  const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+
+  if (selectedMandorCode && selectedMandorName) {
+    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
+  }
+
+  const filteredAbsen = window.absenData.filter(absen => 
+    absen.idmandor === selectedMandorId
+  );
+
+  let lakiCount = 0;
+  let perempuanCount = 0;
+
+  filteredAbsen.forEach(absen => {
+    if (absen.gender === 'L') {
+      lakiCount++;
+    } else if (absen.gender === 'P') {
+      perempuanCount++;
+    }
+  });
+
+  const totalCount = lakiCount + perempuanCount;
+
+  document.getElementById('summary-laki').textContent = lakiCount;
+  document.getElementById('summary-perempuan').textContent = perempuanCount;
+  document.getElementById('summary-total').textContent = totalCount;
+}
+
+// Existing calculation functions
 function calculateRow(row) {
   const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
   const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
@@ -579,7 +894,6 @@ function calculateRow(row) {
   }
 }
 
-// Function untuk calculate totals
 function calculateTotals() {
   let luasSum = 0, lakiSum = 0, perempuanSum = 0, tenagaSum = 0;
   document.querySelectorAll('#rkh-table tbody tr.rkh-row').forEach(row => {
@@ -598,7 +912,6 @@ function calculateTotals() {
   document.getElementById('total-tenaga').textContent = tenagaSum;
 }
 
-// Function untuk attach listeners
 function attachListeners(row) {
   ['[laki_laki]', '[perempuan]', '[luas]'].forEach(suffix => {
     const input = row.querySelector(`input[name$="${suffix}"]`);
@@ -606,117 +919,226 @@ function attachListeners(row) {
   });
 }
 
-// Function untuk update jenis tenaga berdasarkan total
-function updateJenisTenaga(rowIndex) {
-  const row = document.querySelectorAll('#rkh-table tbody tr.rkh-row')[rowIndex];
-  const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
-  const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
-  const jenisInput = row.querySelector('input[name$="[jenistenagakerja]"]');
-  
-  const laki = parseInt(lakiInput.value) || 0;
-  const perempuan = parseInt(perempuanInput.value) || 0;
-  const total = laki + perempuan;
-  
-  if (total === 0) {
-    jenisInput.value = '';
-  } else if (total <= 10) {
-    jenisInput.value = 'Kecil';
-  } else if (total <= 20) {
-    jenisInput.value = 'Sedang';
-  } else {
-    jenisInput.value = 'Besar';
-  }
-}
-
-// Validasi form submission
-document.querySelector('form').addEventListener('submit', function(e) {
-  console.log('Form is being submitted');
-  
-  // Check if mandor is selected
-  const mandorId = document.querySelector('input[name="mandor_id"]').value;
-  if (!mandorId) {
-    e.preventDefault();
-    alert('Please select a Mandor');
-    return;
-  }
-  
-  // Check if at least one row has data
-  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-  let hasData = false;
-  rows.forEach(row => {
-    const blok = row.querySelector('input[name$="[blok]"]').value;
-    const plot = row.querySelector('input[name$="[plot]"]').value;
-    const activity = row.querySelector('input[name$="[nama]"]').value;
-    if (blok && plot && activity) {
-      hasData = true;
-    }
+// Alpine.js store for modal
+document.addEventListener('alpine:init', () => {
+  Alpine.store('modal', {
+    showModal: false,
+    modalType: '',
+    modalMessage: '',
+    modalErrors: []
   });
   
-  if (!hasData) {
-    e.preventDefault();
-    alert('Please fill at least one complete row');
-    return;
-  }
+  // Store for tracking blok per row (needed for plot picker)
+  Alpine.store('blokPerRow', {
+    bloks: {},
+    
+    setBlok(rowIndex, blok) {
+      this.bloks[rowIndex] = blok;
+    },
+    
+    getBlok(rowIndex) {
+      return this.bloks[rowIndex] || '';
+    },
+    
+    hasBlok(rowIndex) {
+      return !!(this.bloks[rowIndex] && this.bloks[rowIndex].trim());
+    }
+  });
 });
 
-// Function untuk update absen summary berdasarkan mandor
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-  if (!selectedMandorId || !window.absenData) {
-    // Reset ke 0 jika tidak ada mandor dipilih
-    document.getElementById('summary-laki').textContent = '0';
-    document.getElementById('summary-perempuan').textContent = '0';
-    document.getElementById('summary-total').textContent = '0';
-    // Reset absen info ke tanggal saja
-    const today = new Date().toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric'
-    });
-    document.getElementById('absen-info').textContent = today;
-    return;
-  }
-
-  // Update absen info dengan nama mandor
-  const today = new Date().toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric'
-  });
-
-  if (selectedMandorCode && selectedMandorName) {
-    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${today}`;
-  }
-
-  // Filter data absen berdasarkan mandor yang dipilih
-  const filteredAbsen = window.absenData.filter(absen => 
-    absen.idmandor === selectedMandorId
-  );
-
-  // Hitung jumlah berdasarkan gender
-  let lakiCount = 0;
-  let perempuanCount = 0;
-
-  filteredAbsen.forEach(absen => {
-    if (absen.gender === 'L') {
-      lakiCount++;
-    } else if (absen.gender === 'P') {
-      perempuanCount++;
+// Function to update luas from plot selection
+function updateLuasFromPlot(plotCode, rowIndex) {
+  if (plotCode && window.plotsData) {
+    const plotData = window.plotsData.find(p => p.plot === plotCode);
+    if (plotData && plotData.luasarea) {
+      const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
+      if (luasInput) {
+        luasInput.value = plotData.luasarea;
+        // Trigger change event to update calculations
+        luasInput.dispatchEvent(new Event('input'));
+      }
     }
-  });
-
-  const totalCount = lakiCount + perempuanCount;
-
-  // Update tampilan
-  document.getElementById('summary-laki').textContent = lakiCount;
-  document.getElementById('summary-perempuan').textContent = perempuanCount;
-  document.getElementById('summary-total').textContent = totalCount;
+  }
 }
 
-// Pass data PHP ke JavaScript untuk herbisida
-window.herbisidaData = @json($herbisidagroups ?? []);
-
-console.log('Herbisida data loaded:', window.herbisidaData);
-
+// Material picker function - FIXED VERSION
+function materialPicker(rowIndex) {
+  return {
+    open: false,
+    rowIndex: rowIndex,
+    currentActivityCode: '',
+    selectedGroup: null,
+    
+    get hasMaterial() {
+      const hasOptions = this.currentActivityCode && this.availableGroups.length > 0;
+      console.log(`Row ${this.rowIndex} - Activity: ${this.currentActivityCode}, hasMaterial: ${hasOptions}`);
+      return hasOptions;
+    },
+    
+    get availableGroups() {
+      if (!this.currentActivityCode || !window.herbisidaData) return [];
+      
+      const groups = {};
+      window.herbisidaData.forEach(item => {
+        if (item.activitycode === this.currentActivityCode) {
+          if (!groups[item.herbisidagroupid]) {
+            groups[item.herbisidagroupid] = {
+              herbisidagroupid: item.herbisidagroupid,
+              herbisidagroupname: item.herbisidagroupname,
+              showDetails: false,
+              items: []
+            };
+          }
+          groups[item.herbisidagroupid].items.push(item);
+        }
+      });
+      
+      return Object.values(groups);
+    },
+    
+    checkMaterial() {
+      if (this.hasMaterial) {
+        this.open = true;
+      } else {
+        // No material needed, ensure hidden inputs are cleared
+        this.selectedGroup = null;
+        this.updateHiddenInputs();
+      }
+    },
+    
+    selectGroup(group) {
+      // Ensure group object is properly structured
+      this.selectedGroup = {
+        herbisidagroupid: group.herbisidagroupid || '',
+        herbisidagroupname: group.herbisidagroupname || ''
+      };
+      console.log(`Row ${this.rowIndex} - Selected group:`, this.selectedGroup);
+    },
+    
+    // NEW: Method to set selected group during initialization
+    setSelectedGroup(groupId, activityCode) {
+      if (!window.herbisidaData || !groupId || !activityCode) return;
+      
+      const groupData = window.herbisidaData.find(item => 
+        item.herbisidagroupid == groupId && item.activitycode === activityCode
+      );
+      
+      if (groupData) {
+        this.selectedGroup = {
+          herbisidagroupid: groupData.herbisidagroupid,
+          herbisidagroupname: groupData.herbisidagroupname
+        };
+        console.log(`Row ${this.rowIndex} - Initialized with group:`, this.selectedGroup);
+      }
+    },
+    
+    clearSelection() {
+      this.selectedGroup = null;
+      this.updateHiddenInputs();
+      console.log(`Row ${this.rowIndex} - Cleared selection`);
+    },
+    
+    confirmSelection() {
+      this.updateHiddenInputs();
+      this.open = false;
+    },
+    
+    updateHiddenInputs() {
+      // Ensure hidden inputs exist
+      this.ensureHiddenInputsExist();
+      
+      const materialGroupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
+      const materialGroupNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`);
+      const usingMaterialInput = document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`);
+      
+      if (materialGroupInput) {
+        materialGroupInput.value = (this.selectedGroup && this.selectedGroup.herbisidagroupid) ? this.selectedGroup.herbisidagroupid : '';
+      }
+      
+      if (materialGroupNameInput) {
+        materialGroupNameInput.value = (this.selectedGroup && this.selectedGroup.herbisidagroupname) ? this.selectedGroup.herbisidagroupname : '';
+      }
+      
+      if (usingMaterialInput) {
+        usingMaterialInput.value = (this.hasMaterial && this.selectedGroup) ? '1' : '0';
+      }
+      
+      console.log(`Row ${this.rowIndex} - Updated inputs:`, {
+        groupId: materialGroupInput?.value,
+        groupName: materialGroupNameInput?.value,
+        usingMaterial: usingMaterialInput?.value
+      });
+    },
+    
+    ensureHiddenInputsExist() {
+      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`);
+      if (!materialCell) return;
+      
+      // Create material_group_id input if not exists
+      if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`)) {
+        const groupIdInput = document.createElement('input');
+        groupIdInput.type = 'hidden';
+        groupIdInput.name = `rows[${this.rowIndex}][material_group_id]`;
+        groupIdInput.value = '';
+        materialCell.appendChild(groupIdInput);
+      }
+      
+      // Create material_group_name input if not exists
+      if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`)) {
+        const groupNameInput = document.createElement('input');
+        groupNameInput.type = 'hidden';
+        groupNameInput.name = `rows[${this.rowIndex}][material_group_name]`;
+        groupNameInput.value = '';
+        materialCell.appendChild(groupNameInput);
+      }
+      
+      // Create usingmaterial input if not exists
+      if (!document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`)) {
+        const usingMaterialInput = document.createElement('input');
+        usingMaterialInput.type = 'hidden';
+        usingMaterialInput.name = `rows[${this.rowIndex}][usingmaterial]`;
+        usingMaterialInput.value = '0';
+        materialCell.appendChild(usingMaterialInput);
+      }
+    },
+    
+    init() {
+      // Initialize hidden inputs
+      this.ensureHiddenInputsExist();
+      
+      // Listen for activity changes
+      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
+      if (activityInput) {
+        const observer = new MutationObserver(() => {
+          const newActivity = activityInput.value || '';
+          if (this.currentActivityCode !== newActivity) {
+            console.log(`Row ${this.rowIndex} - Activity changed from ${this.currentActivityCode} to ${newActivity}`);
+            this.currentActivityCode = newActivity;
+            this.selectedGroup = null; // Reset selection when activity changes
+            this.updateHiddenInputs();
+          }
+        });
+        
+        observer.observe(activityInput, {
+          attributes: true,
+          attributeFilter: ['value']
+        });
+        
+        activityInput.addEventListener('input', () => {
+          const newActivity = activityInput.value || '';
+          if (this.currentActivityCode !== newActivity) {
+            this.currentActivityCode = newActivity;
+            this.selectedGroup = null;
+            this.updateHiddenInputs();
+          }
+        });
+        
+        this.currentActivityCode = activityInput.value || '';
+        this.updateHiddenInputs(); // Initialize on load
+      }
+    }
+  };
+}
 </script>
 
 </x-layout>
