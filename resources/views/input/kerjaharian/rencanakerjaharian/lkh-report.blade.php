@@ -56,152 +56,194 @@
 
         <!-- Summary Info -->
         <div class="grid grid-cols-4 gap-4 mb-6">
-            <div class="bg-blue-50 p-4 rounded-lg text-center">
-                <div class="text-2xl font-bold text-blue-600">{{ $lkhData->totalworkers }}</div>
-                <div class="text-sm text-blue-800">Total Pekerja</div>
+            <div class="bg-gray-50 p-4 rounded-lg text-center border">
+                <div class="text-2xl font-bold text-gray-800">{{ $lkhData->totalworkers }}</div>
+                <div class="text-sm text-gray-600">Total Pekerja</div>
             </div>
-            <div class="bg-green-50 p-4 rounded-lg text-center">
-                <div class="text-2xl font-bold text-green-600">{{ number_format($lkhData->totalhasil, 2) }}</div>
-                <div class="text-sm text-green-800">Total Hasil (Ha)</div>
+            <div class="bg-gray-50 p-4 rounded-lg text-center border">
+                <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalhasil, 2) }}</div>
+                <div class="text-sm text-gray-600">Total Hasil (Ha)</div>
             </div>
-            <div class="bg-orange-50 p-4 rounded-lg text-center">
-                <div class="text-2xl font-bold text-orange-600">{{ number_format($lkhData->totalsisa, 2) }}</div>
-                <div class="text-sm text-orange-800">Total Sisa (Ha)</div>
+            <div class="bg-gray-50 p-4 rounded-lg text-center border">
+                <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalsisa, 2) }}</div>
+                <div class="text-sm text-gray-600">Total Sisa (Ha)</div>
             </div>
-            <div class="bg-purple-50 p-4 rounded-lg text-center">
-                <div class="text-2xl font-bold text-purple-600">Rp {{ number_format($lkhData->totalupahall, 0, ',', '.') }}</div>
-                <div class="text-sm text-purple-800">Total Upah</div>
+            <div class="bg-gray-50 p-4 rounded-lg text-center border">
+                <div class="text-2xl font-bold text-gray-800">Rp {{ number_format($lkhData->totalupahall, 0, ',', '.') }}</div>
+                <div class="text-sm text-gray-600">Total Upah</div>
             </div>
         </div>
 
-        <!-- Work Hours (Hanya untuk Tenaga Harian) -->
-        @if($lkhData->jenistenagakerja == 1)
-        <div class="bg-yellow-50 p-4 rounded-lg mb-6">
-            <h3 class="font-semibold text-gray-800 mb-2">Jam Kerja Shift</h3>
-            <div class="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                    <span class="font-medium">Jam Mulai:</span> 
-                    <span class="font-mono">{{ $lkhData->jammulaikerja ?? '-' }}</span>
-                </div>
-                <div>
-                    <span class="font-medium">Jam Selesai:</span> 
-                    <span class="font-mono">{{ $lkhData->jamselesaikerja ?? '-' }}</span>
-                </div>
-                <div>
-                    <span class="font-medium">Total Overtime:</span> 
-                    <span class="font-mono">{{ $lkhData->totalovertimehours ?? 0 }} jam</span>
-                </div>
-            </div>
-        </div>
-        @endif
+        <!-- Detail Tables - Grouped by Plot -->
+        <div class="mb-8">
+            @php
+                $groupedDetails = $lkhDetails->groupBy('plot');
+                $grandTotalWorkers = 0;
+                $grandTotalHasil = 0;
+                $grandTotalSisa = 0;
+                $grandTotalUpah = 0;
+                $grandTotalOvertimeHours = 0;
+            @endphp
 
-        <!-- Detail Table -->
-        <div class="overflow-x-auto mb-8">
-            <table class="min-w-full border-collapse border border-gray-300">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">No</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Nama</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">No KTP</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Blok</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Plot</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 text-center" colspan="3">Hasil</th>
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Material</th>
+            @if($groupedDetails->count() > 0)
+                @foreach($groupedDetails as $plot => $plotDetails)
+                    @php
+                        $plotTotalWorkers = $plotDetails->count();
+                        $plotTotalHasil = $plotDetails->sum('hasil');
+                        $plotTotalSisa = $plotDetails->sum('sisa');
+                        $plotTotalUpah = $plotDetails->sum($lkhData->jenistenagakerja == 1 ? 'totalupahharian' : 'totalbiayaborongan');
+                        $plotTotalOvertimeHours = $plotDetails->sum('overtimehours');
                         
-                        @if($lkhData->jenistenagakerja == 1)
-                            {{-- Tenaga Harian --}}
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 text-center" colspan="3">Jam Kerja</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Premi</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Upah Harian</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Total Upah</th>
-                        @else
-                            {{-- Tenaga Borongan --}}
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Cost/Ha</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Total Biaya</th>
-                        @endif
-                        
-                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
-                    </tr>
-                    
-                    {{-- Sub Header untuk kolom yang di-colspan --}}
-                    <tr class="bg-gray-50">
-                        <th class="border border-gray-300 px-1 py-1" colspan="5"></th>
-                        <th class="border border-gray-300 px-2 py-1 text-xs">Luas Plot</th>
-                        <th class="border border-gray-300 px-2 py-1 text-xs">Hasil</th>
-                        <th class="border border-gray-300 px-2 py-1 text-xs">Sisa</th>
-                        <th class="border border-gray-300 px-1 py-1"></th>
-                        
-                        @if($lkhData->jenistenagakerja == 1)
-                            <th class="border border-gray-300 px-2 py-1 text-xs">Masuk</th>
-                            <th class="border border-gray-300 px-2 py-1 text-xs">Selesai</th>
-                            <th class="border border-gray-300 px-2 py-1 text-xs">Overtime</th>
-                            <th class="border border-gray-300 px-1 py-1" colspan="3"></th>
-                        @else
-                            <th class="border border-gray-300 px-1 py-1" colspan="2"></th>
-                        @endif
-                        
-                        <th class="border border-gray-300 px-1 py-1"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($lkhDetails as $index => $worker)
-                    <tr class="hover:bg-gray-50">
-                        <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $index + 1 }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-sm">{{ $worker->workername }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-sm font-mono">{{ $worker->noktp ?? '-' }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->blok }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->plot }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->luasplot, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->hasil, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->sisa, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-sm">{{ $worker->materialused ?? '-' }}</td>
-                        
-                        @if($lkhData->jenistenagakerja == 1)
-                            {{-- Tenaga Harian --}}
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-mono">{{ $worker->jammasuk ?? '-' }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-mono">{{ $worker->jamselesai ?? '-' }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->overtimehours ?? 0 }}h</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalupahharian ?? 0, 0, ',', '.') }}</td>
-                        @else
-                            {{-- Tenaga Borongan --}}
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->costperha ?? 0, 0, ',', '.') }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalbiayaborongan ?? 0, 0, ',', '.') }}</td>
-                        @endif
-                        
-                        <td class="border border-gray-300 px-3 py-2 text-sm">-</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="{{ $lkhData->jenistenagakerja == 1 ? 15 : 12 }}" class="border border-gray-300 px-3 py-8 text-center text-gray-500">
-                            Tidak ada data pekerja
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
+                        // Add to grand totals
+                        $grandTotalWorkers += $plotTotalWorkers;
+                        $grandTotalHasil += $plotTotalHasil;
+                        $grandTotalSisa += $plotTotalSisa;
+                        $grandTotalUpah += $plotTotalUpah;
+                        $grandTotalOvertimeHours += $plotTotalOvertimeHours;
+                    @endphp
+
+                    <!-- Plot Header -->
+                    <div class="bg-blue-100 p-3 rounded-t-lg border border-b-0">
+                        <h3 class="font-bold text-gray-800">Plot: {{ $plot }} ({{ $plotDetails->first()->blok }})</h3>
+                    </div>
+
+                    <!-- Plot Table -->
+                    <div class="overflow-x-auto mb-4">
+                        <table class="min-w-full border-collapse border border-gray-300">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">No</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Blok</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Plot</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Nama</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">No KTP</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 text-center" colspan="3">Hasil</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Material</th>
+                                    
+                                    @if($lkhData->jenistenagakerja == 1)
+                                        {{-- Tenaga Harian --}}
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 text-center" colspan="3">Jam Kerja</th>
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Premi</th>
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Upah Harian</th>
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Total Upah</th>
+                                    @else
+                                        {{-- Tenaga Borongan --}}
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Cost/Ha</th>
+                                        <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Total Biaya</th>
+                                    @endif
+                                    
+                                    <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
+                                </tr>
+                                
+                                {{-- Sub Header untuk kolom yang di-colspan --}}
+                                <tr class="bg-gray-50">
+                                    <th class="border border-gray-300 px-1 py-1" colspan="5"></th>
+                                    <th class="border border-gray-300 px-2 py-1 text-xs">Luas Plot</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-xs">Hasil</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-xs">Sisa</th>
+                                    <th class="border border-gray-300 px-1 py-1"></th>
+                                    
+                                    @if($lkhData->jenistenagakerja == 1)
+                                        <th class="border border-gray-300 px-2 py-1 text-xs">Masuk</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-xs">Selesai</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-xs">Overtime</th>
+                                        <th class="border border-gray-300 px-1 py-1" colspan="3"></th>
+                                    @else
+                                        <th class="border border-gray-300 px-1 py-1" colspan="2"></th>
+                                    @endif
+                                    
+                                    <th class="border border-gray-300 px-1 py-1"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($plotDetails as $index => $worker)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $index + 1 }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->blok }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->plot }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-sm">{{ $worker->workername ?? 'N/A' }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-sm font-mono">{{ $worker->noktp ?? '-' }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->luasplot, 2) }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->hasil, 2) }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($worker->sisa, 2) }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-sm">{{ $worker->materialused ?? '-' }}</td>
+                                    
+                                    @if($lkhData->jenistenagakerja == 1)
+                                        {{-- Tenaga Harian --}}
+                                        <td class="border border-gray-300 px-3 py-2 text-center text-sm font-mono">{{ $worker->jammasuk ?? '-' }}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-center text-sm font-mono">{{ $worker->jamselesai ?? '-' }}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $worker->overtimehours ?? 0 }}h</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalupahharian ?? 0, 0, ',', '.') }}</td>
+                                    @else
+                                        {{-- Tenaga Borongan --}}
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($worker->costperha ?? 0, 0, ',', '.') }}</td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalbiayaborongan ?? 0, 0, ',', '.') }}</td>
+                                    @endif
+                                    
+                                    <td class="border border-gray-300 px-3 py-2 text-sm">-</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                            
+                            {{-- Plot Subtotal --}}
+                            <tfoot class="bg-blue-50 font-semibold">
+                                <tr>
+                                    <td colspan="6" class="border border-gray-300 px-3 py-2 text-center text-sm">SUBTOTAL - {{ $plot }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plotTotalHasil, 2) }}</td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plotTotalSisa, 2) }}</td>
+                                    <td class="border border-gray-300 px-3 py-2"></td>
+                                    
+                                    @if($lkhData->jenistenagakerja == 1)
+                                        <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $plotTotalOvertimeHours }}h</td>
+                                        <td colspan="2" class="border border-gray-300 px-3 py-2"></td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($plotTotalUpah, 0, ',', '.') }}</td>
+                                    @else
+                                        <td class="border border-gray-300 px-3 py-2"></td>
+                                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($plotTotalUpah, 0, ',', '.') }}</td>
+                                    @endif
+                                    
+                                    <td class="border border-gray-300 px-3 py-2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @endforeach
+
+                <!-- Grand Total Table -->
+                <div class="bg-green-100 p-3 rounded-t-lg border border-b-0 mt-6">
+                    <h3 class="font-bold text-gray-800">GRAND TOTAL</h3>
+                </div>
                 
-                {{-- Footer Total --}}
-                <tfoot class="bg-gray-100 font-semibold">
-                    <tr>
-                        <td colspan="6" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhData->totalhasil, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhData->totalsisa, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2"></td>
-                        
-                        @if($lkhData->jenistenagakerja == 1)
-                            <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $lkhData->totalovertimehours }}h</td>
-                            <td colspan="2" class="border border-gray-300 px-3 py-2"></td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($lkhData->totalupahall, 0, ',', '.') }}</td>
-                        @else
-                            <td class="border border-gray-300 px-3 py-2"></td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($lkhData->totalupahall, 0, ',', '.') }}</td>
-                        @endif
-                        
-                        <td class="border border-gray-300 px-3 py-2"></td>
-                    </tr>
-                </tfoot>
-            </table>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse border border-gray-300">
+                        <tfoot class="bg-green-100 font-bold">
+                            <tr>
+                                <td colspan="6" class="border border-gray-300 px-3 py-2 text-center text-sm">GRAND TOTAL</td>
+                                <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($grandTotalHasil, 2) }}</td>
+                                <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($grandTotalSisa, 2) }}</td>
+                                <td class="border border-gray-300 px-3 py-2"></td>
+                                
+                                @if($lkhData->jenistenagakerja == 1)
+                                    <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $grandTotalOvertimeHours }}h</td>
+                                    <td colspan="2" class="border border-gray-300 px-3 py-2"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($grandTotalUpah, 0, ',', '.') }}</td>
+                                @else
+                                    <td class="border border-gray-300 px-3 py-2"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-right text-sm">Rp {{ number_format($grandTotalUpah, 0, ',', '.') }}</td>
+                                @endif
+                                
+                                <td class="border border-gray-300 px-3 py-2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            @else
+                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+                    <strong>Info:</strong> Tidak ada detail data LKH yang ditemukan.
+                </div>
+            @endif
         </div>
 
         <!-- Keterangan -->

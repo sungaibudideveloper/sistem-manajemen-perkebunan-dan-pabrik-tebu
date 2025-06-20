@@ -617,7 +617,474 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    // RKH Approval Methods
+    // =========================
+    // LKH METHODS
+    // =========================
+    public function getLKHData($rkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            \Log::info("Getting LKH data for RKH: {$rkhno}, Company: {$companycode}");
+            
+            $lkhList = DB::table('lkhhdr as h')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->leftJoin('approval as app', function($join) use ($companycode) {
+                    $join->on('a.activitygroup', '=', 'app.activitygroup')
+                         ->where('app.companycode', '=', $companycode);
+                })
+                ->where('h.companycode', $companycode)
+                ->where('h.rkhno', $rkhno)
+                ->select([
+                    'h.lkhno',
+                    'h.activitycode',
+                    'a.activityname',
+                    'h.blok',
+                    'h.jenistenagakerja',
+                    'h.status',
+                    'h.lkhdate',
+                    'h.totalworkers',
+                    'h.totalhasil',
+                    'h.totalsisa',
+                    'h.createdat',
+                    'h.issubmit',  // Changed from islocked
+                    'h.submitby', // Changed from lockedby
+                    'h.submitat', // Changed from lockedat
+                    'h.jumlahapproval',
+                    'h.approval1flag',
+                    'h.approval2flag',
+                    'h.approval3flag',
+                    'app.jumlahapproval as required_approvals'
+                ])
+                ->orderBy('h.lkhno')
+                ->get();
+
+            \Log::info("Found {$lkhList->count()} LKH records for RKH {$rkhno}");
+
+            $formattedData = $lkhList->map(function($lkh) {
+                $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
+                $canEdit = !$lkh->issubmit && !$this->isLKHFullyApproved($lkh);
+                $canSubmit = !$lkh->issubmit && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
+
+                return [
+                    'lkhno' => $lkh->lkhno,
+                    'activity' => $lkh->activitycode . ' - ' . ($lkh->activityname ?? 'Unknown Activity'),
+                    'blok' => $lkh->blok ?? 'N/A',
+                    'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
+                    'status' => $lkh->status ?? 'EMPTY',
+                    'approval_status' => $approvalStatus,
+                    'issubmit' => (bool) $lkh->issubmit,
+                    'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
+                    'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
+                    'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
+                    'can_edit' => $canEdit,
+                    'can_submit' => $canSubmit,
+                    'view_url' => route('input.kerjaharian.rencanakerjaharian.showLKH', $lkh->lkhno),
+                    'edit_url' => route('input.kerjaharian.rencanakerjaharian.editLKH', $lkh->lkhno)
+                ];
+            });
+
+            $canGenerateLkh = false;
+            $generateMessage = '';
+            
+            $rkhData = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
+                
+            if ($rkhData) {
+                if ($this->isRkhFullyApproved($rkhData)) {
+                    if ($lkhList->isEmpty()) {
+                        $canGenerateLkh = true;
+                        $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
+                    } else {
+                        $generateMessage = 'LKH sudah pernah di-generate';
+                    }
+                } else {
+                    $generateMessage = 'RKH belum fully approved';
+                }
+            }
+
+            \Log::info("Returning LKH data", [
+                'success' => true,
+                'total_lkh' => $lkhList->count(),
+                'formatted_count' => $formattedData->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'lkh_data' => $formattedData->values()->toArray(),
+                'rkhno' => $rkhno,
+                'can_generate_lkh' => $canGenerateLkh,
+                'generate_message' => $generateMessage,
+                'total_lkh' => $lkhList->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting LKH data for RKH {$rkhno}: " . $e->getMessage());
+            \Log::error("Stack trace: " . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data LKH: ' . $e->getMessage(),
+                'lkh_data' => [],
+                'total_lkh' => 0
+            ], 500);
+        }
+    }
+
+    // =========================
+    // LKH APPROVAL METHODS
+    // =========================
+    public function getPendingLKHApprovals(Request $request)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            $currentUser = Auth::user();
+            
+            if (!$currentUser || !$currentUser->idjabatan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak memiliki jabatan yang valid'
+                ]);
+            }
+
+            $pendingLKH = DB::table('lkhhdr as h')
+                ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->where('h.companycode', $companycode)
+                ->where('h.issubmit', 1) // Changed from islocked
+                ->where(function($query) use ($currentUser) {
+                    $query->where(function($q) use ($currentUser) {
+                        $q->where('h.approval1idjabatan', $currentUser->idjabatan)->whereNull('h.approval1flag');
+                    })->orWhere(function($q) use ($currentUser) {
+                        $q->where('h.approval2idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->whereNull('h.approval2flag');
+                    })->orWhere(function($q) use ($currentUser) {
+                        $q->where('h.approval3idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->where('h.approval2flag', '1')->whereNull('h.approval3flag');
+                    });
+                })
+                ->select([
+                    'h.*',
+                    'm.name as mandor_nama',
+                    'a.activityname',
+                    DB::raw('CASE 
+                        WHEN h.approval1idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag IS NULL THEN 1
+                        WHEN h.approval2idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag IS NULL THEN 2
+                        WHEN h.approval3idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag = "1" AND h.approval3flag IS NULL THEN 3
+                        ELSE 0
+                    END as approval_level')
+                ])
+                ->orderBy('h.lkhdate', 'desc')
+                ->get();
+
+            $formattedData = $pendingLKH->map(function($lkh) {
+                return [
+                    'lkhno' => $lkh->lkhno,
+                    'rkhno' => $lkh->rkhno,
+                    'lkhdate' => $lkh->lkhdate,
+                    'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+                    'mandor_nama' => $lkh->mandor_nama,
+                    'activityname' => $lkh->activityname ?? 'Unknown Activity',
+                    'approval_level' => $lkh->approval_level,
+                    'status' => $lkh->status,
+                    'total_workers' => $lkh->totalworkers,
+                    'total_hasil' => $lkh->totalhasil,
+                    'blok' => $lkh->blok,
+                    'plot' => $lkh->plot
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedData,
+                'user_info' => [
+                    'userid' => $currentUser->userid,
+                    'name' => $currentUser->name,
+                    'idjabatan' => $currentUser->idjabatan,
+                    'jabatan_name' => $this->getJabatanName($currentUser->idjabatan)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting pending LKH approvals: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data approval LKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getLkhApprovalDetail($lkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            $lkh = DB::table('lkhhdr as h')
+                ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->leftJoin('approval as app', function($join) use ($companycode) {
+                    $join->on('a.activitygroup', '=', 'app.activitygroup')
+                         ->where('app.companycode', '=', $companycode);
+                })
+                ->leftJoin('user as u1', 'h.approval1userid', '=', 'u1.userid')
+                ->leftJoin('user as u2', 'h.approval2userid', '=', 'u2.userid')
+                ->leftJoin('user as u3', 'h.approval3userid', '=', 'u3.userid')
+                ->leftJoin('jabatan as j1', 'h.approval1idjabatan', '=', 'j1.idjabatan')
+                ->leftJoin('jabatan as j2', 'h.approval2idjabatan', '=', 'j2.idjabatan')
+                ->leftJoin('jabatan as j3', 'h.approval3idjabatan', '=', 'j3.idjabatan')
+                ->where('h.companycode', $companycode)
+                ->where('h.lkhno', $lkhno)
+                ->select([
+                    'h.*',
+                    'm.name as mandor_nama',
+                    'a.activityname',
+                    'h.jumlahapproval',
+                    'h.approval1idjabatan',
+                    'h.approval2idjabatan', 
+                    'h.approval3idjabatan',
+                    'u1.name as approval1_user_name',
+                    'u2.name as approval2_user_name',
+                    'u3.name as approval3_user_name',
+                    'j1.namajabatan as jabatan1_name',
+                    'j2.namajabatan as jabatan2_name',
+                    'j3.namajabatan as jabatan3_name'
+                ])
+                ->first();
+
+            if (!$lkh) {
+                return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
+            }
+
+            $levels = [];
+            
+            for ($i = 1; $i <= 3; $i++) {
+                $jabatanId = $lkh->{"approval{$i}idjabatan"};
+                if (!$jabatanId) continue;
+
+                $flagField = "approval{$i}flag";
+                $dateField = "approval{$i}date";
+                $userField = "approval{$i}_user_name";
+                $jabatanField = "jabatan{$i}_name";
+
+                $flag = $lkh->$flagField;
+                $status = 'waiting';
+                $statusText = 'Waiting';
+
+                if ($flag === '1') {
+                    $status = 'approved';
+                    $statusText = 'Approved';
+                } elseif ($flag === '0') {
+                    $status = 'declined';
+                    $statusText = 'Declined';
+                }
+
+                $levels[] = [
+                    'level' => $i,
+                    'jabatan_name' => $lkh->$jabatanField ?? 'Unknown',
+                    'status' => $status,
+                    'status_text' => $statusText,
+                    'user_name' => $lkh->$userField ?? null,
+                    'date_formatted' => $lkh->$dateField ? Carbon::parse($lkh->$dateField)->format('d/m/Y H:i') : null
+                ];
+            }
+
+            $formattedData = [
+                'lkhno' => $lkh->lkhno,
+                'rkhno' => $lkh->rkhno,
+                'lkhdate' => $lkh->lkhdate,
+                'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+                'mandor_nama' => $lkh->mandor_nama,
+                'activityname' => $lkh->activityname ?? 'Unknown Activity',
+                'blok' => $lkh->blok,
+                'jumlah_approval' => $lkh->jumlahapproval ?? 0,
+                'levels' => $levels
+            ];
+
+            return response()->json(['success' => true, 'data' => $formattedData]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting LKH approval detail: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat detail approval LKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function processLKHApproval(Request $request)
+    {
+        $request->validate([
+            'lkhno' => 'required|string',
+            'action' => 'required|in:approve,decline',
+            'level' => 'required|integer|between:1,3'
+        ]);
+
+        try {
+            $companycode = Session::get('companycode');
+            $currentUser = Auth::user();
+            $lkhno = $request->lkhno;
+            $action = $request->action;
+            $level = $request->level;
+
+            if (!$currentUser || !$currentUser->idjabatan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak memiliki jabatan yang valid'
+                ]);
+            }
+
+            $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
+
+            if (!$lkh) {
+                return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
+            }
+
+            $canApprove = false;
+            $approvalField = '';
+            $approvalDateField = '';
+            $approvalUserField = '';
+
+            switch ($level) {
+                case 1:
+                    if ($lkh->approval1idjabatan == $currentUser->idjabatan && is_null($lkh->approval1flag)) {
+                        $canApprove = true;
+                        $approvalField = 'approval1flag';
+                        $approvalDateField = 'approval1date';
+                        $approvalUserField = 'approval1userid';
+                    }
+                    break;
+                case 2:
+                    if ($lkh->approval2idjabatan == $currentUser->idjabatan && 
+                        $lkh->approval1flag == '1' && is_null($lkh->approval2flag)) {
+                        $canApprove = true;
+                        $approvalField = 'approval2flag';
+                        $approvalDateField = 'approval2date';
+                        $approvalUserField = 'approval2userid';
+                    }
+                    break;
+                case 3:
+                    if ($lkh->approval3idjabatan == $currentUser->idjabatan && 
+                        $lkh->approval1flag == '1' && $lkh->approval2flag == '1' && is_null($lkh->approval3flag)) {
+                        $canApprove = true;
+                        $approvalField = 'approval3flag';
+                        $approvalDateField = 'approval3date';
+                        $approvalUserField = 'approval3userid';
+                    }
+                    break;
+            }
+
+            if (!$canApprove) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki hak untuk melakukan approval pada level ini'
+                ]);
+            }
+
+            $approvalValue = $action === 'approve' ? '1' : '0';
+            $updateData = [
+                $approvalField => $approvalValue,
+                $approvalDateField => now(),
+                $approvalUserField => $currentUser->userid,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ];
+
+            if ($action === 'approve') {
+                $tempLkh = clone $lkh;
+                $tempLkh->$approvalField = '1';
+                
+                if ($this->isLKHFullyApproved($tempLkh)) {
+                    $updateData['status'] = 'APPROVED';
+                }
+            }
+
+            DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
+
+            $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            return response()->json(['success' => true, 'message' => $responseMessage]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error processing LKH approval: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses approval LKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Submit LKH method (changed from lockLKH to submitLKH)
+    public function submitLKH(Request $request)
+    {
+        $request->validate(['lkhno' => 'required|string']);
+
+        try {
+            $companycode = Session::get('companycode');
+            $lkhno = $request->lkhno;
+            $currentUser = Auth::user();
+
+            DB::beginTransaction();
+
+            $lkh = DB::table('lkhhdr as h')
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->where('h.companycode', $companycode)
+                ->where('h.lkhno', $lkhno)
+                ->select(['h.*', 'a.activitygroup'])
+                ->first();
+
+            if (!$lkh) {
+                return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
+            }
+
+            if ($lkh->issubmit) {
+                return response()->json(['success' => false, 'message' => 'LKH sudah disubmit sebelumnya']);
+            }
+
+            $approvalSetting = null;
+            if ($lkh->activitygroup) {
+                $approvalSetting = DB::table('approval')
+                    ->where('companycode', $companycode)
+                    ->where('activitygroup', $lkh->activitygroup)
+                    ->first();
+            }
+
+            $updateData = [
+                'issubmit' => 1,
+                'submitby' => $currentUser->userid,
+                'submitat' => now(),
+                'status' => 'SUBMITTED',
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ];
+
+            if ($approvalSetting) {
+                $updateData = array_merge($updateData, [
+                    'jumlahapproval' => $approvalSetting->jumlahapproval,
+                    'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
+                    'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
+                    'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
+                ]);
+            }
+
+            DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'LKH berhasil disubmit dan masuk ke proses approval'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error("Error submitting LKH: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim LKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // =========================
+    // RKH APPROVAL METHODS
+    // =========================
     public function getPendingApprovals(Request $request)
     {
         try {
@@ -917,442 +1384,385 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    // LKH Methods
-    public function getLKHData($rkhno)
+    // =========================
+    // HELPER METHODS
+    // =========================
+    private function calculateLKHApprovalStatus($lkh)
     {
-        try {
-            $companycode = Session::get('companycode');
-            
-            \Log::info("Getting LKH data for RKH: {$rkhno}, Company: {$companycode}");
-            
-            $lkhList = DB::table('lkhhdr as h')
-                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-                ->leftJoin('approval as app', function($join) use ($companycode) {
-                    $join->on('a.activitygroup', '=', 'app.activitygroup')
-                         ->where('app.companycode', '=', $companycode);
-                })
-                ->where('h.companycode', $companycode)
-                ->where('h.rkhno', $rkhno)
-                ->select([
-                    'h.lkhno',
-                    'h.activitycode',
-                    'a.activityname',
-                    'h.blok',
-                    'h.plot',
-                    'h.jenistenagakerja',
-                    'h.status',
-                    'h.lkhdate',
-                    'h.totalworkers',
-                    'h.totalhasil',
-                    'h.totalsisa',
-                    'h.createdat',
-                    'h.issubmit',
-                    'h.submitby',
-                    'h.submitat',
-                    'h.jumlahapproval',
-                    'h.approval1flag',
-                    'h.approval2flag',
-                    'h.approval3flag',
-                    'app.jumlahapproval as required_approvals'
-                ])
-                ->orderBy('h.lkhno')
-                ->get();
+        // If not submitted yet, return "Not Yet Submitted"
+        if (!$lkh->issubmit) {
+            return 'Not Yet Submitted';
+        }
 
-            \Log::info("Found {$lkhList->count()} LKH records for RKH {$rkhno}");
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return 'No Approval Required';
+        }
 
-            $formattedData = $lkhList->map(function($lkh) {
-                $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
-                $canEdit = !$lkh->issubmit && !$this->isLKHFullyApproved($lkh);
-                $canLock = !$lkh->issubmit && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
+        if ($this->isLKHFullyApproved($lkh)) {
+            return 'Approved';
+        }
 
-                return [
-                    'lkhno' => $lkh->lkhno,
-                    'activity' => $lkh->activitycode . ' - ' . ($lkh->activityname ?? 'Unknown Activity'),
-                    'location' => "Blok {$lkh->blok}, Plot {$lkh->plot}",
-                    'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
-                    'status' => $lkh->status ?? 'EMPTY',
-                    'approval_status' => $approvalStatus,
-                    'issubmit' => (bool) $lkh->issubmit,
-                    'workers' => $lkh->totalworkers ?? 0,
-                    'hasil' => $lkh->totalhasil ?? 0,
-                    'sisa' => $lkh->totalsisa ?? 0,
-                    'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
-                    'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
-                    'locked_info' => $lkh->submitat ? 'Locked at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
-                    'can_edit' => $canEdit,
-                    'can_lock' => $canLock,
-                    'view_url' => route('input.kerjaharian.rencanakerjaharian.showLKH', $lkh->lkhno),
-                    'edit_url' => route('input.kerjaharian.rencanakerjaharian.editLKH', $lkh->lkhno)
-                ];
-            });
+        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
+            return 'Declined';
+        }
 
-            $canGenerateLkh = false;
-            $generateMessage = '';
-            
-            $rkhData = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
-                
-            if ($rkhData) {
-                if ($this->isRkhFullyApproved($rkhData)) {
-                    if ($lkhList->isEmpty()) {
-                        $canGenerateLkh = true;
-                        $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
-                    } else {
-                        $generateMessage = 'LKH sudah pernah di-generate';
-                    }
-                } else {
-                    $generateMessage = 'RKH belum fully approved';
-                }
-            }
+        $completed = 0;
+        if ($lkh->approval1flag === '1') $completed++;
+        if ($lkh->approval2flag === '1') $completed++;
+        if ($lkh->approval3flag === '1') $completed++;
 
-            \Log::info("Returning LKH data", [
-                'success' => true,
-                'total_lkh' => $lkhList->count(),
-                'formatted_count' => $formattedData->count()
-            ]);
+        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
+    }
 
-            return response()->json([
-                'success' => true,
-                'lkh_data' => $formattedData->values()->toArray(),
-                'rkhno' => $rkhno,
-                'can_generate_lkh' => $canGenerateLkh,
-                'generate_message' => $generateMessage,
-                'total_lkh' => $lkhList->count()
-            ]);
+    private function isLKHFullyApproved($lkh)
+    {
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return true;
+        }
 
-        } catch (\Exception $e) {
-            \Log::error("Error getting LKH data for RKH {$rkhno}: " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memuat data LKH: ' . $e->getMessage(),
-                'lkh_data' => [],
-                'total_lkh' => 0
-            ], 500);
+        switch ($lkh->jumlahapproval) {
+            case 1:
+                return $lkh->approval1flag === '1';
+            case 2:
+                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
+            case 3:
+                return $lkh->approval1flag === '1' && 
+                       $lkh->approval2flag === '1' && 
+                       $lkh->approval3flag === '1';
+            default:
+                return false;
         }
     }
+
+    private function isRkhFullyApproved($rkh)
+    {
+        if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
+            return true;
+        }
+
+        switch ($rkh->jumlahapproval) {
+            case 1:
+                return $rkh->approval1flag === '1';
+            case 2:
+                return $rkh->approval1flag === '1' && $rkh->approval2flag === '1';
+            case 3:
+                return $rkh->approval1flag === '1' && 
+                       $rkh->approval2flag === '1' && 
+                       $rkh->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    private function getJabatanName($idjabatan)
+    {
+        $jabatan = DB::table('jabatan')->where('idjabatan', $idjabatan)->first();
+        return $jabatan ? $jabatan->namajabatan : 'Unknown';
+    }
+
+    // ... (other existing methods like showLKH, editLKH, DTH methods, etc. remain the same) ...
 
     public function showLKH($lkhno)
-    {
-        try {
-            $companycode = Session::get('companycode');
-            
-            $lkhData = DB::table('lkhhdr as h')
-                ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-                ->leftJoin('approval as app', function($join) use ($companycode) {
-                    $join->on('a.activitygroup', '=', 'app.activitygroup')
-                         ->where('app.companycode', '=', $companycode);
-                })
-                ->where('h.companycode', $companycode)
-                ->where('h.lkhno', $lkhno)
-                ->select([
-                    'h.*',
-                    'm.name as mandornama',
-                    'a.activityname',
-                    'app.jumlahapproval',
-                    'app.idjabatanapproval1',
-                    'app.idjabatanapproval2',
-                    'app.idjabatanapproval3'
-                ])
-                ->first();
+{
+    try {
+        $companycode = Session::get('companycode');
+        
+        $lkhData = DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                     ->where('app.companycode', '=', $companycode);
+            })
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3'
+            ])
+            ->first();
 
-            if (!$lkhData) {
-                return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                    ->with('error', 'Data LKH tidak ditemukan');
-            }
-
-            $lkhDetails = DB::table('lkhlst')->where('lkhno', $lkhno)->orderBy('workersequence')->get();
-
-            $approvals = new \stdClass();
-            if ($lkhData->jumlahapproval > 0) {
-                $jabatanData = DB::table('jabatan')
-                    ->whereIn('idjabatan', array_filter([
-                        $lkhData->idjabatanapproval1,
-                        $lkhData->idjabatanapproval2,
-                        $lkhData->idjabatanapproval3
-                    ]))
-                    ->pluck('namajabatan', 'idjabatan');
-
-                $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
-                $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
-                $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
-                $approvals->jabatan4name = null;
-            }
-
-            return view('input.kerjaharian.rencanakerjaharian.lkh-report', [
-                'title' => 'Laporan Kegiatan Harian (LKH)',
-                'navbar' => 'Input',
-                'nav' => 'Rencana Kerja Harian',
-                'lkhData' => $lkhData,
-                'lkhDetails' => $lkhDetails,
-                'approvals' => $approvals
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error("Error showing LKH: " . $e->getMessage());
+        if (!$lkhData) {
             return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('error', 'Terjadi kesalahan saat menampilkan LKH: ' . $e->getMessage());
+                ->with('error', 'Data LKH tidak ditemukan');
         }
-    }
 
-    public function editLKH($lkhno)
-    {
-        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-            ->with('info', 'Fitur edit LKH belum tersedia');
-    }
+        // Update query untuk menggunakan JOIN dengan tenagakerja
+        $lkhDetails = DB::table('lkhlst as l')
+            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.idtenagakerja')
+            ->where('l.lkhno', $lkhno)
+            ->select([
+                'l.*',
+                't.nama as workername',
+                't.nik as noktp'
+            ])
+            ->orderBy('l.tenagakerjaurutan')
+            ->get();
 
-    // LKH Approval Methods
-    public function getPendingLKHApprovals(Request $request)
-    {
-        try {
-            $companycode = Session::get('companycode');
-            $currentUser = Auth::user();
-            
-            if (!$currentUser || !$currentUser->idjabatan) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User tidak memiliki jabatan yang valid'
-                ]);
-            }
+        $approvals = new \stdClass();
+        if ($lkhData->jumlahapproval > 0) {
+            $jabatanData = DB::table('jabatan')
+                ->whereIn('idjabatan', array_filter([
+                    $lkhData->idjabatanapproval1,
+                    $lkhData->idjabatanapproval2,
+                    $lkhData->idjabatanapproval3
+                ]))
+                ->pluck('namajabatan', 'idjabatan');
 
-            $pendingLKH = DB::table('lkhhdr as h')
-                ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-                ->where('h.companycode', $companycode)
-                ->where('h.issubmit', 1)
-                ->where(function($query) use ($currentUser) {
-                    $query->where(function($q) use ($currentUser) {
-                        $q->where('h.approval1idjabatan', $currentUser->idjabatan)->whereNull('h.approval1flag');
-                    })->orWhere(function($q) use ($currentUser) {
-                        $q->where('h.approval2idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->whereNull('h.approval2flag');
-                    })->orWhere(function($q) use ($currentUser) {
-                        $q->where('h.approval3idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->where('h.approval2flag', '1')->whereNull('h.approval3flag');
-                    });
-                })
-                ->select([
-                    'h.*',
-                    'm.name as mandor_nama',
-                    'a.activityname',
-                    DB::raw('CASE 
-                        WHEN h.approval1idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag IS NULL THEN 1
-                        WHEN h.approval2idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag IS NULL THEN 2
-                        WHEN h.approval3idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag = "1" AND h.approval3flag IS NULL THEN 3
-                        ELSE 0
-                    END as approval_level')
-                ])
-                ->orderBy('h.lkhdate', 'desc')
-                ->get();
-
-            $formattedData = $pendingLKH->map(function($lkh) {
-                return [
-                    'lkhno' => $lkh->lkhno,
-                    'rkhno' => $lkh->rkhno,
-                    'lkhdate' => $lkh->lkhdate,
-                    'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
-                    'mandor_nama' => $lkh->mandor_nama,
-                    'activityname' => $lkh->activityname ?? 'Unknown Activity',
-                    'approval_level' => $lkh->approval_level,
-                    'status' => $lkh->status,
-                    'total_workers' => $lkh->totalworkers,
-                    'total_hasil' => $lkh->totalhasil,
-                    'blok' => $lkh->blok,
-                    'plot' => $lkh->plot
-                ];
-            });
-
-            return response()->json([
-                'success' => true,
-                'data' => $formattedData,
-                'user_info' => [
-                    'userid' => $currentUser->userid,
-                    'name' => $currentUser->name,
-                    'idjabatan' => $currentUser->idjabatan,
-                    'jabatan_name' => $this->getJabatanName($currentUser->idjabatan)
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error("Error getting pending LKH approvals: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memuat data approval LKH: ' . $e->getMessage()
-            ], 500);
+            $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
+            $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
+            $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
+            $approvals->jabatan4name = null;
         }
-    }
 
-    public function processLKHApproval(Request $request)
-    {
-        $request->validate([
-            'lkhno' => 'required|string',
-            'action' => 'required|in:approve,decline',
-            'level' => 'required|integer|between:1,3'
+        return view('input.kerjaharian.rencanakerjaharian.lkh-report', [
+            'title' => 'Laporan Kegiatan Harian (LKH)',
+            'navbar' => 'Input',
+            'nav' => 'Rencana Kerja Harian',
+            'lkhData' => $lkhData,
+            'lkhDetails' => $lkhDetails,
+            'approvals' => $approvals
         ]);
 
-        try {
-            $companycode = Session::get('companycode');
-            $currentUser = Auth::user();
-            $lkhno = $request->lkhno;
-            $action = $request->action;
-            $level = $request->level;
-
-            if (!$currentUser || !$currentUser->idjabatan) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User tidak memiliki jabatan yang valid'
-                ]);
-            }
-
-            $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
-
-            if (!$lkh) {
-                return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
-            }
-
-            $canApprove = false;
-            $approvalField = '';
-            $approvalDateField = '';
-            $approvalUserField = '';
-
-            switch ($level) {
-                case 1:
-                    if ($lkh->approval1idjabatan == $currentUser->idjabatan && is_null($lkh->approval1flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval1flag';
-                        $approvalDateField = 'approval1date';
-                        $approvalUserField = 'approval1userid';
-                    }
-                    break;
-                case 2:
-                    if ($lkh->approval2idjabatan == $currentUser->idjabatan && 
-                        $lkh->approval1flag == '1' && is_null($lkh->approval2flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval2flag';
-                        $approvalDateField = 'approval2date';
-                        $approvalUserField = 'approval2userid';
-                    }
-                    break;
-                case 3:
-                    if ($lkh->approval3idjabatan == $currentUser->idjabatan && 
-                        $lkh->approval1flag == '1' && $lkh->approval2flag == '1' && is_null($lkh->approval3flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval3flag';
-                        $approvalDateField = 'approval3date';
-                        $approvalUserField = 'approval3userid';
-                    }
-                    break;
-            }
-
-            if (!$canApprove) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki hak untuk melakukan approval pada level ini'
-                ]);
-            }
-
-            $approvalValue = $action === 'approve' ? '1' : '0';
-            $updateData = [
-                $approvalField => $approvalValue,
-                $approvalDateField => now(),
-                $approvalUserField => $currentUser->userid,
-                'updateby' => $currentUser->userid,
-                'updatedat' => now()
-            ];
-
-            if ($action === 'approve') {
-                $tempLkh = clone $lkh;
-                $tempLkh->$approvalField = '1';
-                
-                if ($this->isLKHFullyApproved($tempLkh)) {
-                    $updateData['status'] = 'APPROVED';
-                }
-            }
-
-            DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
-
-            $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
-
-            return response()->json(['success' => true, 'message' => $responseMessage]);
-
-        } catch (\Exception $e) {
-            \Log::error("Error processing LKH approval: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memproses approval LKH: ' . $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        \Log::error("Error showing LKH: " . $e->getMessage());
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('error', 'Terjadi kesalahan saat menampilkan LKH: ' . $e->getMessage());
     }
+}
 
-    public function lockLKH(Request $request)
-    {
-        $request->validate(['lkhno' => 'required|string']);
 
-        try {
-            $companycode = Session::get('companycode');
-            $lkhno = $request->lkhno;
-            $currentUser = Auth::user();
 
-            DB::beginTransaction();
+// EDIT LKH START
 
-            $lkh = DB::table('lkhhdr as h')
-                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-                ->where('h.companycode', $companycode)
-                ->where('h.lkhno', $lkhno)
-                ->select(['h.*', 'a.activitygroup'])
-                ->first();
+// Add these methods to your RencanaKerjaHarianController
 
-            if (!$lkh) {
-                return response()->json(['success' => false, 'message' => 'LKH tidak ditemukan']);
+public function editLKH($lkhno)
+{
+    try {
+        $companycode = Session::get('companycode');
+        
+        $lkhData = DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname'
+            ])
+            ->first();
+
+        if (!$lkhData) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Data LKH tidak ditemukan');
+        }
+
+        // Check if LKH can be edited (not locked/submitted)
+        if ($lkhData->issubmit) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'LKH sudah disubmit dan tidak dapat diedit');
+        }
+
+        $lkhDetails = DB::table('lkhlst as l')
+            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.idtenagakerja')
+            ->where('l.lkhno', $lkhno)
+            ->select([
+                'l.*',
+                't.nama as workername',
+                't.nik as noktp'
+            ])
+            ->orderBy('l.tenagakerjaurutan')
+            ->get();
+
+        // Load data for modals
+        $tenagaKerja = DB::table('tenagakerja')
+            ->where('companycode', $companycode)
+            ->where('isactive', 1)
+            ->select(['idtenagakerja', 'nama', 'nik', 'jenistenagakerja'])
+            ->orderBy('nama')
+            ->get();
+
+        $bloks = Blok::orderBy('blok')->get();
+        $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+        $plots = DB::table('plot')->where('companycode', $companycode)->get();
+
+        return view('input.kerjaharian.rencanakerjaharian.edit-lkh', [
+            'title' => 'Edit LKH',
+            'navbar' => 'Input',
+            'nav' => 'Rencana Kerja Harian',
+            'lkhData' => $lkhData,
+            'lkhDetails' => $lkhDetails,
+            'tenagaKerja' => $tenagaKerja,
+            'bloks' => $bloks,
+            'masterlist' => $masterlist,
+            'plots' => $plots,
+            'bloksData' => $bloks,
+            'masterlistData' => $masterlist,
+            'plotsData' => $plots
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error("Error editing LKH: " . $e->getMessage());
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            ->with('error', 'Terjadi kesalahan saat membuka edit LKH: ' . $e->getMessage());
+    }
+}
+
+public function updateLKH(Request $request, $lkhno)
+{
+    try {
+        $request->validate([
+            'keterangan' => 'nullable|string|max:500',
+            'workers' => 'required|array|min:1',
+            'workers.*.idtenagakerja' => 'required|string',
+            'workers.*.blok' => 'required|string',
+            'workers.*.plot' => 'required|string',
+            'workers.*.luasplot' => 'required|numeric|min:0',
+            'workers.*.hasil' => 'required|numeric|min:0',
+            'workers.*.sisa' => 'required|numeric|min:0',
+        ]);
+
+        $companycode = Session::get('companycode');
+        $currentUser = Auth::user();
+        
+        DB::beginTransaction();
+
+        // Check if LKH exists and can be edited
+        $lkhData = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->first();
+
+        if (!$lkhData) {
+            throw new \Exception('LKH tidak ditemukan');
+        }
+
+        if ($lkhData->issubmit) {
+            throw new \Exception('LKH sudah disubmit dan tidak dapat diedit');
+        }
+
+        // Calculate totals
+        $totalWorkers = count($request->workers);
+        $totalHasil = collect($request->workers)->sum('hasil');
+        $totalSisa = collect($request->workers)->sum('sisa');
+        $totalUpah = 0;
+
+        // Calculate total upah based on jenistenagakerja
+        foreach ($request->workers as $worker) {
+            if ($lkhData->jenistenagakerja == 1) {
+                // Harian: upah harian + premi + overtime
+                $upahHarian = $worker['upahharian'] ?? 0;
+                $premi = $worker['premi'] ?? 0;
+                $overtimeHours = $worker['overtimehours'] ?? 0;
+                // You might need to calculate overtime rate
+                $totalUpah += $upahHarian + $premi;
+            } else {
+                // Borongan: hasil * cost per ha
+                $hasil = $worker['hasil'] ?? 0;
+                $costPerHa = $worker['costperha'] ?? 0;
+                $totalUpah += $hasil * $costPerHa;
             }
+        }
 
-            if ($lkh->issubmit) {
-                return response()->json(['success' => false, 'message' => 'LKH sudah dikunci sebelumnya']);
-            }
-
-            $approvalSetting = null;
-            if ($lkh->activitygroup) {
-                $approvalSetting = DB::table('approval')
-                    ->where('companycode', $companycode)
-                    ->where('activitygroup', $lkh->activitygroup)
-                    ->first();
-            }
-
-            $updateData = [
-                'issubmit' => 1,
-                'submitby' => $currentUser->userid,
-                'submitat' => now(),
-                'status' => 'SUBMITTED',
+        // Update LKH Header
+        DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->update([
+                'totalworkers' => $totalWorkers,
+                'totalhasil' => $totalHasil,
+                'totalsisa' => $totalSisa,
+                'totalupahall' => $totalUpah,
+                'keterangan' => $request->keterangan,
                 'updateby' => $currentUser->userid,
                 'updatedat' => now()
-            ];
-
-            if ($approvalSetting) {
-                $updateData = array_merge($updateData, [
-                    'jumlahapproval' => $approvalSetting->jumlahapproval,
-                    'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
-                    'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
-                    'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
-                ]);
-            }
-
-            DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'LKH berhasil dikunci dan masuk ke proses approval'
             ]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error("Error locking LKH: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengunci LKH: ' . $e->getMessage()
-            ], 500);
+        // Delete existing details
+        DB::table('lkhlst')->where('lkhno', $lkhno)->delete();
+
+        // Insert new details
+        $details = [];
+        foreach ($request->workers as $index => $worker) {
+            $detail = [
+                'lkhno' => $lkhno,
+                'tenagakerjaurutan' => $index + 1,
+                'idtenagakerja' => $worker['idtenagakerja'],
+                'blok' => $worker['blok'],
+                'plot' => $worker['plot'],
+                'luasplot' => $worker['luasplot'],
+                'hasil' => $worker['hasil'],
+                'sisa' => $worker['sisa'],
+                'materialused' => $worker['materialused'] ?? null,
+                'createdat' => now()
+            ];
+
+            if ($lkhData->jenistenagakerja == 1) {
+                // Tenaga Harian fields
+                $detail['jammasuk'] = $worker['jammasuk'] ?? null;
+                $detail['jamselesai'] = $worker['jamselesai'] ?? null;
+                $detail['overtimehours'] = $worker['overtimehours'] ?? 0;
+                $detail['premi'] = $worker['premi'] ?? 0;
+                $detail['upahharian'] = $worker['upahharian'] ?? 0;
+                $detail['totalupahharian'] = ($worker['upahharian'] ?? 0) + ($worker['premi'] ?? 0);
+                $detail['costperha'] = 0;
+                $detail['totalbiayaborongan'] = 0;
+            } else {
+                // Tenaga Borongan fields
+                $detail['jammasuk'] = null;
+                $detail['jamselesai'] = null;
+                $detail['overtimehours'] = 0;
+                $detail['premi'] = 0;
+                $detail['upahharian'] = 0;
+                $detail['totalupahharian'] = 0;
+                $detail['costperha'] = $worker['costperha'] ?? 0;
+                $detail['totalbiayaborongan'] = ($worker['hasil'] ?? 0) * ($worker['costperha'] ?? 0);
+            }
+
+            $details[] = $detail;
         }
+
+        DB::table('lkhlst')->insert($details);
+
+        DB::commit();
+
+        return redirect()->route('input.kerjaharian.rencanakerjaharian.showLKH', $lkhno)
+            ->with('success', 'LKH berhasil diupdate');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error("Error updating LKH: " . $e->getMessage());
+        
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Terjadi kesalahan saat mengupdate LKH: ' . $e->getMessage());
     }
+}
+// EDIT LKH END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // DTH Methods
     public function getDTHData(Request $request)
@@ -1501,72 +1911,4 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    // Helper Methods
-    private function isRkhFullyApproved($rkh)
-    {
-        if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
-            return true;
-        }
-
-        switch ($rkh->jumlahapproval) {
-            case 1:
-                return $rkh->approval1flag === '1';
-            case 2:
-                return $rkh->approval1flag === '1' && $rkh->approval2flag === '1';
-            case 3:
-                return $rkh->approval1flag === '1' && 
-                       $rkh->approval2flag === '1' && 
-                       $rkh->approval3flag === '1';
-            default:
-                return false;
-        }
-    }
-
-    private function calculateLKHApprovalStatus($lkh)
-    {
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return 'No Approval Required';
-        }
-
-        if ($this->isLKHFullyApproved($lkh)) {
-            return 'Approved';
-        }
-
-        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
-            return 'Declined';
-        }
-
-        $completed = 0;
-        if ($lkh->approval1flag === '1') $completed++;
-        if ($lkh->approval2flag === '1') $completed++;
-        if ($lkh->approval3flag === '1') $completed++;
-
-        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
-    }
-
-    private function isLKHFullyApproved($lkh)
-    {
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return true;
-        }
-
-        switch ($lkh->jumlahapproval) {
-            case 1:
-                return $lkh->approval1flag === '1';
-            case 2:
-                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
-            case 3:
-                return $lkh->approval1flag === '1' && 
-                       $lkh->approval2flag === '1' && 
-                       $lkh->approval3flag === '1';
-            default:
-                return false;
-        }
-    }
-
-    private function getJabatanName($idjabatan)
-    {
-        $jabatan = DB::table('jabatan')->where('idjabatan', $idjabatan)->first();
-        return $jabatan ? $jabatan->namajabatan : 'Unknown';
-    }
 }

@@ -18,7 +18,6 @@ class Lkhhdr extends Model
         'companycode',
         'activitycode',
         'blok',
-        'plot',
         'mandorid',
         'lkhdate',
         'jenistenagakerja',
