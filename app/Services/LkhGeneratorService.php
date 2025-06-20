@@ -55,8 +55,11 @@ class LkhGeneratorService
             foreach ($rkhActivities as $activity) {
                 $lkhno = $this->generateLkhNumber($rkhno, $lkhIndex);
                 
-                // Buat LKH Header
-                $lkhHeader = Lkhhdr::create([
+                // Get approval requirements untuk activity ini
+                $approvalData = $this->getApprovalRequirements($rkh->companycode, $activity->activitycode);
+                
+                // Buat LKH Header dengan approval requirements
+                $lkhHeaderData = array_merge([
                     'lkhno' => $lkhno,
                     'rkhno' => $rkhno,
                     'companycode' => $rkh->companycode,
@@ -75,10 +78,13 @@ class LkhGeneratorService
                     'jamselesaikerja' => null,
                     'totalovertimehours' => 0.00,
                     'status' => 'DRAFT',
+                    'islocked' => 0, // NEW: Default unlocked
                     'keterangan' => "Auto-generated from RKH {$rkhno}",
                     'inputby' => auth()->user()->userid ?? 'SYSTEM',
                     'createdat' => now(),
-                ]);
+                ], $approvalData);
+
+                $lkhHeader = Lkhhdr::create($lkhHeaderData);
 
                 $generatedLkh[] = [
                     'lkhno' => $lkhno,
@@ -165,6 +171,46 @@ class LkhGeneratorService
             default:
                 return false;
         }
+    }
+
+    /**
+     * NEW: Get approval requirements untuk activity
+     */
+    private function getApprovalRequirements($companycode, $activitycode)
+    {
+        // Get activity group dari activity code
+        $activity = DB::table('activity')->where('activitycode', $activitycode)->first();
+        
+        if (!$activity || !$activity->activitygroup) {
+            return [
+                'jumlahapproval' => 0,
+                'approval1idjabatan' => null,
+                'approval2idjabatan' => null,
+                'approval3idjabatan' => null,
+            ];
+        }
+
+        // Get approval settings berdasarkan activity group
+        $approvalSetting = DB::table('approval')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $activity->activitygroup)
+            ->first();
+
+        if (!$approvalSetting) {
+            return [
+                'jumlahapproval' => 0,
+                'approval1idjabatan' => null,
+                'approval2idjabatan' => null,
+                'approval3idjabatan' => null,
+            ];
+        }
+
+        return [
+            'jumlahapproval' => $approvalSetting->jumlahapproval ?? 0,
+            'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
+            'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
+            'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
+        ];
     }
 
     /**

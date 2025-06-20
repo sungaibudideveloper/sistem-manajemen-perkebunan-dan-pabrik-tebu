@@ -32,6 +32,7 @@ class Lkhhdr extends Model
         'totalovertimehours',
         'status',
         'keterangan',
+        'jumlahapproval',
         'approval1idjabatan',
         'approval1userid',
         'approval1flag',
@@ -44,10 +45,9 @@ class Lkhhdr extends Model
         'approval3userid',
         'approval3flag',
         'approval3date',
-        'approval4idjabatan',
-        'approval4userid',
-        'approval4flag',
-        'approval4date',
+        'islocked',
+        'lockedby',
+        'lockedat',
         'inputby',
         'createdat',
         'updateby',
@@ -66,14 +66,15 @@ class Lkhhdr extends Model
         'totalsisa' => 'decimal:2',
         'totalupahall' => 'decimal:2',
         'totalovertimehours' => 'decimal:2',
+        'jumlahapproval' => 'integer',
         'approval1idjabatan' => 'integer',
         'approval1date' => 'datetime',
         'approval2idjabatan' => 'integer',
         'approval2date' => 'datetime',
         'approval3idjabatan' => 'integer',
         'approval3date' => 'datetime',
-        'approval4idjabatan' => 'integer',
-        'approval4date' => 'datetime',
+        'islocked' => 'boolean',
+        'lockedat' => 'datetime',
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
         'mobilecreatedat' => 'datetime',
@@ -107,7 +108,7 @@ class Lkhhdr extends Model
         return $this->belongsTo(User::class, 'mandorid', 'userid');
     }
 
-    // Helper methods
+    // Helper methods untuk LKH
     public function getStatusColorAttribute()
     {
         return match($this->status) {
@@ -132,6 +133,161 @@ class Lkhhdr extends Model
         };
     }
 
+    // NEW: Helper methods untuk approval LKH
+    public function getRequiredApprovals()
+    {
+        if (!$this->jumlahapproval || $this->jumlahapproval == 0) return [];
+
+        $required = [];
+        
+        if ($this->approval1idjabatan) {
+            $required[] = [
+                'level' => 1,
+                'jabatan_id' => $this->approval1idjabatan,
+                'status' => $this->approval1flag,
+                'date' => $this->approval1date,
+                'user_id' => $this->approval1userid
+            ];
+        }
+        
+        if ($this->approval2idjabatan) {
+            $required[] = [
+                'level' => 2,
+                'jabatan_id' => $this->approval2idjabatan,
+                'status' => $this->approval2flag,
+                'date' => $this->approval2date,
+                'user_id' => $this->approval2userid
+            ];
+        }
+        
+        if ($this->approval3idjabatan) {
+            $required[] = [
+                'level' => 3,
+                'jabatan_id' => $this->approval3idjabatan,
+                'status' => $this->approval3flag,
+                'date' => $this->approval3date,
+                'user_id' => $this->approval3userid
+            ];
+        }
+
+        return $required;
+    }
+
+    // NEW: Check apakah LKH sudah fully approved
+    public function isFullyApproved()
+    {
+        $required = $this->getRequiredApprovals();
+        if (empty($required)) return true;
+
+        foreach ($required as $approval) {
+            if ($approval['status'] !== '1') {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    // NEW: Check apakah LKH bisa di-edit
+    public function canBeEdited()
+    {
+        return !$this->islocked && !$this->isFullyApproved();
+    }
+
+    // NEW: Check apakah LKH bisa di-lock
+    public function canBeLocked()
+    {
+        return !$this->islocked && ($this->status === 'COMPLETED' || $this->status === 'SUBMITTED');
+    }
+
+    // NEW: Get approval status text
+    public function getApprovalStatusAttribute()
+    {
+        if (!$this->jumlahapproval || $this->jumlahapproval == 0) {
+            return 'No Approval Required';
+        }
+
+        if ($this->isFullyApproved()) {
+            return 'Approved';
+        }
+
+        // Check for declined
+        if ($this->approval1flag === '0' || $this->approval2flag === '0' || $this->approval3flag === '0') {
+            return 'Declined';
+        }
+
+        // Count completed approvals
+        $completed = 0;
+        if ($this->approval1flag === '1') $completed++;
+        if ($this->approval2flag === '1') $completed++;
+        if ($this->approval3flag === '1') $completed++;
+
+        return "Waiting for Approve ({$completed} / {$this->jumlahapproval})";
+    }
+
+    // NEW: Get lock status info
+    public function getLockStatusInfoAttribute()
+    {
+        if (!$this->islocked) {
+            return 'Unlocked';
+        }
+
+        $info = 'Locked';
+        if ($this->lockedby) {
+            $info .= " by {$this->lockedby}";
+        }
+        if ($this->lockedat) {
+            $info .= " at " . $this->lockedat->format('d/m/Y H:i');
+        }
+
+        return $info;
+    }
+
+    // NEW: Get next approval level yang diperlukan
+    public function getNextApprovalLevel()
+    {
+        if (!$this->jumlahapproval || $this->jumlahapproval == 0) {
+            return null;
+        }
+
+        // Check level 1
+        if ($this->approval1idjabatan && (!$this->approval1flag || $this->approval1flag === '0')) {
+            return 1;
+        }
+
+        // Check level 2
+        if ($this->approval2idjabatan && $this->approval1flag === '1' && 
+            (!$this->approval2flag || $this->approval2flag === '0')) {
+            return 2;
+        }
+
+        // Check level 3
+        if ($this->approval3idjabatan && $this->approval1flag === '1' && 
+            $this->approval2flag === '1' && (!$this->approval3flag || $this->approval3flag === '0')) {
+            return 3;
+        }
+
+        return null; // Sudah fully approved atau declined
+    }
+
+    // NEW: Check apakah user bisa approve LKH ini
+    public function canBeApprovedBy($userId, $jabatanId)
+    {
+        $nextLevel = $this->getNextApprovalLevel();
+        if (!$nextLevel) return false;
+
+        switch ($nextLevel) {
+            case 1:
+                return $this->approval1idjabatan == $jabatanId;
+            case 2:
+                return $this->approval2idjabatan == $jabatanId;
+            case 3:
+                return $this->approval3idjabatan == $jabatanId;
+            default:
+                return false;
+        }
+    }
+
     // Scope untuk filter
     public function scopeByCompany($query, $companycode)
     {
@@ -151,5 +307,55 @@ class Lkhhdr extends Model
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
+    }
+
+    public function scopeByRkh($query, $rkhno)
+    {
+        return $query->where('rkhno', $rkhno);
+    }
+
+    public function scopeLocked($query, $locked = true)
+    {
+        return $query->where('islocked', $locked);
+    }
+
+    public function scopeUnlocked($query)
+    {
+        return $query->where('islocked', 0);
+    }
+
+    public function scopePendingApproval($query)
+    {
+        return $query->where('islocked', 1)
+                    ->where('status', '!=', 'APPROVED');
+    }
+
+    public function scopeFullyApproved($query)
+    {
+        return $query->where('status', 'APPROVED');
+    }
+
+    // NEW: Scope untuk approval berdasarkan jabatan
+    public function scopeAwaitingApprovalBy($query, $jabatanId)
+    {
+        return $query->where('islocked', 1)
+                    ->where(function($q) use ($jabatanId) {
+                        $q->where(function($sub) use ($jabatanId) {
+                            // Level 1 approval
+                            $sub->where('approval1idjabatan', $jabatanId)
+                                ->whereNull('approval1flag');
+                        })->orWhere(function($sub) use ($jabatanId) {
+                            // Level 2 approval
+                            $sub->where('approval2idjabatan', $jabatanId)
+                                ->where('approval1flag', '1')
+                                ->whereNull('approval2flag');
+                        })->orWhere(function($sub) use ($jabatanId) {
+                            // Level 3 approval
+                            $sub->where('approval3idjabatan', $jabatanId)
+                                ->where('approval1flag', '1')
+                                ->where('approval2flag', '1')
+                                ->whereNull('approval3flag');
+                        });
+                    });
     }
 }

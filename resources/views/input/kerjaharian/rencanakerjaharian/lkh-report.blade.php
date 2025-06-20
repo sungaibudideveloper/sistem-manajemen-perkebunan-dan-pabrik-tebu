@@ -240,14 +240,6 @@
                     <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval3date ? \Carbon\Carbon::parse($lkhData->approval3date)->format('d/m/Y') : '' }}</p>
                 @endif
             </div>
-            <div class="text-center">
-                <div class="border-b border-gray-300 h-16 mb-2"></div>
-                <p class="text-sm font-medium">Jabatan 4</p>
-                <p class="text-xs text-gray-600">{{ $approvals->jabatan4name ?? 'Tidak diatur' }}</p>
-                @if($lkhData->approval4flag == '1')
-                    <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval4date ? \Carbon\Carbon::parse($lkhData->approval4date)->format('d/m/Y') : '' }}</p>
-                @endif
-            </div>
         </div>
 
         <!-- Action Buttons -->
