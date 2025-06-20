@@ -70,7 +70,14 @@
           </div>
           
           {{-- Items Detail - Collapsible --}}
-          <div x-show="group.showDetails" x-collapse class="border-t border-gray-100">
+          <div x-show="group.showDetails" 
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95 -translate-y-2"
+            x-transition:enter-end="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 transform scale-95 -translate-y-2"
+            class="border-t border-gray-100">
             <div class="p-4">
               <h4 class="text-sm font-medium text-gray-700 mb-3">Material yang tersedia:</h4>
               
@@ -120,7 +127,7 @@
 
 @push('scripts')
 <script>
-    // Tambahkan setelah function attachListeners
+// Tambahkan setelah function attachListeners
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -151,6 +158,33 @@ function materialPicker(rowIndex) {
       });
       
       return Object.values(groups);
+    },
+    
+    // Tambahkan function untuk mencari group berdasarkan ID
+    getGroupById(groupId, activityCode) {
+      if (!window.herbisidaData || !groupId || !activityCode) return null;
+      
+      const group = window.herbisidaData.find(item => 
+        item.herbisidagroupid == groupId && 
+        item.activitycode === activityCode
+      );
+      
+      if (group) {
+        return {
+          herbisidagroupid: group.herbisidagroupid,
+          herbisidagroupname: group.herbisidagroupname
+        };
+      }
+      
+      return null;
+    },
+    
+    // Method untuk set selected group dari outside
+    setSelectedGroup(groupId, activityCode) {
+      const group = this.getGroupById(groupId, activityCode);
+      if (group) {
+        this.selectedGroup = group;
+      }
     },
     
     checkMaterial() {
@@ -222,6 +256,9 @@ function materialPicker(rowIndex) {
           this.selectedGroup = null;
           this.clearSelection();
         });
+        
+        // Set initial activity code
+        this.currentActivityCode = activityInput.value || '';
       }
     }
   }

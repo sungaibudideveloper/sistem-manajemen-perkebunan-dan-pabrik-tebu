@@ -11,7 +11,7 @@ class ActivityGroup extends Model
     protected $primaryKey = ['activitygroup'];
     protected $fillable = [
         'activitygroup',
-        'activityname'
+        'groupname',
     ];
 
 }

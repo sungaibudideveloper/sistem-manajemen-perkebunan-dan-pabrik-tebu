@@ -16,10 +16,11 @@ use App\Http\Controllers\MasterData\StatusController;
 use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
+use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\AplikasiController;
-use App\Http\Controllers\Aplikasi\MenuController;
-use App\Http\Controllers\Aplikasi\SubmenuController;
-use App\Http\Controllers\Aplikasi\SubsubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\MenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 
 
 
@@ -195,13 +196,19 @@ Route::get('masterdata/master-list', [MasterListController::class, 'index'])->na
         ->name('masterdata.mandor.store');
 //});
 Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
-    ->name('masterdata.mandor.update')
-    ->middleware(['auth', 'permission:Edit Mandor']);
+    ->name('masterdata.mandor.update');//->middleware(['auth', 'permission:Edit Mandor']);
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
-    ->name('masterdata.mandor.destroy')
-    ->middleware(['auth', 'permission:Hapus Mandor']);
+    ->name('masterdata.mandor.destroy');//->middleware(['auth', 'permission:Hapus Mandor']);
 
 
+Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
+    ->name('masterdata.tenagakerja.index');
+Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
+    ->name('masterdata.tenagakerja.store');
+Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])
+    ->name('masterdata.tenagakerja.update');
+Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])
+        ->name('masterdata.tenagakerja.destroy');
 
 Route::middleware('auth')->group(function () {
     Route::get('aplikasi/menu', [MenuController::class, 'index'])->name('aplikasi.menu.index');
@@ -220,6 +227,6 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('aplikasi/subsubmenu', [SubsubmenuController::class, 'index'])->name('aplikasi.subsubmenu.index');
     Route::post('aplikasi/subsubmenu', [SubsubmenuController::class, 'store'])->name('aplikasi.subsubmenu.store');
-    Route::put('aplikasi/subsubmenu/{subsubmenu}', [SubsubmenuController::class, 'update'])->name('aplikasi.subsubmenu.update');
-    Route::delete('aplikasi/subsubmenu/{subsubmenu}/{name}', [SubsubmenuController::class, 'destroy'])->name('aplikasi.subsubmenu.destroy');
+    Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->name('aplikasi.subsubmenu.update');
+    Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->name('aplikasi.subsubmenu.destroy');
 });

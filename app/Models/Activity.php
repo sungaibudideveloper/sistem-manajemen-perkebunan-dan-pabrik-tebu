@@ -48,4 +48,9 @@ class Activity extends Model
         return $this->belongsTo(ActivityGroup::class, 'activitygroup', 'activitygroup');
     }
 
+    public function jenistenagakerja()
+    {
+        return $this->belongsTo(JenisTenagaKerja::class, 'jenistenagakerja', 'idjenistenagakerja');
+    }
+
 }
