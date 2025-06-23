@@ -23,7 +23,7 @@ class UsernameController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'Kelola User',
-            'routeName' => route('master.username.index')
+            'routeName' => route('masterdata.username.index')
         ]);
     }
     public function index(Request $request)
@@ -95,20 +95,21 @@ class UsernameController extends Controller
                 'userid' => strtoupper($validated['usernm']),
                 'name' => strtoupper($validated['name']),
                 'password' => bcrypt($validated['password']),
+                'companycode' => $companycode,
                 'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
                 'createdat' => now(),
                 'updatedat' => now(),
+                'isactive' => 1,
+
             ]);
             DB::table('usercompany')->insert([
                 'userid' => $validated['usernm'],
                 'companycode' => $companycode,
                 'inputby' => Auth::user()->userid,
                 'createdat' => now(),
-                'updatedat' => now(),
             ]);
         });
-        return redirect()->back()
-            ->with('success1', 'Data created successfully.');
+        return redirect()->back()->with('success1', 'Data created successfully.');
     }
 
     public function edit($usernm, $companycode)
@@ -147,47 +148,53 @@ class UsernameController extends Controller
                     'inputby' => Auth::user()->userid,
                 ]);
         });
-        return redirect()->route('master.username.index')
+        return redirect()->route('masterdata.username.index')
             ->with('success1', 'Data updated successfully.');
     }
 
-    public function access($usernm)
-    {
-        $title = 'Set Hak Akses';
-        $user = User::findOrFail($usernm);
+public function access($usernm)
+{
+    $title = 'Set Hak Akses';
+    $user = User::findOrFail($usernm);
 
-        $menu = Menu::orderBy('menuid')->get();
-        $submenu = Submenu::orderBy('name')->get();
-        $subsubmenu = Subsubmenu::orderBy('name')->get();
-        return view('master.username.access', [
-            'user' => $user,    
-            'title' => $title,
-            'menu' => $menu,
-            'submenu' => $submenu,
-            'subsubmenu' => $subsubmenu,
-        ]);
-    }
-
+    // Filter unique by slug directly
+    $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
+    $submenu = Submenu::orderBy('submenuid')->get();
+    $subsubmenu = Subsubmenu::orderBy('name')->get();
+    
+    return view('master.username.access', [
+        'user' => $user,
+        'title' => $title,
+        'menu' => $menu,
+        'submenu' => $submenu,
+        'subsubmenu' => $subsubmenu,
+    ]);
+}
 
     public function setaccess(Request $request, $usernm)
     {
         $validated = $request->validate([
-            'userid' => 'required',
             'permissions' => 'nullable|array',
         ]);
-
         DB::transaction(function () use ($validated, $usernm) {
+
             DB::table('user')
                 ->where('userid', $usernm)
                 ->update([
-                    'userid' => $validated['userid'],
-                    'permissions' => $validated['permissions'] ?? null,
+                    'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
+                    'updatedat' => now(),
                 ]);
         });
 
-        return redirect()->route('master.username.index')
+        // Jika ingin tetap di halaman access:
+        return redirect()->route('masterdata.username.index', $usernm)
             ->with('success', 'Data updated successfully.');
+
+        // Kalau mau ke index:
+        // return redirect()->route('masterdata.username.index')->with('success', 'Data updated successfully.');
     }
+
+
 
     public function destroy($usernm, $companycode)
     {
@@ -195,7 +202,7 @@ class UsernameController extends Controller
             DB::table('user')->where('userid', $usernm)->delete();
             DB::table('usercompany')->where('userid', $usernm)->where('companycode', $companycode)->delete();
         });
-        return redirect()->route('master.username.index')
+        return redirect()->route('masterdata.username.index')
             ->with('success', 'Data deleted successfully.');
     }
 }

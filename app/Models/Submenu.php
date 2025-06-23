@@ -1,12 +1,11 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Submenu extends Model
 {
-    protected $table = 'submenu';
+    protected $table = 'submenu'; // Nama tabel submenu
     public $timestamps = false;
 
     protected $primaryKey = 'submenuid';
@@ -19,11 +18,37 @@ class Submenu extends Model
         'parentid',
         'name',
         'slug',
-        'updateby',
+        'updatedby',
         'updatedat',
     ];
 
     protected $casts = [
         'updatedat' => 'datetime',
     ];
+
+    // Relasi ke Menu
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class, 'menuid', 'menuid');
+    }
+
+    // Relasi ke Parent Submenu
+    public function parent()
+    {
+        return $this->belongsTo(Submenu::class, 'parentid', 'submenuid');
+    }
+
+    // Relasi ke Children Submenu
+      public function children()
+    {
+        return $this->hasMany(Submenu::class, 'parentid', 'submenuid');
+    }
+
+    // TAMBAHAN: Relasi untuk memuat semua anak secara rekursif
+    public function childrenRecursive()
+    {
+        // Ini akan memuat relasi 'children', dan untuk setiap anak, 
+        // ia akan memuat relasi 'childrenRecursive' lagi.
+        return $this->children()->with('childrenRecursive');
+    }
 }

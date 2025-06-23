@@ -222,7 +222,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.company.handle') }}";
+            form.action = "{{ route('masterdata.company.handle') }}";
             crudMethod.value = "POST";
             kdCompInput.value = "";
             kdCompInput.readOnly = false;
@@ -240,7 +240,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
-            var editRoute = "{{ route('master.company.update', ['companycode' => '__kdComp__']) }}";
+            var editRoute = "{{ route('masterdata.company.update', ['companycode' => '__kdComp__']) }}";
             form.action = editRoute.replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
             kdCompInput.value = kdComp;

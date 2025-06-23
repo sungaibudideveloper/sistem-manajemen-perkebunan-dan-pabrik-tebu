@@ -10,7 +10,7 @@
                 {{ $message }}</div>
         @enderror
 
-        <form action="{{ route('master.username.handle') }}" method="POST">
+        <form action="{{ route('masterdata.username.handle') }}" method="POST">
             @csrf
             <div class="bg-white p-4 rounded-md shadow-md mb-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -486,7 +486,7 @@
                     </svg>
                     <span>Save</span>
                 </button>
-                <a href="{{ route('master.username.index') }}"
+                <a href="{{ route('masterdata.username.index') }}"
                     class="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded w-full md:w-auto hover:bg-red-600">
                     <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
                         xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"

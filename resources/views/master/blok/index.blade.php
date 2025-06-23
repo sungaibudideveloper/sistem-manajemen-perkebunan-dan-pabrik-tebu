@@ -207,7 +207,7 @@
                 let kdblok = this.getAttribute('data-kd-blok');
                 let kdComp = this.getAttribute('data-kd-comp');
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                    fetch(`{{ route('master.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
+                    fetch(`{{ route('masterdata.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
                             .replace('__kdblok__', kdblok)
                             .replace('__kdComp__', kdComp), {
                                 method: 'POST',
@@ -246,7 +246,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.blok.handle') }}";
+            form.action = "{{ route('masterdata.blok.handle') }}";
             crudMethod.value = "POST";
             kdBlokInput.value = "";
             setTimeout(() => {
@@ -270,7 +270,7 @@
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute =
-                "{{ route('master.blok.update', ['blok' => 'kdblok', 'companycode' => '__kdComp__']) }}";
+                "{{ route('masterdata.blok.update', ['blok' => 'kdblok', 'companycode' => '__kdComp__']) }}";
             form.action = editRoute.replace('kdblok', kdblok).replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
             kdBlokInput.value = kdblok;
@@ -283,7 +283,7 @@
 
         function deleteRow(kdblok, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
+                fetch(`{{ route('masterdata.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
                         .replace('__kdblok__', kdblok)
                         .replace('__kdComp__', kdComp), {
                             method: "DELETE",

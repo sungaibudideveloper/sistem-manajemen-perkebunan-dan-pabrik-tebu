@@ -14,7 +14,7 @@ class PlottingController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'plot',
-            'routeName' => route('master.plotting.index'),
+            'routeName' => route('masterdata.plotting.index'),
         ]);
     }
 
@@ -124,7 +124,7 @@ class PlottingController extends Controller
                     'updatedat' => now(),
                 ]);
         });
-        return redirect()->route('master.plotting.index')
+        return redirect()->route('masterdata.plotting.index')
             ->with('success1', 'Data updated successfully.');
     }
 

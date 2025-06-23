@@ -17,7 +17,7 @@ class BlokController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'Blok',
-            'routeName' => route('master.blok.index'),
+            'routeName' => route('masterdata.blok.index'),
         ]);
     }
 
@@ -120,7 +120,7 @@ class BlokController extends Controller
                 ]);
         });
 
-        return redirect()->route('master.blok.index')
+        return redirect()->route('masterdata.blok.index')
             ->with('success1', 'Data updated successfully.');
     }
 

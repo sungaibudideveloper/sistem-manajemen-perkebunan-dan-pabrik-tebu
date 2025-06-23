@@ -194,7 +194,7 @@ class GudangController extends Controller
 
         });
 
-        return redirect()->route('master.aktivitas.index')->with('success1', 'Data updated successfully.');
+        return redirect()->route('masterdata.aktivitas.index')->with('success1', 'Data updated successfully.');
     }
 
     public function destroy($activityCode)
