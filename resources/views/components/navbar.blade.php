@@ -13,16 +13,8 @@ $navComponent = $__env->getContainer()->make(\App\View\Components\Navbar::class)
                     </a>
                 </div>
                 {{-- DESKTOP MENU --}}
-
-
-
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-2">
-
-                     
-
-
-
                         @foreach (($navigationMenus ?? []) as $menu)
                         @if ($hasPermission($getPermission($menu)))
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">

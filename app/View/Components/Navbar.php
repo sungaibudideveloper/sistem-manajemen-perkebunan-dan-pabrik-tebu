@@ -21,17 +21,6 @@ class Navbar extends Component
     public function __construct()
     {
         $this->navigationMenus = Cache::remember('navigation_menus_manual_depth', 3600, function () {
-            // Debug logging untuk dashboard menu
-            if ($menu->slug === 'dashboard') {
-                \Log::info('Dashboard menu check', [
-                    'menu' => $menu->name,
-                    'submenus_count' => $menu->submenus->count(),
-                    'submenus' => $menu->submenus->map(function($s) {
-                        return ['name' => $s->name, 'slug' => $s->slug];
-                    })
-                ]);
-            }
-            
             // Eager load secara manual hingga kedalaman yang Anda inginkan
             return Menu::with([
                 'submenus.children.children.children' // Ini memuat hingga 5 level (Menu -> L1 -> L2 -> L3 -> L4)
