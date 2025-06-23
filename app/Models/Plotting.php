@@ -8,9 +8,9 @@ class Plot extends Model
 {
     public $incrementing = false;
     protected $table = 'plot';
-    protected $primaryKey = ['plot', 'companycode'];
+    protected $primaryKey = 'plot';
     protected $keyType = 'char';
-    protected $fillable = ['plot', 'nama', 'luasarea', 'jaraktanam', 'companycode', 'inputby', 'createdat'];
+    protected $fillable = ['plot', 'luasarea', 'jaraktanam', 'companycode', 'inputby', 'createdat'];
 
     public function setCreatedAt($value)
     {

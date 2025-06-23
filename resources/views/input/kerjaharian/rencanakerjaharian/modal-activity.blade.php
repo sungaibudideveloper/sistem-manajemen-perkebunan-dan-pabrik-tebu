@@ -343,6 +343,7 @@
 
 @push('scripts')
 <script>
+// Activity picker function - BACK TO YOUR ORIGINAL CODE
 function activityPicker(rowIndex) {
   return {
     open: false,
@@ -435,7 +436,6 @@ function activityPicker(rowIndex) {
       this.searchQuery = ''
     },
 
-    
     selectSubGroup(code) {
       const matched = this.activities.filter(a => a.activitycode.startsWith(code))
       
@@ -484,19 +484,36 @@ function activityPicker(rowIndex) {
       return activity ? activity.activityname : '';
     },
 
-
     updateJenisField() {
-    const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
-    if (jenisField) {  // ✅ BENAR: menggunakan jenisField
-      if (this.selected.jenistenagakerja === 1) {
-        jenisField.value = 'Harian';  
-      } else if (this.selected.jenistenagakerja === 2) {
-        jenisField.value = 'Borongan';  
-      } else if (this.selected.jenistenagakerja === 3) {
-        jenisField.value = 'Operator'; 
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      
+      if (jenisField) {
+        // FIXED: Handle both direct ID and object from relation
+        let jenisId = null;
+        
+        if (this.selected.jenistenagakerja) {
+          // If it's an object with idjenistenagakerja property
+          if (typeof this.selected.jenistenagakerja === 'object' && this.selected.jenistenagakerja.idjenistenagakerja) {
+            jenisId = this.selected.jenistenagakerja.idjenistenagakerja;
+          } else if (typeof this.selected.jenistenagakerja === 'number') {
+            // If it's a direct number
+            jenisId = this.selected.jenistenagakerja;
+          }
+        }
+        
+        if (jenisId === 1) {
+          jenisField.value = 'Harian';  
+        } else if (jenisId === 2) {
+          jenisField.value = 'Borongan';  
+        } else if (jenisId === 3) {
+          jenisField.value = 'Operator'; 
+        } else if (jenisId === 4) {
+          jenisField.value = 'Helper';
+        } else {
+          jenisField.value = '-';
+        }
       }
-    }
-  },
+    },
 
     closeModal() {
       this.open = false
@@ -522,5 +539,33 @@ function activityPicker(rowIndex) {
     }
   }
 }
+
+// Global data - Keep it simple
+window.activitiesData = @json($activities ?? []);
+
+// Simple initialization - just for updating jenis field on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize jenis fields for any pre-filled activities (for edit mode)
+  const activityInputs = document.querySelectorAll('input[name*="[nama]"]');
+  activityInputs.forEach((input, index) => {
+    if (input.value && window.activitiesData) {
+      const activity = window.activitiesData.find(a => a.activitycode === input.value);
+      if (activity) {
+        const jenisInput = document.getElementById(`jenistenagakerja-${index}`);
+        if (jenisInput) {
+          if (activity.jenistenagakerja === 1) {
+            jenisInput.value = 'Harian';  
+          } else if (activity.jenistenagakerja === 2) {
+            jenisInput.value = 'Borongan';  
+          } else if (activity.jenistenagakerja === 3) {
+            jenisInput.value = 'Operator'; 
+          } else if (activity.jenistenagakerja === 4) {
+            jenisInput.value = 'Helper';
+          }
+        }
+      }
+    }
+  });
+});
 </script>
 @endpush

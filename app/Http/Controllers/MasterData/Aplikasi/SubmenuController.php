@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Aplikasi;
+namespace App\Http\Controllers\Masterdata\Aplikasi;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,13 +106,13 @@ class SubmenuController extends Controller
 
         Parent::h_flash('Data Berhasil Disimpan!.', 'success');
 
-        return redirect()->route('aplikasi.submenu.index')->with('success', 'Submenu berhasil diupdate');
+        return redirect()->route('masterdata.submenu.index')->with('success', 'Submenu berhasil diupdate');
     }
 
     public function destroy($submenuid, $name)
     {
         DB::table('submenu')->where('submenuid', $submenuid)->where('name', $name)->delete();
 
-        return redirect()->back()->with('success', 'Data Submenu berhasil dihapus.');
+        return redirect()->route('masterdata.submenu.index')->with('success', 'Data Submenu berhasil dihapus.');
     }
 }

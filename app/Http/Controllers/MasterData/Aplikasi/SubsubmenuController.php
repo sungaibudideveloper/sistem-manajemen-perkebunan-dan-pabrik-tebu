@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Aplikasi;
+namespace App\Http\Controllers\Masterdata\Aplikasi;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +97,7 @@ class SubsubmenuController extends Controller
 
         Parent::h_flash('Data Berhasil Disimpan!.', 'success');
 
-        return redirect()->route('aplikasi.subsubmenu.index')->with('success', 'Submenu berhasil diupdate');
+        return redirect()->route('masterdata.subsubmenu.index')->with('success', 'Submenu berhasil diupdate');
     }
 
     public function destroy($subsubmenuid, $name)

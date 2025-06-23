@@ -18,59 +18,59 @@ use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
 use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\AplikasiController;
-use App\Http\Controllers\Aplikasi\MenuController;
-use App\Http\Controllers\Aplikasi\SubmenuController;
-use App\Http\Controllers\Aplikasi\SubsubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\MenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
+use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 
 
 
 //company
 Route::group(['middleware' => ['auth', 'permission:Company']], function () {
-    Route::post('masterdata/company', [CompanyController::class, 'handle'])->name('master.company.handle');
-    Route::get('masterdata/company', [CompanyController::class, 'index'])->name('master.company.index');
+    Route::post('masterdata/company', [CompanyController::class, 'handle'])->name('masterdata.company.handle');
+    Route::get('masterdata/company', [CompanyController::class, 'index'])->name('masterdata.company.index');
 });
-Route::put('masterdata/company/{companycode}', [CompanyController::class, 'update'])->name('master.company.update')->middleware('permission:Edit Company');
+Route::put('masterdata/company/{companycode}', [CompanyController::class, 'update'])->name('masterdata.company.update')->middleware('permission:Edit Company');
 Route::delete('masterdata/company/{companycode}', [CompanyController::class, 'destroy'])
-    ->name('master.company.destroy')->middleware('permission:Hapus Company');
+    ->name('masterdata.company.destroy')->middleware('permission:Hapus Company');
 
 //Blok
 Route::group(['middleware' => ['auth', 'permission:Blok']], function () {
-    Route::get('masterdata/blok', [BlokController::class, 'index'])->name('master.blok.index');
-    Route::post('masterdata/blok', [BlokController::class, 'handle'])->name('master.blok.handle');
+    Route::get('masterdata/blok', [BlokController::class, 'index'])->name('masterdata.blok.index');
+    Route::post('masterdata/blok', [BlokController::class, 'handle'])->name('masterdata.blok.handle');
 });
 Route::delete('masterdata/blok/{blok}/{companycode}', [BlokController::class, 'destroy'])
-    ->name('master.blok.destroy')->middleware('permission:Hapus Blok');
+    ->name('masterdata.blok.destroy')->middleware('permission:Hapus Blok');
 Route::put('masterdata/blok/{blok}/{companycode}', [BlokController::class, 'update'])
-    ->name('master.blok.update')->middleware('permission:Edit Blok');
+    ->name('masterdata.blok.update')->middleware('permission:Edit Blok');
 
 //Plotting
 Route::group(['middleware' => ['auth', 'permission:Plotting']], function () {
-    Route::post('masterdata/plotting', [PlottingController::class, 'handle'])->name('master.plotting.handle');
-    Route::get('masterdata/plotting', [PlottingController::class, 'index'])->name('master.plotting.index');
+    Route::post('masterdata/plotting', [PlottingController::class, 'handle'])->name('masterdata.plotting.handle');
+    Route::get('masterdata/plotting', [PlottingController::class, 'index'])->name('masterdata.plotting.index');
 });
 Route::delete('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'destroy'])
-    ->name('master.plotting.destroy')->middleware('permission:Hapus Plotting');
+    ->name('masterdata.plotting.destroy')->middleware('permission:Hapus Plotting');
 Route::put('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'update'])
-    ->name('master.plotting.update')->middleware('permission:Edit Plotting');
+    ->name('masterdata.plotting.update')->middleware('permission:Edit Plotting');
 
 //Mapping
 Route::group(['middleware' => ['auth', 'permission:Mapping']], function () {
     Route::post('masterdata/mapping/get-filtered-data', [MappingController::class, 'getFilteredData'])->name('get.filtered.data');
-    Route::post('masterdata/mapping', [MappingController::class, 'handle'])->name('master.mapping.handle');
-    Route::get('masterdata/mapping', [MappingController::class, 'index'])->name('master.mapping.index');
+    Route::post('masterdata/mapping', [MappingController::class, 'handle'])->name('masterdata.mapping.handle');
+    Route::get('masterdata/mapping', [MappingController::class, 'index'])->name('masterdata.mapping.index');
 });
 Route::delete('masterdata/mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'destroy'])
-    ->name('master.mapping.destroy')->middleware('permission:Hapus Mapping');
+    ->name('masterdata.mapping.destroy')->middleware('permission:Hapus Mapping');
 Route::put('masterdata/mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'update'])
-    ->name('master.mapping.update')->middleware('permission:Edit Mapping');
+    ->name('masterdata.mapping.update')->middleware('permission:Edit Mapping');
 
 
 
 //Kelola User
 Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
 
-    Route::post('masterdata/username', [UsernameController::class, 'handle'])->name('master.username.handle');
-    Route::get('masterdata/username', [UsernameController::class, 'index'])->name('master.username.index');
+    Route::post('masterdata/username', [UsernameController::class, 'handle'])->name('masterdata.username.handle');
+    Route::get('masterdata/username', [UsernameController::class, 'index'])->name('masterdata.username.index');
 });
 Route::get('masterdata/username/create', [UsernameController::class, 'create'])
     ->name('master.username.create')->middleware('permission:Create User');
@@ -84,9 +84,9 @@ Route::group(['middleware' => ['auth', 'permission:Edit User']], function () {
 });
 Route::group(['middleware' => ['auth', 'permission:Hak Akses']], function () {
     Route::put('masterdata/username/access/{userid}', [UsernameController::class, 'setaccess'])
-        ->name('master.username.setaccess');
+        ->name('masterdata.username.setaccess');
     Route::get('masterdata/username/{userid}/access', [UsernameController::class, 'access'])
-        ->name('master.username.access');
+        ->name('masterdata.username.access');
 });
 
 //Herbisida
@@ -114,10 +114,10 @@ Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcod
 Route::resource('herbisida-dosage', HerbisidaDosageController::class);
 
 //Route::group(['middleware' => ['auth', 'permission:Aktivitas']], function () {
-Route::get('masterdata/aktivitas', [ActivityController::class, 'index'])->name('master.aktivitas.index');
-Route::post('masterdata/aktivitas', [ActivityController::class, 'store'])->name('master.aktivitas.store');
-Route::put('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'update'])->name('master.aktivitas.update'); //->middleware('permission:Edit Aktivitas');
-Route::delete('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'destroy'])->name('master.aktivitas.destroy'); //->middleware('permission:Hapus Aktivitas');
+Route::get('masterdata/aktivitas', [ActivityController::class, 'index'])->name('masterdata.aktivitas.index');
+Route::post('masterdata/aktivitas', [ActivityController::class, 'store'])->name('masterdata.aktivitas.store');
+Route::put('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'update'])->name('masterdata.aktivitas.update'); //->middleware('permission:Edit Aktivitas');
+Route::delete('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'destroy'])->name('masterdata.aktivitas.destroy'); //->middleware('permission:Hapus Aktivitas');
 //});
 
 //Jabatan
@@ -183,22 +183,22 @@ Route::delete(
 
 
 //Route::group(['middleware' => ['auth','permission:MasterList']], function() {
-Route::get('masterdata/master-list', [MasterListController::class, 'index'])->name('master.master-list.index');
+Route::get('masterdata/master-list', [MasterListController::class, 'index'])->name('masterdata.master-list.index');
 //});
 
 
 // Mandor Routes
 //Route::group(['middleware' => ['auth', 'permission:Mandor']], function () {
-    // List and Create
-    Route::get('masterdata/mandor', [MandorController::class, 'index'])
-        ->name('masterdata.mandor.index');
-    Route::post('masterdata/mandor', [MandorController::class, 'store'])
-        ->name('masterdata.mandor.store');
+// List and Create
+Route::get('masterdata/mandor', [MandorController::class, 'index'])
+    ->name('masterdata.mandor.index');
+Route::post('masterdata/mandor', [MandorController::class, 'store'])
+    ->name('masterdata.mandor.store');
 //});
 Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])
-    ->name('masterdata.mandor.update');//->middleware(['auth', 'permission:Edit Mandor']);
+    ->name('masterdata.mandor.update'); //->middleware(['auth', 'permission:Edit Mandor']);
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])
-    ->name('masterdata.mandor.destroy');//->middleware(['auth', 'permission:Hapus Mandor']);
+    ->name('masterdata.mandor.destroy'); //->middleware(['auth', 'permission:Hapus Mandor']);
 
 
 Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])
@@ -208,25 +208,27 @@ Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])
 Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])
     ->name('masterdata.tenagakerja.update');
 Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])
-        ->name('masterdata.tenagakerja.destroy');
+    ->name('masterdata.tenagakerja.destroy');
 
-Route::middleware('auth')->group(function () {
-    Route::get('aplikasi/menu', [MenuController::class, 'index'])->name('aplikasi.menu.index');
-    Route::post('aplikasi/menu', [MenuController::class, 'store'])->name('aplikasi.menu.store');
-    Route::put('aplikasi/menu/{menuid}', [MenuController::class, 'update'])->name('aplikasi.menu.update');
-    Route::delete('aplikasi/menu/{menuid}/{name}', [MenuController::class, 'destroy'])->name('aplikasi.menu.destroy');
+// Aplikasi Routes
+Route::group(['middleware' => ['auth', 'permission:Menu']], function () {
+    Route::get('aplikasi/menu', [MenuController::class, 'index'])->name('masterdata.menu.index');
+    Route::post('aplikasi/menu', [MenuController::class, 'store'])->name('masterdata.menu.store');
 });
+Route::put('aplikasi/menu/{menuid}', [MenuController::class, 'update'])->middleware(['auth', 'permission:Edit Menu'])->name('masterdata.menu.update');
+Route::delete('aplikasi/menu/{menuid}/{name}', [MenuController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Menu'])->name('masterdata.menu.destroy');
 
-Route::middleware('auth')->group(function () {
-    Route::get('aplikasi/submenu', [SubmenuController::class, 'index'])->name('aplikasi.submenu.index');
-    Route::post('aplikasi/submenu', [SubmenuController::class, 'store'])->name('aplikasi.submenu.store');
-    Route::put('aplikasi/submenu/{submenuid}', [SubmenuController::class, 'update'])->name('aplikasi.submenu.update');
-    Route::delete('aplikasi/submenu/{submenuid}/{name}', [SubmenuController::class, 'destroy'])->name('aplikasi.submenu.destroy');
-});
 
-Route::middleware('auth')->group(function () {
-    Route::get('aplikasi/subsubmenu', [SubsubmenuController::class, 'index'])->name('aplikasi.subsubmenu.index');
-    Route::post('aplikasi/subsubmenu', [SubsubmenuController::class, 'store'])->name('aplikasi.subsubmenu.store');
-    Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->name('aplikasi.subsubmenu.update');
-    Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->name('aplikasi.subsubmenu.destroy');
+Route::group(['middleware' => ['auth', 'permission:Submenu']], function () {
+    Route::get('aplikasi/submenu', [SubmenuController::class, 'index'])->name('masterdata.submenu.index');
+    Route::post('aplikasi/submenu', [SubmenuController::class, 'store'])->name('masterdata.submenu.store');
 });
+Route::put('aplikasi/submenu/{submenuid}', [SubmenuController::class, 'update'])->middleware(['auth', 'permission:Edit Submenu'])->name('masterdata.submenu.update');
+Route::delete('aplikasi/submenu/{submenuid}/{name}', [SubmenuController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Submenu'])->name('masterdata.submenu.destroy');
+
+Route::group(['middleware' => ['auth', 'permission:Subsubmenu']], function () {
+    Route::get('aplikasi/subsubmenu', [SubsubmenuController::class, 'index'])->name('masterdata.subsubmenu.index');
+    Route::post('aplikasi/subsubmenu', [SubsubmenuController::class, 'store'])->name('masterdata.subsubmenu.store');
+});
+Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->middleware(['auth', 'permission:Edit Subsubmenu'])->name('masterdata.subsubmenu.update');
+Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Subsubmenu'])->name('masterdata.subsubmenu.destroy');

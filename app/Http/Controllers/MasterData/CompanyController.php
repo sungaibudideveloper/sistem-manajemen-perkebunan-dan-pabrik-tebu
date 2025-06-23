@@ -17,7 +17,7 @@ class CompanyController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'Company',
-            'routeName' => route('master.company.index'),
+            'routeName' => route('masterdata.company.index'),
         ]);
     }
 
@@ -134,7 +134,7 @@ class CompanyController extends Controller
                 'updatedat' => now()
             ]);
         });
-        return redirect()->route('master.company.index')
+        return redirect()->route('masterdata.company.index')
             ->with('success1', 'Data updated successfully.');
     }
 

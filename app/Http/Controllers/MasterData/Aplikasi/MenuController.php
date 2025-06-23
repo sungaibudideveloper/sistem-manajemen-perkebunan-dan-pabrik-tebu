@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Aplikasi;
+namespace App\Http\Controllers\Masterdata\Aplikasi;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Menu;
+use App\Models\Submenu;
 
 class MenuController extends Controller
 {
@@ -72,7 +73,7 @@ class MenuController extends Controller
 
         Parent::h_flash('Data Berhasil Disimpan!.', 'success');
 
-        return redirect()->route('aplikasi.menu.index')->with('success', 'Menu berhasil diupdate');
+        return redirect()->route('masterdata.menu.index')->with('success', 'Menu berhasil diupdate');
     }
 
     public function destroy($menuid, $name)

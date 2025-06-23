@@ -17,7 +17,7 @@ class MasterListController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'master-list',
-            'routeName' => route('master.master-list.index'),
+            'routeName' => route('masterdata.master-list.index'),
         ]);
     }
 
@@ -118,7 +118,7 @@ class MasterListController extends Controller
                 ]);
         });
 
-        return redirect()->route('master.blok.index')
+        return redirect()->route('masterdata.blok.index')
             ->with('success1', 'Data updated successfully.');
     }
 

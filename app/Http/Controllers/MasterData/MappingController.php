@@ -19,7 +19,7 @@ class MappingController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'Mapping',
-            'routeName' => route('master.mapping.index'),
+            'routeName' => route('masterdata.mapping.index'),
         ]);
     }
     public function index(Request $request)
@@ -182,7 +182,7 @@ class MappingController extends Controller
                 ]);
         });
 
-        return redirect()->route('master.mapping.index')
+        return redirect()->route('masterdata.mapping.index')
             ->with('success1', 'Data updated successfully.');
     }
 

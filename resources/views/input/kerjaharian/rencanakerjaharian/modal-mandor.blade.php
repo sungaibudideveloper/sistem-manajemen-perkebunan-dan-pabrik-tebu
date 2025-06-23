@@ -102,12 +102,12 @@
       <div class="flex justify-between items-center text-xs text-gray-500">
         <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
         <button
-              type="button"
-              @click.stop="clear()"
-              class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
-            >
-              Clear Selected Mandor
-            </button>
+          type="button"
+          @click.stop="clear()"
+          class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+        >
+          Clear Selected Mandor
+        </button>
       </div>
     </div>
   </div>
@@ -115,7 +115,7 @@
 
 @push('scripts')
 <script>
-   function mandorPicker() {
+function mandorPicker() {
   return {
     open: false,
     searchQuery: '',
@@ -132,7 +132,12 @@
     },
 
     selectMandor(mandor) {
-      this.selected = mandor;
+      // FIXED: Proper object assignment
+      this.selected = {
+        companycode: mandor.companycode,
+        userid: mandor.userid,
+        name: mandor.name
+      };
       this.open = false;
       
       // Update absen summary dengan semua parameter yang diperlukan
@@ -146,12 +151,15 @@
       this.searchQuery = '';
       // Reset the absen summary
       updateAbsenSummary(null);
+      // Close modal
+      this.open = false;
     },
 
-    
-
-   
-    
+    // ADDED: Initialize with old input if available
+    init() {
+      // This will be called from the parent component's x-init
+      // The parent component will set the selected value if old input exists
+    }
   }
 }
 </script>

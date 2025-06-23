@@ -259,7 +259,7 @@
                 let kdPlot = this.getAttribute('data-kd-plot');
                 let kdComp = this.getAttribute('data-kd-comp');
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                    fetch(`{{ route('master.mapping.destroy', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
+                    fetch(`{{ route('masterdata.mapping.destroy', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                             .replace('__kdPlotSample__', kdPlotSample)
                             .replace('__kdblok__', kdblok)
                             .replace('__kdPlot__', kdPlot)
@@ -302,7 +302,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.mapping.handle') }}";
+            form.action = "{{ route('masterdata.mapping.handle') }}";
             crudMethod.value = "POST";
             kdPlotSampleInput.value = "";
             kdBlokInput.value = "";
@@ -328,7 +328,7 @@
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute =
-                "{{ route('master.mapping.update', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}";
+                "{{ route('masterdata.mapping.update', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}";
             form.action = editRoute.replace('__kdPlotSample__', kdPlotSample).replace('__kdblok__', kdblok).replace(
                 '__kdPlot__', kdPlot).replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
@@ -344,7 +344,7 @@
 
         function deleteRow(kdPlotSample, kdblok, kdPlot, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.mapping.destroy', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
+                fetch(`{{ route('masterdata.mapping.destroy', ['plotcodesample' => '__kdPlotSample__', 'blok' => '__kdblok__', 'plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                         .replace('__kdPlotSample__', kdPlotSample).replace('__kdblok__', kdblok).replace('__kdPlot__',
                             kdPlot).replace('__kdComp__', kdComp), {
                             method: "DELETE",
