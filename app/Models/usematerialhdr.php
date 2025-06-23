@@ -5,16 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Auth;
 
-class Use_hdr extends Model
+class usematerialhdr extends Model
 {
-    protected $table = 'Use_hdr';
+    protected $table = 'usematerialhdr';
     public $timestamps = false;
 
     public $incrementing = false;        // kalau key-nya string/non-numeric
     protected $keyType = 'string';
 
     protected $fillable = [
-        'companycode','rkhno','useno','totalluas','flagstatus','inputby','creatdat','updateby','updatedat'
+        'companycode','rkhno','totalluas','flagstatus','inputby','creatdat','updateby','updatedat'
     ];
 
 
@@ -25,8 +25,8 @@ class Use_hdr extends Model
 //     }else{ $sql='b.*,'; }
 //     return \DB::select(
 //       "
-//         SELECT DISTINCT e.herbisidagroupname, ".$sql." a.* FROM use_hdr a 
-//         LEFT JOIN use_lst b ON a.rkhno = b.rkhno
+//         SELECT DISTINCT e.herbisidagroupname, ".$sql." a.* FROM usematerialhdr a 
+//         LEFT JOIN usemateriallst b ON a.rkhno = b.rkhno
 //         LEFT JOIN rkhhdr f ON a.rkhno = f.rkhno
 //         LEFT JOIN rkhlst g ON a.rkhno = g.rkhno 
 //         LEFT JOIN herbisida c ON a.companycode = c.companycode AND b.itemcode = c.itemcode
@@ -39,9 +39,9 @@ class Use_hdr extends Model
 
 public function selectuse($companycode, $rkhno = 0, $type = 0)
 { 
-    return \DB::table('use_hdr as a')
-        ->selectRaw('DISTINCT g.blok, g.plot, g.luasarea, f.mandorid, h.name AS mandorname, e.activitycode,e.herbisidagroupid, e.herbisidagroupname, a.*')
-        ->leftJoin('use_lst as b', 'a.rkhno', '=', 'b.rkhno')
+    return \DB::table('usematerialhdr as a')
+        ->selectRaw('DISTINCT b.nouse, c.companyinv, c.factoryinv, g.blok, g.plot, g.luasarea, f.mandorid, h.name AS mandorname, e.activitycode,e.herbisidagroupid, e.herbisidagroupname, a.*')
+        ->leftJoin('usemateriallst as b', 'a.rkhno', '=', 'b.rkhno')
         ->leftJoin('rkhhdr as f', 'a.rkhno', '=', 'f.rkhno')
         ->leftJoin('rkhlst as g', 'a.rkhno', '=', 'g.rkhno')
         ->leftJoin('herbisida as c', function ($join) {

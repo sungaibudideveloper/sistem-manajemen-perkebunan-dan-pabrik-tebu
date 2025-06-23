@@ -70,7 +70,14 @@
           </div>
           
           {{-- Items Detail - Collapsible --}}
-          <div x-show="group.showDetails" x-collapse class="border-t border-gray-100">
+          <div x-show="group.showDetails" 
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95 -translate-y-2"
+            x-transition:enter-end="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 transform scale-95 -translate-y-2"
+            class="border-t border-gray-100">
             <div class="p-4">
               <h4 class="text-sm font-medium text-gray-700 mb-3">Material yang tersedia:</h4>
               

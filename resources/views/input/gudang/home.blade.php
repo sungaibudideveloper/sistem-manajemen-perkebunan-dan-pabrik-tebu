@@ -74,7 +74,8 @@
                         <tr>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No. RKH</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tanggal</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kegiatan</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Keterangan</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No. Pemakaian</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Luas</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Mandor</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Status</th>
@@ -85,12 +86,13 @@
                         <tr>
                             <td class="py-2 px-4 "><a href="#" onclick="location.href='{{ url('input/gudang/detail?rkhno='.$u->rkhno) }}'" class="text-blue-600 hover:underline">{{$u->rkhno}}</a></td>
                             <td class="py-2 px-4 ">{{ date('d M Y',strtotime($u->createdat)) }}</td>
-                            <td class="py-2 px-4 ">{{$u->herbisidagroupname}}</td>
+                            <td class="py-2 px-4 ">Pre Emergence</td>
+                            <td class="py-2 px-4 "></td>
                             <td class="py-2 px-4 ">{{$u->totalluas}}</td>
-                            <td class="py-2 px-4 ">{{$u->inputby}}</td>
-                            <td class="py-2 px-4 ">
-                              <span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full">
-                                NEW
+                            <td class="py-2 px-4 ">M10 Angky</td>
+                            <td class="py-2 px-4 "> 
+                              <span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full"> 
+                                {{$u->flagstatus}} 
                               </span>
                             </td>
                         </tr>

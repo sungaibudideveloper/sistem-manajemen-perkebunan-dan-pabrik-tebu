@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Input;
 use App\Http\Controllers\Controller;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
-use App\Models\Use_hdr;
-use App\Models\Use_lst;
+use App\Models\usematerialhdr;
+use App\Models\usemateriallst;
 use App\Models\HerbisidaDosage;
+use App\Models\Herbisida;
 
 class GudangController extends Controller
 {
@@ -47,8 +50,8 @@ class GudangController extends Controller
     }
 
     public function home(Request $request)
-    {   $Use_hdr = new Use_hdr; 
-        $usehdr= $Use_hdr->selectuse(session('companycode'));
+    {   $usematerialhdr = new usematerialhdr; 
+        $usehdr= $usematerialhdr->selectuse(session('companycode'));
         
         $title = "Gudang";
 
@@ -59,7 +62,7 @@ class GudangController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $usehdr = Use_hdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
+        $usehdr = usematerialhdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
         
         return view('input.gudang.home')->with([
             'title'         => 'Gudang',
@@ -70,24 +73,201 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        $Use_hdr = new Use_hdr;
+        $usematerialhdr = new usematerialhdr;
+        $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
-        $details = $Use_hdr->selectuse(session('companycode'), $request->rkhno,1)->get();
-        
-        //$dosage = HerbisidaDosage::where('herbisidagroupid', $details[0]->herbisidagroupid)->get();
+        $herbisida = new Herbisida;
 
+        $dosage = HerbisidaDosage::get();
+
+        $validItemCodes = HerbisidaDosage::get()->pluck('itemcode')->unique();
+
+        $itemlist = DB::table('herbisidaDosage as d')
+        ->join('herbisida as h', function ($join) {
+        $join->on('d.itemcode', '=', 'h.itemcode')
+                ->on('d.companycode', '=', 'h.companycode');
+        })
+        ->where('d.companycode', session('companycode'))
+        ->select(
+        'd.herbisidagroupid',
+        'd.itemcode',
+        'd.dosageperha',
+        'd.dosageunit',
+        'h.itemname',
+        'h.measure'
+        )
+        ->get();
+            
+        $details = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
+        
         $groupIds = $details->pluck('herbisidagroupid')->unique();
+        $lst = usemateriallst::where('rkhno', $request->rkhno)->get();
+        //$joinlst = $usemateriallst->joinlst($request->rkhno);
 
-        $dosage = HerbisidaDosage::whereIn('herbisidagroupid', $groupIds)->get();
-        
         // $header
         $title = "Gudang";
 
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
-            'details'        => $details,
-            'dosage'         => $dosage
+            'details'       => $details,
+            'dosage'        => $dosage,
+            'lst'       => $lst,
+            'itemlist'      => $itemlist
         ]);
+    }
+
+    public function submit(Request $request)
+    {   
+        $usematerialhdr = new usematerialhdr;
+        $usemateriallst = new usemateriallst;
+        $dosage = new HerbisidaDosage;
+        $details = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
+        $exists = usemateriallst::where('rkhno', $request->rkhno)->whereNotNull('nouse')->where('nouse', '!=', '')->exists();
+        $first = $details->first();
+  
+        if($details->whereNotNull('nouse')->count()<1){
+            
+        $isi = collect();
+        if( $exists == FALSE ){
+        if(!empty($details)){ 
+        $testisi = collect([
+            (object)[
+                'CompCodeTerima' => 'GSB',
+                'FactoryTerima'  => 'ATK',
+                'ItemGrup'       => '02',
+                'CompItemcode'   => '000155',
+                'prunit'         => 'BH',
+                'itemprice'      => '3100000',
+                'currcode'       => 'IDR',
+                'itemnote'       => 'U/ TEST MESIN TAPIOKA PENGEMASAN TEST',
+                'qtybpb'         => '2',
+                'Keterangan'     => '',
+                'vehiclenumber'  => '2',
+                'flagstatus'     => 'POSTED'
+            ]
+          ]);
+          $groupIds = $details->pluck('herbisidagroupid')->unique();
+          $dosage = HerbisidaDosage::whereIn('herbisidagroupid', $groupIds)->get();
+
+
+          $groupedDetails = $details->groupBy('herbisidagroupid')->map(function ($group) {
+            $totalLuas = $group->sum('luasarea');
+            $firstItem = $group->first();
+        
+            return (object)[
+                'CompCodeTerima' => $firstItem->companyinv,
+                'FactoryTerima' => $firstItem->factoryinv,
+                'herbisidagroupid' => $firstItem->herbisidagroupid,
+                'herbisidagroupname' => $firstItem->herbisidagroupname,
+                'mandorname' => $firstItem->mandorname,
+                'flagstatus' => $firstItem->flagstatus,
+                'totalLuas' => $totalLuas
+            ];
+        });
+        
+        $herbisidaitem = Herbisida::where('companycode',session('companycode'))->get();
+
+        DB::transaction(function() use ($request, $first, $groupedDetails, $herbisidaitem, $isi) {
+        
+        usemateriallst::where('rkhno', $first->rkhno)->delete();
+        $insertData = [];
+        
+
+        foreach($groupedDetails as $groupId => $items){ 
+            foreach ($request->itemcode[$groupId] as $index => $itemcode) { 
+                
+                $dosage = $request->dosage[$groupId][$index]; 
+                $qty = $dosage*$items->totalLuas;
+                $unit = $request->unit[$groupId][$index];  
+                $itemname = $herbisidaitem->where('itemcode', $itemcode)->first()->itemname;
+                $qtyretur = $request->qtyretur[$groupId][$index];
+
+                $insertData[] = [
+                    'companycode' => session('companycode'),
+                    'rkhno' => $request->rkhno,
+                    'itemcode' => $itemcode,
+                    'qty' => $qty,
+                    'unit' => $request->unit,
+                    'qtyretur' => $qtyretur,
+                    'itemname' => $itemname,
+                    'dosageperha' => $dosage
+                ];
+                
+                $isi->push((object)[
+                    'CompCodeTerima' => $items->CompCodeTerima, 
+                    'FactoryTerima'  => $items->FactoryTerima,
+                    'ItemGrup'       => substr($itemcode, 0, 1),
+                    'CompItemcode'   => substr($itemcode, 1),
+                    'prunit'         => $unit,
+                    'itemprice'      =>  0,
+                    'currcode'       => 'IDR',
+                    'itemnote'       => $items->herbisidagroupname,
+                    'qtybpb'         => $dosage*floatval($items->totalLuas),
+                    'Keterangan'     => $items->herbisidagroupname.' - '.$items->mandorname ?? '',  
+                    'vehiclenumber'  => '',
+                    'flagstatus'     => $items->flagstatus
+                ]);
+            }
+          }
+        
+          // Bulk insert
+            if (!empty($insertData)) {
+                usemateriallst::insert($insertData);
+            }
+          });
+         
+
+// Group by composite key and sum quantities
+$grouped = [];
+$keyMap = [];
+foreach($isi as $item) {
+    $key = $item->CompCodeTerima . '|' . $item->FactoryTerima . '|' . $item->ItemGrup . $item->CompItemcode;
+    if (isset($keyMap[$key])) {
+        // Sum to existing item
+        $index = $keyMap[$key];
+        $grouped[$index]->qtybpb += floatval($item->qtybpb);
+    } else {
+        // Add new item
+        $grouped[] = clone $item;
+        $grouped[count($grouped)-1]->qtybpb = floatval($item->qtybpb);
+        $keyMap[$key] = count($grouped) - 1;
+    }
+}
+$isi = collect(array_values($grouped));
+
+        $response = Http::withOptions([
+            'headers' => ['Accept' => 'application/json']
+        ])->asJson()
+        ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api', [
+            'connection' => 'TESTING',
+            'company' => $first->companyinv,
+            'factory' => $first->factoryinv,
+            'isi' => $isi,  
+            'userid' => auth::user()->userid 
+        ]);  
+            
+        if ($response->successful()) {
+            Log::info('API success:', $response->json());
+        } else {
+            Log::error('API error', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+        }
+            
+            if($response->status()==200){ 
+                if($response->json()['status']==1){
+                usemateriallst::where('rkhno', $request->rkhno)->update(['nouse' => $response->json()['noUse']]);
+                usematerialhdr::where('rkhno', $request->rkhno)->update(['flagstatus' => 'SUBMITTED']);
+                }
+            }else{
+                return redirect()->back()->with('success1', 'Data updated successfully');
+            }
+        }
+        }
+        // ->withErrors(['activitycode' => 'Duplicate Entry, kombinasi kode sudah ada']);
+        return redirect()->back()->with('success1', 'Data updated successfully');
+        }else{ return redirect()->back()->with('warning', 'Data Use Sudah Ada!'); }//tutup cek nouse < 1
     }
 
 
