@@ -62,11 +62,26 @@ class UsernameController extends Controller
         return $this->store($request);
     }
 
+
+
     public function create()
     {
         $title = "Create Data";
-        $company = DB::table('company')->get();
-        return view('master.username.create', compact('title', 'company'));
+
+        // Get data untuk form
+        $company = Company::orderBy('companycode')->get();
+        $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
+        $submenu = Submenu::orderBy('submenuid')->get();
+        $subsubmenu = Subsubmenu::orderBy('name')->get();
+
+        return view('master.username.create', [
+            'title' => $title,
+            'company' => $company,
+            'menu' => $menu,
+            'submenu' => $submenu,
+            'subsubmenu' => $subsubmenu,
+            'username' => new User(), // empty model untuk old() values
+        ]);
     }
 
     public function store(Request $request)
@@ -79,37 +94,46 @@ class UsernameController extends Controller
             'companycode' => 'required|array',
         ]);
 
-        $exists = DB::table('usercompany')->where('userid', $request->usernm)
-            ->where('companycode', $request->companycode)
-            ->exists();
+        // Cek duplicate untuk setiap company
+        foreach ($validated['companycode'] as $company) {
+            $exists = DB::table('usercompany')
+                ->where('userid', $request->usernm)
+                ->where('companycode', $company)
+                ->exists();
 
-        if ($exists) {
-            return back()->withErrors([
-                'duplicate' => 'Data sudah ada, silahkan coba dengan data yang berbeda.',
-            ])->withInput();
+            if ($exists) {
+                return back()->withErrors([
+                    'duplicate' => "User {$request->usernm} sudah ada untuk company {$company}",
+                ])->withInput();
+            }
         }
 
         DB::transaction(function () use ($validated) {
-            $companycode = implode(',', $validated['companycode']);
+            // Insert ke tabel user
             DB::table('user')->insert([
                 'userid' => strtoupper($validated['usernm']),
                 'name' => strtoupper($validated['name']),
                 'password' => bcrypt($validated['password']),
-                'companycode' => $companycode,
+                'companycode' => implode(',', $validated['companycode']), // Gabungan untuk display
                 'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
                 'createdat' => now(),
                 'updatedat' => now(),
                 'isactive' => 1,
+            ]);
 
-            ]);
-            DB::table('usercompany')->insert([
-                'userid' => $validated['usernm'],
-                'companycode' => $companycode,
-                'inputby' => Auth::user()->userid,
-                'createdat' => now(),
-            ]);
+            // Insert ke usercompany - satu row per company
+            foreach ($validated['companycode'] as $company) {
+                DB::table('usercompany')->insert([
+                    'userid' => strtoupper($validated['usernm']),
+                    'companycode' => $company,
+                    'inputby' => Auth::user()->userid,
+                    'createdat' => now(),
+                ]);
+            }
         });
-        return redirect()->back()->with('success1', 'Data created successfully.');
+
+        return redirect()->route('masterdata.username.index')
+            ->with('success', 'User berhasil ditambahkan.');
     }
 
     public function edit($usernm, $companycode)
@@ -152,24 +176,24 @@ class UsernameController extends Controller
             ->with('success1', 'Data updated successfully.');
     }
 
-public function access($usernm)
-{
-    $title = 'Set Hak Akses';
-    $user = User::findOrFail($usernm);
+    public function access($usernm)
+    {
+        $title = 'Set Hak Akses';
+        $user = User::findOrFail($usernm);
 
-    // Filter unique by slug directly
-    $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
-    $submenu = Submenu::orderBy('submenuid')->get();
-    $subsubmenu = Subsubmenu::orderBy('name')->get();
-    
-    return view('master.username.access', [
-        'user' => $user,
-        'title' => $title,
-        'menu' => $menu,
-        'submenu' => $submenu,
-        'subsubmenu' => $subsubmenu,
-    ]);
-}
+        // Filter unique by slug directly
+        $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
+        $submenu = Submenu::orderBy('submenuid')->get();
+        $subsubmenu = Subsubmenu::orderBy('name')->get();
+
+        return view('master.username.access', [
+            'user' => $user,
+            'title' => $title,
+            'menu' => $menu,
+            'submenu' => $submenu,
+            'subsubmenu' => $subsubmenu,
+        ]);
+    }
 
     public function setaccess(Request $request, $usernm)
     {
