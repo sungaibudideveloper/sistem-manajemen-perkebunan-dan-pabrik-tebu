@@ -175,6 +175,7 @@
                           <option value="1">Tenaga Kerja Harian</option>
                           <option value="2">Borongan</option>
                           <option value="3">Operator</option>
+                          <option value="4">Helper</option>
                         </select>
                       </div>
                     </div>
