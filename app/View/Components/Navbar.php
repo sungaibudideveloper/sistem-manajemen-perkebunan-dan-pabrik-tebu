@@ -34,36 +34,26 @@ class Navbar extends Component
 
     public function render(): View|Closure|string
     {
-        // Get user permissions
         $userPermissions = json_decode(auth()->user()->permissions ?? '[]', true);
 
-        // Get semua data
         $allMenus = Menu::orderBy('menuid')->get();
         $allSubmenus = Submenu::orderBy('submenuid')->get();
 
-        // Filter menus yang user punya permission
         $allowedMenus = $allMenus->whereIn('name', $userPermissions);
-
-        // Filter submenu yang user punya permission
         $allowedSubmenus = $allSubmenus->whereIn('name', $userPermissions);
 
-        // Get menu IDs dari submenu yang allowed
         $menuIdsFromSubmenus = $allowedSubmenus->pluck('menuid')->unique();
-
-        // Get menu IDs dari menu yang directly allowed
         $menuIdsFromMenus = $allowedMenus->pluck('menuid');
 
-        // Combine menu IDs (menu yang punya permission langsung ATAU punya submenu dengan permission)
         $finalMenuIds = $menuIdsFromMenus->merge($menuIdsFromSubmenus)->unique();
 
-        // Get final menus
         $menus = $allMenus->whereIn('menuid', $finalMenuIds);
 
         $this->companyName = auth()->user()->companycode ?? 'Default Company';
 
         return view('components.navbar', [
             'navigationMenus' => $menus,
-            'allSubmenus' => $allSubmenus, // Semua submenu untuk structure
+            'allSubmenus' => $allSubmenus, 
             'userPermissions' => $userPermissions,
             'companyName' => $this->companyName,
         ]);

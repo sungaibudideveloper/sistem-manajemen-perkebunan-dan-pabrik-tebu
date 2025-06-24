@@ -5,123 +5,139 @@
     
     // Generate route otomatis berdasarkan pattern
     $getRoute = function($menuSlug, $submenuSlug) {
-    // Log untuk debug
-    \Log::info("Generating route for menu: {$menuSlug}, submenu: {$submenuSlug}");
-    
-    // Special routes yang tidak ikut pattern  
-    $specialRoutes = [
-        'closing' => 'closing',
-        'upload-gpx' => 'upload.gpx.view',
-        'export-kml' => 'export.kml.view',
-        'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
-    ];
-    
-    if (isset($specialRoutes[$submenuSlug])) {
-        try {
-            return route($specialRoutes[$submenuSlug]);
-        } catch (\Exception $e) {
-            return '#';
-        }
-    }
-    
-    // Dashboard routes
-    if ($menuSlug === 'dashboard') {
-        // Special case mapping dulu
-        $specialDashboard = [
-            'agronomi-dashboard' => 'dashboard.agronomi',
-            'hpt-dashboard' => 'dashboard.hpt',
+        // Clean slug - remove spaces and convert to lowercase
+        $submenuSlug = str_replace(' ', '-', strtolower($submenuSlug));
+        
+        // Special routes yang tidak ikut pattern  
+        $specialRoutes = [
+            'closing' => 'closing',
+            'upload-gpx' => 'upload.gpx.view',
+            'upload-gpx-file' => 'upload.gpx.view',
+            'export-kml' => 'export.kml.view',
+            'export-kml-file' => 'export.kml.view',
+            'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
         ];
         
-        if (isset($specialDashboard[$submenuSlug])) {
+        if (isset($specialRoutes[$submenuSlug])) {
             try {
-                return route($specialDashboard[$submenuSlug]);
+                return route($specialRoutes[$submenuSlug]);
             } catch (\Exception $e) {
                 return '#';
             }
         }
         
-        // Default pattern untuk yang lain (timeline, maps, dll)
-        try {
-            return route("dashboard.{$submenuSlug}");
-        } catch (\Exception $e) {
-            return '#';
-        }
-    }
-    
-    // Process routes
-    if ($menuSlug === 'process') {
-        try {
-            return route("process.{$submenuSlug}");
-        } catch (\Exception $e) {
-            return '#';
-        }
-    }
-    
-    // Master routes
-    if ($menuSlug === 'master') {
-        // Aplikasi submenu
-        if (in_array($submenuSlug, ['menu', 'submenu', 'subsubmenu'])) {
+        // Dashboard routes
+        if ($menuSlug === 'dashboard') {
+            $specialDashboard = [
+                'agronomi-dashboard' => 'dashboard.agronomi',
+                'hpt-dashboard' => 'dashboard.hpt',
+            ];
+            
+            if (isset($specialDashboard[$submenuSlug])) {
+                try {
+                    return route($specialDashboard[$submenuSlug]);
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
             try {
-                return route("aplikasi.{$submenuSlug}.index");
+                return route("dashboard.{$submenuSlug}");
             } catch (\Exception $e) {
                 return '#';
             }
         }
         
-        // Default master routes
-        try {
-            return route("masterdata.{$submenuSlug}.index");
-        } catch (\Exception $e) {
-            return '#';
-        }
-    }
-    
-    // Input routes
-    if ($menuSlug === 'input-data') {
-        try {
-            return route("input.{$submenuSlug}.index");
-        } catch (\Exception $e) {
-            return '#';
-        }
-    }
-    
-    // Report routes
-    if ($menuSlug === 'report') {
-        // Special case mapping untuk report
-        $specialReport = [
-            'agronomi-report' => 'report.agronomi.index',
-            'hpt-report' => 'report.hpt.index',
-        ];
-        
-        if (isset($specialReport[$submenuSlug])) {
+        // Process routes
+        if ($menuSlug === 'process') {
             try {
-                return route($specialReport[$submenuSlug]);
+                return route("process.{$submenuSlug}");
             } catch (\Exception $e) {
                 return '#';
             }
         }
         
-        // Default pattern untuk report lain
+        // Master routes
+        if ($menuSlug === 'master') {
+            // Aplikasi submenu
+            if (in_array($submenuSlug, ['menu', 'submenu', 'subsubmenu'])) {
+                try {
+                    return route("aplikasi.{$submenuSlug}.index");
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
+            // Default master routes
+            try {
+                return route("masterdata.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Input routes
+        if ($menuSlug === 'input-data') {
+            try {
+                return route("input.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Report routes
+        if ($menuSlug === 'report') {
+            $specialReport = [
+                'agronomi-report' => 'report.agronomi.index',
+                'hpt-report' => 'report.hpt.index',
+            ];
+            
+            if (isset($specialReport[$submenuSlug])) {
+                try {
+                    return route($specialReport[$submenuSlug]);
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
+            try {
+                return route("report.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Default fallback
         try {
-            return route("report.{$submenuSlug}.index");
+            return route("{$menuSlug}.{$submenuSlug}.index");
         } catch (\Exception $e) {
             return '#';
         }
-    }
-    
-    // Default fallback
-    try {
-        return route("{$menuSlug}.{$submenuSlug}.index");
-    } catch (\Exception $e) {
-        \Log::warning("Route not found: {$menuSlug}.{$submenuSlug}.index");
-    }
-};
+    };
     
     // Check active
     $isActive = function($slug) {
         return request()->is($slug . '*') || 
                request()->is('*/' . $slug . '*') ||
                request()->routeIs('*.' . $slug . '*');
+    };
+    
+    // Helper function untuk render submenu items
+    $renderSubmenuItem = function($item, $menu, $getRoute, $isActive, $indent = false) {
+        $classes = "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150";
+        if ($indent) {
+            $classes .= " ml-4";
+        }
+        if ($isActive($item->slug)) {
+            $classes .= " bg-red-50 text-red-700 font-medium";
+        }
+        
+        return sprintf(
+            '<a href="%s" class="%s">%s</a>',
+            $getRoute($menu->slug, $item->slug),
+            $classes,
+            $item->name
+        );
     };
 @endphp
 
@@ -142,113 +158,157 @@
                             @php
                                 // Get submenus for this menu
                                 $menuSubmenus = $allSubmenus->where('menuid', $menu->menuid);
+                                // Headers (parentid null, no slug) - exclude items that have both null parentid and slug (like Aktivitas)
+                                $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');                 
+                                // Direct items (parentid null, has slug) - these are standalone items
+                                $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug')->whereIn('name', $userPermissions);
                                 
-                                // Headers (parentid null, no slug)
-                                $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');
+                                // Check if menu has any visible items
+                                $hasVisibleItems = false;
                                 
-                                // Direct items (parentid null, has slug)
-                                $directItems = $menuSubmenus->whereNull('parentid')
-                                    ->whereNotNull('slug')
-                                    ->whereIn('name', $userPermissions);
+                                // Check headers
+                                foreach ($headers as $header) {
+                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                    if ($children->isNotEmpty()) {
+                                        $hasVisibleItems = true;
+                                        break;
+                                    }
+                                }
+                                
+                                // Check direct items
+                                if (!$hasVisibleItems && $directItems->isNotEmpty()) {
+                                    $hasVisibleItems = true;
+                                }
                             @endphp
                             
-                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                                <button @click="open = !open" 
-                                    class="text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-all duration-200"
-                                    :class="{ 'bg-red-900 text-white': open }">
-                                    {{ $menu->name }}
-                                    <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" 
-                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                
-                                <div x-show="open" x-transition 
-                                    class="absolute z-50 mt-2 w-64 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5">
-                                    <div class="py-1">
-                                        {{-- Render headers with children --}}
-                                        @foreach ($headers as $header)
-                                            @php
-                                                $children = $menuSubmenus->where('parentid', $header->submenuid)
-                                                    ->whereIn('name', $userPermissions);
-                                            @endphp
-                                            
-                                            @if ($children->isNotEmpty())
-                                                <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                                    {{ $header->name }}
-                                                </div>
+                            @if ($hasVisibleItems)
+                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                    <button @click="open = !open" 
+                                        class="text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-all duration-200"
+                                        :class="{ 'bg-red-900 text-white': open }">
+                                        {{ $menu->name }}
+                                        <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" 
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    
+                                    <div x-show="open" 
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                        x-transition:leave="transition ease-in duration-75"
+                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                        class="absolute z-50 mt-2 w-64 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5">
+                                        <div class="py-1">
+                                            {{-- Render headers with children --}}
+                                            @foreach ($headers as $header)
+                                                @php
+                                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                                    // Skip duplicate headers
+                                                    $isDuplicate = $children->contains(function($child) use ($header) {
+                                                        return strtolower($child->name) === strtolower($header->name);
+                                                    });
+                                                @endphp
                                                 
-                                                @foreach ($children as $child)
-                                                    <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
-                                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ml-2
-                                                              {{ $isActive($child->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
-                                                        {{ $child->name }}
-                                                    </a>
-                                                @endforeach
-                                                
-                                                @if (!$loop->last || $directItems->isNotEmpty())
-                                                    <div class="my-1 h-px bg-gray-200"></div>
-                                                @endif
-                                            @endif
-                                        @endforeach
-                                        
-                                        {{-- Render direct items with nested dropdown support --}}
-                                        @foreach ($directItems as $item)
-                                            @php
-                                                // Check if this item has children
-                                                $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)
-                                                    ->whereIn('name', $userPermissions);
-                                                $hasChildren = $itemChildren->isNotEmpty();
-                                            @endphp
-                                            
-                                            @if ($hasChildren)
-                                                {{-- Item with dropdown --}}
-                                                <div x-data="{ subOpen: false }" class="relative">
-                                                    <button @click="subOpen = !subOpen" 
-                                                        class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 rounded-md
-                                                               {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
-                                                        <span>{{ $item->name }}</span>
-                                                        <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-90': subOpen}" 
-                                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                                                        </svg>
-                                                    </button>
-                                                    
-                                                    <div x-show="subOpen" x-transition 
-                                                        class="absolute top-0 left-full w-56 mt-0 ml-1 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5" 
-                                                        style="display: none;">
-                                                        <div class="py-1">
-                                                            {{-- Parent link --}}
-                                                            <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
-                                                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md
-                                                                      {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
-                                                                {{ $item->name }}
-                                                            </a>
-                                                            <div class="my-1 h-px bg-gray-200"></div>
+                                                @if ($children->isNotEmpty())
+                                                    @if (!$isDuplicate)
+                                                        {{-- Header with children - make it dropdown --}}
+                                                        <div x-data="{ subOpen: false }" class="relative">
+                                                            <button @click="subOpen = !subOpen" 
+                                                                class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                                                <span class="font-semibold uppercase text-xs tracking-wider">{{ $header->name }}</span>
+                                                                <svg class="h-4 w-4 transform transition-transform duration-200" :class="{'rotate-90': subOpen}" 
+                                                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                                                </svg>
+                                                            </button>
                                                             
-                                                            {{-- Children --}}
-                                                            @foreach ($itemChildren as $child)
-                                                                <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
-                                                                   class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md
-                                                                          {{ $isActive($child->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
-                                                                    {{ $child->name }}
+                                                            <div x-show="subOpen" 
+                                                                x-transition:enter="transition ease-out duration-100"
+                                                                x-transition:enter-start="transform opacity-0 scale-95"
+                                                                x-transition:enter-end="transform opacity-100 scale-100"
+                                                                x-transition:leave="transition ease-in duration-75"
+                                                                x-transition:leave-start="transform opacity-100 scale-100"
+                                                                x-transition:leave-end="transform opacity-0 scale-95"
+                                                                @click.away="subOpen = false"
+                                                                class="absolute top-0 left-full w-56 mt-0 ml-1 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5">
+                                                                <div class="py-1">
+                                                                    @foreach ($children as $child)
+                                                                        {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        {{-- Duplicate case - just show children without header --}}
+                                                        @foreach ($children as $child)
+                                                            {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                        @endforeach
+                                                    @endif
+                                                    
+                                                    @if (!$loop->last || $directItems->isNotEmpty())
+                                                        <div class="my-1 h-px bg-gray-200"></div>
+                                                    @endif
+                                                @endif
+                                            @endforeach
+                                            
+                                            {{-- Render direct items with nested dropdown support --}}
+                                            @foreach ($directItems as $item)
+                                                @php
+                                                    // Check if this item has children
+                                                    $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)->whereIn('name', $userPermissions);
+                                                    $hasChildren = $itemChildren->isNotEmpty();
+                                                @endphp
+                                                
+                                                @if ($hasChildren)
+                                                    {{-- Item with dropdown --}}
+                                                    <div x-data="{ subOpen: false }" class="relative">
+                                                        <button @click="subOpen = !subOpen" 
+                                                            class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150
+                                                                   {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
+                                                            <span>{{ $item->name }}</span>
+                                                            <svg class="h-4 w-4 transform transition-transform duration-200" :class="{'rotate-90': subOpen}" 
+                                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                                            </svg>
+                                                        </button>
+                                                        
+                                                        <div x-show="subOpen" 
+                                                            x-transition:enter="transition ease-out duration-100"
+                                                            x-transition:enter-start="transform opacity-0 scale-95"
+                                                            x-transition:enter-end="transform opacity-100 scale-100"
+                                                            x-transition:leave="transition ease-in duration-75"
+                                                            x-transition:leave-start="transform opacity-100 scale-100"
+                                                            x-transition:leave-end="transform opacity-0 scale-95"
+                                                            @click.away="subOpen = false"
+                                                            class="absolute top-0 left-full w-56 mt-0 ml-1 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5">
+                                                            <div class="py-1">
+                                                                {{-- Parent link --}}
+                                                                <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150
+                                                                          {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
+                                                                    {{ $item->name }}
                                                                 </a>
-                                                            @endforeach
+                                                                <div class="my-1 h-px bg-gray-200"></div>
+                                                                
+                                                                {{-- Children --}}
+                                                                @foreach ($itemChildren as $child)
+                                                                    {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                                @endforeach
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            @else
-                                                {{-- Item without children --}}
-                                                <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
-                                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md
-                                                          {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
-                                                    {{ $item->name }}
-                                                </a>
-                                            @endif
-                                        @endforeach
+                                                @else
+                                                    {{-- Item without children --}}
+                                                    {!! $renderSubmenuItem($item, $menu, $getRoute, $isActive) !!}
+                                                @endif
+                                            @endforeach
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>
@@ -282,9 +342,14 @@
                             </svg>
                         </button>
                         
-                        <div x-show="open" x-transition 
-                            class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5" 
-                            style="display: none;">
+                        <div x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5">
                             <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                                 <p class="text-xs text-gray-500">Signed in as</p>
                                 <p class="text-sm font-medium text-gray-900 truncate">{{ Auth::user()->email ?? Auth::user()->name }}</p>
@@ -330,90 +395,140 @@
     </div>
 
     {{-- Mobile menu --}}
-    <div x-show="isOpen" class="md:hidden" id="mobile-menu" style="display: none;">
+    <div x-show="isOpen" 
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="transform opacity-0 -translate-y-2"
+        x-transition:enter-end="transform opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="transform opacity-100 translate-y-0"
+        x-transition:leave-end="transform opacity-0 -translate-y-2"
+        class="md:hidden" id="mobile-menu">
         <div class="px-2 pb-3 pt-2 space-y-1">
             @foreach ($navigationMenus as $menu)
                 @php
                     $menuSubmenus = $allSubmenus->where('menuid', $menu->menuid);
                     $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');
-                    $directItems = $menuSubmenus->whereNull('parentid')
-                        ->whereNotNull('slug')
-                        ->whereIn('name', $userPermissions);
+                    $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug')->whereIn('name', $userPermissions);
+                    
+                    // Check if menu has any visible items
+                    $hasVisibleItems = false;
+                    foreach ($headers as $header) {
+                        $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                        if ($children->isNotEmpty()) {
+                            $hasVisibleItems = true;
+                            break;
+                        }
+                    }
+                    if (!$hasVisibleItems && $directItems->isNotEmpty()) {
+                        $hasVisibleItems = true;
+                    }
                 @endphp
                 
-                <div x-data="{ open: false }">
-                    <button @click="open = !open" 
-                        class="w-full text-left text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-base font-medium flex items-center justify-between">
-                        {{ $menu->name }}
-                        <svg class="h-5 w-5 transition-transform duration-200" :class="{ 'rotate-180': open }" 
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    
-                    <div x-show="open" x-transition class="mt-2 space-y-1 bg-red-950 rounded-md mx-2">
-                        {{-- Headers with children --}}
-                        @foreach ($headers as $header)
-                            @php
-                                $children = $menuSubmenus->where('parentid', $header->submenuid)
-                                    ->whereIn('name', $userPermissions);
-                            @endphp
-                            
-                            @if ($children->isNotEmpty())
-                                <div class="px-4 py-2 text-xs font-semibold text-red-300 uppercase tracking-wider">
-                                    {{ $header->name }}
-                                </div>
-                                
-                                @foreach ($children as $child)
-                                    <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
-                                       class="block pl-8 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
-                                        {{ $child->name }}
-                                    </a>
-                                @endforeach
-                            @endif
-                        @endforeach
+                @if ($hasVisibleItems)
+                    <div x-data="{ open: false }">
+                        <button @click="open = !open" 
+                            class="w-full text-left text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-base font-medium flex items-center justify-between">
+                            {{ $menu->name }}
+                            <svg class="h-5 w-5 transition-transform duration-200" :class="{ 'rotate-180': open }" 
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
                         
-                        {{-- Direct items --}}
-                        @foreach ($directItems as $item)
-                            @php
-                                $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)
-                                    ->whereIn('name', $userPermissions);
-                                $hasChildren = $itemChildren->isNotEmpty();
-                            @endphp
-                            
-                            @if ($hasChildren)
-                                <div x-data="{ subOpen: false }" class="relative">
-                                    <button @click="subOpen = !subOpen" 
-                                        class="w-full flex items-center justify-between pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
-                                        {{ $item->name }}
-                                        <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-180': subOpen}" 
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
+                        <div x-show="open" x-transition class="mt-2 space-y-1 bg-red-950 rounded-md mx-2">
+                            {{-- Headers with children --}}
+                            @foreach ($headers as $header)
+                                @php
+                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                @endphp
+                                
+                                @if ($children->isNotEmpty())
+                                    {{-- Skip duplicate headers --}}
+                                    @php
+                                        $isDuplicate = $children->contains(function($child) use ($header) {
+                                            return strtolower($child->name) === strtolower($header->name);
+                                        });
+                                    @endphp
                                     
-                                    <div x-show="subOpen" x-transition class="mt-1 space-y-1">
-                                        <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
-                                           class="block pl-10 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md">
-                                            {{ $item->name }}
-                                        </a>
-                                        @foreach ($itemChildren as $child)
+                                    @if (!$isDuplicate)
+                                        {{-- Header with children - make it dropdown for mobile too --}}
+                                        <div x-data="{ subOpen: false }" class="relative">
+                                            <button @click="subOpen = !subOpen" 
+                                                class="w-full flex items-center justify-between pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
+                                                <span class="font-semibold uppercase text-xs tracking-wider">{{ $header->name }}</span>
+                                                <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-180': subOpen}" 
+                                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            
+                                            <div x-show="subOpen" x-transition class="mt-1 space-y-1">
+                                                @foreach ($children as $child)
+                                                    <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
+                                                       class="block pl-10 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                              {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                        {{ $child->name }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        {{-- Duplicate case - just show children without header --}}
+                                        @foreach ($children as $child)
                                             <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
-                                               class="block pl-12 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md">
+                                               class="block pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md
+                                                      {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
                                                 {{ $child->name }}
                                             </a>
                                         @endforeach
+                                    @endif
+                                @endif
+                            @endforeach
+                            
+                            {{-- Direct items --}}
+                            @foreach ($directItems as $item)
+                                @php
+                                    $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)->whereIn('name', $userPermissions);
+                                    $hasChildren = $itemChildren->isNotEmpty();
+                                @endphp
+                                
+                                @if ($hasChildren)
+                                    <div x-data="{ subOpen: false }" class="relative">
+                                        <button @click="subOpen = !subOpen" 
+                                            class="w-full flex items-center justify-between pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
+                                            {{ $item->name }}
+                                            <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-180': subOpen}" 
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        
+                                        <div x-show="subOpen" x-transition class="mt-1 space-y-1">
+                                            <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                               class="block pl-10 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                      {{ $isActive($item->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                {{ $item->name }}
+                                            </a>
+                                            @foreach ($itemChildren as $child)
+                                                <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
+                                                   class="block pl-12 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                          {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                    {{ $child->name }}
+                                                </a>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </div>
-                            @else
-                                <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
-                                   class="block pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
-                                    {{ $item->name }}
-                                </a>
-                            @endif
-                        @endforeach
+                                @else
+                                    <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                       class="block pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md
+                                              {{ $isActive($item->slug) ? 'bg-red-900 text-white' : '' }}">
+                                        {{ $item->name }}
+                                    </a>
+                                @endif
+                            @endforeach
+                        </div>
                     </div>
-                </div>
+                @endif
             @endforeach
         </div>
 
