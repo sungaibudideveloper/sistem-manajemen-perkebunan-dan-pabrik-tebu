@@ -41,7 +41,7 @@
             @endif
 
 
-            <form method="POST" action="{{ route('report.agronomi-report.index') }}">
+            <form method="POST" action="{{ route('report.agronomi.index') }}">
                 @csrf
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                     <div class="flex items-center gap-2">

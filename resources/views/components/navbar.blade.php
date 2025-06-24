@@ -3,57 +3,119 @@
 @php
     $compName = $companyName ?? 'Default Company';
     
-    // Generate route otomatis
+    // Generate route otomatis berdasarkan pattern
     $getRoute = function($menuSlug, $submenuSlug) {
-        // Special routes
-        $special = [
-            'closing' => 'closing',
+    // Log untuk debug
+    \Log::info("Generating route for menu: {$menuSlug}, submenu: {$submenuSlug}");
+    
+    // Special routes yang tidak ikut pattern  
+    $specialRoutes = [
+        'closing' => 'closing',
+        'upload-gpx' => 'upload.gpx.view',
+        'export-kml' => 'export.kml.view',
+        'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
+    ];
+    
+    if (isset($specialRoutes[$submenuSlug])) {
+        try {
+            return route($specialRoutes[$submenuSlug]);
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+    
+    // Dashboard routes
+    if ($menuSlug === 'dashboard') {
+        // Special case mapping dulu
+        $specialDashboard = [
             'agronomi-dashboard' => 'dashboard.agronomi',
             'hpt-dashboard' => 'dashboard.hpt',
-            'agronomi-report' => 'report.agronomi.index',
-            'hpt-report' => 'report.hpt.index',
-            'upload-gpx' => 'upload.gpx.view',
-            'export-kml' => 'export.kml.view',
-            'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
- 
         ];
         
-        if (isset($special[$submenuSlug])) {
+        if (isset($specialDashboard[$submenuSlug])) {
             try {
-                return route($special[$submenuSlug]);
+                return route($specialDashboard[$submenuSlug]);
             } catch (\Exception $e) {
                 return '#';
             }
         }
         
-        // Pattern based
-        $patterns = [
-            'master' => 'masterdata.{slug}.index',
-            'input-data' => 'input.{slug}.index',
-            'report' => 'report.{slug}.index',
-            'dashboard' => 'dashboard.{slug}.index',
-            'process' => 'process.{slug}',
-        ];
-        
-        // Check exceptions first for master menu
-        if ($menuSlug === 'master' && isset($patterns['master']['exceptions'][$submenuSlug])) {
-            $pattern = $patterns['master']['exceptions'][$submenuSlug];
-        } elseif (isset($patterns[$menuSlug]['default'])) {
-            $pattern = $patterns[$menuSlug]['default'];
-        } elseif (isset($patterns[$menuSlug])) {
-            $pattern = $patterns[$menuSlug];
-        } else {
-            $pattern = '{menu}.{slug}.index';
-        }
-        
-        $routeName = str_replace(['{menu}', '{slug}'], [$menuSlug, $submenuSlug], $pattern);
-        
+        // Default pattern untuk yang lain (timeline, maps, dll)
         try {
-            return route($routeName);
+            return route("dashboard.{$submenuSlug}");
         } catch (\Exception $e) {
             return '#';
         }
-    };
+    }
+    
+    // Process routes
+    if ($menuSlug === 'process') {
+        try {
+            return route("process.{$submenuSlug}");
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+    
+    // Master routes
+    if ($menuSlug === 'master') {
+        // Aplikasi submenu
+        if (in_array($submenuSlug, ['menu', 'submenu', 'subsubmenu'])) {
+            try {
+                return route("aplikasi.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Default master routes
+        try {
+            return route("masterdata.{$submenuSlug}.index");
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+    
+    // Input routes
+    if ($menuSlug === 'input-data') {
+        try {
+            return route("input.{$submenuSlug}.index");
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+    
+    // Report routes
+    if ($menuSlug === 'report') {
+        // Special case mapping untuk report
+        $specialReport = [
+            'agronomi-report' => 'report.agronomi.index',
+            'hpt-report' => 'report.hpt.index',
+        ];
+        
+        if (isset($specialReport[$submenuSlug])) {
+            try {
+                return route($specialReport[$submenuSlug]);
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Default pattern untuk report lain
+        try {
+            return route("report.{$submenuSlug}.index");
+        } catch (\Exception $e) {
+            return '#';
+        }
+    }
+    
+    // Default fallback
+    try {
+        return route("{$menuSlug}.{$submenuSlug}.index");
+    } catch (\Exception $e) {
+        \Log::warning("Route not found: {$menuSlug}.{$submenuSlug}.index");
+    }
+};
     
     // Check active
     $isActive = function($slug) {
