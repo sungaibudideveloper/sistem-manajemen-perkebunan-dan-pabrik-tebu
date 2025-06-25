@@ -1494,7 +1494,7 @@ class RencanaKerjaHarianController extends Controller
 
         // Update query untuk menggunakan JOIN dengan tenagakerja
         $lkhDetails = DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
+            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.tenagakerjaid')
             ->where('l.lkhno', $lkhno)
             ->select([
                 'l.*',
@@ -1571,7 +1571,7 @@ public function editLKH($lkhno)
         }
 
         $lkhDetails = DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
+            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.tenagakerjaid')
             ->where('l.lkhno', $lkhno)
             ->select([
                 'l.*',

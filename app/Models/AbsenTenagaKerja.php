@@ -25,7 +25,7 @@ class AbsenTenagaKerja extends Model
     $sql = "SELECT
                 a.companycode,
                 a.absentime,
-                a.tenagakerjaid as id,
+                a.idtenagakerja as id,
                 a.idmandor,
                 b.nama,
                 b.gender,
@@ -33,7 +33,7 @@ class AbsenTenagaKerja extends Model
                 m.name as mandor_nama,
                 TIME(a.absentime) as jam_absen
             FROM absentenagakerja a
-            JOIN tenagakerja b ON a.tenagakerjaid = b.tenagakerjaid
+            JOIN tenagakerja b ON a.idtenagakerja = b.tenagakerjaid
             LEFT JOIN mandor m ON a.idmandor = m.id
             WHERE a.companycode = ?
             AND DATE(a.absentime) = ?";
