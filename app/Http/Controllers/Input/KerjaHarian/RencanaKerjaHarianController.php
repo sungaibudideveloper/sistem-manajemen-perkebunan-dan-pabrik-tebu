@@ -1494,7 +1494,7 @@ class RencanaKerjaHarianController extends Controller
 
         // Update query untuk menggunakan JOIN dengan tenagakerja
         $lkhDetails = DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.idtenagakerja')
+            ->leftJoin('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
             ->where('l.lkhno', $lkhno)
             ->select([
                 'l.*',
@@ -1571,7 +1571,7 @@ public function editLKH($lkhno)
         }
 
         $lkhDetails = DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.idtenagakerja')
+            ->leftJoin('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
             ->where('l.lkhno', $lkhno)
             ->select([
                 'l.*',
@@ -1585,7 +1585,7 @@ public function editLKH($lkhno)
         $tenagaKerja = DB::table('tenagakerja')
             ->where('companycode', $companycode)
             ->where('isactive', 1)
-            ->select(['idtenagakerja', 'nama', 'nik', 'jenistenagakerja'])
+            ->select(['tenagakerjaid', 'nama', 'nik', 'jenistenagakerja'])
             ->orderBy('nama')
             ->get();
 
@@ -1621,7 +1621,7 @@ public function updateLKH(Request $request, $lkhno)
         $request->validate([
             'keterangan' => 'nullable|string|max:500',
             'workers' => 'required|array|min:1',
-            'workers.*.idtenagakerja' => 'required|string',
+            'workers.*.tenagakerjaid' => 'required|string',
             'workers.*.blok' => 'required|string',
             'workers.*.plot' => 'required|string',
             'workers.*.luasplot' => 'required|numeric|min:0',
@@ -1694,7 +1694,7 @@ public function updateLKH(Request $request, $lkhno)
             $detail = [
                 'lkhno' => $lkhno,
                 'tenagakerjaurutan' => $index + 1,
-                'idtenagakerja' => $worker['idtenagakerja'],
+                'tenagakerjaid' => $worker['tenagakerjaid'],
                 'blok' => $worker['blok'],
                 'plot' => $worker['plot'],
                 'luasplot' => $worker['luasplot'],

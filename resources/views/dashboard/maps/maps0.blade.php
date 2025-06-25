@@ -4,9 +4,17 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     <style>
+        .container {
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
         .header {
             background: linear-gradient(135deg, #4285F4, #34A853);
-            color: #b6b9bd;
+            color: white;
             padding: 20px;
             text-align: center;
         }
@@ -26,7 +34,7 @@
 
         .controls {
             padding: 20px;
-            background: #b6b9bd;
+            background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
@@ -189,15 +197,14 @@
     <div class="container">
         <div class="controls">
             <div class="info-panel">
-              <div class="flex items-center justify-center w-full">
-                  <label for="avatar" class="flex flex-col items-center justify-center w-full max-w-lg border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                      <form action="{{ route('dashboard.maps.upload') }}" id="frm-submit" method="post" enctype="multipart/form-data"
-                            onsubmit="return validateForm()">
-                            @csrf
-                        <input id="gpxFile" type="file" name="gpxFile"  accept=".gpx" />
-                      </form>
-                  </label>
-              </div>
+                <div class="info-item">
+                    <div class="info-icon marker-icon"></div>
+                    <span><strong>1</strong> Marker dari Header</span>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon polyline-icon"></div>
+                    <span><strong>21</strong> Titik Polyline</span>
+                </div>
             </div>
 
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -205,13 +212,11 @@
                     <button class="map-type-btn active" onclick="setMapType('roadmap')">Roadmap</button>
                     <button class="map-type-btn" onclick="setMapType('satellite')">Satellite</button>
                     <button class="map-type-btn" onclick="setMapType('hybrid')">Hybrid</button>
-
                 </div>
 
                 <button class="toggle-btn" onclick="togglePolyline()">
                     <span id="toggleText">Sembunyikan Polyline</span>
                 </button>
-
             </div>
         </div>
 
@@ -234,75 +239,33 @@
 
     <script>
         // Data GPS Header (Marker)
-        document.addEventListener("DOMContentLoaded", () => {
-            const fileInput = document.getElementById("gpxFile");
-            const dropArea = document.querySelector("label[for='gpxFile']");
-            const uploadPlaceholder = document.getElementById("uploadPlaceholder");
-            const filePreview = document.getElementById("filePreview");
-            const fileNameElement = document.getElementById("fileName");
-
-            const handleFile = (file) => {
-                if (file) {
-                    uploadPlaceholder.classList.add("invisible");
-                    filePreview.classList.remove("invisible");
-                    fileNameElement.textContent = file.name;
-                } else {
-                    uploadPlaceholder.classList.remove("invisible");
-                    filePreview.classList.add("invisible");
-                }
-            };
-
-            fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
-
-            dropArea.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                dropArea.classList.add("border-green-500", "bg-green-100");
-            });
-
-            dropArea.addEventListener("dragleave", () => dropArea.classList.remove("border-green-500",
-                "bg-green-100"));
-
-            dropArea.addEventListener("drop", (e) => {
-                e.preventDefault();
-                dropArea.classList.remove("border-green-500", "bg-green-100");
-
-                const file = e.dataTransfer.files[0];
-                if (file) {
-                    fileInput.files = e.dataTransfer.files;
-                    handleFile(file);
-                }
-            });
-        });
-
-        $('#gpxFile').change(function(){
-          $('#frm-submit').submit();
-        })
-
-        function validateForm() {
-            const file = document.getElementById("gpxFile").files[0];
-            if (!file) return alert("No file selected."), false;
-
-            const fileExtension = file.name.split(".").pop().toLowerCase();
-            if (file.type !== "application/gpx+xml" && fileExtension !== "gpx")
-                return alert("Please upload a valid GPX file."), false;
-
-            if (file.size > 20 * 1024 * 1024)
-                return alert("File size exceeds the maximum limit of 20MB."), false;
-
-            return true;
-        }
-
         const headerData = [
-          @foreach( $header as $item )
-            { code: '{{ $item->plot }}', lat: {{ $item->centerlatitude }}, lng: {{ $item->centerlongitude }} },
-          @endforeach
+            { table: 'TBL1', code: 'AE034', lat: -4.128930493841100, lng: 105.297104824610000 }
         ];
 
         // Data GPS List (Polyline)
         const listData = [
-          @foreach($list as $item)
-            { code: '{{ $item->plot }}', lat: {{ $item->latitude }}, lng: {{ $item->longitude }} },
-          @endforeach
+            { table: 'TBL1', code: 'AE034', lat: -4.128277193385700, lng: 105.297749602920000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128403192813300, lng: 105.297751175240000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128570632765200, lng: 105.297735332540000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128702759705500, lng: 105.297736453940000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128868276609900, lng: 105.297741522390000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129087413385300, lng: 105.297737074790000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129224924188000, lng: 105.297744992540000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129411387183900, lng: 105.297742249160000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129422935619200, lng: 105.297584917860000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129415378676200, lng: 105.297313155120000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129406838926200, lng: 105.297107185610000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129397337501800, lng: 105.296910751790000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129395529277300, lng: 105.296627548650000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129388911838100, lng: 105.296399648050000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129389986097500, lng: 105.296088792910000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.129327714345200, lng: 105.296082730520000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128686200695800, lng: 105.296147334010000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128387372823700, lng: 105.296159857780000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128242550558800, lng: 105.296183046810000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128256640881100, lng: 105.296908341250000 },
+            { table: 'TBL1', code: 'AE034', lat: -4.128277193385700, lng: 105.297749602920000 }
         ];
 
         let map;
@@ -318,7 +281,7 @@
                 const centerLng = (headerData[0].lng + listData[0].lng) / 2;
 
                 map = new google.maps.Map(document.getElementById('map'), {
-                    zoom: 8,
+                    zoom: 16,
                     center: { lat: centerLat, lng: centerLng },
                     mapTypeId: google.maps.MapTypeId.ROADMAP,
                     styles: [
@@ -337,6 +300,7 @@
                         map: map,
                         title: `Header Marker - ${point.code}`,
                         icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
                             scale: 12,
                             fillColor: '#EA4335',
                             fillOpacity: 1,
@@ -350,6 +314,7 @@
                             <div class="info-window">
                                 <div class="info-title">📍 Header Marker</div>
                                 <div class="info-detail">
+                                    <strong>Table:</strong> ${point.table}<br>
                                     <strong>Code:</strong> ${point.code}<br>
                                     <strong>Latitude:</strong> ${point.lat.toFixed(6)}<br>
                                     <strong>Longitude:</strong> ${point.lng.toFixed(6)}
@@ -365,42 +330,58 @@
                     markers.push(marker);
                 });
 
-                function filterByCodes(codes) {
-                    return listData.filter(item => item.code === codes);
-                }
+                // Buat polyline dari list data
+                const polylineCoordinates = listData.map(point => ({
+                    lat: point.lat,
+                    lng: point.lng
+                }));
 
-                function getRandomColor() {
-                    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-                    return colors[Math.floor(Math.random() * colors.length)];
-                }
-
-                headerData.forEach((point, index) => {
-                    filtered = filterByCodes(point.code)
-
-                    // Buat polyline dari list data
-                    const polygonCoordinates = filtered.map(item => ({
-                        lat: item.lat,
-                        lng: item.lng
-                    }));
-
-                    polygon = new google.maps.Polygon({
-                      paths: polygonCoordinates,
-                      strokeColor: '#FF0000',      // Warna garis tepi
-                      strokeOpacity: 0.8,          // Opacity garis tepi
-                      strokeWeight: 2,             // Ketebalan garis tepi
-                      fillColor: '#FF0000',        // Warna isi area
-                      fillOpacity: 0.35
-                    });
-
-                    polygon.setMap(map);
-
-                    polygon.setOptions({
-                        fillColor: getRandomColor(),        // Ubah isi ke hijau
-                        fillOpacity: 0.5,
-                        strokeColor: getRandomColor()      // Ubah garis tepi ke hijau
-                    });
+                polyline = new google.maps.Polyline({
+                    path: polylineCoordinates,
+                    geodesic: true,
+                    strokeColor: '#4285F4',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4
                 });
 
+                polyline.setMap(map);
+
+                // Tambahkan marker kecil untuk setiap titik polyline
+                listData.forEach((point, index) => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: point.lat, lng: point.lng },
+                        map: map,
+                        title: `Polyline Point ${index + 1}`,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 4,
+                            fillColor: '#4285F4',
+                            fillOpacity: 1,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 2
+                        }
+                    });
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div class="info-window">
+                                <div class="info-title">🔵 Polyline Point ${index + 1}</div>
+                                <div class="info-detail">
+                                    <strong>Table:</strong> ${point.table}<br>
+                                    <strong>Code:</strong> ${point.code}<br>
+                                    <strong>Latitude:</strong> ${point.lat.toFixed(6)}<br>
+                                    <strong>Longitude:</strong> ${point.lng.toFixed(6)}
+                                </div>
+                            </div>
+                        `
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(map, marker);
+                    });
+
+                    markers.push(marker);
+                });
 
                 // Fit bounds untuk menampilkan semua data
                 const bounds = new google.maps.LatLngBounds();

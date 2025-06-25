@@ -12,9 +12,9 @@ class TenagaKerja extends Model
     // Laravel tidak mendukung primary key komposit secara bawaan.
     // Jika Anda ingin menggunakan kedua kolom sebagai primary key, Anda
     // perlu melakukan penanganan manual atau menggunakan package tambahan.
-    // Di contoh ini, kita tetapkan primaryKey hanya 'idtenagakerja' dan
+    // Di contoh ini, kita tetapkan primaryKey hanya 'tenagakerjaid' dan
     // mematikan auto-increment karena ID bertipe varchar.
-    protected $primaryKey = 'idtenagakerja';
+    protected $primaryKey = 'tenagakerjaid';
     public $incrementing = false;
     protected $keyType = 'string';
 
@@ -22,7 +22,7 @@ class TenagaKerja extends Model
     public $timestamps = false;
     // Kolom-kolom yang boleh diisi lewat mass assignment
     protected $fillable = [
-        'idtenagakerja',
+        'tenagakerjaid',
         'mandoruserid',
         'companycode',
         'nama',

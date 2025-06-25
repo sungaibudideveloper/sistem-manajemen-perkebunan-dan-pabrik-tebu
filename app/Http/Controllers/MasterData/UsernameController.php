@@ -43,7 +43,7 @@ class UsernameController extends Controller
         $username = DB::table('user')
             ->join('usercompany', 'user.userid', '=', 'usercompany.userid')
             ->select('usercompany.*', 'user.*')
-            ->where('user.userid', '!=', 'Admin')
+            //->where('user.userid', '!=', 'Admin')
             ->orderBy('user.userid', 'asc')
             ->paginate($perPage);
 

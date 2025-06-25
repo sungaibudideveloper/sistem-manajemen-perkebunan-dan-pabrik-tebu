@@ -24,3 +24,6 @@ Route::match(['POST', 'GET'], 'dashboard/timeline',  [TimelineController::class,
 
     Route::match(['POST', 'GET'], 'dashboard/maps',  [MapsController::class, 'index'])
         ->name('dashboard.maps');
+
+        Route::match(['POST', 'GET'], 'dashboard/maps/upload',  [MapsController::class, 'upload'])
+            ->name('dashboard.maps.upload');

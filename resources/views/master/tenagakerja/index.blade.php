@@ -242,7 +242,7 @@
             @foreach($result as $data)
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idtenagakerja }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->tenagakerjaid }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->name }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->nik }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->nama }}</td>
@@ -256,7 +256,7 @@
                       <button
                         @click="
                           mode = 'edit';
-                          form.id = '{{ $data->idtenagakerja }}';
+                          form.id = '{{ $data->tenagakerjaid }}';
                           form.companycode = '{{ $data->companycode }}';
                           form.name = '{{ $data->nama }}';
                           form.nik = '{{ $data->nik }}';
@@ -279,7 +279,7 @@
                     {{-- Delete --}}
                     {{--@if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))--}}
                       <form
-                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->idtenagakerja}") }}"
+                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->tenagakerjaid}") }}"
                         method="POST"
                         onsubmit="return confirm('Yakin ingin menghapus data ini?');"
                         class="inline"

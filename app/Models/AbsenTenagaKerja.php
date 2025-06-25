@@ -16,16 +16,16 @@ class AbsenTenagaKerja extends Model
     protected $fillable = [
         'companycode',
         'absentime',
-        'idtenagakerja',
+        'tenagakerjaid',
         'idmandor',
     ];
 
         public function getDataAbsenFull($companycode, $date, $mandorId = null)
 {
-    $sql = "SELECT 
+    $sql = "SELECT
                 a.companycode,
                 a.absentime,
-                a.idtenagakerja as id,
+                a.tenagakerjaid as id,
                 a.idmandor,
                 b.nama,
                 b.gender,
@@ -33,20 +33,20 @@ class AbsenTenagaKerja extends Model
                 m.name as mandor_nama,
                 TIME(a.absentime) as jam_absen
             FROM absentenagakerja a
-            JOIN tenagakerja b ON a.idtenagakerja = b.idtenagakerja
+            JOIN tenagakerja b ON a.tenagakerjaid = b.tenagakerjaid
             LEFT JOIN mandor m ON a.idmandor = m.id
             WHERE a.companycode = ?
             AND DATE(a.absentime) = ?";
-    
+
     $params = [$companycode, $date];
-    
+
     if ($mandorId) {
         $sql .= " AND a.idmandor = ?";
         $params[] = $mandorId;
     }
-    
+
     $sql .= " ORDER BY a.absentime";
-    
+
     return DB::select($sql, $params);
 }
 

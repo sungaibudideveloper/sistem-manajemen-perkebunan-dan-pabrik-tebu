@@ -318,7 +318,7 @@
                 const centerLng = (headerData[0].lng + listData[0].lng) / 2;
 
                 map = new google.maps.Map(document.getElementById('map'), {
-                    zoom: 8,
+                    zoom: 16,
                     center: { lat: centerLat, lng: centerLng },
                     mapTypeId: google.maps.MapTypeId.ROADMAP,
                     styles: [
@@ -369,36 +369,25 @@
                     return listData.filter(item => item.code === codes);
                 }
 
-                function getRandomColor() {
-                    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-                    return colors[Math.floor(Math.random() * colors.length)];
-                }
-
                 headerData.forEach((point, index) => {
                     filtered = filterByCodes(point.code)
 
                     // Buat polyline dari list data
-                    const polygonCoordinates = filtered.map(item => ({
+                    const polylineCoordinates = filtered.map(item => ({
                         lat: item.lat,
                         lng: item.lng
                     }));
 
-                    polygon = new google.maps.Polygon({
-                      paths: polygonCoordinates,
-                      strokeColor: '#FF0000',      // Warna garis tepi
-                      strokeOpacity: 0.8,          // Opacity garis tepi
-                      strokeWeight: 2,             // Ketebalan garis tepi
-                      fillColor: '#FF0000',        // Warna isi area
-                      fillOpacity: 0.35
+                    polyline = new google.maps.Polyline({
+                        path: polylineCoordinates,
+                        geodesic: true,
+                        strokeColor: '#4285F4',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 4
                     });
 
-                    polygon.setMap(map);
+                    polyline.setMap(map);
 
-                    polygon.setOptions({
-                        fillColor: getRandomColor(),        // Ubah isi ke hijau
-                        fillOpacity: 0.5,
-                        strokeColor: getRandomColor()      // Ubah garis tepi ke hijau
-                    });
                 });
 
 
