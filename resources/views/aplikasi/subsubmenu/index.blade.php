@@ -181,7 +181,7 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('aplikasi.subsubmenu.store') }}' : '{{ url('aplikasi/subsubmenu') }}/' + form.subsubmenuid" 
+                    <form :action="mode === 'create' ? '{{ route('masterdata.subsubmenu.store') }}' : '{{ url('aplikasi/subsubmenu') }}/' + form.subsubmenuid" 
                           method="POST">
                         @csrf
                         <template x-if="mode === 'edit'">

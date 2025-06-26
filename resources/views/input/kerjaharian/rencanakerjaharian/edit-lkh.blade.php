@@ -206,7 +206,7 @@
                             <!-- Nama Pekerja -->
                             <td class="border border-gray-300 px-2 py-3">
                                 <div class="relative">
-                                    <input type="hidden" name="workers[{{ $index }}][idtenagakerja]" value="{{ $worker->idtenagakerja }}" class="worker-id">
+                                    <input type="hidden" name="workers[{{ $index }}][tenagakerjaid]" value="{{ $worker->tenagakerjaid }}" class="worker-id">
                                     <button type="button" class="select-worker-btn w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-left cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" data-row="{{ $index }}">
                                         <span class="worker-name">{{ $worker->workername ?? 'Pilih Pekerja' }}</span>
                                     </button>
@@ -463,7 +463,7 @@
                 workerDiv.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-200 transition-colors worker-item';
                 workerDiv.innerHTML = `
                     <div class="font-medium text-gray-800">${worker.nama}</div>
-                    <div class="text-sm text-gray-600">ID: ${worker.idtenagakerja} | NIK: ${worker.nik || '-'}</div>
+                    <div class="text-sm text-gray-600">ID: ${worker.tenagakerjaid} | NIK: ${worker.nik || '-'}</div>
                 `;
                 workerDiv.addEventListener('click', () => selectWorker(worker));
                 workerList.appendChild(workerDiv);
@@ -500,7 +500,7 @@
 
         function selectWorker(worker) {
             const row = document.querySelector(`[data-row="${currentRow}"]`);
-            row.querySelector('.worker-id').value = worker.idtenagakerja;
+            row.querySelector('.worker-id').value = worker.tenagakerjaid;
             row.querySelector('.worker-name').textContent = worker.nama;
             row.querySelector('.worker-nik').value = worker.nik || '';
             closeWorkerModal();
@@ -550,7 +550,7 @@
                     </button>
                 </td>
                 <td class="border border-gray-300 px-2 py-3">
-                    <input type="hidden" name="workers[${index}][idtenagakerja]" value="" class="worker-id">
+                    <input type="hidden" name="workers[${index}][tenagakerjaid]" value="" class="worker-id">
                     <button type="button" class="select-worker-btn w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-left cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" data-row="${index}">
                         <span class="worker-name">Pilih Pekerja</span>
                     </button>

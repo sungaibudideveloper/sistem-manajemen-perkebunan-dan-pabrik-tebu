@@ -50,7 +50,6 @@ class AccountingController extends Controller
         // Cek duplicate dengan 3-field composite key
         if (Accounting::where('activitycode', $request->activitycode)
                        ->where('jurnalaccno',   $request->jurnalaccno)
-                       ->where('jurnalacctype', $request->jurnalacctype)
                        ->exists()
         ) {
             return back()
@@ -61,7 +60,6 @@ class AccountingController extends Controller
         Accounting::create([
             'activitycode'  => $request->activitycode,
             'jurnalaccno'   => $request->jurnalaccno,
-            'jurnalacctype' => $request->jurnalacctype,
             'description'   => $request->description,
             'inputby'       => Auth::user()->userid,
             'createdat'     => now(),

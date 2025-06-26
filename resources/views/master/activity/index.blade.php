@@ -260,7 +260,7 @@
             button.addEventListener('click', function() {
                 if (confirm('Yakin ingin menghapus data ini?')) {
                   let activitycode = this.getAttribute('data-activitycode');
-                  fetch(`{{ route('master.aktivitas.destroy', ['aktivitas' => '__activitycode__']) }}`
+                  fetch(`{{ route('masterdata.aktivitas.destroy', ['aktivitas' => '__activitycode__']) }}`
                           .replace('__activitycode__', activitycode), {
                               method: 'POST',
                               headers: {
@@ -296,7 +296,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.aktivitas.store') }}";
+            form.action = "{{ route('masterdata.aktivitas.store') }}";
             crudMethod.value = "POST";
             $('input[name="nama"]').attr('readonly','false');
             setTimeout(() => {
@@ -320,7 +320,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
-            var editRoute = "{{ route('master.aktivitas.update', ['aktivitas' => '__activitycode__']) }}";
+            var editRoute = "{{ route('masterdata.aktivitas.update', ['aktivitas' => '__activitycode__']) }}";
             const form = $('#crud-form');
             form.attr('action', editRoute.replace('__activitycode__', activitycode));
             form.find('input[name="kodeaktivitas"]').attr('readonly','true');
@@ -373,7 +373,7 @@
 
         function deleteRow(kdblok, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
+                fetch(`{{ route('masterdata.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
                         .replace('__kdblok__', kdblok)
                         .replace('__kdComp__', kdComp), {
                             method: "DELETE",

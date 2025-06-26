@@ -19,6 +19,7 @@
     <script src="{{ asset('asset/simple-datatables@9.0.3.js') }}"></script>
 
     <title>{{ $title }}</title>
+    <x-slot:head></x-slot>
 </head>
 
 <body class="h-full flex flex-col">

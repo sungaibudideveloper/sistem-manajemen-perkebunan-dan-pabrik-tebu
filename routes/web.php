@@ -56,3 +56,82 @@ Route::group(['middleware' => 'auth'], function () {
         })->name('export.kml.view');
     });
 });
+
+Route::get('/test-permissions', function() {
+    $user = auth()->user();
+    if (!$user) {
+        return 'Not authenticated';
+    }
+    
+    $permissions = json_decode($user->permissions ?? '[]', true);
+    
+    // Cari permission Dashboard
+    $results = [];
+    $searchTerms = ['Dashboard Agronomi', 'Dashboard HPT'];
+    
+    foreach ($searchTerms as $search) {
+        $found = false;
+        $similar = [];
+        
+        foreach ($permissions as $index => $perm) {
+            // Exact match
+            if ($perm === $search) {
+                $found = true;
+                $results[$search] = [
+                    'status' => 'FOUND',
+                    'index' => $index,
+                    'value' => $perm
+                ];
+                break;
+            }
+            
+            // Similar match
+            if (stripos($perm, 'dashboard') !== false && 
+                stripos($perm, explode(' ', $search)[1]) !== false) {
+                $similar[] = [
+                    'index' => $index,
+                    'value' => $perm,
+                    'hex' => bin2hex($perm)
+                ];
+            }
+        }
+        
+        if (!$found) {
+            $results[$search] = [
+                'status' => 'NOT FOUND',
+                'similar' => $similar
+            ];
+        }
+    }
+    
+    // Get all dashboard related permissions
+    $dashboardPerms = [];
+    foreach ($permissions as $idx => $perm) {
+        if (stripos($perm, 'dashboard') !== false) {
+            $dashboardPerms[] = [
+                'index' => $idx,
+                'value' => $perm,
+                'length' => strlen($perm),
+                'hex' => bin2hex($perm)
+            ];
+        }
+    }
+    
+    return response()->json([
+        'user' => $user->name,
+        'total_permissions' => count($permissions),
+        'search_results' => $results,
+        'all_dashboard_permissions' => $dashboardPerms,
+        'raw_permissions' => $permissions
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->middleware('auth');
+
+// Test dengan middleware
+Route::get('/test-dashboard-with-middleware', function() {
+    return 'Success! You have Dashboard Agronomi permission';
+})->middleware(['auth', 'permission:Dashboard Agronomi']);
+
+// Test direct call
+Route::get('/test-dashboard-agronomi-call', function() {
+    return app(\App\Http\Controllers\Dashboard\DashboardController::class)->agronomi();
+})->middleware('auth');

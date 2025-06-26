@@ -1,666 +1,365 @@
-<nav class="bg-gradient-to-tr from-red-950 to-red-800" x-data="{ 
-    isOpen: false, 
-    isMasterOpen: false,
-    isInputOpen: false,
-    isReportOpen: false,
-    isDashboardOpen: false,
-    isProcessOpen: false,
-    mobileMenuOpen: false,
-    activeMenu: null,
-    activeMenuMobile: null,
-    activeCategoryMobile: null,
+@props(['navigationMenus', 'allSubmenus', 'userPermissions', 'companyName'])
+
+@php
+    $compName = $companyName ?? 'Default Company';
     
-    // Helper function to check if any Master route is active
-    isMasterActive() {
-        return {{ request()->is('company') ||
-            request()->is('blok') ||
-            request()->is('plotting') ||
-            request()->is('mapping') ||
-            request()->is('herbisida') ||
-            request()->is('herbisida-dosage') ||
-            request()->is('jabatan') ||
-            request()->is('approval') ||
-            request()->is('kategori') ||
-            request()->is('varietas') ||
-            request()->is('accounting') ||
-            request()->is('username') ||
-            request()->routeIs('master.username.create') ||
-            request()->routeIs('master.username.access') ||
-            request()->routeIs('master.username.edit') ? 'true' : 'false' }};
-    },
+    // Generate route otomatis berdasarkan pattern
+    $getRoute = function($menuSlug, $submenuSlug) {
+        // Clean slug - remove spaces and convert to lowercase
+        $submenuSlug = str_replace(' ', '-', strtolower($submenuSlug));
+        
+        // Special routes yang tidak ikut pattern  
+        $specialRoutes = [
+            'closing' => 'closing',
+            'upload-gpx' => 'upload.gpx.view',
+            'upload-gpx-file' => 'upload.gpx.view',
+            'export-kml' => 'export.kml.view',
+            'export-kml-file' => 'export.kml.view',
+            'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
+        ];
+        
+        if (isset($specialRoutes[$submenuSlug])) {
+            try {
+                return route($specialRoutes[$submenuSlug]);
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Dashboard routes
+        if ($menuSlug === 'dashboard') {
+            $specialDashboard = [
+                'agronomi-dashboard' => 'dashboard.agronomi',
+                'hpt-dashboard' => 'dashboard.hpt',
+            ];
+            
+            if (isset($specialDashboard[$submenuSlug])) {
+                try {
+                    return route($specialDashboard[$submenuSlug]);
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
+            try {
+                return route("dashboard.{$submenuSlug}");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Process routes
+        if ($menuSlug === 'process') {
+            try {
+                return route("process.{$submenuSlug}");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Master routes
+        if ($menuSlug === 'master') {
+            // Aplikasi submenu
+            if (in_array($submenuSlug, ['menu', 'submenu', 'subsubmenu'])) {
+                try {
+                    return route("aplikasi.{$submenuSlug}.index");
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
+            // Default master routes
+            try {
+                return route("masterdata.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Input routes
+        if ($menuSlug === 'input-data') {
+            try {
+                return route("input.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Report routes
+        if ($menuSlug === 'report') {
+            $specialReport = [
+                'agronomi-report' => 'report.agronomi.index',
+                'hpt-report' => 'report.hpt.index',
+            ];
+            
+            if (isset($specialReport[$submenuSlug])) {
+                try {
+                    return route($specialReport[$submenuSlug]);
+                } catch (\Exception $e) {
+                    return '#';
+                }
+            }
+            
+            try {
+                return route("report.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
+        
+        // Default fallback
+        try {
+            return route("{$menuSlug}.{$submenuSlug}.index");
+        } catch (\Exception $e) {
+            return '#';
+        }
+    };
     
-    // Helper function to check if any Input Data route is active
-    isInputDataActive() {
-        return {{ request()->is('agronomi') ||
-            request()->is('hpt') ||
-            request()->routeIs('input.agronomi.create') ||
-            request()->routeIs('input.agronomi.edit') ||
-            request()->routeIs('input.hpt.create') ||
-            request()->routeIs('input.hpt.edit') ||
-            request()->routeIs('input.rkh.edit') ? 'true' : 'false' }};
-    },
+    // Check active
+    $isActive = function($slug) {
+        return request()->is($slug . '*') || 
+               request()->is('*/' . $slug . '*') ||
+               request()->routeIs('*.' . $slug . '*');
+    };
     
-    // Helper function to check if any Report route is active
-    isReportActive() {
-        return {{ request()->is('agronomireport') || request()->is('hptreport') ? 'true' : 'false' }};
-    },
-    
-    // Helper function to check if any Dashboard route is active
-    isDashboardActiveRoute() {
-        return {{ request()->is('agronomidashboard') || request()->is('hptdashboard') ? 'true' : 'false' }};
-    },
-    
-    // Helper function to check if any Process route is active
-    isProcessActive() {
-        return {{ request()->is('closing') || request()->is('uploadgpx') || request()->is('exportkml') || request()->is('posting') || request()->is('unposting') ? 'true' : 'false' }};
-    },
-    
-    // Helper function to get button classes
-    getButtonClass(isActive) {
-        return isActive 
-            ? 'bg-red-1000 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center'
-            : 'text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center';
-    }
-}">
+    // Helper function untuk render submenu items
+    $renderSubmenuItem = function($item, $menu, $getRoute, $isActive, $indent = false) {
+        $classes = "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150";
+        if ($indent) {
+            $classes .= " ml-4";
+        }
+        if ($isActive($item->slug)) {
+            $classes .= " bg-red-50 text-red-700 font-medium";
+        }
+        
+        return sprintf(
+            '<a href="%s" class="%s">%s</a>',
+            $getRoute($menu->slug, $item->slug),
+            $classes,
+            $item->name
+        );
+    };
+@endphp
+
+<nav class="bg-gradient-to-tr from-red-950 to-red-800" x-data="{ isOpen: false }">
     <div class="mx-auto px-4 sm:px-6 lg:px-12">
         <div class="flex h-16 items-center justify-between">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <a href="{{ route('home') }}">
-                        <img class="h-8 w-8" src="{{ asset('img/Logo-1.png') }}" alt="Sungai Budi">
+                        <img class="h-8 w-8" src="{{ asset('img/Logo-1.png') }}" alt="Logo">
                     </a>
                 </div>
                 
-                <!-- Desktop Navigation -->
+                {{-- DESKTOP MENU --}}
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-2">
-                        
-                        <!-- Master Menu -->
-                        @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div class="relative" x-data="{ isMasterOpen: false }">
-                            <button @click="isMasterOpen = !isMasterOpen"
-                                :class="getButtonClass(isMasterActive())"
-                                class="">
-                                Master
-                                <svg class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                    :class="{ 'rotate-180': isMasterOpen, 'rotate-0': !isMasterOpen }"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+                        @foreach ($navigationMenus as $menu)
+                            @php
+                                // Get submenus for this menu
+                                $menuSubmenus = $allSubmenus->where('menuid', $menu->menuid);
+                                // Headers (parentid null, no slug) - exclude items that have both null parentid and slug (like Aktivitas)
+                                $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');                 
+                                // Direct items (parentid null, has slug) - these are standalone items
+                                $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug')->whereIn('name', $userPermissions);
+                                
+                                // Check if menu has any visible items
+                                $hasVisibleItems = false;
+                                
+                                // Check headers
+                                foreach ($headers as $header) {
+                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                    if ($children->isNotEmpty()) {
+                                        $hasVisibleItems = true;
+                                        break;
+                                    }
+                                }
+                                
+                                // Check direct items
+                                if (!$hasVisibleItems && $directItems->isNotEmpty()) {
+                                    $hasVisibleItems = true;
+                                }
+                            @endphp
                             
-                            <div x-show="isMasterOpen" @click.away="isMasterOpen = false" style="display: none;"
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute z-10 mt-2 w-[24rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-
-                                <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenu: null }">
-
-                                    <!-- Company -->
-                                    @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <div @mouseenter="activeMenu = 'company'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Company</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'company'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('master.company.index') }}"
-                                                    :active="request()->is('company')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Company
-                                                </x-childnav-link>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @endif
-
-                                    <!-- Master Lahan -->
-                                    <div @mouseenter="activeMenu = 'lahan'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Master Lahan</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'lahan'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('master.master-list.index') }}"
-                                                    :active="request()->is('master-list')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Master List
-                                                </x-childnav-link>
-
-                                                @if (in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('master.blok.index') }}"
-                                                    :active="request()->is('blok')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Blok
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('master.plotting.index') }}"
-                                                    :active="request()->is('plotting')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Plotting
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('master.mapping.index') }}"
-                                                    :active="request()->is('mapping')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Mapping
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
-                                                    :active="request()->is('kategori')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Kategori
-                                                </x-childnav-link>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Agronomi -->
-                                    <div @mouseenter="activeMenu = 'agronomi'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Agronomi</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'agronomi'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                @if (in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
-                                                    :active="request()->is('herbisida')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Herbisida
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
-                                                    :active="request()->is('herbisida-dosage')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Dosis Herbisida
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
-                                                    :active="request()->is('varietas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Varietas
-                                                </x-childnav-link>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Karyawan & Tenaga Kerja -->
-                                    <div @mouseenter="activeMenu = 'karyawan'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Karyawan & Tenaga Kerja</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'karyawan'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('masterdata.mandor.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Mandor
-                                                </x-childnav-link>
-                                                <x-childnav-link href="{{ route('masterdata.tenagakerja.index') }}" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Tenaga Kerja
-                                                </x-childnav-link>
-                                                <x-childnav-link href="#" :active="false" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Operator
-                                                </x-childnav-link>
-
-                                                @if (in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
-                                                    :active="request()->is('jabatan')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Jabatan
-                                                </x-childnav-link>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Accounting -->
-                                    @if (in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <div @mouseenter="activeMenu = 'accounting'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Accounting</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'accounting'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
-                                                    :active="request()->is('accounting')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Accounting
-                                                </x-childnav-link>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @endif
-
-                                    <!-- User & Approval -->
-                                    <div @mouseenter="activeMenu = 'user'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>User & Approval</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'user'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                @if (in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('master.username.index') }}"
-                                                    :active="request()->is('username') || request()->routeIs('master.username.*')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Kelola User
-                                                </x-childnav-link>
-                                                @endif
-
-                                                @if (in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                                                <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                                    :active="request()->is('approval')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Approval
-                                                </x-childnav-link>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Aktivitas -->
-                                    <div @mouseenter="activeMenu = 'aktivitas'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Aktivitas</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'aktivitas'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('master.aktivitas.index') }}"
-                                                    :active="request()->is('aktivitas')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Aktivitas
-                                                </x-childnav-link>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Aplikasi -->
-                                    <div @mouseenter="activeMenu = 'applikasi'" @mouseleave="activeMenu = null" class="relative">
-                                        <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                            <span>Aplikasi</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="activeMenu === 'applikasi'"
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 transform scale-95"
-                                            x-transition:enter-end="opacity-100 transform scale-100"
-                                            class="absolute left-full top-0 ml-1 w-[18rem] rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                            <div class="py-2">
-                                                <x-childnav-link href="{{ route('aplikasi.menu.index') }}"
-                                                    :active="request()->is('aplikasi/menu*')"
-                                                    class="block px-4 py-2 hover:bg-gray-100">
-                                                    Menu
-                                                </x-childnav-link>
-
-                                                <x-childnav-link href="{{ route('aplikasi.submenu.index') }}"
-                                                    :active="request()->is('aplikasi/submenu*')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Submenu
-                                                </x-childnav-link>
-                                                <x-childnav-link href="{{ route('aplikasi.subsubmenu.index') }}"
-                                                    :active="request()->is('aplikasi/subsubmenu*')" class="block px-4 py-2 hover:bg-gray-100">
-                                                    Subsubmenu
-                                                </x-childnav-link>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Input Data Menu -->
-                        @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div class="relative" x-data="{ isInputOpen: false }">
-                            <button @click="isInputOpen = !isInputOpen"
-                                :class="getButtonClass(isInputDataActive())"
-                                class="">
-                                Input Data
-                                <svg :class="{ 'rotate-180': isInputOpen, 'rotate-0': !isInputOpen }"
-                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            <div x-show="isInputOpen" @click.away="isInputOpen = false" style="display: none;"
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute z-50 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 border border-gray-200">
-                                <div class="py-2">
-                                    @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('input.agronomi.index') }}"
-                                        :active="request()->is('agronomi') ||
-                                                    request()->routeIs('input.agronomi.create') ||
-                                                    request()->routeIs('input.agronomi.edit')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Agronomi
-                                    </x-childnav-link>
-                                    @endif
-                                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('input.hpt.index') }}"
-                                        :active="request()->is('hpt') ||
-                                                    request()->routeIs('input.hpt.create') ||
-                                                    request()->routeIs('input.hpt.edit')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        HPT
-                                    </x-childnav-link>
-                                    @endif
-
-                                    @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}"
-                                        :active="request()->is('hpt') ||
-                                                    request()->routeIs('input.rkh.create') ||
-                                                    request()->routeIs('input.rkh.edit')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Rencana Kerja Harian
-                                    </x-childnav-link>
-                                    @endif
-
-                                    <x-childnav-link href="{{ route('input.gudang.index') }}"
-                                        :active="request()->is('gudang')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Gudang
-                                    </x-childnav-link>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Report Menu -->
-                        @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div class="relative" x-data="{ isReportOpen: false }">
-                            <button @click="isReportOpen = !isReportOpen"
-                                :class="getButtonClass(isReportActive())"
-                                class="">
-                                Report
-                                <svg :class="{ 'rotate-180': isReportOpen, 'rotate-0': !isReportOpen }"
-                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            <div x-show="isReportOpen" @click.away="isReportOpen = false" style="display: none;"
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute z-50 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 border border-gray-200">
-                                <div class="py-2">
-                                    @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('report.agronomi.index') }}"
-                                        :active="request()->is('agronomireport')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Agronomi
-                                    </x-childnav-link>
-                                    @endif
-                                 
-                                    @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('report.hpt.index') }}"
-                                        :active="request()->is('hptreport')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        HPT
-                                    </x-childnav-link>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Dashboard Menu -->
-                        @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div class="relative" x-data="{ isDashboardOpen: false }">
-                            <button @click="isDashboardOpen = !isDashboardOpen"
-                                :class="getButtonClass(isDashboardActiveRoute())"
-                                class="">
-                                Dashboard
-                                <svg :class="{ 'rotate-180': isDashboardOpen, 'rotate-0': !isDashboardOpen }"
-                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            <div x-show="isDashboardOpen" @click.away="isDashboardOpen = false"
-                                style="display: none;" x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute z-50 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 border border-gray-200">
-                                <div class="py-2">
-                                    @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('dashboard.agronomi') }}"
-                                        :active="request()->is('agronomidashboard')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Agronomi
-                                    </x-childnav-link>
-                                    @endif
+                            @if ($hasVisibleItems)
+                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                    <button @click="open = !open" 
+                                        class="text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center transition-all duration-200"
+                                        :class="{ 'bg-red-900 text-white': open }">
+                                        {{ $menu->name }}
+                                        <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" 
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
                                     
-                                    @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('dashboard.hpt') }}"
-                                        :active="request()->is('hptdashboard')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        HPT
-                                    </x-childnav-link>
-                                    @endif
+                                    <div x-show="open" 
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                        x-transition:leave="transition ease-in duration-75"
+                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                        class="absolute z-50 mt-2 w-64 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5">
+                                        <div class="py-1">
+                                            {{-- Render headers with children --}}
+                                            @foreach ($headers as $header)
+                                                @php
+                                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                                    // Skip duplicate headers
+                                                    $isDuplicate = $children->contains(function($child) use ($header) {
+                                                        return strtolower($child->name) === strtolower($header->name);
+                                                    });
+                                                @endphp
+                                                
+                                                @if ($children->isNotEmpty())
+                                                    @if (!$isDuplicate)
+                                                        {{-- Header with children - make it dropdown --}}
+                                                        <div x-data="{ subOpen: false }" class="relative">
+                                                            <button @click="subOpen = !subOpen" 
+                                                                class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                                                <span class="font-semibold uppercase text-xs tracking-wider">{{ $header->name }}</span>
+                                                                <svg class="h-4 w-4 transform transition-transform duration-200" :class="{'rotate-90': subOpen}" 
+                                                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                                                </svg>
+                                                            </button>
+                                                            
+                                                            <div x-show="subOpen" 
+                                                                x-transition:enter="transition ease-out duration-100"
+                                                                x-transition:enter-start="transform opacity-0 scale-95"
+                                                                x-transition:enter-end="transform opacity-100 scale-100"
+                                                                x-transition:leave="transition ease-in duration-75"
+                                                                x-transition:leave-start="transform opacity-100 scale-100"
+                                                                x-transition:leave-end="transform opacity-0 scale-95"
+                                                                @click.away="subOpen = false"
+                                                                class="absolute top-0 left-full w-56 mt-0 ml-1 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5">
+                                                                <div class="py-1">
+                                                                    @foreach ($children as $child)
+                                                                        {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        {{-- Duplicate case - just show children without header --}}
+                                                        @foreach ($children as $child)
+                                                            {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                        @endforeach
+                                                    @endif
+                                                    
+                                                    @if (!$loop->last || $directItems->isNotEmpty())
+                                                        <div class="my-1 h-px bg-gray-200"></div>
+                                                    @endif
+                                                @endif
+                                            @endforeach
+                                            
+                                            {{-- Render direct items with nested dropdown support --}}
+                                            @foreach ($directItems as $item)
+                                                @php
+                                                    // Check if this item has children
+                                                    $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)->whereIn('name', $userPermissions);
+                                                    $hasChildren = $itemChildren->isNotEmpty();
+                                                @endphp
+                                                
+                                                @if ($hasChildren)
+                                                    {{-- Item with dropdown --}}
+                                                    <div x-data="{ subOpen: false }" class="relative">
+                                                        <button @click="subOpen = !subOpen" 
+                                                            class="w-full flex items-center justify-between px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150
+                                                                   {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
+                                                            <span>{{ $item->name }}</span>
+                                                            <svg class="h-4 w-4 transform transition-transform duration-200" :class="{'rotate-90': subOpen}" 
+                                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                                            </svg>
+                                                        </button>
+                                                        
+                                                        <div x-show="subOpen" 
+                                                            x-transition:enter="transition ease-out duration-100"
+                                                            x-transition:enter-start="transform opacity-0 scale-95"
+                                                            x-transition:enter-end="transform opacity-100 scale-100"
+                                                            x-transition:leave="transition ease-in duration-75"
+                                                            x-transition:leave-start="transform opacity-100 scale-100"
+                                                            x-transition:leave-end="transform opacity-0 scale-95"
+                                                            @click.away="subOpen = false"
+                                                            class="absolute top-0 left-full w-56 mt-0 ml-1 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5">
+                                                            <div class="py-1">
+                                                                {{-- Parent link --}}
+                                                                <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150
+                                                                          {{ $isActive($item->slug) ? 'bg-red-50 text-red-700 font-medium' : '' }}">
+                                                                    {{ $item->name }}
+                                                                </a>
+                                                                <div class="my-1 h-px bg-gray-200"></div>
+                                                                
+                                                                {{-- Children --}}
+                                                                @foreach ($itemChildren as $child)
+                                                                    {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive) !!}
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    {{-- Item without children --}}
+                                                    {!! $renderSubmenuItem($item, $menu, $getRoute, $isActive) !!}
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Process Menu -->
-                        @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div class="relative" x-data="{ isProcessOpen: false }">
-                            <button @click="isProcessOpen = !isProcessOpen"
-                                :class="getButtonClass(isProcessActive())"
-                                class="">
-                                Process
-                                <svg :class="{ 'rotate-180': isProcessOpen, 'rotate-0': !isProcessOpen }"
-                                    class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            <div x-show="isProcessOpen" @click.away="isProcessOpen = false"
-                                style="display: none;" x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute z-50 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 border border-gray-200">
-                                <div class="py-2">
-                                    @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('process.posting') }}"
-                                        :active="request()->is('posting')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Posting
-                                    </x-childnav-link>
-                                    @endif
-                                    
-                                    @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('process.unposting') }}"
-                                        :active="request()->is('unposting')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Unposting
-                                    </x-childnav-link>
-                                    @endif
-                                    
-                                    @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('upload.gpx.view') }}"
-                                        :active="request()->is('uploadgpx')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Upload GPX File
-                                    </x-childnav-link>
-                                    @endif
-                                    
-                                    @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('export.kml.view') }}"
-                                        :active="request()->is('exportkml')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Export KML File
-                                    </x-childnav-link>
-                                    @endif
-                                    
-                                    @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
-                                        onclick="return confirm('Yakin closing periode sekarang?')"
-                                        class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        Closing
-                                    </x-childnav-link>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        @endif
+                            @endif
+                        @endforeach
                     </div>
                 </div>
             </div>
 
+            {{-- Right side: Profile & Notifications --}}
             <div class="hidden md:block">
                 <div class="ml-4 flex items-center md:ml-6">
-                    @php
-                    $compName = DB::table('company')
-                    ->where('companycode', '=', session('companycode'))
-                    ->value('name');
-                    @endphp
                     <div class="mr-3 text-right">
-                        <div class="text-sm font-medium leading-none text-white opacity-70">
-                            {{ session('companycode') }}
-                        </div>
-                        <div class="text-sm font-medium leading-none text-white opacity-50">{{ $compName }}</div>
+                        <div class="text-sm font-medium leading-none text-white">{{ session('companycode') }}</div>
+                        <div class="text-xs font-medium leading-none text-red-100 mt-1">{{ $compName }}</div>
                     </div>
-                    <a href="{{ route('notifications.index') }}"
-                        class="relative rounded-full p-1 text-red-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                        <span class="absolute -inset-1.5"></span>
+                    
+                    <a href="{{ route('notifications.index') }}" class="relative rounded-full p-1 text-red-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-red-800 transition-colors duration-200">
                         <span class="sr-only">View notifications</span>
-                        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" aria-hidden="true" data-slot="icon">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                         </svg>
-                        <span id="notification-dot"
-                            class="absolute top-0.5 right-0.5 w-3 h-3 bg-red-500 rounded-full hidden text-[8px] text-white text-center"></span>
+                        <span id="notification-dot" class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full hidden animate-pulse"></span>
                     </a>
                     
-                    <!-- Profile dropdown -->
-                    <div class="relative ml-3">
-                        <div class="flex items-center text-red-200 hover:text-white hover:underline">
-                            <img class="h-8 w-8 rounded-full"
-                                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                                alt="">
-                            <div class="ml-3">
-                                <span class="text-sm font-medium">
-                                    {{ Auth::user()->name }}
-                                </span>
+                    <div x-data="{ open: false }" @click.away="open = false" class="relative ml-3">
+                        <button @click="open = !open" type="button" class="flex items-center text-red-200 hover:text-white transition-colors duration-200 group">
+                            <img class="h-8 w-8 rounded-full ring-2 ring-red-900 group-hover:ring-white transition-all duration-200" 
+                                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                                alt="{{ Auth::user()->name }}">
+                            <div class="ml-3"><span class="text-sm font-medium">{{ Auth::user()->name }}</span></div>
+                            <svg class="ml-2 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" 
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        
+                        <div x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+                            <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                                <p class="text-xs text-gray-500">Signed in as</p>
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ Auth::user()->email ?? Auth::user()->name }}</p>
                             </div>
-                            <button type="button" @click="isOpen = !isOpen"
-                                class="relative flex max-w-xs items-center rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
-                                id="user-menu-button" aria-expanded="false" aria-haspopup="true">
-                                <span class="absolute -inset-1.5"></span>
-                                <span class="sr-only">Open user menu</span>
-                            </button>
-                        </div>
-
-                        <div x-show="isOpen" @click.away="isOpen = false" style="display: none;"
-                            x-transition:enter="transition ease-out duration-100 transform"
-                            x-transition:enter-start="opacity-0 scale-95"
-                            x-transition:enter-end="opacity-100 scale-100"
-                            x-transition:leave="transition ease-in duration-75 transform"
-                            x-transition:leave-start="opacity-100 scale-100"
-                            x-transition:leave-end="opacity-0 scale-95"
-                            class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-                            role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button"
-                            tabindex="-1">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                    role="menuitem" tabindex="-1" id="user-menu-item-2">
-                                    <svg class="w-4 h-4 dark:text-white" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                        fill="none" viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                            stroke-width="2"
+                                <button type="submit" 
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors duration-150">
+                                    <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                             d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2" />
                                     </svg>
                                     <span>Sign out</span>
@@ -671,35 +370,23 @@
                 </div>
             </div>
 
+            {{-- Mobile menu button --}}
             <div class="-mr-2 flex md:hidden items-center gap-3">
-                <a href="{{ route('notifications.index') }}"
-                    class="relative ml-auto shrink-0 rounded-full p-1 text-red-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                    <span class="absolute -inset-1.5"></span>
+                <a href="{{ route('notifications.index') }}" class="relative ml-auto shrink-0 rounded-full p-1 text-red-200 hover:text-white">
                     <span class="sr-only">View notifications</span>
-                    <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                        aria-hidden="true" data-slot="icon">
-                        <path stroke-linecap="round" stroke-linejoin="round"
+                    <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" 
                             d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                     </svg>
-                    <span id="notification-dot-mobile"
-                        class="absolute top-0.5 right-0.5 w-3 h-3 bg-red-500 rounded-full hidden text-[8px] text-white text-center"></span>
+                    <span id="notification-dot-mobile" class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full hidden animate-pulse"></span>
                 </a>
-                
-                <!-- Mobile menu button -->
-                <button type="button" @click="mobileMenuOpen = !mobileMenuOpen"
-                    class="relative inline-flex items-center justify-center rounded-md p-2 text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
-                    aria-controls="mobile-menu" aria-expanded="false">
-                    <span class="absolute -inset-0.5"></span>
+                <button type="button" @click="isOpen = !isOpen" 
+                    class="relative inline-flex items-center justify-center rounded-md p-2 text-red-200 hover:bg-red-800 hover:text-white">
                     <span class="sr-only">Open main menu</span>
-                    <svg :class="{ 'hidden': mobileMenuOpen, 'block': !mobileMenuOpen }" class="h-6 w-6" fill="none"
-                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
-                        data-slot="icon">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    <svg :class="{ 'hidden': isOpen, 'block': !isOpen }" class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
-                    <svg :class="{ 'block': mobileMenuOpen, 'hidden': !mobileMenuOpen }" class="h-6 w-6" fill="none"
-                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"
-                        data-slot="icon">
+                    <svg :class="{ 'block': isOpen, 'hidden': !isOpen }" class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -707,589 +394,164 @@
         </div>
     </div>
 
-    <!-- Mobile menu, show/hide based on menu state. -->
-    <div x-show="mobileMenuOpen" class="md:hidden" id="mobile-menu">
-        <div class="flex px-2 pb-3 pt-2 flex-wrap">
-
-            @if (auth()->user() && in_array('Master', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isMasterOpenMobile: false }">
-                <button @click="isMasterOpenMobile = !isMasterOpenMobile"
-                    :class="getButtonClass(isMasterActive())"
-                    class="">
-                    Master
-                    <svg :class="{ 'rotate-180': isMasterOpenMobile, 'rotate-0': !isMasterOpenMobile }"
-                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+    {{-- Mobile menu --}}
+    <div x-show="isOpen" 
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="transform opacity-0 -translate-y-2"
+        x-transition:enter-end="transform opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="transform opacity-100 translate-y-0"
+        x-transition:leave-end="transform opacity-0 -translate-y-2"
+        class="md:hidden" id="mobile-menu">
+        <div class="px-2 pb-3 pt-2 space-y-1">
+            @foreach ($navigationMenus as $menu)
+                @php
+                    $menuSubmenus = $allSubmenus->where('menuid', $menu->menuid);
+                    $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');
+                    $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug')->whereIn('name', $userPermissions);
+                    
+                    // Check if menu has any visible items
+                    $hasVisibleItems = false;
+                    foreach ($headers as $header) {
+                        $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                        if ($children->isNotEmpty()) {
+                            $hasVisibleItems = true;
+                            break;
+                        }
+                    }
+                    if (!$hasVisibleItems && $directItems->isNotEmpty()) {
+                        $hasVisibleItems = true;
+                    }
+                @endphp
                 
-                <!-- Dropdown Content -->
-                <div x-show="isMasterOpenMobile" @click.away="isMasterOpenMobile = false"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 transform scale-95"
-                    x-transition:enter-end="opacity-100 transform scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 transform scale-100"
-                    x-transition:leave-end="opacity-0 transform scale-95"
-                    class="absolute z-10 mt-2 w-60 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-
-                    <div class="space-y-0 text-sm text-gray-800" x-data="{ activeMenuMobile: null }">
-
-                        <!-- 1. Company -->
-                        @if (auth()->user() && in_array('Company', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div @click="activeMenuMobile = activeMenuMobile === 'company' ? null : 'company'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Company</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'company', 'rotate-0': activeMenuMobile !== 'company' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'company'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('master.company.index') }}"
-                                    :active="request()->is('company')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Company
-                                </x-childnav-link>
-                            </div>
+                @if ($hasVisibleItems)
+                    <div x-data="{ open: false }">
+                        <button @click="open = !open" 
+                            class="w-full text-left text-red-200 hover:bg-red-800 hover:text-white px-3 py-2 rounded-md text-base font-medium flex items-center justify-between">
+                            {{ $menu->name }}
+                            <svg class="h-5 w-5 transition-transform duration-200" :class="{ 'rotate-180': open }" 
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        
+                        <div x-show="open" x-transition class="mt-2 space-y-1 bg-red-950 rounded-md mx-2">
+                            {{-- Headers with children --}}
+                            @foreach ($headers as $header)
+                                @php
+                                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
+                                @endphp
+                                
+                                @if ($children->isNotEmpty())
+                                    {{-- Skip duplicate headers --}}
+                                    @php
+                                        $isDuplicate = $children->contains(function($child) use ($header) {
+                                            return strtolower($child->name) === strtolower($header->name);
+                                        });
+                                    @endphp
+                                    
+                                    @if (!$isDuplicate)
+                                        {{-- Header with children - make it dropdown for mobile too --}}
+                                        <div x-data="{ subOpen: false }" class="relative">
+                                            <button @click="subOpen = !subOpen" 
+                                                class="w-full flex items-center justify-between pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
+                                                <span class="font-semibold uppercase text-xs tracking-wider">{{ $header->name }}</span>
+                                                <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-180': subOpen}" 
+                                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            
+                                            <div x-show="subOpen" x-transition class="mt-1 space-y-1">
+                                                @foreach ($children as $child)
+                                                    <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
+                                                       class="block pl-10 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                              {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                        {{ $child->name }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        {{-- Duplicate case - just show children without header --}}
+                                        @foreach ($children as $child)
+                                            <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
+                                               class="block pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md
+                                                      {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                {{ $child->name }}
+                                            </a>
+                                        @endforeach
+                                    @endif
+                                @endif
+                            @endforeach
+                            
+                            {{-- Direct items --}}
+                            @foreach ($directItems as $item)
+                                @php
+                                    $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)->whereIn('name', $userPermissions);
+                                    $hasChildren = $itemChildren->isNotEmpty();
+                                @endphp
+                                
+                                @if ($hasChildren)
+                                    <div x-data="{ subOpen: false }" class="relative">
+                                        <button @click="subOpen = !subOpen" 
+                                            class="w-full flex items-center justify-between pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md">
+                                            {{ $item->name }}
+                                            <svg class="h-4 w-4 transform transition-transform" :class="{'rotate-180': subOpen}" 
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        
+                                        <div x-show="subOpen" x-transition class="mt-1 space-y-1">
+                                            <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                               class="block pl-10 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                      {{ $isActive($item->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                {{ $item->name }}
+                                            </a>
+                                            @foreach ($itemChildren as $child)
+                                                <a href="{{ $getRoute($menu->slug, $child->slug) }}" 
+                                                   class="block pl-12 pr-3 py-1 text-xs text-red-200 hover:bg-red-800 hover:text-white rounded-md
+                                                          {{ $isActive($child->slug) ? 'bg-red-900 text-white' : '' }}">
+                                                    {{ $child->name }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @else
+                                    <a href="{{ $getRoute($menu->slug, $item->slug) }}" 
+                                       class="block pl-6 pr-3 py-2 text-sm text-red-100 hover:bg-red-800 hover:text-white rounded-md
+                                              {{ $isActive($item->slug) ? 'bg-red-900 text-white' : '' }}">
+                                        {{ $item->name }}
+                                    </a>
+                                @endif
+                            @endforeach
                         </div>
-                        @endif
-
-                        <!-- 2. Master Lahan -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'lahan' ? null : 'lahan'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Master Lahan</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'lahan', 'rotate-0': activeMenuMobile !== 'lahan' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'lahan'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('master.master-list.index') }}"
-                                    :active="request()->is('master-list')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Master List
-                                </x-childnav-link>
-
-                                @if (in_array('Blok', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('master.blok.index') }}"
-                                    :active="request()->is('blok')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Blok
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('master.plotting.index') }}"
-                                    :active="request()->is('plotting')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Plotting
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Mapping', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('master.mapping.index') }}"
-                                    :active="request()->is('mapping')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Mapping
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Kategori', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.kategori.index') }}"
-                                    :active="request()->is('kategori')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Kategori
-                                </x-childnav-link>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- 3. Agronomi -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'agronomi' ? null : 'agronomi'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Agronomi</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'agronomi', 'rotate-0': activeMenuMobile !== 'agronomi' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'agronomi'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                @if (in_array('Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.herbisida.index') }}"
-                                    :active="request()->is('herbisida')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Herbisida
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.herbisida-dosage.index') }}"
-                                    :active="request()->is('herbisida-dosage')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Dosis Herbisida
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Varietas', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.varietas.index') }}"
-                                    :active="request()->is('varietas')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Varietas
-                                </x-childnav-link>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- 4. Karyawan & Tenaga Kerja -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'karyawan' ? null : 'karyawan'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Karyawan & Tenaga Kerja</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'karyawan', 'rotate-0': activeMenuMobile !== 'karyawan' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'karyawan'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('masterdata.mandor.index') }}" :active="false" class="block px-8 py-2 hover:bg-gray-100">
-                                    Mandor
-                                </x-childnav-link>
-                                <x-childnav-link href="{{ route('masterdata.tenagakerja.index') }}" :active="false" class="block px-8 py-2 hover:bg-gray-100">
-                                    Tenaga Kerja
-                                </x-childnav-link>
-                                <x-childnav-link href="#" :active="false" class="block px-8 py-2 hover:bg-gray-100">
-                                    Operator
-                                </x-childnav-link>
-
-                                @if (in_array('Jabatan', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.jabatan.index') }}"
-                                    :active="request()->is('jabatan')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Jabatan
-                                </x-childnav-link>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- 5. Accounting -->
-                        @if (in_array('Accounting', json_decode(auth()->user()->permissions ?? '[]')))
-                        <div @click="activeMenuMobile = activeMenuMobile === 'accounting' ? null : 'accounting'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Accounting</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'accounting', 'rotate-0': activeMenuMobile !== 'accounting' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'accounting'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('masterdata.accounting.index') }}"
-                                    :active="request()->is('accounting')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Accounting
-                                </x-childnav-link>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- 6. User & Approval -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'user' ? null : 'user'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>User & Approval</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'user', 'rotate-0': activeMenuMobile !== 'user' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'user'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                @if (in_array('Kelola User', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('master.username.index') }}"
-                                    :active="request()->is('username') || request()->routeIs('master.username.*')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Kelola User
-                                </x-childnav-link>
-                                @endif
-
-                                @if (in_array('Approval', json_decode(auth()->user()->permissions ?? '[]')))
-                                <x-childnav-link href="{{ route('masterdata.approval.index') }}"
-                                    :active="request()->is('approval')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Approval
-                                </x-childnav-link>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- 7. Aktivitas -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'aktivitas' ? null : 'aktivitas'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Aktivitas</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'aktivitas', 'rotate-0': activeMenuMobile !== 'aktivitas' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'aktivitas'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('master.aktivitas.index') }}"
-                                    :active="request()->is('aktivitas')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Aktivitas
-                                </x-childnav-link>
-                            </div>
-                        </div>
-
-                        <!-- 8. Aplikasi -->
-                        <div @click="activeMenuMobile = activeMenuMobile === 'applikasi' ? null : 'applikasi'" class="relative">
-                            <button class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 font-semibold">
-                                <span>Aplikasi</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transition-transform transform"
-                                    :class="{ 'rotate-90': activeMenuMobile === 'applikasi', 'rotate-0': activeMenuMobile !== 'applikasi' }"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-
-                            <!-- Submenu -->
-                            <div x-show="activeMenuMobile === 'applikasi'"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 max-h-0"
-                                x-transition:enter-end="opacity-100 max-h-96"
-                                x-transition:leave="transition ease-in duration-200"
-                                x-transition:leave-start="opacity-100 max-h-96"
-                                x-transition:leave-end="opacity-0 max-h-0"
-                                class="overflow-hidden bg-gray-50">
-                                <x-childnav-link href="{{ route('aplikasi.menu.index') }}"
-                                    :active="request()->is('aplikasi/menu*')"
-                                    class="block px-8 py-2 hover:bg-gray-100">
-                                    Menu
-                                </x-childnav-link>
-
-                                <x-childnav-link href="{{ route('aplikasi.submenu.index') }}"
-                                    :active="request()->is('aplikasi/submenu*')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Submenu
-                                </x-childnav-link>
-                                <x-childnav-link href="{{ route('aplikasi.subsubmenu.index') }}"
-                                    :active="request()->is('aplikasi/subsubmenu*')" class="block px-8 py-2 hover:bg-gray-100">
-                                    Subsubmenu
-                                </x-childnav-link>
-                            </div>
-                        </div>
-
                     </div>
-                </div>
-            </div>
-            @endif
-            
-            @if (auth()->user() && in_array('Input Data', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isInputDataOpenMobile: false }">
-                <button @click="isInputDataOpenMobile = !isInputDataOpenMobile"
-                    :class="getButtonClass(isInputDataActive())"
-                    class="">
-                    Input Data
-                    <svg :class="{ 'rotate-180': isInputDataOpenMobile, 'rotate-0': !isInputDataOpenMobile }"
-                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div x-show="isInputDataOpenMobile" @click.away="isInputDataOpenMobile = false"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 transform scale-95"
-                    x-transition:enter-end="opacity-100 transform scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 transform scale-100"
-                    x-transition:leave-end="opacity-0 transform scale-95"
-                    class="absolute z-10 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div class="py-2">
-                        @if (auth()->user() && in_array('Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('input.agronomi.index') }}"
-                            :active="request()->is('agronomi') ||
-                                        request()->routeIs('input.agronomi.create') ||
-                                        request()->routeIs('input.agronomi.edit')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Agronomi
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('input.hpt.index') }}"
-                            :active="request()->is('hpt') ||
-                                        request()->routeIs('input.hpt.create') ||
-                                        request()->routeIs('input.hpt.edit')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            HPT
-                        </x-childnav-link>
-                        @endif
-
-                        @if (auth()->user() && in_array('HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}"
-                            :active="request()->is('hpt') ||
-                                        request()->routeIs('input.rkh.create') ||
-                                        request()->routeIs('input.rkh.edit')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Rencana Kerja Harian
-                        </x-childnav-link>
-                        @endif
-
-                        <x-childnav-link href="{{ route('input.gudang.index') }}"
-                            :active="request()->is('gudang')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Gudang
-                        </x-childnav-link>
-                    </div>
-                </div>
-            </div>
-            @endif
-            
-            @if (auth()->user() && in_array('Report', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isReportOpenMobile: false }">
-                <button @click="isReportOpenMobile = !isReportOpenMobile"
-                    :class="getButtonClass(isReportActive())"
-                    class="">
-                    Report
-                    <svg :class="{ 'rotate-180': isReportOpenMobile, 'rotate-0': !isReportOpenMobile }"
-                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div x-show="isReportOpenMobile" @click.away="isReportOpenMobile = false"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 transform scale-95"
-                    x-transition:enter-end="opacity-100 transform scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 transform scale-100"
-                    x-transition:leave-end="opacity-0 transform scale-95"
-                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div class="py-2">
-                        @if (auth()->user() && in_array('Report Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('report.agronomi.index') }}"
-                            :active="request()->is('agronomireport')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Agronomi
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Report HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('report.hpt.index') }}"
-                            :active="request()->is('hptreport')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            HPT
-                        </x-childnav-link>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-
-            @if (auth()->user() && in_array('Dashboard', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isDashboardOpenMobile: false }">
-                <button @click="isDashboardOpenMobile = !isDashboardOpenMobile"
-                    :class="getButtonClass(isDashboardActiveRoute())"
-                    class="">
-                    Dashboard
-                    <svg :class="{ 'rotate-180': isDashboardOpenMobile, 'rotate-0': !isDashboardOpenMobile }"
-                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div x-show="isDashboardOpenMobile" @click.away="isDashboardOpenMobile = false"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 transform scale-95"
-                    x-transition:enter-end="opacity-100 transform scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 transform scale-100"
-                    x-transition:leave-end="opacity-0 transform scale-95"
-                    class="absolute z-10 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div class="py-2">
-                        @if (auth()->user() && in_array('Dashboard Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('dashboard.agronomi') }}"
-                            :active="request()->is('agronomidashboard')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Agronomi
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Dashboard HPT', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('dashboard.hpt') }}"
-                            :active="request()->is('hptdashboard')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            HPT
-                        </x-childnav-link>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-            
-            @if (auth()->user() && in_array('Process', json_decode(auth()->user()->permissions ?? '[]')))
-            <div class="relative" x-data="{ isProcessOpenMobile: false }">
-                <button @click="isProcessOpenMobile = !isProcessOpenMobile"
-                    :class="getButtonClass(isProcessActive())"
-                    class="">
-                    Process
-                    <svg :class="{ 'rotate-180': isProcessOpenMobile, 'rotate-0': !isProcessOpenMobile }"
-                        class="ml-1 h-4 w-4 -mr-1 transition-transform transform"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div x-show="isProcessOpenMobile" @click.away="isProcessOpenMobile = false" style="display: none;"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 transform scale-95"
-                    x-transition:enter-end="opacity-100 transform scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 transform scale-100"
-                    x-transition:leave-end="opacity-0 transform scale-95"
-                    class="absolute right-0 z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div class="py-2">
-                        @if (auth()->user() && in_array('Posting', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('process.posting') }}"
-                            :active="request()->is('posting')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Posting
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Unposting', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('process.unposting') }}"
-                            :active="request()->is('unposting')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Unposting
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Upload GPX File', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('upload.gpx.view') }}" :active="request()->is('uploadgpx')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Upload GPX File
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Export KML File', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('export.kml.view') }}" :active="request()->is('exportkml')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Export KML File
-                        </x-childnav-link>
-                        @endif
-                        
-                        @if (auth()->user() && in_array('Closing', json_decode(auth()->user()->permissions ?? '[]')))
-                        <x-childnav-link href="{{ route('closing') }}" :active="request()->is('closing')"
-                            onclick="return confirm('Yakin closing periode sekarang?')"
-                            class="block px-4 py-2 text-sm hover:bg-gray-100">
-                            Closing
-                        </x-childnav-link>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-
+                @endif
+            @endforeach
         </div>
-        
-        <div class="border-t border-red-900 pb-3 pt-4">
+
+        {{-- Profile Section untuk Mobile --}}
+        <div class="border-t border-red-800 pb-3 pt-4">
             <div class="flex items-center px-5">
                 <div class="flex-shrink-0">
-                    <img class="h-10 w-10 rounded-full"
-                        src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                        alt="">
+                    <img class="h-10 w-10 rounded-full ring-2 ring-red-800" 
+                        src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                        alt="{{ Auth::user()->name }}">
                 </div>
-                <div class="ml-3 space-y-2">
-                    <div class="text-base font-medium leading-none text-white">{{ Auth::user()->name }}</div>
-                    <div class="text-sm font-medium leading-none text-white opacity-70">
-                        {{ session('companycode') }}
-                        <span class="text-white opacity-50">
-                            ( {{ $compName }} )
-                        </span>
-                    </div>
+                <div class="ml-3 space-y-1">
+                    <div class="text-base font-medium text-white">{{ Auth::user()->name }}</div>
+                    <div class="text-sm font-medium text-red-200">{{ session('companycode') }}<span class="text-red-300"> - {{ $compName }}</span></div>
                 </div>
             </div>
-
-            <div class="mt-3 space-y-1 px-2">
+            <div class="mt-3 px-2">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit"
-                        class="w-full text-left flex items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-red-200 hover:from-red-900 hover:bg-gradient-to-b hover:to-red-800 hover:text-white"
-                        role="menuitem" tabindex="-1" id="user-menu-item-2">
-                        <svg class="w-4 h-4 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="3"
+                    <button type="submit" 
+                        class="w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium text-red-200 hover:bg-red-800 hover:text-white">
+                        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                 d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2" />
                         </svg>
                         <span>Sign out</span>

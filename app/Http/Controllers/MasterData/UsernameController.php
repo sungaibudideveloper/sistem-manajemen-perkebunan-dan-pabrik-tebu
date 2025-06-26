@@ -23,7 +23,7 @@ class UsernameController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'Kelola User',
-            'routeName' => route('master.username.index')
+            'routeName' => route('masterdata.username.index')
         ]);
     }
     public function index(Request $request)
@@ -43,7 +43,7 @@ class UsernameController extends Controller
         $username = DB::table('user')
             ->join('usercompany', 'user.userid', '=', 'usercompany.userid')
             ->select('usercompany.*', 'user.*')
-            ->where('user.userid', '!=', 'Admin')
+            //->where('user.userid', '!=', 'Admin')
             ->orderBy('user.userid', 'asc')
             ->paginate($perPage);
 
@@ -62,11 +62,26 @@ class UsernameController extends Controller
         return $this->store($request);
     }
 
+
+
     public function create()
     {
         $title = "Create Data";
-        $company = DB::table('company')->get();
-        return view('master.username.create', compact('title', 'company'));
+
+        // Get data untuk form
+        $company = Company::orderBy('companycode')->get();
+        $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
+        $submenu = Submenu::orderBy('submenuid')->get();
+        $subsubmenu = Subsubmenu::orderBy('name')->get();
+
+        return view('master.username.create', [
+            'title' => $title,
+            'company' => $company,
+            'menu' => $menu,
+            'submenu' => $submenu,
+            'subsubmenu' => $subsubmenu,
+            'username' => new User(), // empty model untuk old() values
+        ]);
     }
 
     public function store(Request $request)
@@ -79,36 +94,46 @@ class UsernameController extends Controller
             'companycode' => 'required|array',
         ]);
 
-        $exists = DB::table('usercompany')->where('userid', $request->usernm)
-            ->where('companycode', $request->companycode)
-            ->exists();
+        // Cek duplicate untuk setiap company
+        foreach ($validated['companycode'] as $company) {
+            $exists = DB::table('usercompany')
+                ->where('userid', $request->usernm)
+                ->where('companycode', $company)
+                ->exists();
 
-        if ($exists) {
-            return back()->withErrors([
-                'duplicate' => 'Data sudah ada, silahkan coba dengan data yang berbeda.',
-            ])->withInput();
+            if ($exists) {
+                return back()->withErrors([
+                    'duplicate' => "User {$request->usernm} sudah ada untuk company {$company}",
+                ])->withInput();
+            }
         }
 
         DB::transaction(function () use ($validated) {
-            $companycode = implode(',', $validated['companycode']);
+            // Insert ke tabel user
             DB::table('user')->insert([
                 'userid' => strtoupper($validated['usernm']),
                 'name' => strtoupper($validated['name']),
                 'password' => bcrypt($validated['password']),
+                'companycode' => implode(',', $validated['companycode']), // Gabungan untuk display
                 'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
                 'createdat' => now(),
                 'updatedat' => now(),
+                'isactive' => 1,
             ]);
-            DB::table('usercompany')->insert([
-                'userid' => $validated['usernm'],
-                'companycode' => $companycode,
-                'inputby' => Auth::user()->userid,
-                'createdat' => now(),
-                'updatedat' => now(),
-            ]);
+
+            // Insert ke usercompany - satu row per company
+            foreach ($validated['companycode'] as $company) {
+                DB::table('usercompany')->insert([
+                    'userid' => strtoupper($validated['usernm']),
+                    'companycode' => $company,
+                    'inputby' => Auth::user()->userid,
+                    'createdat' => now(),
+                ]);
+            }
         });
-        return redirect()->back()
-            ->with('success1', 'Data created successfully.');
+
+        return redirect()->route('masterdata.username.index')
+            ->with('success', 'User berhasil ditambahkan.');
     }
 
     public function edit($usernm, $companycode)
@@ -147,7 +172,7 @@ class UsernameController extends Controller
                     'inputby' => Auth::user()->userid,
                 ]);
         });
-        return redirect()->route('master.username.index')
+        return redirect()->route('masterdata.username.index')
             ->with('success1', 'Data updated successfully.');
     }
 
@@ -156,11 +181,13 @@ class UsernameController extends Controller
         $title = 'Set Hak Akses';
         $user = User::findOrFail($usernm);
 
-        $menu = Menu::orderBy('menuid')->get();
-        $submenu = Submenu::orderBy('name')->get();
+        // Filter unique by slug directly
+        $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
+        $submenu = Submenu::orderBy('submenuid')->get();
         $subsubmenu = Subsubmenu::orderBy('name')->get();
+
         return view('master.username.access', [
-            'user' => $user,    
+            'user' => $user,
             'title' => $title,
             'menu' => $menu,
             'submenu' => $submenu,
@@ -168,26 +195,30 @@ class UsernameController extends Controller
         ]);
     }
 
-
     public function setaccess(Request $request, $usernm)
     {
         $validated = $request->validate([
-            'userid' => 'required',
             'permissions' => 'nullable|array',
         ]);
-
         DB::transaction(function () use ($validated, $usernm) {
+
             DB::table('user')
                 ->where('userid', $usernm)
                 ->update([
-                    'userid' => $validated['userid'],
-                    'permissions' => $validated['permissions'] ?? null,
+                    'permissions' => $validated['permissions'] ? json_encode($validated['permissions']) : null,
+                    'updatedat' => now(),
                 ]);
         });
 
-        return redirect()->route('master.username.index')
+        // Jika ingin tetap di halaman access:
+        return redirect()->route('masterdata.username.index', $usernm)
             ->with('success', 'Data updated successfully.');
+
+        // Kalau mau ke index:
+        // return redirect()->route('masterdata.username.index')->with('success', 'Data updated successfully.');
     }
+
+
 
     public function destroy($usernm, $companycode)
     {
@@ -195,7 +226,7 @@ class UsernameController extends Controller
             DB::table('user')->where('userid', $usernm)->delete();
             DB::table('usercompany')->where('userid', $usernm)->where('companycode', $companycode)->delete();
         });
-        return redirect()->route('master.username.index')
+        return redirect()->route('masterdata.username.index')
             ->with('success', 'Data deleted successfully.');
     }
 }

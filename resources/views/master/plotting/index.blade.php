@@ -222,7 +222,7 @@
                 let kdPlot = this.getAttribute('data-kd-plot');
                 let kdComp = this.getAttribute('data-kd-comp');
                 if (confirm('Yakin ingin menghapus data ini?')) {
-                    fetch(`{{ route('master.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
+                    fetch(`{{ route('masterdata.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                             .replace('__kdPlot__', kdPlot)
                             .replace('__kdComp__', kdComp), {
                                 method: 'POST',
@@ -263,7 +263,7 @@
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
-            form.action = "{{ route('master.plotting.handle') }}";
+            form.action = "{{ route('masterdata.plotting.handle') }}";
             crudMethod.value = "POST";
             kdPlotInput.value = "";
             luasAreaInput.value = "";
@@ -289,7 +289,7 @@
             modal.classList.add("visible");
             modalTitle.textContent = "Edit Data";
             var editRoute =
-                "{{ route('master.plotting.update', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}";
+                "{{ route('masterdata.plotting.update', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}";
             form.action = editRoute.replace('__kdPlot__', kdPlot).replace('__kdComp__', kdComp);
             crudMethod.value = "PUT";
             kdPlotInput.value = kdPlot;
@@ -304,7 +304,7 @@
 
         function deleteRow(kdPlot, kdComp, row) {
             if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('master.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
+                fetch(`{{ route('masterdata.plotting.destroy', ['plot' => '__kdPlot__', 'companycode' => '__kdComp__']) }}`
                         .replace('__kdPlot__', kdPlot)
                         .replace('__kdComp__', kdComp), {
                             method: "DELETE",
