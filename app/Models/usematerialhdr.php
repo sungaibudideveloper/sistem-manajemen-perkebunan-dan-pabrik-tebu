@@ -55,7 +55,7 @@ public function selectuse($companycode, $rkhno = 0, $type = 0)
         ->leftJoin('herbisidagroup as e', function ($join) {
             $join->on('g.herbisidagroupid', '=', 'e.herbisidagroupid');
         })
-        ->leftJoin('mandor as h', 'f.mandorid', '=', 'h.id')
+        ->leftJoin('USER as h', 'f.mandorid', '=', 'h.userid')
         ->when($type == 1, function ($query) use ($rkhno) {
             $query->where('a.rkhno', $rkhno);
         }, function ($query) use ($companycode) {

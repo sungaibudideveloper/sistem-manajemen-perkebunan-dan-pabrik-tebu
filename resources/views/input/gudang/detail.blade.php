@@ -37,7 +37,7 @@
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="py-2 px-3">{{ $d->blok }}</td>
                                 <td class="py-2 px-3">{{ $d->plot }}</td>
-                                <td class="py-2 px-3">{{ $d->luasarea }} HA</td>
+                                <td class="py-2 px-3 text-right">{{ $d->luasarea }} HA</td>
                                 <td class="py-2 px-3 bg-green-100">
                                     {{ $d->activitycode }} {{ $d->herbisidagroupname }}
                                 </td>
@@ -48,7 +48,7 @@
                     <tfoot>
                         <tr class="bg-gray-200 text-gray-800">
                             <td colspan="2" class="py-2 px-3 font-semibold">Total Luas</td>
-                            <td class="py-2 px-3 font-semibold">{{ $totalLuas }} HA</td>
+                            <td class="py-2 px-3 font-semibold text-right">{{ $totalLuas }} HA</td>
                             <td class="py-2 px-3 font-semibold"></td>
                         </tr>
                     </tfoot>
@@ -110,39 +110,53 @@
                             $luas = (float) $details->where('herbisidagroupid',$d->herbisidagroupid)->sum(function($item) {
                                                 return (float) $item->luasarea;
                                             });    
+                                            
                         @endphp
                         <tr class="border-b hover:bg-gray-50">
                             <td class="py-3 px-4">
-                                <select name="itemcode[{{ $groupId }}][{{ $loop->iteration }}]" class="item-select w-full border-none bg-yellow-100">
+                                <select @if(strtoupper($details[0]->flagstatus) == 'RECEIVED') readonly style="pointer-events: none;" @endif
+                                name="itemcode[{{ $groupId }}][{{ $loop->iteration }}]" class="item-select w-full border-none bg-yellow-100">
                                     @foreach($itemlist as $item) 
                                     @php $currentluas = $luas * $item->dosageperha; @endphp
                                     <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->herbisidagroupid == $d->herbisidagroupid ? 'selected' : '' }}
                                     data-dosage="{{$item->dosageperha}}" data-qty="{{$currentluas}}">
-                                      Herbisida {{$item->herbisidagroupid}} -  {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} 
+                                      Herbisida {{$item->herbisidagroupid}} -  {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}})
                                     </option>
                                     @endforeach
                                 </select> 
                                 <!-- Hidden fields to capture additional data -->
                                 <input type="hidden" name="dosage[{{ $groupId }}][{{ $loop->iteration }}]" class="selected-dosage" value="{{ $d->dosageperha }}">
-                                <input type="hidden" name="unit[{{ $groupId }}][{{ $loop->iteration }}]" class="selected-dosage" value="{{ $d->dosageunit }}">
-                                
-                                
+                                <input type="hidden" name="unit[{{ $groupId }}][{{ $loop->iteration }}]" class="selected-dosage" value="{{ $d->unit }}">
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-right">
                                 <label class="labeldosage">{{ $d->dosageperha }} {{ $d->dosageunit }}</label>
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-right">
                                 <label class="luas" id='luas'>{{$luas}}</label>
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-right">
                                 <label class="labelqty"> {{ $matched->qty ?? '-' }}</label>
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-right">
+                            {{-- @if( empty($matched->noretur) )
                             <input name="qtyretur[{{ $groupId }}][{{ $loop->iteration }}]" type="text" value="{{ $matched->qtyretur ?? '0' }}" 
                                class="w-32 border-none bg-yellow-100">
+                            @else
+                            {{ $matched->qtyretur }}
+                            @endif
+                            --}}
+                            {{ $matched->qtyretur }}
                             </td>
                             <td class="py-3 px-4">
-                                {{ $matched->noretur ?? '-' }}
+                                @if(empty($matched->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE') 
+                                <a href="{{ route('input.gudang.retur', ['retur' => $matched->qtyretur, 'itemcode' => $d->itemcode, 'rkhno' => $details[0]->rkhno, 'herbisidagroupid' => $d->herbisidagroupid] ) }}" 
+                                class="inline-block bg-gray-200 text-gray-800 hover:bg-blue-600 hover:text-white text-sm font-medium py-1 px-3 rounded shadow hover:shadow-md transition duration-200"
+                                onclick="return confirm('Proses Retur Barang ini ?')">
+                                Retur ?
+                                </a>
+                                @else
+                                 {{ $matched->noretur ?? '-' }}
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -156,12 +170,14 @@
             <!-- Submit BUTTON (now inside the form) -->
             <!-- ========================================================================= -->
             <div class="flex justify-center mt-6">
+                @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
                 <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
                     type="submit"
                     class="bg-green-600 hover:bg-green-700 text-white text-lg font-semibold py-2 px-8 rounded-lg shadow-md transition duration-300 ease-in-out"
                 >
                     Penyerahan
                 </button>
+                @endif
             </div>
         </form>
         <!-- FORM ENDS HERE -->

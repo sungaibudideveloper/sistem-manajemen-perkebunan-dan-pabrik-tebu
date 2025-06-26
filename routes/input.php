@@ -127,8 +127,9 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
 
 //Gudang
 //Route::group(['middleware' => ['auth', 'permission:Gudang']], function () {
-    Route::get('input/gudang', [GudangController::class, 'index'])->name('input.gudang.index');
-    Route::get('input/gudang/home', [GudangController::class, 'home'])->name('input.gudang.home');
+    Route::get('input/gudang/home', [GudangController::class, 'index'])->name('input.gudang.index');
+    Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.home');
     Route::get('input/gudang/detail', [GudangController::class, 'detail'])->name('input.gudang.detail');
     Route::post('input/gudang/submit', [GudangController::class, 'submit'])->name('input.gudang.submit');
+    Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur');
 //});

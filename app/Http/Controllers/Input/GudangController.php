@@ -106,7 +106,7 @@ class GudangController extends Controller
 
         // $header
         $title = "Gudang";
-
+          
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
             'details'       => $details,
@@ -116,44 +116,40 @@ class GudangController extends Controller
         ]);
     }
 
+    public function retur(Request $request)
+    {
+        $usemateriallst = new usemateriallst;
+        
+        $usemateriallst->where('itemcode', $request->itemnumber)
+        ->where('rkhno', $request->rkhno)
+        ->where('herbisidagroupid', $request->herbisidagroupid)
+        ->update(['noretur' => 'R-000123']);
+
+        return redirect()->back()->with('success1', 'Sukses Membuat Dokumen Retur');
+    }
+
     public function submit(Request $request)
     {   
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
         $details = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
-        $exists = usemateriallst::where('rkhno', $request->rkhno)->whereNotNull('nouse')->where('nouse', '!=', '')->exists();
+        $exists = usemateriallst::where('rkhno', $request->rkhno);
+        
         $first = $details->first();
-  
-        if($details->whereNotNull('nouse')->count()<1){
-            
+        if(strtoupper($first->flagstatus) == 'RECEIVED' || strtoupper($first->flagstatus) == 'COMPLETED' ){
+            return redirect()->back()->with('error', 'Cant Edit! Items Already Received');
+        }
+
         $isi = collect();
-        if( $exists == FALSE ){
         if(!empty($details)){ 
-        $testisi = collect([
-            (object)[
-                'CompCodeTerima' => 'GSB',
-                'FactoryTerima'  => 'ATK',
-                'ItemGrup'       => '02',
-                'CompItemcode'   => '000155',
-                'prunit'         => 'BH',
-                'itemprice'      => '3100000',
-                'currcode'       => 'IDR',
-                'itemnote'       => 'U/ TEST MESIN TAPIOKA PENGEMASAN TEST',
-                'qtybpb'         => '2',
-                'Keterangan'     => '',
-                'vehiclenumber'  => '2',
-                'flagstatus'     => 'POSTED'
-            ]
-          ]);
           $groupIds = $details->pluck('herbisidagroupid')->unique();
           $dosage = HerbisidaDosage::whereIn('herbisidagroupid', $groupIds)->get();
-
 
           $groupedDetails = $details->groupBy('herbisidagroupid')->map(function ($group) {
             $totalLuas = $group->sum('luasarea');
             $firstItem = $group->first();
-        
+
             return (object)[
                 'CompCodeTerima' => $firstItem->companyinv,
                 'FactoryTerima' => $firstItem->factoryinv,
@@ -166,12 +162,11 @@ class GudangController extends Controller
         });
         
         $herbisidaitem = Herbisida::where('companycode',session('companycode'))->get();
-
-        DB::transaction(function() use ($request, $first, $groupedDetails, $herbisidaitem, $isi) {
-        
+        // menghapus dan isi detail
+        DB::transaction(function() use ($request, $first, $groupedDetails, $herbisidaitem, $isi, $exists, $details) {
+        $isidetail = $exists->get();
         usemateriallst::where('rkhno', $first->rkhno)->delete();
         $insertData = [];
-        
 
         foreach($groupedDetails as $groupId => $items){ 
             foreach ($request->itemcode[$groupId] as $index => $itemcode) { 
@@ -179,18 +174,25 @@ class GudangController extends Controller
                 $dosage = $request->dosage[$groupId][$index]; 
                 $qty = $dosage*$items->totalLuas;
                 $unit = $request->unit[$groupId][$index];  
-                $itemname = $herbisidaitem->where('itemcode', $itemcode)->first()->itemname;
-                $qtyretur = $request->qtyretur[$groupId][$index];
-
+                $itemname = $herbisidaitem->where('itemcode', $itemcode)->first()->itemname; 
+                // apabila item berubah maka qty retur akan 0 , perlu dijaga di atas agar tidak boleh rubah item saat qty retur > 0
+                // sama seperti if null maka qtyretur 0 , namun lebih rapih
+                $qtyretur = $isidetail->where('itemcode', $itemcode)
+                     ->where('herbisidagroupid', $groupId)
+                     ->first()?->qtyretur ?? 0;
+                
+                
                 $insertData[] = [
                     'companycode' => session('companycode'),
                     'rkhno' => $request->rkhno,
                     'itemcode' => $itemcode,
                     'qty' => $qty,
-                    'unit' => $request->unit,
+                    'unit' => $unit,
                     'qtyretur' => $qtyretur,
                     'itemname' => $itemname,
-                    'dosageperha' => $dosage
+                    'dosageperha' => $dosage,
+                    'herbisidagroupid' =>$groupId,
+                    'nouse' => $exists->first() ? $exists->first()->nouse : null
                 ];
                 
                 $isi->push((object)[
@@ -207,9 +209,10 @@ class GudangController extends Controller
                     'vehiclenumber'  => '',
                     'flagstatus'     => $items->flagstatus
                 ]);
+
             }
           }
-        
+          
           // Bulk insert
             if (!empty($insertData)) {
                 usemateriallst::insert($insertData);
@@ -234,18 +237,36 @@ foreach($isi as $item) {
     }
 }
 $isi = collect(array_values($grouped));
+        
+        //filter untuk insert atau edit
+        if($details->whereNotNull('nouse')->count()<1){  
+        //mode insert
+            $response = Http::withOptions([
+                'headers' => ['Accept' => 'application/json']
+            ])->asJson()
+            ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api', [
+                'connection' => 'TESTING',
+                'company' => $first->companyinv,
+                'factory' => $first->factoryinv,
+                'isi' => $isi,  
+                'userid' => auth::user()->userid 
+            ]); 
+        //mode edit
+        }else{
+            $response = Http::withOptions([
+                'headers' => ['Accept' => 'application/json']
+            ])->asJson()
+            ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/edituse_api', [
+                'connection' => 'TESTING',
+                'nouse' => $first->nouse,
+                'company' => $first->companyinv,
+                'factory' => $first->factoryinv,
+                'isi' => $isi,  
+                'userid' => auth::user()->userid 
+            ]);
+        }
 
-        $response = Http::withOptions([
-            'headers' => ['Accept' => 'application/json']
-        ])->asJson()
-        ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api', [
-            'connection' => 'TESTING',
-            'company' => $first->companyinv,
-            'factory' => $first->factoryinv,
-            'isi' => $isi,  
-            'userid' => auth::user()->userid 
-        ]);  
-            
+        //log
         if ($response->successful()) {
             Log::info('API success:', $response->json());
         } else {
@@ -254,20 +275,21 @@ $isi = collect(array_values($grouped));
                 'body' => $response->body()
             ]);
         }
-            
+            //success update nouse
             if($response->status()==200){ 
                 if($response->json()['status']==1){
                 usemateriallst::where('rkhno', $request->rkhno)->update(['nouse' => $response->json()['noUse']]);
                 usematerialhdr::where('rkhno', $request->rkhno)->update(['flagstatus' => 'SUBMITTED']);
                 }
             }else{
+                dd($response->json(), $response->body(), $response->status());
                 return redirect()->back()->with('success1', 'Data updated successfully');
             }
         }
-        }
+        
         // ->withErrors(['activitycode' => 'Duplicate Entry, kombinasi kode sudah ada']);
         return redirect()->back()->with('success1', 'Data updated successfully');
-        }else{ return redirect()->back()->with('warning', 'Data Use Sudah Ada!'); }//tutup cek nouse < 1
+
     }
 
 
