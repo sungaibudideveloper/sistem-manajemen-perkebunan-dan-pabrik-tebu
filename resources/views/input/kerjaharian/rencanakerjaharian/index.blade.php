@@ -139,7 +139,10 @@
                         <tr class="text-xs">
                             <td class="border px-2 py-1">{{ $rkhData->firstItem() + $index }}</td>
                             <td class="border px-2 py-1">
-                                {{ $rkh->rkhno }}
+                                <a href="{{ route('input.kerjaharian.rencanakerjaharian.show', $rkh->rkhno) }}" 
+                                class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                    {{ $rkh->rkhno }}
+                                </a>
                             </td>
                             <td class="border px-2 py-1">{{ Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y') }}</td>
                             <td class="border px-2 py-1">{{ $rkh->mandor_nama ?? '-' }}</td>

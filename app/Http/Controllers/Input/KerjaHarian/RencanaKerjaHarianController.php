@@ -594,6 +594,77 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
+    public function show($rkhno)
+    {
+        $companycode = Session::get('companycode');
+        
+        $rkhHeader = DB::table('rkhhdr as r')
+            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('r.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select([
+                'r.*',
+                'm.name as mandor_nama',
+                'ag.groupname as activity_group_name',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3',
+                // Enhanced approval status logic
+                DB::raw('CASE 
+                    WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
+                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
+                    WHEN r.approval1flag = "0" THEN "Declined Level 1"
+                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting Level 2"
+                    WHEN r.approval2flag = "0" THEN "Declined Level 2"
+                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting Level 3"
+                    WHEN r.approval3flag = "0" THEN "Declined Level 3"
+                    WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
+                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
+                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
+                    ELSE "Waiting"
+                END as approval_status'),
+                DB::raw('CASE 
+                    WHEN r.status = "Done" THEN "Done"
+                    ELSE "On Progress"
+                END as current_status')
+            ])
+            ->first();
+        
+        if (!$rkhHeader) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Data RKH tidak ditemukan');
+        }
+        
+        $rkhDetails = DB::table('rkhlst as r')
+            ->leftJoin('herbisidagroup as hg', function($join) {
+                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+                    ->on('r.activitycode', '=', 'hg.activitycode');
+            })
+            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select(['r.*', 'hg.herbisidagroupname', 'a.activityname', 'a.jenistenagakerja'])
+            ->get();
+        
+        $absentenagakerjamodel = new AbsenTenagaKerja;
+        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate));
+        
+        return view('input.kerjaharian.rencanakerjaharian.show', [
+            'title' => 'Detail RKH',
+            'navbar' => 'Input',
+            'nav' => 'Rencana Kerja Harian',
+            'rkhHeader' => $rkhHeader,
+            'rkhDetails' => $rkhDetails,
+            'absentenagakerja' => $absentenagakerja,
+        ]);
+    }
+
     public function destroy($rkhno)
     {
         $companycode = Session::get('companycode');
