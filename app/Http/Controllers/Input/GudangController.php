@@ -27,6 +27,7 @@ class GudangController extends Controller
         ]);
     }
 
+    //dummy
     public function index(Request $request)
     {
         $title = "Gudang";
@@ -37,12 +38,7 @@ class GudangController extends Controller
         }
 
         $perPage = $request->session()->get('perPage', 10);
-        //$activities = Activity::with('group')->orderBy('activitycode', 'asc')->paginate($perPage);
-        //$activityGroup = ActivityGroup::get();
 
-        //foreach ($activities as $index => $item) {
-        //    $item->no = ($activities->currentPage() - 1) * $activities->perPage() + $index + 1;
-        //}
         return view('input.gudang.index')->with([
             'title'         => 'Gudang',
             'perPage'       => $perPage
@@ -118,14 +114,82 @@ class GudangController extends Controller
 
     public function retur(Request $request)
     {
+        $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
+        $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
+        $hfirst = $header->where('herbisidagroupid',$request->herbisidagroupid)->first();
         
-        $usemateriallst->where('itemcode', $request->itemnumber)
-        ->where('rkhno', $request->rkhno)
-        ->where('herbisidagroupid', $request->herbisidagroupid)
-        ->update(['noretur' => 'R-000123']);
+        $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('herbisidagroupid', $hfirst->herbisidagroupid)->where('itemcode', $request->itemcode);
+        $first = $details->first();
 
-        return redirect()->back()->with('success1', 'Sukses Membuat Dokumen Retur');
+        if(empty($first->qtyretur)){
+            return redirect()->back()->with('error', 'Cant Retur! Qty Retur Empty');
+        } 
+        
+        if($first->qtyretur>$first->qty){
+            return redirect()->back()->with('error', 'Cant Retur! Qty Retur > Qty Kirim');
+        }
+        if( strtoupper($first->flagstatus) == 'COMPLETED' ){
+            return redirect()->back()->with('error', 'Items Already Completed');
+        }
+
+        if($first->noretur != null){
+            return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
+        }
+
+
+        $isi = collect();
+        $isi->push((object)[
+            'CompCodeTerima' => $hfirst->companyinv, 
+            'FactoryTerima'  => $hfirst->factoryinv,
+            'ItemGrup'       => substr($first->itemcode, 0, 1),
+            'CompItemcode'   => substr($first->itemcode, 1),
+            'prunit'         => $first->unit,
+            'itemprice'      =>  0,
+            'currcode'       => 'IDR',
+            'itemnote'       => $hfirst->herbisidagroupname,
+            'qtybpb'         => $first->qtyretur,
+            'Keterangan'     => $hfirst->herbisidagroupname.' - '.$hfirst->mandorname ?? '',  
+            'vehiclenumber'  => '',
+            'flagstatus'     => $hfirst->flagstatus
+        ]);
+
+        $response = Http::withOptions([
+            'headers' => ['Accept' => 'application/json']
+        ])->asJson()
+        ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/returuse_api', [
+            'connection' => 'TESTING',
+            'company' => $hfirst->companyinv,
+            'factory' => $hfirst->factoryinv,
+            'isi' => $isi,  
+            'userid' => auth::user()->userid 
+        ]); 
+
+        //log
+        if ($response->successful()) {
+            Log::info('API success:', $response->json());
+        } else {
+            Log::error('API error', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+        }
+            //success update nouse
+            if($response->status()==200){ 
+                if($response->json()['status']==1){
+                usemateriallst::where('rkhno', $request->rkhno)->where('itemcode', $first->itemcode)
+                ->where('herbisidagroupid',$hfirst->herbisidagroupid)->update(['noretur' => $response->json()['noretur']]);
+                }
+            }else{
+                dd($response->json(), $response->body(), $response->status());
+            }
+
+        // $usemateriallst->where('itemcode', $request->itemnumber)
+        // ->where('rkhno', $request->rkhno)
+        // ->where('herbisidagroupid', $request->herbisidagroupid)
+        // ->update(['noretur' => 'R-000123']);
+
+        return redirect()->back()->with('success1', 'Sukses Membuat Dokumen Retur '. $response->json()['noretur']);
     }
 
     public function submit(Request $request)
