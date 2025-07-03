@@ -1,5 +1,6 @@
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
+    <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     
     <!-- Wrapper div untuk layout sidebar + content -->
     <div class="flex min-h-screen bg-gray-50">
