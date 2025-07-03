@@ -56,12 +56,12 @@ class RencanaKerjaHarianController extends Controller
                 // Enhanced approval status logic
                 DB::raw('CASE 
                     WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
-                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
-                    WHEN r.approval1flag = "0" THEN "Declined Level 1"
-                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting Level 2"
-                    WHEN r.approval2flag = "0" THEN "Declined Level 2"
-                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting Level 3"
-                    WHEN r.approval3flag = "0" THEN "Declined Level 3"
+                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting"
+                    WHEN r.approval1flag = "0" THEN "Declined"
+                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting"
+                    WHEN r.approval2flag = "0" THEN "Declined"
+                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting"
+                    WHEN r.approval3flag = "0" THEN "Declined"
                     WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
                          (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
                          (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"

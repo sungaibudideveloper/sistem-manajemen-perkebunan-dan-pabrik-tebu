@@ -4,19 +4,7 @@
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
   <!-- Header Information -->
-  @php
-    $cardBgClass = 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200';
-    
-    // Determine card background based on status
-    if ($rkhHeader->status === 'Done') {
-      $cardBgClass = 'bg-gradient-to-r from-green-50 to-green-100 border-green-200';
-    } elseif (isset($rkhHeader->approval1flag) && $rkhHeader->approval1flag === '1') {
-      $cardBgClass = 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200';
-    } elseif (isset($rkhHeader->approval1flag) && $rkhHeader->approval1flag === '0') {
-      $cardBgClass = 'bg-gradient-to-r from-red-50 to-red-100 border-red-200';
-    }
-  @endphp
-  <div class="rounded-lg p-6 mb-8 border shadow-sm {{ $cardBgClass }}">
+  <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100 shadow-sm">
     <div class="flex justify-between items-start">
       <!-- LEFT: RKH Info -->
       <div class="flex flex-col space-y-6 w-2/3">
@@ -30,31 +18,62 @@
           </p>
         </div>
 
-        <!-- Status Badge -->
-        <div class="flex items-center space-x-4">
+        <!-- Status Badges -->
+        <div class="flex items-center space-x-6">
           @php
+            // Status Approval
             $approvalStatus = 'Waiting';
-            $statusClass = 'bg-yellow-100 text-yellow-800';
+            $approvalClass = 'bg-yellow-100 text-yellow-800';
+            $approvalCount = '';
             
-            if ($rkhHeader->status === 'Done') {
-              $approvalStatus = 'Done';
-              $statusClass = 'bg-green-100 text-green-800';
-            } elseif (isset($rkhHeader->approval1flag) && $rkhHeader->approval1flag === '1') {
-              $approvalStatus = 'Approved';
-              $statusClass = 'bg-blue-100 text-blue-800';
-            } elseif (isset($rkhHeader->approval1flag) && $rkhHeader->approval1flag === '0') {
-              $approvalStatus = 'Declined';
-              $statusClass = 'bg-red-100 text-red-800';
+            if (isset($rkhHeader->jumlahapproval) && $rkhHeader->jumlahapproval > 0) {
+              // Count approved levels
+              $approvedCount = 0;
+              if ($rkhHeader->approval1flag === '1') $approvedCount++;
+              if ($rkhHeader->approval2flag === '1') $approvedCount++;
+              if ($rkhHeader->approval3flag === '1') $approvedCount++;
+              
+              if ($rkhHeader->approval1flag === '0' || $rkhHeader->approval2flag === '0' || $rkhHeader->approval3flag === '0') {
+                $approvalStatus = 'Declined';
+                $approvalClass = 'bg-red-100 text-red-800';
+                // Find which level was declined
+                if ($rkhHeader->approval1flag === '0') {
+                  $approvalStatus = 'Declined Level 1';
+                } elseif ($rkhHeader->approval2flag === '0') {
+                  $approvalStatus = 'Declined Level 2';
+                } elseif ($rkhHeader->approval3flag === '0') {
+                  $approvalStatus = 'Declined Level 3';
+                }
+              } elseif ($approvedCount === $rkhHeader->jumlahapproval) {
+                $approvalStatus = 'Approved';
+                $approvalClass = 'bg-green-100 text-green-800';
+              } else {
+                $approvalCount = "({$approvedCount}/{$rkhHeader->jumlahapproval})";
+                $approvalStatus = "Waiting for Approval {$approvalCount}";
+              }
+            } else {
+              $approvalStatus = 'No Approval Required';
+              $approvalClass = 'bg-gray-100 text-gray-800';
             }
+            
+            // Status RKH
+            $rkhStatus = $rkhHeader->status === 'Done' ? 'Done' : 'On Progress';
+            $rkhStatusClass = $rkhHeader->status === 'Done' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
           @endphp
           
-          <div class="text-sm text-gray-600">
-            <span class="font-medium">Status:</span>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium text-gray-600">Approval Status:</span>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $approvalClass }}">
+              {{ $approvalStatus }}
+            </span>
           </div>
           
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $statusClass }}">
-            {{ $approvalStatus }}
-          </span>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium text-gray-600">RKH Status:</span>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $rkhStatusClass }}">
+              {{ $rkhStatus }}
+            </span>
+          </div>
         </div>
 
         <!-- Mandor & Date Info -->
@@ -317,10 +336,7 @@
     </button>
 
     <!-- Edit Button (if allowed) -->
-    @php
-      $isApproved = isset($rkhHeader->approval1flag) && $rkhHeader->approval1flag === '1';
-    @endphp
-    @if($rkhHeader->status !== 'Done' && !$isApproved)
+    @if($rkhHeader->status !== 'Done')
       <button
         onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.edit', $rkhHeader->rkhno) }}';"
         class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors flex items-center"
