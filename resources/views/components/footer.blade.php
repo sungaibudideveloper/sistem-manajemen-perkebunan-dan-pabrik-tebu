@@ -4,7 +4,7 @@
             <div class="flex items-center space-x-4">
                 <span>&copy; {{ date('Y') }} PT. Sungai Budi Group</span>
                 <span class="hidden sm:inline text-gray-400">•</span>
-                <span class="hidden sm:inline">Created by Jakarta & Lampung IT Team</span>
+                <span class="hidden sm:inline">Created by Jakarta and Lampung IT Team</span>
             </div>
             
             <div class="flex items-center space-x-2 text-xs text-gray-500">
