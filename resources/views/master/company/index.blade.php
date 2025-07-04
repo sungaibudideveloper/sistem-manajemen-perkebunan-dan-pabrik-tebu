@@ -54,7 +54,7 @@
                         @foreach ($company as $item)
                             <tr>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
-                                    {{ $item->no }}.</td>
+                                    {{ $item->no }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companycode }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
