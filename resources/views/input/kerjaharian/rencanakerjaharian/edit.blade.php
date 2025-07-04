@@ -211,11 +211,11 @@
     </div>
 
     <!-- KANAN: Ringkasan Tenaga Kerja -->
-    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 min-w-[320px]">
+    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center">
           <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-          <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+          <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
         </div>
         <!-- Mandor & Tanggal Info (moved to top right) -->
         <div class="text-right">
@@ -592,6 +592,14 @@ document.addEventListener('DOMContentLoaded', function() {
   rows.forEach(row => attachListeners(row));
   calculateTotals();
 
+  // TAMBAHAN: Initialize absen summary dengan data mandor yang sudah ada
+  const mandorId = '{{ old('mandor_id', $rkhHeader->mandorid) }}';
+  const mandorName = '{{ old('mandor', $rkhHeader->mandor_nama) }}';
+  
+  if (mandorId && mandorName) {
+    updateAbsenSummary(mandorId, mandorId, mandorName);
+  }
+
   // MODERN FORM SUBMISSION with AJAX
   document.getElementById('rkh-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -838,25 +846,28 @@ window.addEventListener('plot-changed', function(e) {
   updateLuasFromPlot(plotCode, rowIndex);
 });
 
-// Absen summary function
+// Absen summary function - EDIT VERSION
 function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
   if (!selectedMandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
     document.getElementById('summary-perempuan').textContent = '0';
     document.getElementById('summary-total').textContent = '0';
+    // Menggunakan tanggal dari RKH header yang sedang diedit
     const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
     document.getElementById('absen-info').textContent = selectedDate;
     return;
   }
 
+  // Menggunakan tanggal dari RKH header yang sedang diedit
   const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
 
   if (selectedMandorCode && selectedMandorName) {
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
   }
 
+  // UPDATE: ganti idmandor jadi mandorid sesuai struktur data baru
   const filteredAbsen = window.absenData.filter(absen => 
-    absen.idmandor === selectedMandorId
+    absen.mandorid === selectedMandorId
   );
 
   let lakiCount = 0;
@@ -870,11 +881,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     }
   });
 
-  const totalCount = lakiCount + perempuanCount;
-
   document.getElementById('summary-laki').textContent = lakiCount;
   document.getElementById('summary-perempuan').textContent = perempuanCount;
-  document.getElementById('summary-total').textContent = totalCount;
+  document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
 
 // Existing calculation functions

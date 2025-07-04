@@ -162,11 +162,11 @@
     </div>
 
     <!-- KANAN: Ringkasan Tenaga Kerja -->
-    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 min-w-[320px]">
+    <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center">
           <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-          <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+          <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
         </div>
         <!-- Mandor & Tanggal Info (moved to top right) -->
         <div class="text-right">
@@ -841,8 +841,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
   }
 
+  // UPDATE: ganti idmandor jadi mandorid sesuai struktur data baru
   const filteredAbsen = window.absenData.filter(absen => 
-    absen.idmandor === selectedMandorId
+    absen.mandorid === selectedMandorId
   );
 
   let lakiCount = 0;
@@ -856,11 +857,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     }
   });
 
-  const totalCount = lakiCount + perempuanCount;
-
   document.getElementById('summary-laki').textContent = lakiCount;
   document.getElementById('summary-perempuan').textContent = perempuanCount;
-  document.getElementById('summary-total').textContent = totalCount;
+  document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
 
 // Alpine.js store for modal
