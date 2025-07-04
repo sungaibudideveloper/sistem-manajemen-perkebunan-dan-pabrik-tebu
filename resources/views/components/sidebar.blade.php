@@ -153,7 +153,7 @@
      :class="$store.sidebar.isMinimized ? 'w-16' : 'w-72'">
     
     <!-- Header -->
-    <div class="flex h-16 shrink-0 items-center justify-between bg-gradient-to-r from-gray-50 to-white border-b border-gray-200"
+    <div class="flex h-[94px] shrink-0 items-center justify-between bg-gradient-to-r from-gray-50 to-white border-b border-gray-200"
          :class="$store.sidebar.isMinimized ? 'px-3' : 'px-6'">
         <a href="{{ route('home') }}" class="flex items-center space-x-3">
             <!-- Logo with subtle shadow -->
@@ -353,24 +353,6 @@
 </div>
 
 <script>
-// Alpine.js Store untuk sidebar state
-document.addEventListener('alpine:init', () => {
-    Alpine.store('sidebar', {
-        isMinimized: false,
-        
-        toggle() {
-            this.isMinimized = !this.isMinimized;
-            // Dispatch event untuk komunikasi dengan komponen lain
-            window.dispatchEvent(new CustomEvent('sidebar-toggle', {
-                detail: { 
-                    minimized: this.isMinimized,
-                    width: this.isMinimized ? 64 : 288 // w-16 = 64px, w-72 = 288px
-                }
-            }));
-        }
-    });
-});
-
 // Sidebar component data
 function sidebarData() {
     return {

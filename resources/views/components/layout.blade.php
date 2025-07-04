@@ -139,10 +139,11 @@
         // Global Alpine.js store for app-wide state
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
-                isMinimized: false,
+                isMinimized: JSON.parse(localStorage.getItem('sidebar-minimized') || 'false'),
                 
                 toggle() {
                     this.isMinimized = !this.isMinimized;
+                    localStorage.setItem('sidebar-minimized', this.isMinimized);
                     // Dispatch event for other components to listen
                     window.dispatchEvent(new CustomEvent('sidebar-toggle', {
                         detail: { minimized: this.isMinimized }
