@@ -4,7 +4,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     
     <!-- Wrapper div untuk layout sidebar + content -->
-    <div class="flex min-h-screen bg-gray-50">
+    <div class="flex min-h-screen bg-gray-200">
         <!-- Sidebar -->
         <x-sidebar 
             :navigationMenus="$navigationMenus"

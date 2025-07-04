@@ -153,7 +153,7 @@
      :class="$store.sidebar.isMinimized ? 'w-16' : 'w-72'">
     
     <!-- Header -->
-    <div class="flex h-[94px] shrink-0 items-center justify-between bg-gradient-to-r from-gray-50 to-white border-b border-gray-200"
+    <div class="flex h-[94px] shrink-0 items-center justify-between bg-green-50 border-b border-gray-200"
          :class="$store.sidebar.isMinimized ? 'px-3' : 'px-6'">
         <a href="{{ route('home') }}" class="flex items-center space-x-3">
             <!-- Logo with subtle shadow -->
@@ -169,14 +169,14 @@
                  x-transition:leave="transition ease-in duration-150"
                  x-transition:leave-start="opacity-100 transform scale-100"
                  x-transition:leave-end="opacity-0 transform scale-95">
-                <div class="text-gray-900 font-bold text-base leading-tight">Sungaibudi</div>
+                <div class="text-gray-900 font-bold text-base leading-tight">Sungai Budi Group</div>
                 <div class="text-gray-500 text-xs font-medium">Sugarcane Management System</div>
             </div>
         </a>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 py-6 space-y-1 overflow-y-auto" 
+    <nav class="bg-green-50 flex-1 py-6 space-y-1 overflow-y-auto" 
          :class="$store.sidebar.isMinimized ? 'px-2' : 'px-4'">
         @foreach ($navigationMenus as $menu)
             @php

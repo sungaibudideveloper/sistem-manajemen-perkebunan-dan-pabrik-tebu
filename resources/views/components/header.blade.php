@@ -123,7 +123,7 @@
 
     <!-- Breadcrumb/Navigation hint -->
     @if(isset($navhint))
-        <div class="border-t border-gray-200 bg-gray-50 px-4 py-2 sm:px-6 lg:px-8">
+        <div class="border-t border-gray-200 bg-green-50 px-4 py-2 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center">
                 <div class="text-sm text-gray-600">
                     {{ $navhint }}

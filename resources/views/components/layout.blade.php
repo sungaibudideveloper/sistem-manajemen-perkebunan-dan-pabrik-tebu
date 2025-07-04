@@ -62,7 +62,7 @@
             </x-header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto">
+            <main class="bg-gray-200 flex-1 overflow-y-auto">
                 {{ $hero ?? null }}
                 <div class="px-4 py-6 sm:px-6 lg:px-8">
                     @error('duplicateClosing')
