@@ -22,7 +22,7 @@
         
         <div class="flex justify-between items-center border-b border-slate-200 px-6 py-4">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
@@ -43,7 +43,7 @@
                 <label class="block text-sm font-medium text-slate-700 mb-3">Choose Company</label>
                 <select name="dropdown_value" 
                         x-model="selectedCompany"
-                        class="w-full border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+                        class="w-full border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors" 
                         required>
                     <option value="" disabled class="text-slate-400">--Select Company--</option>
                     @foreach ($companies as $comp)
@@ -62,8 +62,8 @@
                 </button>
                 <button type="submit" 
                         :disabled="!selectedCompany"
-                        :class="selectedCompany ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gray-300 cursor-not-allowed'"
-                        class="px-6 py-2 text-sm font-medium text-white border border-transparent rounded-xl focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
+                        :class="selectedCompany ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' : 'bg-gray-300 cursor-not-allowed'"
+                        class="px-6 py-2 text-sm font-medium text-white border border-transparent rounded-xl focus:ring-2 focus:ring-green-500 transition-all shadow-sm">
                     Confirm
                 </button>
             </div>
