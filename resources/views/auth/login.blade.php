@@ -1,154 +1,325 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-100">
+<html lang="en" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-    <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <title>Login</title>
+    <title>Login - Sungai Budi Group Sugarcane Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background-image 1.5s ease-in-out;
+            font-family: 'Inter', system-ui, sans-serif;
         }
-    </style>
-    <style>
-        .text-shadow {
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #065f46 0%, #047857 25%, #059669 50%, #10b981 75%, #34d399 100%);
         }
-    </style>
-    <style>
-        .img-shadow {
-            box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.3);
+        
+        .glass-effect {
+            backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .floating-animation:nth-child(2) {
+            animation-delay: -2s;
+        }
+        
+        .floating-animation:nth-child(3) {
+            animation-delay: -4s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(1deg); }
+            66% { transform: translateY(10px) rotate(-1deg); }
+        }
+        
+        .input-focus {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .input-focus:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.15);
+        }
+        
+        .btn-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.3);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.8s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .sugar-cane-icon {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
     </style>
 </head>
 
-<body class="h-full" id="dynamic-background">
-    <div class="min-h-full">
-        <div class="flex min-h-full flex-col justify-center px-6 pt-12 pb-6 lg:px-8">
-            <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-                <img class="mx-auto h-14 w-auto img-shadow" src="{{ asset('img/Logo-1.png') }}" alt="Sungai Budi">
-                <h2 class="mt-8 pb-8 text-center text-2xl font-bold tracking-tight text-gray-50 text-shadow">Log in to
-                    your account</h2>
-
-                <div class="bg-white px-8 pt-4 pb-8 rounded-lg shadow-lg">
+<body class="h-full bg-gray-50 overflow-hidden">
+    <div class="min-h-screen flex">
+        <!-- Left Side - Brand/Visual -->
+        <div class="hidden lg:flex lg:w-1/2 gradient-bg relative overflow-hidden">
+            <!-- Floating Elements -->
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="floating-animation absolute top-20 left-20 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+                <div class="floating-animation absolute top-60 right-32 w-24 h-24 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+                <div class="floating-animation absolute bottom-32 left-40 w-40 h-40 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+            </div>
+            
+            <!-- Content -->
+            <div class="relative z-10 flex flex-col justify-center px-16 py-20">
+                <div class="slide-in-left">
+                    <!-- Logo/Icon -->
+                    <div class="mb-12">
+                        <div class="w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                            <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 3c4.96 0 9 4.04 9 9s-4.04 9-9 9-9-4.04-9-9 4.04-9 9-9zm0 2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Title -->
+                    <h1 class="text-3xl font-bold text-white mb-6 leading-tight">
+                        Sungai Budi Group<br>
+                        <span class="text-primary-200">Sugarcane Management System</span>
+                    </h1>
+                    
+                    <!-- Description -->
+                    <p class="text-xl text-primary-100 mb-8 max-w-md leading-relaxed">
+                        Streamline your sugarcane operations with our comprehensive monitoring and management system.
+                    </p>
+                    
+                    <!-- Features -->
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
+                            <span class="text-primary-100">Real-time field monitoring</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
+                            <span class="text-primary-100">Harvest optimization</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
+                            <span class="text-primary-100">Quality control tracking</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side - Login Form -->
+        <div class="flex-1 flex items-center justify-center px-6 py-12 lg:px-8">
+            <div class="w-full max-w-md fade-in">
+                <!-- Mobile Logo -->
+                <div class="lg:hidden mb-8 text-center">
+                    <div class="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 3c4.96 0 9 4.04 9 9s-4.04 9-9 9-9-4.04-9-9 4.04-9 9-9zm0 2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900">Sungai Budi Group<br>Sugarcane Management System</h2>
+                </div>
+                
+                <!-- Login Header -->
+                <div class="text-center mb-8">
+                    <h3 class="text-3xl font-bold text-gray-900 mb-2">Welcome back</h3>
+                    <p class="text-gray-600">Please sign in to your account</p>
+                </div>
+                
+                <!-- Login Form -->
+                <div class="glass-effect rounded-3xl p-8 shadow-2xl">
+                    <!-- Error Display -->
                     @if ($errors->any())
-                        <div class="p-4 text-red-700 bg-red-100 rounded-lg mb-2 mt-2 text-sm">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
+                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <div class="text-red-700 text-sm">
+                                    @foreach ($errors->all() as $error)
+                                        <div>{{ $error }}</div>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                     @endif
-
+                    
                     <form class="space-y-6" action="{{ route('login') }}" method="POST">
                         @csrf
+                        <!-- Username Field -->
                         <div>
-                            <label for="userid" class="block text-sm font-medium text-gray-900">Username</label>
-                            <div class="mt-2">
-                                <input id="usernm" name="userid" value="{{ old('userid') }}" type="text" required
-                                    placeholder="Enter Username"
-                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm
-                                {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : 'ring-gray-300 focus:ring-gray-600' }}">
+                            <label for="userid" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="userid" 
+                                    name="userid" 
+                                    value="{{ old('userid') }}"
+                                    required 
+                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
+                                    placeholder="Enter your username"
+                                >
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-
+                        
+                        <!-- Password Field -->
                         <div>
-                            <div class="flex items-center justify-between">
-                                <label for="password" class="block text-sm font-medium text-gray-900">Password</label>
-                            </div>
-                            <div class="mt-2 relative">
-                                <input id="password" name="password" type="password" autocomplete="current-password"
-                                    placeholder="Enter password" value="{{ old('password') }}" required
-                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm
-                                    {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : 'ring-gray-300 focus:ring-gray-600' }}">
-                                <button type="button" id="toggle-password-visibility"
-                                    class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                                    <svg id="eye-icon" class="w-6 h-6 text-gray-400 dark:text-white" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                        fill="currentColor" viewBox="0 0 24 24">
-                                        <path fill-rule="evenodd"
-                                            d="M4.998 7.78C6.729 6.345 9.198 5 12 5c2.802 0 5.27 1.345 7.002 2.78a12.713 12.713 0 0 1 2.096 2.183c.253.344.465.682.618.997.14.286.284.658.284 1.04s-.145.754-.284 1.04a6.6 6.6 0 0 1-.618.997 12.712 12.712 0 0 1-2.096 2.183C17.271 17.655 14.802 19 12 19c-2.802 0-5.27-1.345-7.002-2.78a12.712 12.712 0 0 1-2.096-2.183 6.6 6.6 0 0 1-.618-.997C2.144 12.754 2 12.382 2 12s.145-.754.284-1.04c.153-.315.365-.653.618-.997A12.714 12.714 0 0 1 4.998 7.78ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                                            clip-rule="evenodd" />
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    value="{{ old('password') }}"
+                                    required 
+                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
+                                    placeholder="Enter your password"
+                                >
+                                <button 
+                                    type="button" 
+                                    onclick="togglePasswordVisibility()"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                >
+                                    <svg id="eye-icon" class="w-5 h-5 text-gray-400 hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </button>
                             </div>
                         </div>
-
-                        <div>
-                            <button type="submit"
-                                class="flex items-center gap-2 w-full justify-center rounded-md bg-gray-800 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600">
-                                <svg class="w-4 h-4" aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="3"
-                                        d="M16 12H4m12 0-4 4m4-4-4-4m3-4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2" />
-                                </svg>
-                                <span>
-                                    Log in
-                                </span>
-                            </button>
+                        
+                        <!-- Remember Me & Forgot Password -->
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                                <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                            </label>
+                            <a href="#" class="text-sm text-primary-600 hover:text-primary-500 transition-colors">
+                                Forgot password?
+                            </a>
                         </div>
+                        
+                        <!-- Login Button -->
+                        <button 
+                            type="submit" 
+                            class="btn-hover w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                            </svg>
+                            <span>Sign In</span>
+                        </button>
                     </form>
-                    <p class="mt-10 text-center text-sm font-bold text-gray-500">
-                        Monitoring
-                    </p>
-                    <p class="text-center text-xs text-gray-500">
-                        PT. Sungai Budi Group
-                    </p>
+                    
+                    <!-- Footer -->
+                    <div class="mt-8 text-center">
+                        <p class="text-sm text-gray-500 mb-1">
+                            <span class="font-semibold">Sungai Budi Group</span>
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            Sugarcane Management System
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <script>
-        const images = [
-            // "{{ asset('img/bg/3.jpg') }}",
-            "{{ asset('img/bg/4.jpg') }}",
-            "{{ asset('img/bg/5.jpg') }}",
-        ];
-
-        let currentIndex = 0;
-        const body = document.getElementById('dynamic-background');
-
-        function changeBackground() {
-            currentIndex = (currentIndex + 1) % images.length;
-            body.style.backgroundImage = `url('${images[currentIndex]}')`;
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L12 12l2.122-2.122m-5.256 5.256L12 12l2.122 2.122m-5.256-5.256L12 12"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6"></path>
+                `;
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                `;
+            }
         }
-
-        body.style.backgroundImage = `url('${images[0]}')`;
-
-        setInterval(changeBackground, 5000);
-    </script>
-    <script>
-        const passwordInput = document.getElementById('password');
-        const togglePasswordVisibility = document.getElementById('toggle-password-visibility');
-        const eyeIcon = document.getElementById('eye-icon');
-
-        togglePasswordVisibility.addEventListener('click', () => {
-            const isPasswordVisible = passwordInput.type === 'text';
-            passwordInput.type = isPasswordVisible ? 'password' : 'text';
-
-            // Update SVG icon
-            eyeIcon.innerHTML = isPasswordVisible ?
-                `<path fill-rule="evenodd" d="M4.998 7.78C6.729 6.345 9.198 5 12 5c2.802 0 5.27 1.345 7.002 2.78a12.713 12.713 0 0 1 2.096 2.183c.253.344.465.682.618.997.14.286.284.658.284 1.04s-.145.754-.284 1.04a6.6 6.6 0 0 1-.618.997 12.712 12.712 0 0 1-2.096 2.183C17.271 17.655 14.802 19 12 19c-2.802 0-5.27-1.345-7.002-2.78a12.712 12.712 0 0 1-2.096-2.183 6.6 6.6 0 0 1-.618-.997C2.144 12.754 2 12.382 2 12s.145-.754.284-1.04c.153-.315.365-.653.618-.997A12.714 12.714 0 0 1 4.998 7.78ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/>` :
-                `<path d="m4 15.6 3.055-3.056A4.913 4.913 0 0 1 7 12.012a5.006 5.006 0 0 1 5-5c.178.009.356.027.532.054l1.744-1.744A8.973 8.973 0 0 0 12 5.012c-5.388 0-10 5.336-10 7A6.49 6.49 0 0 0 4 15.6Z"/>
-                   <path d="m14.7 10.726 4.995-5.007A.998.998 0 0 0 18.99 4a1 1 0 0 0-.71.305l-4.995 5.007a2.98 2.98 0 0 0-.588-.21l-.035-.01a2.981 2.981 0 0 0-3.584 3.583c0 .012.008.022.01.033.05.204.12.402.211.59l-4.995 4.983a1 1 0 1 0 1.414 1.414l4.995-4.983c.189.091.386.162.59.211.011 0 .021.007.033.01a2.982 2.982 0 0 0 3.584-3.584c0-.012-.008-.023-.011-.035a3.05 3.05 0 0 0-.21-.588Z"/>
-                   <path d="m19.821 8.605-2.857 2.857a4.952 4.952 0 0 1-5.514 5.514l-1.785 1.785c.767.166 1.55.25 2.335.251 6.453 0 10-5.258 10-7 0-1.166-1.637-2.874-2.179-3.407Z"/>`;
+        
+        // Add smooth focus effects
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('scale-105');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('scale-105');
+            });
         });
     </script>
-
 </body>
 
 </html>

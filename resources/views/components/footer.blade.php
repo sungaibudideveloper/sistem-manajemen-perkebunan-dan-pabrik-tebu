@@ -8,7 +8,7 @@
             </div>
             
             <div class="flex items-center space-x-2 text-xs text-gray-500">
-                <span>v1.0.0</span>
+                <span>v2.1</span>
                 <span>•</span>
                 <span>{{ date('H:i') }}</span>
             </div>

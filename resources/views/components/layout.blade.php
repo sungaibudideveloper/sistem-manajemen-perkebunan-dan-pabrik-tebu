@@ -62,7 +62,7 @@
             </x-header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto">
+            <main class="bg-gray-200 flex-1 overflow-y-auto">
                 {{ $hero ?? null }}
                 <div class="px-4 py-6 sm:px-6 lg:px-8">
                     @error('duplicateClosing')
@@ -139,10 +139,11 @@
         // Global Alpine.js store for app-wide state
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
-                isMinimized: false,
+                isMinimized: JSON.parse(localStorage.getItem('sidebar-minimized') || 'false'),
                 
                 toggle() {
                     this.isMinimized = !this.isMinimized;
+                    localStorage.setItem('sidebar-minimized', this.isMinimized);
                     // Dispatch event for other components to listen
                     window.dispatchEvent(new CustomEvent('sidebar-toggle', {
                         detail: { minimized: this.isMinimized }

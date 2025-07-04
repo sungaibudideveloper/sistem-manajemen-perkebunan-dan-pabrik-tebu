@@ -1,10 +1,10 @@
-<header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+<header class="bg-green-700 shadow-sm border-b border-gray-200 sticky top-0 z-40">
     <div class="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Desktop toggle button + Mobile menu button + Page title -->
         <div class="flex items-center space-x-4">
             <!-- Desktop Sidebar Toggle Button -->
             <button @click="toggleSidebar()" 
-                    class="hidden lg:flex p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                    class="hidden lg:flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">Toggle sidebar</span>
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -13,7 +13,7 @@
 
             <!-- Mobile menu button -->
             <button @click="sidebarOpen = !sidebarOpen" 
-                    class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                    class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">Open sidebar</span>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -21,13 +21,13 @@
             </button>
 
             <!-- Page Title -->
-            <h1 class="text-lg font-semibold text-gray-900 truncate">{{ $slot }}</h1>
+            <h1 class="text-lg font-semibold text-white truncate">{{ $slot }}</h1>
         </div>
 
         <!-- Center: Company Info (hidden on mobile) - Clickable -->
         <div class="hidden md:flex items-center space-x-2 text-sm text-gray-600">
             <button @click="$dispatch('open-company-modal')" 
-                    class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors group">
+                    class="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors group">
                 <div class="flex items-center space-x-2">
                     <div class="h-2 w-2 bg-green-500 rounded-full"></div>
                     <span class="font-medium">{{ session('companycode') }}</span>
@@ -44,7 +44,7 @@
         <div class="flex items-center space-x-3">
             <!-- Notifications -->
             <a href="{{ route('notifications.index') }}" 
-               class="relative p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+               class="relative p-2 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">View notifications</span>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -56,7 +56,7 @@
             <!-- User Profile Dropdown -->
             <div x-data="{ open: false }" @click.away="open = false" class="relative">
                 <button @click="open = !open" 
-                        class="flex items-center space-x-2 p-1 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                        class="flex items-center space-x-2 p-1 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
                     <img class="h-8 w-8 rounded-full ring-2 ring-gray-200" 
                          src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
                          alt="{{ Auth::user()->name }}">
@@ -96,7 +96,7 @@
 
                     <!-- Change Company Option -->
                     <button @click="$dispatch('open-company-modal')" 
-                            class="flex w-full items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                            class="flex w-full items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition-colors">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -108,7 +108,7 @@
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" 
-                                class="flex w-full items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                class="flex w-full items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition-colors">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                       d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -123,7 +123,7 @@
 
     <!-- Breadcrumb/Navigation hint -->
     @if(isset($navhint))
-        <div class="border-t border-gray-200 bg-gray-50 px-4 py-2 sm:px-6 lg:px-8">
+        <div class="border-t border-gray-200 bg-green-50 px-4 py-2 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center">
                 <div class="text-sm text-gray-600">
                     {{ $navhint }}
