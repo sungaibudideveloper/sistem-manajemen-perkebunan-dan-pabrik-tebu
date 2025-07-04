@@ -8,7 +8,8 @@
         <div class="mx-auto bg-white rounded-md shadow-md p-6">
             {{-- Search & Filters --}}
             <div class="flex flex-col md:flex-row justify-between mb-4">
-                <div class="flex justify-between items-center w-full">
+                {{-- Search + Approve RKH in one div --}}
+                <div class="flex flex-wrap gap-2 items-center">
                     <form class="flex items-center space-x-2" action="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" method="GET">
                         <input
                             type="text"
@@ -28,7 +29,27 @@
                             Search
                         </button>
                     </form>
-                    {{-- CREATE RKH BUTTON WITH MODAL --}}
+
+                    {{-- RKH Approval Button --}}
+                    <button
+                        type="button"
+                        @click="showRkhApprovalModal = true; loadPendingApprovals()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded flex items-center"
+                    >
+                        Approve RKH
+                    </button>
+                    {{-- RKH Approval Button --}}
+                    <button
+                        type="button"
+                        @click="showLkhApprovalModal = true; loadPendingLKHApprovals()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded flex items-center"
+                    >
+                        Approve LKH
+                    </button>
+                </div>
+
+                {{-- Create RKH Button --}}
+                <div class="mt-2 md:mt-0">
                     <button
                         @click="showDateModal = true"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-xs rounded"
@@ -37,6 +58,7 @@
                     </button>
                 </div>
             </div>
+
 
             <form action="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" method="GET" id="filterForm">
                 <input type="hidden" name="search" value="{{ $search }}">
@@ -79,31 +101,11 @@
 
                     <!-- RIGHT: 2 action buttons -->
                     <div class="flex items-center space-x-2">
-                        <!-- LKH Approval Button -->
+                        
+                        <!-- Absen & Generate DTH Buttons -->
                         <button
                             type="button"
-                            @click="showLkhApprovalModal = true; loadPendingLKHApprovals()"
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 text-xs rounded flex items-center"
-                        >
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Approve LKH
-                        </button>
-                        <!-- RKH Approval Button -->
-                        <button
-                            type="button"
-                            @click="showRkhApprovalModal = true; loadPendingApprovals()"
-                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 text-xs rounded flex items-center"
-                        >
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Approve RKH
-                        </button>
-                        <button
-                            type="button"
-                            @click="showAbsenModal = true"
+                            @click="openAbsenModal()"
                             class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Check Data Absen
@@ -111,7 +113,7 @@
                         <button
                             type="button"
                             @click="showGenerateDTHModal = true"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs rounded"
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Generate DTH
                         </button>
@@ -139,18 +141,31 @@
                         <tr class="text-xs">
                             <td class="border px-2 py-1">{{ $rkhData->firstItem() + $index }}</td>
                             <td class="border px-2 py-1">
-                                {{ $rkh->rkhno }}
+                                <a href="{{ route('input.kerjaharian.rencanakerjaharian.show', $rkh->rkhno) }}" 
+                                class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                    {{ $rkh->rkhno }}
+                                </a>
                             </td>
                             <td class="border px-2 py-1">{{ Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y') }}</td>
                             <td class="border px-2 py-1">{{ $rkh->mandor_nama ?? '-' }}</td>
 
                             <td class="border px-2 py-1 text-center">
                                 @if($rkh->approval_status == 'Approved')
-                                    <span class="px-2 py-0.5 text-xs font-semibold text-green-800 bg-green-100 rounded">Approved</span>
+                                    <button
+                                        @click="showRkhApprovalInfoModal = true; selectedRkhno = '{{ $rkh->rkhno }}'; loadRkhApprovalDetail('{{ $rkh->rkhno }}')"
+                                        class="px-2 py-0.5 text-xs font-semibold text-green-800 bg-green-100 rounded hover:bg-green-200 transition-colors cursor-pointer"
+                                    >
+                                        Approved
+                                    </button>
                                 @elseif($rkh->approval_status == 'No Approval Required')
                                     <span class="px-2 py-0.5 text-xs font-semibold text-blue-800 bg-blue-100 rounded">No Approval Required</span>
                                 @elseif(str_contains($rkh->approval_status, 'Declined'))
-                                    <span class="px-2 py-0.5 text-xs font-semibold text-red-800 bg-red-100 rounded">{{ $rkh->approval_status }}</span>
+                                    <button
+                                        @click="showRkhApprovalInfoModal = true; selectedRkhno = '{{ $rkh->rkhno }}'; loadRkhApprovalDetail('{{ $rkh->rkhno }}')"
+                                        class="px-2 py-0.5 text-xs font-semibold text-red-800 bg-red-100 rounded hover:bg-red-200 transition-colors cursor-pointer"
+                                    >
+                                        {{ $rkh->approval_status }}
+                                    </button>
                                 @else
                                     @php
                                         $total = $rkh->jumlahapproval ?? 0;
@@ -160,9 +175,9 @@
                                         if($rkh->approval3flag == '1') $completed++;
                                         
                                         if($total == 0) {
-                                            $waitingText = "Waiting";
+                                            $waitingText = "Waiting for Approval";
                                         } else {
-                                            $waitingText = "Waiting for Approve ({$completed} / {$total})";
+                                            $waitingText = "Waiting for Approval ( {$completed} / {$total} )";
                                         }
                                     @endphp
                                     <button
@@ -177,7 +192,7 @@
                             <td class="border px-2 py-1 text-center">
                                 <button
                                     @click="showLKHModal = true; selectedRkhno = '{{ $rkh->rkhno }}'; loadLKHData('{{ $rkh->rkhno }}')"
-                                    class="text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded text-xs"
+                                    class="text-white bg-gray-600 hover:bg-gray-700 px-2 py-0.5 rounded text-xs"
                                     title="Klik untuk melihat LKH"
                                 >
                                     LKH
@@ -186,7 +201,7 @@
 
                             <td class="border px-2 py-1 text-center">
                                 @if($rkh->current_status == 'Done')
-                                    <span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded">Done</span>
+                                    <span class="px-2 py-1 text-xs font-semibold">Done</span>
                                 @else
                                     <button
                                         onclick="updateStatus('{{ $rkh->rkhno }}')"
@@ -276,7 +291,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
-                            <h2 class="text-lg font-semibold text-gray-900">Pilih Tanggal RKH</h2>
+                            <h2 class="text-lg font-semibold text-gray-900">Create RKH Baru</h2>
                         </div>
                         <button
                             @click="showDateModal = false"
@@ -456,10 +471,10 @@
                     class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-2/3 max-h-[90vh] flex flex-col"
                 >
                     <!-- Header -->
-                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-orange-50 to-amber-50">
+                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-gray-50 to-white-50">
                         <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
@@ -726,10 +741,10 @@
                     class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-2/3 max-h-[90vh] flex flex-col"
                 >
                     <!-- Header -->
-                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-gray-50 to-white-50">
                         <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
@@ -911,6 +926,7 @@
                                             <th class="px-2 py-1 text-left">ID</th>
                                             <th class="px-2 py-1 text-left">Nama</th>
                                             <th class="px-2 py-1 text-center">Gender</th>
+                                            <th class="px-2 py-1 text-left">Jenis TK</th>
                                             <th class="px-2 py-1 text-left">Mandor</th>
                                             <th class="px-2 py-1 text-center">Jam Absen</th>
                                         </tr>
@@ -918,10 +934,21 @@
                                     <tbody>
                                         <template x-for="person in absenList" :key="person.id">
                                             <tr>
+                                                <td class="border px-2 py-1" x-text="person.id"></td>
+                                                <td class="border px-2 py-1" x-text="person.nama"></td>
+                                                <td class="border px-2 py-1 text-center">
+                                                    <span x-text="person.gender === 'L' ? 'L' : 'P'"></span>
+                                                </td>
+                                                <td class="border px-2 py-1" x-text="person.jenistenagakerja_nama"></td>
                                                 <td class="border px-2 py-1" x-text="person.mandor_nama"></td>
                                                 <td class="border px-2 py-1 text-center" x-text="person.jam_absen"></td>
                                             </tr>
                                         </template>
+                                        <tr x-show="absenList.length === 0">
+                                            <td colspan="6" class="border px-2 py-2 text-center text-gray-500">
+                                                Tidak ada data absen yang tersedia
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1287,6 +1314,11 @@
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat data absen');
                     }
+                },
+
+                openAbsenModal() {
+                    this.showAbsenModal = true;
+                    this.loadAbsenData(this.absenDate); // Load data saat modal dibuka
                 },
 
                 async generateDTH() {

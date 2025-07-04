@@ -13,8 +13,18 @@ class SessionController extends Controller
             'dropdown_value' => 'required|string',
         ]);
 
-        session(['companycode' => $request->dropdown_value]);
+        $companyCode = $request->dropdown_value;
+
+        $companyName = \DB::table('company')
+            ->where('companycode', $companyCode)
+            ->value('name') ?? $companyCode;
+
+        session([
+            'companycode' => $companyCode,
+            'companyname' => $companyName,
+        ]);
 
         return redirect()->route('home')->with('success', 'Preference saved successfully!');
     }
+
 }

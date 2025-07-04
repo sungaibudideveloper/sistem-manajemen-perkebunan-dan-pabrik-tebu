@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [RencanaKerjaHarianController::class, 'store'])->name('store');
             Route::get('/{rkhno}/edit', [RencanaKerjaHarianController::class, 'edit'])->name('edit');
             Route::put('/{rkhno}', [RencanaKerjaHarianController::class, 'update'])->name('update');
+            Route::get('/{rkhno}/show', [RencanaKerjaHarianController::class, 'show'])->name('show');
             Route::delete('/{rkhno}', [RencanaKerjaHarianController::class, 'destroy'])->name('destroy');
             
             // LKH related routes
