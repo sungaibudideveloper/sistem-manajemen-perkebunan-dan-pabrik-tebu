@@ -32,8 +32,9 @@
         mode: 'create',
         editUrl: '',
         originalJenisUpah: '',
+        originalKategoriId: '',
         form: { 
-            jenisupah: '', 
+            kategori_id: '', 
             harga: '', 
             tanggalefektif: '' 
         },
@@ -41,8 +42,9 @@
             this.mode = 'create';
             this.editUrl = '';
             this.originalJenisUpah = '';
+            this.originalKategoriId = '';
             this.form = { 
-                jenisupah: '', 
+                kategori_id: '', 
                 harga: '', 
                 tanggalefektif: '' 
             };
@@ -52,8 +54,9 @@
             this.mode = 'edit';
             this.editUrl = url;
             this.originalJenisUpah = data.jenisupah;
+            this.originalKategoriId = data.kategori_id;
             this.form = {
-                jenisupah: data.jenisupah,
+                kategori_id: data.kategori_id,
                 harga: data.harga,
                 tanggalefektif: data.tanggalefektif
             };
@@ -68,7 +71,6 @@
 
                 <!-- New Data Button -->
                 <div class="flex justify-start">
-                    @if (auth()->user() && in_array('Create Upah', json_decode(auth()->user()->permissions ?? '[]')))
                     <button @click="resetForm()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,7 +79,6 @@
                         <span class="hidden sm:inline">Tambah Upah</span>
                         <span class="sm:hidden">Tambah</span>
                     </button>
-                    @endif
                 </div>
 
                 <!-- Search and Per Page Controls -->
@@ -123,6 +124,9 @@
                                 Jenis Upah
                             </th>
                             <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Company
+                            </th>
+                            <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Harga Upah
                             </th>
                             <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
@@ -143,7 +147,10 @@
                         @foreach ($data as $d)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="py-3 px-2 sm:px-4 text-sm font-medium text-gray-900">
-                                {{ $d->jenisupah }}
+                                {{ $d->jenisupah2 }}
+                            </td>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
+                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $d->companycode }}</code>
                             </td>
                             <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
                                 <div class="font-medium">Rp {{ number_format($d->harga, 0, ',', '.') }}</div>
@@ -160,24 +167,23 @@
                             <td class="py-3 px-2 sm:px-4">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
-                                    @if (auth()->user() && in_array('Edit Upah', json_decode(auth()->user()->permissions ?? '[]')))
                                     <button
                                         @click='editForm({
                                             jenisupah: "{{ $d->jenisupah }}",
+                                            kategori_id: "{{ $d->kategori_id }}",
                                             harga: "{{ $d->harga }}",
-                                            tanggalefektif: "{{ $d->tanggalefektif }}"
-                                        }, "{{ route('masterdata.upah.update', $d->jenisupah) }}")'
+                                            tanggalefektif: "{{ $d->tanggalefektif }}" 
+                                        }, "{{ route('masterdata.upah.update', [$d->jenisupah, $d->harga, $d->tanggalefektif]) }}")'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4 h-4 fill-current">
                                             <path d="M441 58.9L453.1 71c9.4 9.4 9.4 24.6 0 33.9L424 134.1 377.9 88 407 58.9c9.4-9.4 24.6-9.4 33.9 0zM209.8 256.2L344 121.9 390.1 168 255.8 302.2c-2.9 2.9-6.5 5-10.4 6.1l-58.5 16.7 16.7-58.5c1.1-3.9 3.2-7.5 6.1-10.4zM373.1 25L175.8 222.2c-8.7 8.7-15 19.4-18.3 31.1l-28.6 100c-2.4 8.4-.1 17.4 6.1 23.6s15.2 8.5 23.6 6.1l100-28.6c11.8-3.4 22.5-9.7 31.1-18.3L487 138.9c28.1-28.1 28.1-73.7 0-101.8L474.9 25C446.8-3.1 401.2-3.1 373.1 25zM88 64C39.4 64 0 103.4 0 152L0 424c0 48.6 39.4 88 88 88l272 0c48.6 0 88-39.4 88-88l0-112c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 112c0 22.1-17.9 40-40 40L88 464c-22.1 0-40-17.9-40-40l0-272c0-22.1 17.9-40 40-40l112 0c13.3 0 24-10.7 24-24s-10.7-24-24-24L88 64z" />
                                         </svg>
                                     </button>
-                                    @endif
+
                                     <!-- Delete Button -->
-                                    @if (auth()->user() && in_array('Hapus Upah', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <form action="{{ route('masterdata.upah.destroy', $d->jenisupah) }}" method="POST"
-                                        onsubmit="return confirm('Yakin ingin menghapus data upah {{ $d->jenisupah }}?');" class="inline">
+                                    <form action="{{ route('masterdata.upah.destroy', [$d->jenisupah, $d->harga, $d->tanggalefektif]) }}" method="POST"
+                                        onsubmit="return confirm('Yakin ingin menghapus : upah{{ $d->jenisupah2 }} dengan harga :{{ $d->harga }} dan tgl efektif : {{ $d->tanggalefektif }}?');" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -188,7 +194,6 @@
                                             </svg>
                                         </button>
                                     </form>
-                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -227,16 +232,23 @@
                         <template x-if="mode === 'edit'">
                             <div>
                                 <input type="hidden" name="_method" value="PUT">
-                                <input type="hidden" id="original_jenisupah" name="jenisupahlama" :value="originalJenisUpah">
+                                <input type="hidden" id="original_jenisupah" name="original_jenisupah" :value="originalJenisUpah">
                             </div>
                         </template>
 
                         <!-- Jenis Upah -->
                         <div class="mb-6">
-                            <label for="jenisupah" class="block text-sm font-medium text-gray-700 mb-2">Jenis Upah</label>
-                            <input type="text" id="jenisupah" name="jenisupah" x-model="form.jenisupah" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="Masukkan jenis upah" />
+                            <label for="kategori_id" class="block text-sm font-medium text-gray-700 mb-2">Jenis Upah</label>
+                            <select id="kategori_id" name="kategori_id" x-model="form.kategori_id" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">-- Pilih Jenis Upah --</option>
+                                @foreach($pilihanupah as $upah)
+                                <option value="{{ $upah->id }}">
+                                    {{ $upah->jenisupah }}
+                                </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Pilih kategori jenis upah</p>
                         </div>
 
                         <!-- Harga Upah -->

@@ -18,6 +18,7 @@ class Upah extends Model
         'tanggalefektif',
         'inputby',
         'createdat',
+        'companycode',
     ];
 
     protected $casts = [
