@@ -335,6 +335,7 @@
                   <!-- #Plot -->
                   <td class="px-1 py-3">
                     <div x-data="plotPicker({{ $i }})" class="relative" x-init="
+                      init();
                       @if($oldPlot)
                         selected = { plot: '{{ $oldPlot }}' }
                       @endif
