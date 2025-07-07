@@ -179,15 +179,14 @@ class UsernameController extends Controller
     public function access($usernm)
     {
         $title = 'Set Hak Akses';
-        $user = User::findOrFail($usernm);
-
+        $userdata = User::where('userid', $usernm)->firstOrFail();
         // Filter unique by slug directly
         $menu = Menu::orderBy('menuid')->get()->unique('slug')->values();
         $submenu = Submenu::orderBy('submenuid')->get();
         $subsubmenu = Subsubmenu::orderBy('name')->get();
 
         return view('master.username.access', [
-            'user' => $user,
+            'userdata' => $userdata,
             'title' => $title,
             'menu' => $menu,
             'submenu' => $submenu,
