@@ -18,12 +18,12 @@ class UpahController extends Controller
     {
         // Query dengan join untuk mendapatkan kategori_id
         $query = DB::table('upah as a')
-            ->leftJoin('kategoriupah as b', 'a.jenisupah', '=', 'b.id')
-            ->select('a.*', 'b.id as kategori_id', 'b.jenisupah as jenisupah2');
+            ->leftJoin('kategoriupah as b', 'a.upahid', '=', 'b.id')
+            ->select('a.*', 'b.id as kategori_id', 'b.jenisupah as jenisupah');
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('a.jenisupah', 'like', '%' . $request->search . '%')
+                $q->where('a.upahid', 'like', '%' . $request->search . '%')
                     ->orWhere('a.tanggalefektif', 'like', '%' . $request->search . '%');
             });
         }
@@ -60,7 +60,7 @@ class UpahController extends Controller
             }
 
             $cek = DB::table('upah')
-                ->where('jenisupah', $request->kategori_id)->where('tanggalefektif', $request->tanggalefektif)
+                ->where('upahid', $request->kategori_id)->where('tanggalefektif', $request->tanggalefektif)
                 ->where('harga', $request->harga)->where('companycode', Auth::user()->companycode)
                 ->exists();
 
@@ -69,7 +69,7 @@ class UpahController extends Controller
             }
 
             $upah = new Upah();
-            $upah->jenisupah = $request->kategori_id;
+            $upah->upahid = $request->kategori_id;
             $upah->harga = $request->harga;
             $upah->tanggalefektif = $request->tanggalefektif;
             $upah->inputby = Auth::user()->userid;
@@ -85,13 +85,13 @@ class UpahController extends Controller
         }
     }
 
-    public function update(Request $request, $jenisupah, $harga, $tanggalefektif)
+    public function update(Request $request, $upahid, $harga, $tanggalefektif)
     {
         if (Auth::user()->userid && in_array('Edit Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
             $company = Auth::user()->companycode;
 
             // Cari upah berdasarkan jenisupah lama
-            $validasi = DB::table('upah')->where('jenisupah', $request->kategori_id)->where('harga', $request->harga)
+            $validasi = DB::table('upah')->where('upahid', $request->kategori_id)->where('harga', $request->harga)
                 ->where('tanggalefektif', $request->tanggalefektif)->where('companycode', $company)->exists();
 
             if ($validasi == True) {
@@ -106,12 +106,12 @@ class UpahController extends Controller
             }
 
             DB::table('upah')
-                ->where('jenisupah', $jenisupah)
+                ->where('upahid', $upahid)
                 ->where('harga', $harga)
                 ->where('tanggalefektif', $tanggalefektif)
                 ->where('companycode', $company)
                 ->update([
-                    'jenisupah' => $request->kategori_id,
+                    'upahid' => $request->kategori_id,
                     'harga' => $request->harga,
                     'tanggalefektif' => $request->tanggalefektif,
 
@@ -126,12 +126,12 @@ class UpahController extends Controller
                 ->with('error', 'Anda tidak memiliki izin untuk mengedit data upah.');
         }
     }
-    public function destroy($jenisupah, $harga, $tanggalefektif)
+    public function destroy($upahid, $harga, $tanggalefektif)
     {
         if (Auth::user()->userid && in_array('Hapus Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
             $company = Auth::user()->companycode;
 
-            $deleted = Upah::where('jenisupah', $jenisupah)
+            $deleted = Upah::where('upahid', $upahid)
                 ->where('harga', $harga)
                 ->where('tanggalefektif', $tanggalefektif)
                 ->where('companycode', $company)

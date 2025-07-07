@@ -31,7 +31,7 @@
         open: false,
         mode: 'create',
         editUrl: '',
-        originalJenisUpah: '',
+        originalUpahId: '',
         originalKategoriId: '',
         form: { 
             kategori_id: '', 
@@ -41,7 +41,7 @@
         resetForm() {
             this.mode = 'create';
             this.editUrl = '';
-            this.originalJenisUpah = '';
+            this.originalUpahId = '';
             this.originalKategoriId = '';
             this.form = { 
                 kategori_id: '', 
@@ -53,7 +53,7 @@
         editForm(data, url) {
             this.mode = 'edit';
             this.editUrl = url;
-            this.originalJenisUpah = data.jenisupah;
+            this.originalUpahId = data.upahid;
             this.originalKategoriId = data.kategori_id;
             this.form = {
                 kategori_id: data.kategori_id,
@@ -147,7 +147,7 @@
                         @foreach ($data as $d)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="py-3 px-2 sm:px-4 text-sm font-medium text-gray-900">
-                                {{ $d->jenisupah2 }}
+                                {{ $d->jenisupah }}
                             </td>
                             <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
                                 <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $d->companycode }}</code>
@@ -169,11 +169,11 @@
                                     <!-- Edit Button -->
                                     <button
                                         @click='editForm({
-                                            jenisupah: "{{ $d->jenisupah }}",
+                                            upahid: "{{ $d->upahid }}",
                                             kategori_id: "{{ $d->kategori_id }}",
                                             harga: "{{ $d->harga }}",
-                                            tanggalefektif: "{{ $d->tanggalefektif }}" 
-                                        }, "{{ route('masterdata.upah.update', [$d->jenisupah, $d->harga, $d->tanggalefektif]) }}")'
+                                            tanggalefektif: "{{ $d->tanggalefektif }}"
+                                        }, "{{ route('masterdata.upah.update', [$d->upahid, $d->harga, $d->tanggalefektif]) }}")'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4 h-4 fill-current">
@@ -182,8 +182,8 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('masterdata.upah.destroy', [$d->jenisupah, $d->harga, $d->tanggalefektif]) }}" method="POST"
-                                        onsubmit="return confirm('Yakin ingin menghapus : upah{{ $d->jenisupah2 }} dengan harga :{{ $d->harga }} dan tgl efektif : {{ $d->tanggalefektif }}?');" class="inline">
+                                    <form action="{{ route('masterdata.upah.destroy', [$d->upahid, $d->harga, $d->tanggalefektif]) }}" method="POST"
+                                        onsubmit="return confirm('Yakin ingin menghapus data upah {{ $d->jenisupah }} dengan harga Rp {{ number_format($d->harga, 0, ',', '.') }}?');" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -227,12 +227,12 @@
                 <div class="p-6">
                     <form :action="mode === 'create' ? '{{ route('masterdata.upah.store') }}' : editUrl"
                         method="POST"
-                        @submit="if(mode === 'edit') { $el.querySelector('#original_jenisupah').value = originalJenisUpah; }">
+                        @submit="if(mode === 'edit') { $el.querySelector('#original_upahid').value = originalUpahId; }">
                         @csrf
                         <template x-if="mode === 'edit'">
                             <div>
                                 <input type="hidden" name="_method" value="PUT">
-                                <input type="hidden" id="original_jenisupah" name="original_jenisupah" :value="originalJenisUpah">
+                                <input type="hidden" id="original_upahid" name="original_upahid" :value="originalUpahId">
                             </div>
                         </template>
 
