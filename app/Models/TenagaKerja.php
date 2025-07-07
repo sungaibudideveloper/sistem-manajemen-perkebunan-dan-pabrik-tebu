@@ -8,12 +8,6 @@ class TenagaKerja extends Model
 {
     // Nama tabel yang digunakan
     protected $table = 'tenagakerja';
-
-    // Laravel tidak mendukung primary key komposit secara bawaan.
-    // Jika Anda ingin menggunakan kedua kolom sebagai primary key, Anda
-    // perlu melakukan penanganan manual atau menggunakan package tambahan.
-    // Di contoh ini, kita tetapkan primaryKey hanya 'tenagakerjaid' dan
-    // mematikan auto-increment karena ID bertipe varchar.
     protected $primaryKey = 'tenagakerjaid';
     public $incrementing = false;
     protected $keyType = 'string';

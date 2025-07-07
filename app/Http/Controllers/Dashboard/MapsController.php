@@ -23,7 +23,9 @@ class MapsController extends Controller
       $nav = "Agronomi";
       $header = DB::table('testgpshdr')->where('companycode', session('companycode'))->orderBy('plot')->get();
       $list = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
-      return view('dashboard\maps\maps')->with([
+      
+    //   dd($header->first(), $list->first());
+      return view('dashboard\maps\mapscio')->with([
         'title' => $title,
         'nav'   => $nav,
         'header' => $header,

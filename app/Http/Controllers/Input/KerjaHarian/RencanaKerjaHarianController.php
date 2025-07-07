@@ -11,14 +11,14 @@ use Carbon\Carbon;
 
 use App\Models\User;
 use App\Models\RkhHdr;
-use App\Models\Mandor;
 use App\Models\Activity;
 use App\Models\ActivityGroup;
 use App\Models\Blok;
 use App\Models\Masterlist;
 use App\Models\Herbisidadosage;
 use App\Models\Herbisidagroup;
-use App\Models\AbsenTenagaKerja;
+use App\Models\AbsenHdr;
+use App\Models\AbsenLst;
 use App\Models\Lkhhdr;
 use App\Models\Lkhlst;
 use App\Services\LkhGeneratorService;
@@ -130,9 +130,9 @@ class RencanaKerjaHarianController extends Controller
         $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
         $rkhData = $query->paginate($perPage);
 
-        // Data untuk modal absen
-        $absentenagakerjamodel = new AbsenTenagaKerja;
-        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull(
+        // Data untuk modal absen - Updated to use new models
+        $absenModel = new AbsenHdr;
+        $absenData = $absenModel->getDataAbsenFull(
             $companycode,
             Carbon::parse($filterDate ?? Carbon::today())
         );
@@ -148,9 +148,75 @@ class RencanaKerjaHarianController extends Controller
             'filterDate' => $filterDate,
             'allDate' => $allDate,
             'rkhData' => $rkhData,
-            'absentenagakerja' => $absentenagakerja,
+            'absentenagakerja' => $absenData,
         ]);
     }
+
+
+    public function create(Request $request)
+    {
+        $selectedDate = $request->input('date');
+        
+        if (!$selectedDate) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Silakan pilih tanggal terlebih dahulu');
+        }
+
+        $targetDate = Carbon::parse($selectedDate);
+        $today = Carbon::today();
+        $maxDate = Carbon::today()->addDays(7);
+        
+        if ($targetDate->lt($today) || $targetDate->gt($maxDate)) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
+        }
+
+        $day = $targetDate->format('d');
+        $month = $targetDate->format('m');
+        $year = $targetDate->format('y');
+        $companycode = Session::get('companycode');
+
+        $lastRkh = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->whereDate('rkhdate', $targetDate)
+            ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
+            ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
+            ->first();
+
+        $newNumber = $lastRkh ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT) : '01';
+        $previewRkhNo = "RKH{$day}{$month}{$newNumber}{$year}";
+
+        $herbisidadosages = new Herbisidadosage;
+        $absenModel = new AbsenHdr; // Updated to use new model
+
+        $mandors = User::getMandorByCompany($companycode);
+        $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
+        $bloks = Blok::orderBy('blok')->get();
+        $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
+        $plots = DB::table('plot')->where('companycode', $companycode)->get();
+        $absenData = $absenModel->getDataAbsenFull($companycode, $targetDate); // Updated method call
+        $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+
+        return view('input.kerjaharian.rencanakerjaharian.create', [
+            'title' => 'Form RKH',
+            'navbar' => 'Input',
+            'nav' => 'Rencana Kerja Harian',
+            'rkhno' => $previewRkhNo,
+            'selectedDate' => $targetDate->format('Y-m-d'),
+            'mandors' => $mandors,
+            'activities' => $activities,
+            'bloks' => $bloks,
+            'masterlist' => $masterlist,
+            'plots' => $plots,
+            'herbisidagroups' => $herbisidagroups,
+            'bloksData' => $bloks,
+            'masterlistData' => $masterlist,
+            'plotsData' => $plots,
+            'absentenagakerja' => $absenData, // Keep the same variable name for view compatibility
+            'oldInput' => old(),
+        ]);
+    }
+
 
     public function store(Request $request)
     {
@@ -296,97 +362,78 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    private function generateUniqueRkhNoWithLock($date)
+    
+    public function show($rkhno)
     {
-        $carbonDate = Carbon::parse($date);
-        $day = $carbonDate->format('d');
-        $month = $carbonDate->format('m');
-        $year = $carbonDate->format('y');
         $companycode = Session::get('companycode');
-
-        return DB::transaction(function () use ($carbonDate, $day, $month, $year, $companycode) {
-            $lastRkh = DB::table('rkhhdr')
-                ->where('companycode', $companycode)
-                ->whereDate('rkhdate', $carbonDate)
-                ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
-                ->lockForUpdate()
-                ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
-                ->first();
-
-            if ($lastRkh) {
-                $lastNumber = (int)substr($lastRkh->rkhno, 7, 2);
-                $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
-            } else {
-                $newNumber = '01';
-            }
-
-            return "RKH{$day}{$month}{$newNumber}{$year}";
-        });
-    }
-
-    public function create(Request $request)
-    {
-        $selectedDate = $request->input('date');
         
-        if (!$selectedDate) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('error', 'Silakan pilih tanggal terlebih dahulu');
-        }
-
-        $targetDate = Carbon::parse($selectedDate);
-        $today = Carbon::today();
-        $maxDate = Carbon::today()->addDays(7);
-        
-        if ($targetDate->lt($today) || $targetDate->gt($maxDate)) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
-        }
-
-        $day = $targetDate->format('d');
-        $month = $targetDate->format('m');
-        $year = $targetDate->format('y');
-        $companycode = Session::get('companycode');
-
-        $lastRkh = DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->whereDate('rkhdate', $targetDate)
-            ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
-            ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
+        $rkhHeader = DB::table('rkhhdr as r')
+            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('r.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select([
+                'r.*',
+                'm.name as mandor_nama',
+                'ag.groupname as activity_group_name',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3',
+                // Enhanced approval status logic
+                DB::raw('CASE 
+                    WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
+                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
+                    WHEN r.approval1flag = "0" THEN "Declined Level 1"
+                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting Level 2"
+                    WHEN r.approval2flag = "0" THEN "Declined Level 2"
+                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting Level 3"
+                    WHEN r.approval3flag = "0" THEN "Declined Level 3"
+                    WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
+                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
+                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
+                    ELSE "Waiting"
+                END as approval_status'),
+                DB::raw('CASE 
+                    WHEN r.status = "Done" THEN "Done"
+                    ELSE "On Progress"
+                END as current_status')
+            ])
             ->first();
-
-        $newNumber = $lastRkh ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT) : '01';
-        $previewRkhNo = "RKH{$day}{$month}{$newNumber}{$year}";
-
-        $herbisidadosages = new Herbisidadosage;
-        $absentenagakerjamodel = new AbsenTenagaKerja;
-
-        $mandors = User::getMandorByCompany($companycode);
-        $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
-        $bloks = Blok::orderBy('blok')->get();
-        $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
-        $plots = DB::table('plot')->where('companycode', $companycode)->get();
-        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull($companycode, $targetDate);
-        $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
-
-        return view('input.kerjaharian.rencanakerjaharian.create', [
-            'title' => 'Form RKH',
+        
+        if (!$rkhHeader) {
+            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+                ->with('error', 'Data RKH tidak ditemukan');
+        }
+        
+        $rkhDetails = DB::table('rkhlst as r')
+            ->leftJoin('herbisidagroup as hg', function($join) {
+                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+                    ->on('r.activitycode', '=', 'hg.activitycode');
+            })
+            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select(['r.*', 'hg.herbisidagroupname', 'a.activityname', 'a.jenistenagakerja'])
+            ->get();
+        
+        $absenModel = new AbsenHdr; // Updated to use new model
+        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
+        
+        return view('input.kerjaharian.rencanakerjaharian.show', [
+            'title' => 'Detail RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
-            'rkhno' => $previewRkhNo,
-            'selectedDate' => $targetDate->format('Y-m-d'),
-            'mandors' => $mandors,
-            'activities' => $activities,
-            'bloks' => $bloks,
-            'masterlist' => $masterlist,
-            'plots' => $plots,
-            'herbisidagroups' => $herbisidagroups,
-            'bloksData' => $bloks,
-            'masterlistData' => $masterlist,
-            'plotsData' => $plots,
-            'absentenagakerja' => $absentenagakerja,
-            'oldInput' => old(),
+            'rkhHeader' => $rkhHeader,
+            'rkhDetails' => $rkhDetails,
+            'absentenagakerja' => $absenData, // Keep the same variable name for view compatibility
         ]);
     }
+
 
     public function edit($rkhno)
     {
@@ -416,14 +463,14 @@ class RencanaKerjaHarianController extends Controller
             ->get();
         
         $herbisidadosages = new Herbisidadosage;
-        $absentenagakerjamodel = new AbsenTenagaKerja;
+        $absenModel = new AbsenHdr; // Updated to use new model
         
         $mandors = User::getMandorByCompany($companycode);
         $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
         $bloks = Blok::orderBy('blok')->get();
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
-        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate));
+        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         
         return view('input.kerjaharian.rencanakerjaharian.edit', [
@@ -441,7 +488,7 @@ class RencanaKerjaHarianController extends Controller
             'bloksData' => $bloks,
             'masterlistData' => $masterlist,
             'plotsData' => $plots,
-            'absentenagakerja' => $absentenagakerja,
+            'absentenagakerja' => $absenData,
             'oldInput' => old(),
         ]);
     }
@@ -594,76 +641,6 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    public function show($rkhno)
-    {
-        $companycode = Session::get('companycode');
-        
-        $rkhHeader = DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                    ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                'ag.groupname as activity_group_name',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3',
-                // Enhanced approval status logic
-                DB::raw('CASE 
-                    WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
-                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
-                    WHEN r.approval1flag = "0" THEN "Declined Level 1"
-                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting Level 2"
-                    WHEN r.approval2flag = "0" THEN "Declined Level 2"
-                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting Level 3"
-                    WHEN r.approval3flag = "0" THEN "Declined Level 3"
-                    WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
-                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
-                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
-                    ELSE "Waiting"
-                END as approval_status'),
-                DB::raw('CASE 
-                    WHEN r.status = "Done" THEN "Done"
-                    ELSE "On Progress"
-                END as current_status')
-            ])
-            ->first();
-        
-        if (!$rkhHeader) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
-                ->with('error', 'Data RKH tidak ditemukan');
-        }
-        
-        $rkhDetails = DB::table('rkhlst as r')
-            ->leftJoin('herbisidagroup as hg', function($join) {
-                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
-                    ->on('r.activitycode', '=', 'hg.activitycode');
-            })
-            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select(['r.*', 'hg.herbisidagroupname', 'a.activityname', 'a.jenistenagakerja'])
-            ->get();
-        
-        $absentenagakerjamodel = new AbsenTenagaKerja;
-        $absentenagakerja = $absentenagakerjamodel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate));
-        
-        return view('input.kerjaharian.rencanakerjaharian.show', [
-            'title' => 'Detail RKH',
-            'navbar' => 'Input',
-            'nav' => 'Rencana Kerja Harian',
-            'rkhHeader' => $rkhHeader,
-            'rkhDetails' => $rkhDetails,
-            'absentenagakerja' => $absentenagakerja,
-        ]);
-    }
 
     public function destroy($rkhno)
     {
@@ -686,6 +663,34 @@ class RencanaKerjaHarianController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Gagal menghapus RKH: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function generateUniqueRkhNoWithLock($date)
+    {
+        $carbonDate = Carbon::parse($date);
+        $day = $carbonDate->format('d');
+        $month = $carbonDate->format('m');
+        $year = $carbonDate->format('y');
+        $companycode = Session::get('companycode');
+
+        return DB::transaction(function () use ($carbonDate, $day, $month, $year, $companycode) {
+            $lastRkh = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->whereDate('rkhdate', $carbonDate)
+                ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
+                ->lockForUpdate()
+                ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
+                ->first();
+
+            if ($lastRkh) {
+                $lastNumber = (int)substr($lastRkh->rkhno, 7, 2);
+                $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+            } else {
+                $newNumber = '01';
+            }
+
+            return "RKH{$day}{$month}{$newNumber}{$year}";
+        });
     }
 
     // =========================
@@ -1912,9 +1917,9 @@ public function updateLKH(Request $request, $lkhno)
         $mandorId = $request->query('mandor_id');
         $companycode = Session::get('companycode');
         
-        $absentenagakerjamodel = new AbsenTenagaKerja;
-        $absenData = $absentenagakerjamodel->getDataAbsenFull($companycode, Carbon::parse($date), $mandorId);
-        $mandorList = $absentenagakerjamodel->getMandorList($companycode, Carbon::parse($date));
+        $absenModel = new AbsenHdr;
+        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($date), $mandorId); // Updated method call
+        $mandorList = $absenModel->getMandorList($companycode, Carbon::parse($date)); // Updated method call
 
         return response()->json([
             'success' => true,

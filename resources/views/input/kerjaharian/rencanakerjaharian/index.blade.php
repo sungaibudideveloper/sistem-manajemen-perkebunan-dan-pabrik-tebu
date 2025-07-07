@@ -105,7 +105,7 @@
                         <!-- Absen & Generate DTH Buttons -->
                         <button
                             type="button"
-                            @click="showAbsenModal = true"
+                            @click="openAbsenModal()"
                             class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Check Data Absen
@@ -926,6 +926,7 @@
                                             <th class="px-2 py-1 text-left">ID</th>
                                             <th class="px-2 py-1 text-left">Nama</th>
                                             <th class="px-2 py-1 text-center">Gender</th>
+                                            <th class="px-2 py-1 text-left">Jenis TK</th>
                                             <th class="px-2 py-1 text-left">Mandor</th>
                                             <th class="px-2 py-1 text-center">Jam Absen</th>
                                         </tr>
@@ -933,10 +934,21 @@
                                     <tbody>
                                         <template x-for="person in absenList" :key="person.id">
                                             <tr>
+                                                <td class="border px-2 py-1" x-text="person.id"></td>
+                                                <td class="border px-2 py-1" x-text="person.nama"></td>
+                                                <td class="border px-2 py-1 text-center">
+                                                    <span x-text="person.gender === 'L' ? 'L' : 'P'"></span>
+                                                </td>
+                                                <td class="border px-2 py-1" x-text="person.jenistenagakerja_nama"></td>
                                                 <td class="border px-2 py-1" x-text="person.mandor_nama"></td>
                                                 <td class="border px-2 py-1 text-center" x-text="person.jam_absen"></td>
                                             </tr>
                                         </template>
+                                        <tr x-show="absenList.length === 0">
+                                            <td colspan="6" class="border px-2 py-2 text-center text-gray-500">
+                                                Tidak ada data absen yang tersedia
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1302,6 +1314,11 @@
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat data absen');
                     }
+                },
+
+                openAbsenModal() {
+                    this.showAbsenModal = true;
+                    this.loadAbsenData(this.absenDate); // Load data saat modal dibuka
                 },
 
                 async generateDTH() {

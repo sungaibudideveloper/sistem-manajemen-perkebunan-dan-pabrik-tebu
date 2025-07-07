@@ -95,11 +95,11 @@
       </div>
 
       <!-- RIGHT: Absen Summary -->
-      <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 min-w-[320px]">
+      <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center">
             <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-            <h3 class="text-sm font-bold text-gray-800">Absen Hari Ini</h3>
+            <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
           </div>
           <div class="text-right">
             <p class="text-xs text-gray-600">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
@@ -107,7 +107,7 @@
         </div>
         <div class="grid grid-cols-3 gap-4 text-center">
           @php
-            $absenSummary = collect($absentenagakerja ?? [])->where('idmandor', $rkhHeader->mandorid);
+            $absenSummary = collect($absentenagakerja ?? [])->where('mandorid', $rkhHeader->mandorid);
             $lakiCount = $absenSummary->where('gender', 'L')->count();
             $perempuanCount = $absenSummary->where('gender', 'P')->count();
             $totalCount = $lakiCount + $perempuanCount;
