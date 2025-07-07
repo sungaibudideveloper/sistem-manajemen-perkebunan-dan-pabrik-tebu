@@ -1,9 +1,7 @@
-{{-- resources/views/partials/modals/mandor-modal.blade.php --}}
 <div
   x-show="open"
   x-cloak
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-  style="display: none;"
   x-transition:enter="transition ease-out duration-300"
   x-transition:enter-start="opacity-0"
   x-transition:enter-end="opacity-100"
@@ -61,40 +59,37 @@
       </div>
     </div>
 
-    {{-- Daftar Mandor --}}
-    <div class="flex-1 overflow-hidden">
-      <div class="overflow-y-auto" style="max-height: 400px;">
-        <table class="w-full">
-          <thead class="bg-gray-100 sticky top-0">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama
-                Mandor</th>
+    {{-- Mandor List --}}
+    <div class="flex-1 overflow-y-auto max-h-[400px]">
+      <table class="w-full">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mandor</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.userid">
+            <tr @click="selectMandor(mandor)"
+              class="hover:bg-blue-50 cursor-pointer transition-colors duration-150 group">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm font-medium text-gray-900" x-text="mandor.userid"></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900 font-medium" x-text="mandor.name"></div>
+              </td>
             </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <template x-for="mandor in filteredMandors" :key="mandor.companycode + mandor.userid">
-              <tr @click="selectMandor(mandor)"
-                class="hover:bg-blue-50 cursor-pointer transition-colors duration-150 group">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-medium text-gray-900" x-text="mandor.userid"></span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900 font-medium" x-text="mandor.name"></div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+          </template>
+        </tbody>
+      </table>
 
-        {{-- Empty State --}}
-        <template x-if="filteredMandors.length === 0">
-          <div class="text-center py-12">
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada mandor ditemukan</h3>
-            <p class="mt-1 text-sm text-gray-500">Coba ubah kata kunci pencarian Anda.</p>
-          </div>
-        </template>
-      </div>
+      {{-- Empty State --}}
+      <template x-if="filteredMandors.length === 0">
+        <div class="text-center py-12">
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada mandor ditemukan</h3>
+          <p class="mt-1 text-sm text-gray-500">Coba ubah kata kunci pencarian Anda.</p>
+        </div>
+      </template>
     </div>
 
     {{-- Footer --}}
@@ -132,33 +127,20 @@ function mandorPicker() {
     },
 
     selectMandor(mandor) {
-      // FIXED: Proper object assignment
       this.selected = {
         companycode: mandor.companycode,
         userid: mandor.userid,
         name: mandor.name
       };
       this.open = false;
-      
-      // Update absen summary dengan semua parameter yang diperlukan
       updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
     },
 
     clear() {
-      // Reset the selected mandor
       this.selected = { companycode: '', userid: '', name: '' };
-      // Optionally clear the search query
       this.searchQuery = '';
-      // Reset the absen summary
       updateAbsenSummary(null);
-      // Close modal
       this.open = false;
-    },
-
-    // ADDED: Initialize with old input if available
-    init() {
-      // This will be called from the parent component's x-init
-      // The parent component will set the selected value if old input exists
     }
   }
 }

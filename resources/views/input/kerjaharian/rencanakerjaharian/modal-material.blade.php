@@ -210,30 +210,6 @@ function materialPicker(rowIndex) {
       if (groupNameInput) groupNameInput.value = '';
     },
     
-    confirmSelection() {
-      if (this.selectedGroup) {
-        // Update hidden inputs untuk menyimpan data grup yang dipilih
-        let groupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
-        if (!groupInput) {
-          groupInput = document.createElement('input');
-          groupInput.type = 'hidden';
-          groupInput.name = `rows[${this.rowIndex}][material_group_id]`;
-          document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`).appendChild(groupInput);
-        }
-        groupInput.value = this.selectedGroup.herbisidagroupid;
-        
-        let groupNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`);
-        if (!groupNameInput) {
-          groupNameInput = document.createElement('input');
-          groupNameInput.type = 'hidden';
-          groupNameInput.name = `rows[${this.rowIndex}][material_group_name]`;
-          document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`).appendChild(groupNameInput);
-        }
-        groupNameInput.value = this.selectedGroup.herbisidagroupname;
-      }
-      this.open = false;
-    },
-    
     init() {
       // PERBAIKAN: Gunakan event listener untuk mendengar perubahan activity
       const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);

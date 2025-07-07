@@ -56,31 +56,6 @@
           OK
         </button>
       </div>
-
-      <!-- Error Modal -->
-      <div x-show="modalType === 'error'" class="p-6 text-center">
-        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Terjadi Kesalahan</h3>
-        <p class="text-sm text-gray-600 mb-4" x-text="modalMessage"></p>
-        
-        <!-- Error List -->
-        <div x-show="modalErrors.length > 0" class="text-left bg-red-50 rounded-lg p-3 mb-4">
-          <ul class="text-sm text-red-700 space-y-1">
-            <template x-for="error in modalErrors" :key="error">
-              <li x-text="error"></li>
-            </template>
-          </ul>
-        </div>
-
-        <button @click="showModal = false"
-                class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-          Tutup
-        </button>
-      </div>
     </div>
   </div>
 
@@ -249,6 +224,7 @@
                   <!-- #Blok -->
                   <td class="px-1 py-3">
                     <div x-data="blokPicker({{ $i }})" class="relative" x-init="
+                      init();
                       @if(old('rows.'.$i.'.blok'))
                         selected = {
                           blok: '{{ old('rows.'.$i.'.blok') }}'
@@ -323,11 +299,6 @@
                       x-model="selected.activitycode"
                       x-ref="activityInput"
                     >
-                    <input 
-                      type="hidden" 
-                      name="rows[{{ $i }}][usingvehicle]" 
-                      x-model="selected.usingvehicle"
-                    >
                     @include('input.kerjaharian.rencanakerjaharian.modal-activity')
                   </td>
 
@@ -381,7 +352,7 @@
                   </td>
 
                   <!-- #Material -->
-                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})">
+                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="init()">
                     <div class="relative">
                       <div 
                         @click="checkMaterial()"
@@ -517,13 +488,56 @@
 
 
 <script>
-// Global data
+// ===== GLOBAL DATA - SEMUA DI SINI =====
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
 window.absenData = @json($absentenagakerja ?? []);
-window.plotsData = @json($plotsData ?? []); // Add plots data
+window.plotsData = @json($plotsData ?? []);
+window.activitiesData = @json($activities ?? []);
 
+// ===== ALPINE STORES - SEMUA DI SINI =====
+document.addEventListener('alpine:init', () => {
+  // Modal states
+  Alpine.store('modal', {
+    showModal: false,
+    modalType: '',
+    modalMessage: '',
+    modalErrors: []
+  });
+  
+  // Blok tracking per row
+  Alpine.store('blokPerRow', {
+    selected: {},
+    
+    setBlok(rowIndex, blok) {
+      this.selected[rowIndex] = blok;
+    },
+    
+    getBlok(rowIndex) {
+      return this.selected[rowIndex] || '';
+    },
+    
+    hasBlok(rowIndex) {
+      return !!this.selected[rowIndex];
+    }
+  });
+  
+  // Activity tracking per row
+  Alpine.store('activityPerRow', {
+    selected: {},
+    
+    setActivity(rowIndex, activity) {
+      this.selected[rowIndex] = activity;
+    },
+    
+    getActivity(rowIndex) {
+      return this.selected[rowIndex] || null;
+    }
+  });
+});
+
+// ===== FORM HANDLER =====
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize calculations
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
@@ -538,7 +552,9 @@ document.addEventListener('DOMContentLoaded', function() {
     clearValidationErrors();
     
     // CLIENT-SIDE VALIDATION
-    if (!validateForm()) {
+    const validationResult = validateForm();
+    if (!validationResult.isValid) {
+      showValidationModal(validationResult.errors);
       return;
     }
 
@@ -578,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// IMPROVED VALIDATION FUNCTION
+// ===== VALIDATION FUNCTIONS =====
 function validateForm() {
   const errors = [];
   
@@ -617,21 +633,17 @@ function validateForm() {
       if (laki === '' || laki === null) errors.push(`Baris ${rowNum}: Jumlah laki-laki harus diisi`);
       if (perempuan === '' || perempuan === null) errors.push(`Baris ${rowNum}: Jumlah perempuan harus diisi`);
       
-      // Check material requirement - ENHANCED DEBUG
+      // Check material requirement
       if (activity) {
         const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activity);
-        console.log(`Row ${rowNum} - Activity: ${activity}, hasMaterialOptions: ${hasMaterialOptions}`);
         
         if (hasMaterialOptions) {
           const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
           const materialValue = materialGroupInput ? materialGroupInput.value : '';
-          console.log(`Row ${rowNum} - Material group value: '${materialValue}'`);
-          console.log(`Row ${rowNum} - Material input exists: ${!!materialGroupInput}`);
           
           if (!materialGroupInput || !materialGroupInput.value) {
             const errorMsg = `Baris ${rowNum}: Grup material harus dipilih untuk aktivitas ini`;
             errors.push(errorMsg);
-            console.log(`Row ${rowNum} - Added error: ${errorMsg}`);
           }
         }
       }
@@ -642,79 +654,16 @@ function validateForm() {
     errors.push('Minimal satu baris harus diisi dengan lengkap');
   }
 
-  console.log('Validation errors:', errors);
   return {
     isValid: errors.length === 0,
     errors: errors
   };
 }
 
-// SHOW VALIDATION MODAL
 function showValidationModal(errors) {
-  // Dispatch custom event to show validation modal
   window.dispatchEvent(new CustomEvent('validation-error', {
     detail: { errors: errors }
   }));
-}
-
-// HIGHLIGHT REQUIRED FIELDS
-function highlightRequiredFields() {
-  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-  
-  rows.forEach((row, index) => {
-    const blokInput = row.querySelector('input[name$="[blok]"]');
-    const blok = blokInput.value;
-    
-    if (blok) {
-      // If blok is filled, highlight empty required fields
-      const requiredFields = [
-        row.querySelector('input[name$="[plot]"]'),
-        row.querySelector('input[name$="[nama]"]'),
-        row.querySelector('input[name$="[luas]"]'),
-        row.querySelector('input[name$="[laki_laki]"]'),
-        row.querySelector('input[name$="[perempuan]"]')
-      ];
-      
-      requiredFields.forEach(field => {
-        if (field && (!field.value || field.value === '')) {
-          addValidationError(field);
-        }
-      });
-      
-      // Check material requirement
-      const activityInput = row.querySelector('input[name$="[nama]"]');
-      if (activityInput && activityInput.value) {
-        const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activityInput.value);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            const materialDiv = row.querySelector('td:nth-child(10) > div > div');
-            if (materialDiv) {
-              materialDiv.classList.add('border-red-500', 'bg-red-50');
-              materialDiv.classList.remove('border-gray-300', 'border-green-300');
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
-// VALIDATION HELPER FUNCTIONS
-function addValidationError(input) {
-  // Add error styling
-  input.classList.add('border-red-500', 'bg-red-50');
-  input.classList.remove('border-gray-200', 'border-gray-300');
-  
-  // Clear error on input
-  input.addEventListener('input', function() {
-    clearFieldError(this);
-  }, { once: true });
-}
-
-function clearFieldError(input) {
-  input.classList.remove('border-red-500', 'bg-red-50');
-  input.classList.add('border-gray-200');
 }
 
 function clearValidationErrors() {
@@ -725,9 +674,7 @@ function clearValidationErrors() {
   });
 }
 
-
-
-// LOADING STATE FUNCTIONS
+// ===== LOADING STATE FUNCTIONS =====
 function showLoadingState() {
   const submitBtn = document.getElementById('submit-btn');
   const submitText = document.getElementById('submit-text');
@@ -752,11 +699,9 @@ function hideLoadingState() {
   loadingSpinner.classList.add('hidden');
 }
 
-// MODAL FUNCTIONS - SIMPLIFIED
+// ===== MODAL FUNCTIONS =====
 function showModal(type, message, errors = []) {
-  // Use Alpine.js event system for modals
   if (type === 'success') {
-    // For success, trigger Alpine data update
     const modalElement = document.querySelector('[x-data*="showModal"]');
     if (modalElement && modalElement._x_dataStack && modalElement._x_dataStack[0]) {
       modalElement._x_dataStack[0].showModal = true;
@@ -765,17 +710,11 @@ function showModal(type, message, errors = []) {
       modalElement._x_dataStack[0].modalErrors = errors;
     }
   } else {
-    // For error, use validation modal
     showValidationModal([message, ...errors]);
   }
 }
 
-// Listen for modal updates
-document.addEventListener('modal-update', function(e) {
-  // Remove this function as it's not needed with our current modal setup
-});
-
-// Existing calculation functions
+// ===== CALCULATION FUNCTIONS =====
 function calculateRow(row) {
   const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
   const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
@@ -817,14 +756,26 @@ function attachListeners(row) {
   });
 }
 
-// Plot change listener - GLOBAL
+// ===== PLOT CHANGE LISTENER =====
 window.addEventListener('plot-changed', function(e) {
   const { plotCode, rowIndex } = e.detail;
   updateLuasFromPlot(plotCode, rowIndex);
 });
 
+function updateLuasFromPlot(plotCode, rowIndex) {
+  if (plotCode && window.plotsData) {
+    const plotData = window.plotsData.find(p => p.plot === plotCode);
+    if (plotData && plotData.luasarea) {
+      const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
+      if (luasInput) {
+        luasInput.value = plotData.luasarea;
+        luasInput.dispatchEvent(new Event('input'));
+      }
+    }
+  }
+}
 
-// Absen summary function
+// ===== ABSEN SUMMARY FUNCTION =====
 function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
   if (!selectedMandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
@@ -841,7 +792,6 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
   }
 
-  // UPDATE: ganti idmandor jadi mandorid sesuai struktur data baru
   const filteredAbsen = window.absenData.filter(absen => 
     absen.mandorid === selectedMandorId
   );
@@ -862,49 +812,7 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
 
-// Alpine.js store for modal
-document.addEventListener('alpine:init', () => {
-  Alpine.store('modal', {
-    showModal: false,
-    modalType: '',
-    modalMessage: '',
-    modalErrors: []
-  });
-  
-  // Store for tracking blok per row (needed for plot picker)
-  Alpine.store('blokPerRow', {
-    bloks: {},
-    
-    setBlok(rowIndex, blok) {
-      this.bloks[rowIndex] = blok;
-    },
-    
-    getBlok(rowIndex) {
-      return this.bloks[rowIndex] || '';
-    },
-    
-    hasBlok(rowIndex) {
-      return !!(this.bloks[rowIndex] && this.bloks[rowIndex].trim());
-    }
-  });
-});
-
-// Function to update luas from plot selection
-function updateLuasFromPlot(plotCode, rowIndex) {
-  if (plotCode && window.plotsData) {
-    const plotData = window.plotsData.find(p => p.plot === plotCode);
-    if (plotData && plotData.luasarea) {
-      const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
-      if (luasInput) {
-        luasInput.value = plotData.luasarea;
-        // Trigger change event to update calculations
-        luasInput.dispatchEvent(new Event('input'));
-      }
-    }
-  }
-}
-
-// Material picker function - FIXED VERSION
+// ===== MATERIAL PICKER FUNCTION =====
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -914,7 +822,6 @@ function materialPicker(rowIndex) {
     
     get hasMaterial() {
       const hasOptions = this.currentActivityCode && this.availableGroups.length > 0;
-      console.log(`Row ${this.rowIndex} - Activity: ${this.currentActivityCode}, hasMaterial: ${hasOptions}`);
       return hasOptions;
     },
     
@@ -943,7 +850,6 @@ function materialPicker(rowIndex) {
       if (this.hasMaterial) {
         this.open = true;
       } else {
-        // No material needed, ensure hidden inputs are cleared
         this.selectedGroup = null;
         this.updateHiddenInputs();
       }
@@ -954,7 +860,6 @@ function materialPicker(rowIndex) {
         herbisidagroupid: group.herbisidagroupid,
         herbisidagroupname: group.herbisidagroupname
       };
-      console.log(`Row ${this.rowIndex} - Selected group:`, this.selectedGroup);
     },
     
     clearSelection() {
@@ -968,7 +873,6 @@ function materialPicker(rowIndex) {
     },
     
     updateHiddenInputs() {
-      // Ensure hidden inputs exist
       this.ensureHiddenInputsExist();
       
       const materialGroupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
@@ -986,19 +890,12 @@ function materialPicker(rowIndex) {
       if (usingMaterialInput) {
         usingMaterialInput.value = (this.hasMaterial && this.selectedGroup) ? '1' : '0';
       }
-      
-      console.log(`Row ${this.rowIndex} - Updated inputs:`, {
-        groupId: materialGroupInput?.value,
-        groupName: materialGroupNameInput?.value,
-        usingMaterial: usingMaterialInput?.value
-      });
     },
     
     ensureHiddenInputsExist() {
       const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`);
       if (!materialCell) return;
       
-      // Create material_group_id input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`)) {
         const groupIdInput = document.createElement('input');
         groupIdInput.type = 'hidden';
@@ -1007,7 +904,6 @@ function materialPicker(rowIndex) {
         materialCell.appendChild(groupIdInput);
       }
       
-      // Create material_group_name input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`)) {
         const groupNameInput = document.createElement('input');
         groupNameInput.type = 'hidden';
@@ -1016,7 +912,6 @@ function materialPicker(rowIndex) {
         materialCell.appendChild(groupNameInput);
       }
       
-      // Create usingmaterial input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`)) {
         const usingMaterialInput = document.createElement('input');
         usingMaterialInput.type = 'hidden';
@@ -1027,18 +922,15 @@ function materialPicker(rowIndex) {
     },
     
     init() {
-      // Initialize hidden inputs
       this.ensureHiddenInputsExist();
       
-      // Listen for activity changes
       const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
       if (activityInput) {
         const observer = new MutationObserver(() => {
           const newActivity = activityInput.value || '';
           if (this.currentActivityCode !== newActivity) {
-            console.log(`Row ${this.rowIndex} - Activity changed from ${this.currentActivityCode} to ${newActivity}`);
             this.currentActivityCode = newActivity;
-            this.selectedGroup = null; // Reset selection when activity changes
+            this.selectedGroup = null;
             this.updateHiddenInputs();
           }
         });
@@ -1058,7 +950,7 @@ function materialPicker(rowIndex) {
         });
         
         this.currentActivityCode = activityInput.value || '';
-        this.updateHiddenInputs(); // Initialize on load
+        this.updateHiddenInputs();
       }
     }
   }
