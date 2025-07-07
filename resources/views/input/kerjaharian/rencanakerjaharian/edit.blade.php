@@ -581,19 +581,63 @@
 </form>
 
 <script>
+// ===== GLOBAL DATA - SEMUA DI SINI =====
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
 window.absenData = @json($absentenagakerja ?? []);
-window.plotsData = @json($plotsData ?? []); // Add plots data
+window.plotsData = @json($plotsData ?? []);
+window.activitiesData = @json($activities ?? []); // ← TAMBAHAN YANG KURANG
 
+// ===== ALPINE STORES - SEMUA DI SINI =====
+document.addEventListener('alpine:init', () => {
+  // Modal states
+  Alpine.store('modal', {
+    showModal: false,
+    modalType: '',
+    modalMessage: '',
+    modalErrors: []
+  });
+  
+  // Blok tracking per row
+  Alpine.store('blokPerRow', {
+    selected: {},
+    
+    setBlok(rowIndex, blok) {
+      this.selected[rowIndex] = blok;
+    },
+    
+    getBlok(rowIndex) {
+      return this.selected[rowIndex] || '';
+    },
+    
+    hasBlok(rowIndex) {
+      return !!this.selected[rowIndex];
+    }
+  });
+  
+  // Activity tracking per row (← TAMBAHAN YANG KURANG)
+  Alpine.store('activityPerRow', {
+    selected: {},
+    
+    setActivity(rowIndex, activity) {
+      this.selected[rowIndex] = activity;
+    },
+    
+    getActivity(rowIndex) {
+      return this.selected[rowIndex] || null;
+    }
+  });
+});
+
+// ===== FORM HANDLER =====
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize calculations
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   rows.forEach(row => attachListeners(row));
   calculateTotals();
 
-  // TAMBAHAN: Initialize absen summary dengan data mandor yang sudah ada
+  // Initialize absen summary dengan data mandor yang sudah ada
   const mandorId = '{{ old('mandor_id', $rkhHeader->mandorid) }}';
   const mandorName = '{{ old('mandor', $rkhHeader->mandor_nama) }}';
   
@@ -651,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// IMPROVED VALIDATION FUNCTION
+// ===== VALIDATION FUNCTIONS =====
 function validateForm() {
   const errors = [];
   
@@ -690,21 +734,17 @@ function validateForm() {
       if (laki === '' || laki === null) errors.push(`Baris ${rowNum}: Jumlah laki-laki harus diisi`);
       if (perempuan === '' || perempuan === null) errors.push(`Baris ${rowNum}: Jumlah perempuan harus diisi`);
       
-      // Check material requirement - ENHANCED DEBUG
+      // Check material requirement
       if (activity) {
         const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activity);
-        console.log(`Row ${rowNum} - Activity: ${activity}, hasMaterialOptions: ${hasMaterialOptions}`);
         
         if (hasMaterialOptions) {
           const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
           const materialValue = materialGroupInput ? materialGroupInput.value : '';
-          console.log(`Row ${rowNum} - Material group value: '${materialValue}'`);
-          console.log(`Row ${rowNum} - Material input exists: ${!!materialGroupInput}`);
           
           if (!materialGroupInput || !materialGroupInput.value) {
             const errorMsg = `Baris ${rowNum}: Grup material harus dipilih untuk aktivitas ini`;
             errors.push(errorMsg);
-            console.log(`Row ${rowNum} - Added error: ${errorMsg}`);
           }
         }
       }
@@ -715,79 +755,16 @@ function validateForm() {
     errors.push('Minimal satu baris harus diisi dengan lengkap');
   }
 
-  console.log('Validation errors:', errors);
   return {
     isValid: errors.length === 0,
     errors: errors
   };
 }
 
-// SHOW VALIDATION MODAL
 function showValidationModal(errors) {
-  // Dispatch custom event to show validation modal
   window.dispatchEvent(new CustomEvent('validation-error', {
     detail: { errors: errors }
   }));
-}
-
-// HIGHLIGHT REQUIRED FIELDS
-function highlightRequiredFields() {
-  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-  
-  rows.forEach((row, index) => {
-    const blokInput = row.querySelector('input[name$="[blok]"]');
-    const blok = blokInput.value;
-    
-    if (blok) {
-      // If blok is filled, highlight empty required fields
-      const requiredFields = [
-        row.querySelector('input[name$="[plot]"]'),
-        row.querySelector('input[name$="[nama]"]'),
-        row.querySelector('input[name$="[luas]"]'),
-        row.querySelector('input[name$="[laki_laki]"]'),
-        row.querySelector('input[name$="[perempuan]"]')
-      ];
-      
-      requiredFields.forEach(field => {
-        if (field && (!field.value || field.value === '')) {
-          addValidationError(field);
-        }
-      });
-      
-      // Check material requirement
-      const activityInput = row.querySelector('input[name$="[nama]"]');
-      if (activityInput && activityInput.value) {
-        const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activityInput.value);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            const materialDiv = row.querySelector('td:nth-child(10) > div > div');
-            if (materialDiv) {
-              materialDiv.classList.add('border-red-500', 'bg-red-50');
-              materialDiv.classList.remove('border-gray-300', 'border-green-300');
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
-// VALIDATION HELPER FUNCTIONS
-function addValidationError(input) {
-  // Add error styling
-  input.classList.add('border-red-500', 'bg-red-50');
-  input.classList.remove('border-gray-200', 'border-gray-300');
-  
-  // Clear error on input
-  input.addEventListener('input', function() {
-    clearFieldError(this);
-  }, { once: true });
-}
-
-function clearFieldError(input) {
-  input.classList.remove('border-red-500', 'bg-red-50');
-  input.classList.add('border-gray-200');
 }
 
 function clearValidationErrors() {
@@ -798,7 +775,7 @@ function clearValidationErrors() {
   });
 }
 
-// LOADING STATE FUNCTIONS
+// ===== LOADING STATE FUNCTIONS =====
 function showLoadingState() {
   const submitBtn = document.getElementById('submit-btn');
   const submitText = document.getElementById('submit-text');
@@ -823,11 +800,9 @@ function hideLoadingState() {
   loadingSpinner.classList.add('hidden');
 }
 
-// MODAL FUNCTIONS - SIMPLIFIED
+// ===== MODAL FUNCTIONS =====
 function showModal(type, message, errors = []) {
-  // Use Alpine.js event system for modals
   if (type === 'success') {
-    // For success, trigger Alpine data update
     const modalElement = document.querySelector('[x-data*="showModal"]');
     if (modalElement && modalElement._x_dataStack && modalElement._x_dataStack[0]) {
       modalElement._x_dataStack[0].showModal = true;
@@ -836,58 +811,11 @@ function showModal(type, message, errors = []) {
       modalElement._x_dataStack[0].modalErrors = errors;
     }
   } else {
-    // For error, use validation modal
     showValidationModal([message, ...errors]);
   }
 }
 
-// Plot change listener - GLOBAL
-window.addEventListener('plot-changed', function(e) {
-  const { plotCode, rowIndex } = e.detail;
-  updateLuasFromPlot(plotCode, rowIndex);
-});
-
-// Absen summary function - EDIT VERSION
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-  if (!selectedMandorId || !window.absenData) {
-    document.getElementById('summary-laki').textContent = '0';
-    document.getElementById('summary-perempuan').textContent = '0';
-    document.getElementById('summary-total').textContent = '0';
-    // Menggunakan tanggal dari RKH header yang sedang diedit
-    const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
-    document.getElementById('absen-info').textContent = selectedDate;
-    return;
-  }
-
-  // Menggunakan tanggal dari RKH header yang sedang diedit
-  const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
-
-  if (selectedMandorCode && selectedMandorName) {
-    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
-  }
-
-  // UPDATE: ganti idmandor jadi mandorid sesuai struktur data baru
-  const filteredAbsen = window.absenData.filter(absen => 
-    absen.mandorid === selectedMandorId
-  );
-
-  let lakiCount = 0;
-  let perempuanCount = 0;
-
-  filteredAbsen.forEach(absen => {
-    if (absen.gender === 'L') {
-      lakiCount++;
-    } else if (absen.gender === 'P') {
-      perempuanCount++;
-    }
-  });
-
-  document.getElementById('summary-laki').textContent = lakiCount;
-  document.getElementById('summary-perempuan').textContent = perempuanCount;
-  document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
-}
-
-// Existing calculation functions
+// ===== CALCULATION FUNCTIONS =====
 function calculateRow(row) {
   const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
   const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
@@ -929,34 +857,12 @@ function attachListeners(row) {
   });
 }
 
-// Alpine.js store for modal
-document.addEventListener('alpine:init', () => {
-  Alpine.store('modal', {
-    showModal: false,
-    modalType: '',
-    modalMessage: '',
-    modalErrors: []
-  });
-  
-  // Store for tracking blok per row (needed for plot picker)
-  Alpine.store('blokPerRow', {
-    bloks: {},
-    
-    setBlok(rowIndex, blok) {
-      this.bloks[rowIndex] = blok;
-    },
-    
-    getBlok(rowIndex) {
-      return this.bloks[rowIndex] || '';
-    },
-    
-    hasBlok(rowIndex) {
-      return !!(this.bloks[rowIndex] && this.bloks[rowIndex].trim());
-    }
-  });
+// ===== PLOT CHANGE LISTENER =====
+window.addEventListener('plot-changed', function(e) {
+  const { plotCode, rowIndex } = e.detail;
+  updateLuasFromPlot(plotCode, rowIndex);
 });
 
-// Function to update luas from plot selection
 function updateLuasFromPlot(plotCode, rowIndex) {
   if (plotCode && window.plotsData) {
     const plotData = window.plotsData.find(p => p.plot === plotCode);
@@ -964,14 +870,384 @@ function updateLuasFromPlot(plotCode, rowIndex) {
       const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
       if (luasInput) {
         luasInput.value = plotData.luasarea;
-        // Trigger change event to update calculations
         luasInput.dispatchEvent(new Event('input'));
       }
     }
   }
 }
 
-// Material picker function - FIXED VERSION
+// ===== ABSEN SUMMARY FUNCTION =====
+function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
+  if (!selectedMandorId || !window.absenData) {
+    document.getElementById('summary-laki').textContent = '0';
+    document.getElementById('summary-perempuan').textContent = '0';
+    document.getElementById('summary-total').textContent = '0';
+    const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+    document.getElementById('absen-info').textContent = selectedDate;
+    return;
+  }
+
+  const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+
+  if (selectedMandorCode && selectedMandorName) {
+    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
+  }
+
+  const filteredAbsen = window.absenData.filter(absen => 
+    absen.mandorid === selectedMandorId
+  );
+
+  let lakiCount = 0;
+  let perempuanCount = 0;
+
+  filteredAbsen.forEach(absen => {
+    if (absen.gender === 'L') {
+      lakiCount++;
+    } else if (absen.gender === 'P') {
+      perempuanCount++;
+    }
+  });
+
+  document.getElementById('summary-laki').textContent = lakiCount;
+  document.getElementById('summary-perempuan').textContent = perempuanCount;
+  document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
+}
+
+// ===== COMPONENT FUNCTIONS =====
+
+// MANDOR PICKER FUNCTION
+function mandorPicker() {
+  return {
+    open: false,
+    searchQuery: '',
+    mandors: window.mandorsData || [],
+    selected: { companycode: '', userid: '', name: '' },
+
+    get filteredMandors() {
+      if (!this.searchQuery) return this.mandors;
+      const q = this.searchQuery.toString().toUpperCase();
+      return this.mandors.filter(m =>
+        m.name.toUpperCase().includes(q) ||
+        m.userid.toString().toUpperCase().includes(q)
+      );
+    },
+
+    selectMandor(mandor) {
+      this.selected = {
+        companycode: mandor.companycode,
+        userid: mandor.userid,
+        name: mandor.name
+      };
+      this.open = false;
+      
+      updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
+    },
+
+    clear() {
+      this.selected = { companycode: '', userid: '', name: '' };
+      this.searchQuery = '';
+      updateAbsenSummary(null);
+      this.open = false;
+    }
+  }
+}
+
+// ACTIVITY PICKER FUNCTION
+function activityPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    selectedGroup: '',
+    selectedSubGroup: '',
+    activities: window.activitiesData || [],
+    selected: { 
+      activitycode: '', 
+      activityname: '',
+      usingvehicle: null,
+      jenistenagakerja: null 
+    },
+    rowIndex: rowIndex || 0,
+
+    get activityGroups() {
+      const groups = {}
+      this.activities.forEach(a => {
+        const code = a.activitygroup || 'Uncategorized'
+        if (!groups[code]) {
+          groups[code] = {
+            code,
+            groupName: a.group?.groupname || code,
+            activities: []
+          }
+        }
+        groups[code].activities.push(a)
+      })
+      return Object.values(groups).map(g => ({
+        code: g.code,
+        groupName: g.groupName,
+        activities: g.activities,
+        count: g.activities.length
+      }))
+    },
+
+    get subGroups() {
+      if (!this.selectedGroup) return []
+      const list = this.activities.filter(a => a.activitygroup === this.selectedGroup)
+      const prefixes = [...new Set(list.map(a => a.activitycode.split('.').slice(0,3).join('.')))]
+      const subs = prefixes.map(code => {
+        const subList = list.filter(a =>
+          a.activitycode === code ||
+          a.activitycode.startsWith(code + '.')
+        )
+        const childCount = subList.filter(a => a.activitycode.startsWith(code + '.')).length
+        return {
+          code,
+          activityname: subList[0].activityname,
+          count: childCount
+        }
+      })
+      subs.sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}))
+      return subs
+    },
+
+    get filteredGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return q
+        ? this.activityGroups.filter(g =>
+            g.code.toUpperCase().includes(q) ||
+            g.groupName.toUpperCase().includes(q)
+          )
+        : this.activityGroups
+    },
+
+    get filteredSubGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return this.subGroups.filter(sg =>
+        sg.code.toUpperCase().includes(q) ||
+        sg.activityname.toUpperCase().includes(q)
+      )
+    },
+
+    get filteredActivities() {
+      if (!this.selectedSubGroup) return []
+      const q = this.searchQuery.toUpperCase()
+      return this.activities
+        .filter(a => a.activitycode.startsWith(this.selectedSubGroup + '.'))
+        .filter(a =>
+          !q ||
+          a.activitycode.toUpperCase().includes(q) ||
+          a.activityname.toUpperCase().includes(q)
+        )
+        .sort((a,b) => a.activitycode.localeCompare(b.activitycode, undefined, {numeric: true}))
+    },
+
+    selectGroup(code) {
+      this.selectedGroup = code
+      this.searchQuery = ''
+    },
+
+    selectSubGroup(code) {
+      const matched = this.activities.filter(a => a.activitycode.startsWith(code))
+      
+      const children = this.activities.filter(a => a.activitycode.startsWith(code + '.'))
+      
+      if (children.length === 0 && matched.length > 0) {
+        const exactMatch = matched.find(a => a.activitycode === code)
+        return this.selectActivity(exactMatch || matched[0])
+      }
+      
+      this.selectedSubGroup = code
+      this.searchQuery = ''
+    },
+
+    backToGroups() {
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    backToSubGroups() {
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    selectActivity(activity) {
+      this.selected = {
+        activitycode: activity.activitycode,
+        activityname: activity.activityname,
+        usingvehicle: activity.usingvehicle,
+        jenistenagakerja: activity.jenistenagakerja
+      };
+      
+      Alpine.store('activityPerRow').setActivity(this.rowIndex, this.selected);
+      
+      this.updateJenisField();
+      
+      this.closeModal();
+    },
+
+    updateJenisField() {
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      
+      if (jenisField) {
+        let jenisId = null;
+        
+        if (this.selected.jenistenagakerja) {
+          if (typeof this.selected.jenistenagakerja === 'object' && this.selected.jenistenagakerja.idjenistenagakerja) {
+            jenisId = this.selected.jenistenagakerja.idjenistenagakerja;
+          } else if (typeof this.selected.jenistenagakerja === 'number') {
+            jenisId = this.selected.jenistenagakerja;
+          }
+        }
+        
+        if (jenisId === 1) {
+          jenisField.value = 'Harian';  
+        } else if (jenisId === 2) {
+          jenisField.value = 'Borongan';  
+        } else if (jenisId === 3) {
+          jenisField.value = 'Operator'; 
+        } else if (jenisId === 4) {
+          jenisField.value = 'Helper';
+        } else {
+          jenisField.value = '-';
+        }
+      }
+    },
+
+    closeModal() {
+      this.open = false
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    clear() {
+      this.selected = { activitycode: '', activityname: '', usingvehicle: null, jenistenagakerja: null };
+      
+      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
+      if (kendaraanField) {
+        kendaraanField.value = '-';
+      }
+
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      if (jenisField) {
+        jenisField.value = '-';
+      }
+
+      this.closeModal()
+    }
+  }
+}
+
+// BLOK PICKER FUNCTION
+function blokPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    bloks: window.bloksData || [],
+    selected: { blok: '', id: '' },
+    rowIndex: rowIndex,
+
+    get filteredBloks() {
+      if (!this.searchQuery) return this.bloks;
+      const q = this.searchQuery.toUpperCase();
+      return this.bloks.filter(b =>
+        b.blok && b.blok.toUpperCase().includes(q)
+      );
+    },
+
+    selectBlok(item) {
+      this.selected = item;
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, item.blok);
+      
+      const plotPicker = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotPicker && plotPicker._x_dataStack) {
+        const plotComponent = plotPicker._x_dataStack[0];
+        if (plotComponent.selected) {
+          plotComponent.selected = { plot: '' };
+        }
+      }
+      
+      this.open = false;
+    },
+
+    init() {
+      const savedBlok = Alpine.store('blokPerRow').getBlok(this.rowIndex);
+      if (savedBlok) {
+        const foundBlok = this.bloks.find(b => b.blok === savedBlok);
+        if (foundBlok) {
+          this.selected = foundBlok;
+        }
+      }
+    },
+
+    clear() {
+      this.selected = { blok: '', id: '' };
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
+      
+      const plotEl = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotEl && plotEl._x_dataStack) {
+        plotEl._x_dataStack[0].selected = { plot: '' };
+      }
+      
+      this.open = false;
+    }
+  }
+}
+
+// PLOT PICKER FUNCTION
+function plotPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    masterlist: window.masterlistData || [],
+    selected: { plot: '' },
+    rowIndex: rowIndex,
+
+    get isBlokSelected() {
+      return Alpine.store('blokPerRow').hasBlok(this.rowIndex);
+    },
+
+    get selectedBlok() {
+      return Alpine.store('blokPerRow').getBlok(this.rowIndex);
+    },
+
+    get filteredPlots() {
+      const blok = this.selectedBlok;
+      const q = this.searchQuery.toUpperCase();
+      
+      if (!blok) return [];
+      
+      return this.masterlist.filter(item =>
+        item.blok === blok &&
+        (!q || item.plot.toUpperCase().includes(q))
+      );
+    },
+
+    selectPlot(item) {
+      if (!this.isBlokSelected) return;
+      
+      this.selected = item;
+      this.open = false;
+      
+      window.dispatchEvent(new CustomEvent('plot-changed', {
+        detail: {
+          plotCode: item.plot,
+          rowIndex: this.rowIndex
+        }
+      }));
+    },
+
+    init() {
+      this.$watch('selectedBlok', (newBlok, oldBlok) => {
+        if (newBlok !== oldBlok) {
+          this.selected = { plot: '' };
+        }
+      });
+    }
+  }
+}
+
+// MATERIAL PICKER FUNCTION
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -981,7 +1257,6 @@ function materialPicker(rowIndex) {
     
     get hasMaterial() {
       const hasOptions = this.currentActivityCode && this.availableGroups.length > 0;
-      console.log(`Row ${this.rowIndex} - Activity: ${this.currentActivityCode}, hasMaterial: ${hasOptions}`);
       return hasOptions;
     },
     
@@ -1010,42 +1285,21 @@ function materialPicker(rowIndex) {
       if (this.hasMaterial) {
         this.open = true;
       } else {
-        // No material needed, ensure hidden inputs are cleared
         this.selectedGroup = null;
         this.updateHiddenInputs();
       }
     },
     
     selectGroup(group) {
-      // Ensure group object is properly structured
       this.selectedGroup = {
-        herbisidagroupid: group.herbisidagroupid || '',
-        herbisidagroupname: group.herbisidagroupname || ''
+        herbisidagroupid: group.herbisidagroupid,
+        herbisidagroupname: group.herbisidagroupname
       };
-      console.log(`Row ${this.rowIndex} - Selected group:`, this.selectedGroup);
-    },
-    
-    // NEW: Method to set selected group during initialization
-    setSelectedGroup(groupId, activityCode) {
-      if (!window.herbisidaData || !groupId || !activityCode) return;
-      
-      const groupData = window.herbisidaData.find(item => 
-        item.herbisidagroupid == groupId && item.activitycode === activityCode
-      );
-      
-      if (groupData) {
-        this.selectedGroup = {
-          herbisidagroupid: groupData.herbisidagroupid,
-          herbisidagroupname: groupData.herbisidagroupname
-        };
-        console.log(`Row ${this.rowIndex} - Initialized with group:`, this.selectedGroup);
-      }
     },
     
     clearSelection() {
       this.selectedGroup = null;
       this.updateHiddenInputs();
-      console.log(`Row ${this.rowIndex} - Cleared selection`);
     },
     
     confirmSelection() {
@@ -1054,7 +1308,6 @@ function materialPicker(rowIndex) {
     },
     
     updateHiddenInputs() {
-      // Ensure hidden inputs exist
       this.ensureHiddenInputsExist();
       
       const materialGroupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
@@ -1062,29 +1315,22 @@ function materialPicker(rowIndex) {
       const usingMaterialInput = document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`);
       
       if (materialGroupInput) {
-        materialGroupInput.value = (this.selectedGroup && this.selectedGroup.herbisidagroupid) ? this.selectedGroup.herbisidagroupid : '';
+        materialGroupInput.value = this.selectedGroup ? this.selectedGroup.herbisidagroupid : '';
       }
       
       if (materialGroupNameInput) {
-        materialGroupNameInput.value = (this.selectedGroup && this.selectedGroup.herbisidagroupname) ? this.selectedGroup.herbisidagroupname : '';
+        materialGroupNameInput.value = this.selectedGroup ? this.selectedGroup.herbisidagroupname : '';
       }
       
       if (usingMaterialInput) {
         usingMaterialInput.value = (this.hasMaterial && this.selectedGroup) ? '1' : '0';
       }
-      
-      console.log(`Row ${this.rowIndex} - Updated inputs:`, {
-        groupId: materialGroupInput?.value,
-        groupName: materialGroupNameInput?.value,
-        usingMaterial: usingMaterialInput?.value
-      });
     },
     
     ensureHiddenInputsExist() {
       const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`);
       if (!materialCell) return;
       
-      // Create material_group_id input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`)) {
         const groupIdInput = document.createElement('input');
         groupIdInput.type = 'hidden';
@@ -1093,7 +1339,6 @@ function materialPicker(rowIndex) {
         materialCell.appendChild(groupIdInput);
       }
       
-      // Create material_group_name input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`)) {
         const groupNameInput = document.createElement('input');
         groupNameInput.type = 'hidden';
@@ -1102,7 +1347,6 @@ function materialPicker(rowIndex) {
         materialCell.appendChild(groupNameInput);
       }
       
-      // Create usingmaterial input if not exists
       if (!document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`)) {
         const usingMaterialInput = document.createElement('input');
         usingMaterialInput.type = 'hidden';
@@ -1113,18 +1357,15 @@ function materialPicker(rowIndex) {
     },
     
     init() {
-      // Initialize hidden inputs
       this.ensureHiddenInputsExist();
       
-      // Listen for activity changes
       const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
       if (activityInput) {
         const observer = new MutationObserver(() => {
           const newActivity = activityInput.value || '';
           if (this.currentActivityCode !== newActivity) {
-            console.log(`Row ${this.rowIndex} - Activity changed from ${this.currentActivityCode} to ${newActivity}`);
             this.currentActivityCode = newActivity;
-            this.selectedGroup = null; // Reset selection when activity changes
+            this.selectedGroup = null;
             this.updateHiddenInputs();
           }
         });
@@ -1144,10 +1385,10 @@ function materialPicker(rowIndex) {
         });
         
         this.currentActivityCode = activityInput.value || '';
-        this.updateHiddenInputs(); // Initialize on load
+        this.updateHiddenInputs();
       }
     }
-  };
+  }
 }
 </script>
 
