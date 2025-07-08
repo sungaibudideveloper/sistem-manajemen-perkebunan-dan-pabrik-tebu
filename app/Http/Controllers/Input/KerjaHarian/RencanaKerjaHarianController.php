@@ -21,7 +21,9 @@ use App\Models\AbsenHdr;
 use App\Models\AbsenLst;
 use App\Models\Lkhhdr;
 use App\Models\Lkhlst;
+
 use App\Services\LkhGeneratorService;
+use App\Services\MaterialUsageGeneratorService;
 
 class RencanaKerjaHarianController extends Controller
 {
@@ -1267,11 +1269,11 @@ class RencanaKerjaHarianController extends Controller
             $rkh = DB::table('rkhhdr as r')
                 ->leftJoin('approval as app', function($join) use ($companycode) {
                     $join->on('r.activitygroup', '=', 'app.activitygroup')
-                         ->where('app.companycode', '=', $companycode);
+                        ->where('app.companycode', '=', $companycode);
                 })
                 ->where('r.companycode', $companycode)
                 ->where('r.rkhno', $rkhno)
-                ->select(['r.*', 'app.*'])
+                ->select(['r.*', 'app.jumlahapproval', 'app.idjabatanapproval1', 'app.idjabatanapproval2', 'app.idjabatanapproval3'])
                 ->first();
 
             if (!$rkh) {
@@ -1281,45 +1283,35 @@ class RencanaKerjaHarianController extends Controller
                 ]);
             }
 
-            $canApprove = false;
-            $approvalField = '';
-            $approvalDateField = '';
-            $approvalUserField = '';
+            // Validation logic for approval levels (existing code)
+            $approvalField = "approval{$level}flag";
+            $approvalDateField = "approval{$level}date";
+            $approvalUserField = "approval{$level}userid";
+            $approvalJabatanField = "idjabatanapproval{$level}";
 
-            switch ($level) {
-                case 1:
-                    if ($rkh->idjabatanapproval1 == $currentUser->idjabatan && is_null($rkh->approval1flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval1flag';
-                        $approvalDateField = 'approval1date';
-                        $approvalUserField = 'approval1userid';
-                    }
-                    break;
-                case 2:
-                    if ($rkh->idjabatanapproval2 == $currentUser->idjabatan && 
-                        $rkh->approval1flag == '1' && is_null($rkh->approval2flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval2flag';
-                        $approvalDateField = 'approval2date';
-                        $approvalUserField = 'approval2userid';
-                    }
-                    break;
-                case 3:
-                    if ($rkh->idjabatanapproval3 == $currentUser->idjabatan && 
-                        $rkh->approval1flag == '1' && $rkh->approval2flag == '1' && is_null($rkh->approval3flag)) {
-                        $canApprove = true;
-                        $approvalField = 'approval3flag';
-                        $approvalDateField = 'approval3date';
-                        $approvalUserField = 'approval3userid';
-                    }
-                    break;
-            }
-
-            if (!$canApprove) {
+            if (!isset($rkh->$approvalJabatanField) || $rkh->$approvalJabatanField != $currentUser->idjabatan) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Anda tidak memiliki hak untuk melakukan approval pada level ini'
+                    'message' => 'Anda tidak memiliki wewenang untuk approve level ini'
                 ]);
+            }
+
+            if (isset($rkh->$approvalField) && $rkh->$approvalField !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Approval level ini sudah diproses sebelumnya'
+                ]);
+            }
+
+            if ($level > 1) {
+                $prevLevel = $level - 1;
+                $prevApprovalField = "approval{$prevLevel}flag";
+                if (!isset($rkh->$prevApprovalField) || $rkh->$prevApprovalField !== '1') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Approval level sebelumnya belum disetujui'
+                    ]);
+                }
             }
 
             $approvalValue = $action === 'approve' ? '1' : '0';
@@ -1339,6 +1331,7 @@ class RencanaKerjaHarianController extends Controller
 
                 if ($this->isRkhFullyApproved($updatedRkh)) {
                     try {
+                        // Generate LKH
                         $lkhGenerator = new LkhGeneratorService();
                         $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
                         
@@ -1350,6 +1343,25 @@ class RencanaKerjaHarianController extends Controller
                     } catch (\Exception $e) {
                         \Log::error("Exception during LKH auto-generation for RKH {$rkhno}: " . $e->getMessage());
                         $responseMessage .= '. WARNING: Error saat auto-generate LKH';
+                    }
+                    
+                    // Generate Material Usage
+                    try {
+                        $materialUsageGenerator = new MaterialUsageGeneratorService();
+                        $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+                        
+                        if ($materialResult['success']) {
+                            if ($materialResult['total_items'] > 0) {
+                                $responseMessage .= '. Material usage berhasil di-generate (' . $materialResult['total_items'] . ' items)';
+                            } else {
+                                $responseMessage .= '. Info: Tidak ada material yang perlu di-generate';
+                            }
+                        } else {
+                            $responseMessage .= '. WARNING: Gagal generate material usage - ' . $materialResult['message'];
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Exception during Material Usage generation for RKH {$rkhno}: " . $e->getMessage());
+                        $responseMessage .= '. WARNING: Error saat generate material usage';
                     }
                 }
             }
@@ -1983,6 +1995,166 @@ public function updateLKH(Request $request, $lkhno)
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengupdate status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get material usage data for RKH
+     * 
+     * @param string $rkhno
+     * @return array
+     */
+    public function getMaterialUsageData($rkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            $materialUsage = DB::table('usematerialhdr as h')
+                ->leftJoin('usemateriallst as l', function($join) {
+                    $join->on('h.companycode', '=', 'l.companycode')
+                         ->on('h.rkhno', '=', 'l.rkhno');
+                })
+                ->leftJoin('herbisidagroup as hg', 'l.herbisidagroupid', '=', 'hg.herbisidagroupid')
+                ->where('h.companycode', $companycode)
+                ->where('h.rkhno', $rkhno)
+                ->select([
+                    'h.rkhno',
+                    'h.totalluas',
+                    'h.flagstatus',
+                    'h.createdat',
+                    'h.inputby',
+                    'l.itemcode',
+                    'l.itemname',
+                    'l.qty',
+                    'l.unit',
+                    'l.dosageperha',
+                    'l.herbisidagroupid',
+                    'hg.herbisidagroupname'
+                ])
+                ->get();
+                
+            return [
+                'success' => true,
+                'data' => $materialUsage,
+                'has_material_usage' => !$materialUsage->isEmpty()
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error("Error getting material usage data for RKH {$rkhno}: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Gagal memuat data material usage: ' . $e->getMessage(),
+                'data' => collect(),
+                'has_material_usage' => false
+            ];
+        }
+    }
+    
+    /**
+     * Check if RKH has material usage generated
+     * 
+     * @param string $rkhno
+     * @return bool
+     */
+    public function hasMaterialUsage($rkhno)
+    {
+        $companycode = Session::get('companycode');
+        
+        return DB::table('usematerialhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->exists();
+    }
+    
+    /**
+     * API endpoint to get material usage data
+     * 
+     * @param string $rkhno
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMaterialUsageApi($rkhno)
+    {
+        $result = $this->getMaterialUsageData($rkhno);
+        
+        if ($result['success']) {
+            // Group by herbisida group
+            $groupedData = $result['data']->groupBy('herbisidagroupid')->map(function($items, $groupId) {
+                $firstItem = $items->first();
+                return [
+                    'herbisidagroupid' => $groupId,
+                    'herbisidagroupname' => $firstItem->herbisidagroupname ?? 'Unknown Group',
+                    'items' => $items->map(function($item) {
+                        return [
+                            'itemcode' => $item->itemcode,
+                            'itemname' => $item->itemname,
+                            'qty' => number_format($item->qty, 2),
+                            'unit' => $item->unit,
+                            'dosageperha' => number_format($item->dosageperha, 2)
+                        ];
+                    })->toArray()
+                ];
+            })->values();
+            
+            return response()->json([
+                'success' => true,
+                'rkhno' => $rkhno,
+                'totalluas' => $result['data']->first()->totalluas ?? 0,
+                'flagstatus' => $result['data']->first()->flagstatus ?? 'N/A',
+                'createdat' => $result['data']->first()->createdat ?? null,
+                'inputby' => $result['data']->first()->inputby ?? 'N/A',
+                'material_groups' => $groupedData,
+                'total_items' => $result['data']->count()
+            ]);
+        } else {
+            return response()->json($result, 500);
+        }
+    }
+    
+    /**
+     * Manual trigger untuk generate material usage (untuk testing atau force generate)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function generateMaterialUsage(Request $request)
+    {
+        $request->validate([
+            'rkhno' => 'required|string'
+        ]);
+        
+        try {
+            $rkhno = $request->rkhno;
+            $companycode = Session::get('companycode');
+            
+            // Check if RKH exists and is fully approved
+            $rkh = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
+            
+            if (!$rkh) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RKH tidak ditemukan'
+                ]);
+            }
+            
+            if (!$this->isRkhFullyApproved($rkh)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RKH belum fully approved'
+                ]);
+            }
+            
+            $materialUsageGenerator = new MaterialUsageGeneratorService();
+            $result = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+            
+            return response()->json($result);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error manual generate material usage: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal generate material usage: ' . $e->getMessage()
             ], 500);
         }
     }
