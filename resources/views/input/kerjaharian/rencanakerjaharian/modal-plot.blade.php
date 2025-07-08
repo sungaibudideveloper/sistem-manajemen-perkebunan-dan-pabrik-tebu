@@ -3,7 +3,6 @@
   x-show="open"
   x-cloak
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-  style="display: none;"
   x-transition:enter="transition ease-out duration-300"
   x-transition:enter-start="opacity-0"
   x-transition:enter-end="opacity-100"
@@ -21,7 +20,6 @@
     x-transition:leave-start="opacity-100 transform scale-100"
     x-transition:leave-end="opacity-0 transform scale-95"
   >
-    {{-- Header --}}
     <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-sky-50 text-center">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
@@ -43,7 +41,6 @@
       </div>
     </div>
 
-    {{-- Search Bar --}}
     <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
       <div class="relative">
         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -61,34 +58,30 @@
       </div>
     </div>
 
-    {{-- List Plot --}}
-    <div class="flex-1 overflow-hidden">
-      <div class="overflow-y-auto" style="max-height: 400px;">
-        <table class="w-full">
-          <thead class="bg-gray-100 sticky top-0">
-            <tr>
-              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Plot</th>
+    <div class="flex-1 overflow-y-auto max-h-[400px]">
+      <table class="w-full">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Plot</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <template x-for="item in filteredPlots" :key="item.companycode + item.plot + item.blok">
+            <tr @click="selectPlot(item)" class="hover:bg-sky-50 cursor-pointer transition-colors duration-150 group">
+              <td class="px-6 py-4 text-sm font-medium text-gray-900 text-center" x-text="item.plot"></td>
             </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <template x-for="item in filteredPlots" :key="item.companycode + item.plot + item.blok">
-              <tr @click="selectPlot(item)" class="hover:bg-sky-50 cursor-pointer transition-colors duration-150 group">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900 text-center" x-text="item.plot"></td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+          </template>
+        </tbody>
+      </table>
 
-        <template x-if="filteredPlots.length === 0">
-          <div class="text-center py-12">
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada plot ditemukan</h3>
-            <p class="mt-1 text-sm text-gray-500">Coba ubah kata kunci atau blok yang dipilih.</p>
-          </div>
-        </template>
-      </div>
+      <template x-if="filteredPlots.length === 0">
+        <div class="text-center py-12">
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada plot ditemukan</h3>
+          <p class="mt-1 text-sm text-gray-500">Coba ubah kata kunci atau blok yang dipilih.</p>
+        </div>
+      </template>
     </div>
 
-    {{-- Footer --}}
     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
       <div class="flex justify-between items-center text-xs text-gray-500">
         <span x-text="`${filteredPlots.length} plot tersedia`"></span>
@@ -98,22 +91,21 @@
   </div>
 </div>
 
+@once
 @push('scripts')
 <script>
 function plotPicker(rowIndex) {
   return {
     open: false,
     searchQuery: '',
-    masterlist: window.masterlistData || [], // Pastikan data masterlist tersedia secara global
+    masterlist: window.masterlistData || [],
     selected: { plot: '' },
     rowIndex: rowIndex,
 
-    // Cek apakah blok sudah dipilih untuk baris ini
     get isBlokSelected() {
       return Alpine.store('blokPerRow').hasBlok(this.rowIndex);
     },
 
-    // Dapatkan blok yang dipilih untuk baris ini
     get selectedBlok() {
       return Alpine.store('blokPerRow').getBlok(this.rowIndex);
     },
@@ -122,7 +114,7 @@ function plotPicker(rowIndex) {
       const blok = this.selectedBlok;
       const q = this.searchQuery.toUpperCase();
       
-      if (!blok) return []; // Jika belum ada blok yang dipilih, tidak tampilkan plot apapun
+      if (!blok) return [];
       
       return this.masterlist.filter(item =>
         item.blok === blok &&
@@ -131,12 +123,11 @@ function plotPicker(rowIndex) {
     },
 
     selectPlot(item) {
-      if (!this.isBlokSelected) return; // Prevent selection jika blok belum dipilih
+      if (!this.isBlokSelected) return;
       
       this.selected = item;
       this.open = false;
       
-      // TRIGGER EVENT untuk update luas area
       window.dispatchEvent(new CustomEvent('plot-changed', {
         detail: {
           plotCode: item.plot,
@@ -146,7 +137,6 @@ function plotPicker(rowIndex) {
     },
 
     init() {
-      // Watch untuk perubahan blok selection
       this.$watch('selectedBlok', (newBlok, oldBlok) => {
         if (newBlok !== oldBlok) {
           this.selected = { plot: '' };
@@ -155,10 +145,6 @@ function plotPicker(rowIndex) {
     }
   }
 }
-
-// Pastikan data masterlist tersedia secara global
-@if(isset($masterlist))
-  window.masterlistData = @json($masterlist);
-@endif
 </script>
 @endpush
+@endonce

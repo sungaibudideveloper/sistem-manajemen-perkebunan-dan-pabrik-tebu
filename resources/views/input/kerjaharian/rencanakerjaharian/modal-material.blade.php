@@ -127,21 +127,20 @@
 
 @push('scripts')
 <script>
-// Tambahkan setelah function attachListeners
+// Re-define materialPicker dengan confirmSelection dan helper-nya
 function materialPicker(rowIndex) {
   return {
     open: false,
     rowIndex: rowIndex,
     currentActivityCode: '',
     selectedGroup: null,
-    
+
     get hasMaterial() {
       return this.currentActivityCode && this.availableGroups.length > 0;
     },
-    
+
     get availableGroups() {
       if (!this.currentActivityCode || !window.herbisidaData) return [];
-      
       const groups = {};
       window.herbisidaData.forEach(item => {
         if (item.activitycode === this.currentActivityCode) {
@@ -149,116 +148,101 @@ function materialPicker(rowIndex) {
             groups[item.herbisidagroupid] = {
               herbisidagroupid: item.herbisidagroupid,
               herbisidagroupname: item.herbisidagroupname,
-              showDetails: false, // Default collapsed
+              showDetails: false,
               items: []
             };
           }
           groups[item.herbisidagroupid].items.push(item);
         }
       });
-      
       return Object.values(groups);
     },
-    
-    // Tambahkan function untuk mencari group berdasarkan ID
+
+    // Cari group by ID (untuk inisialisasi kalau perlu)
     getGroupById(groupId, activityCode) {
-      if (!window.herbisidaData || !groupId || !activityCode) return null;
-      
-      const group = window.herbisidaData.find(item => 
-        item.herbisidagroupid == groupId && 
-        item.activitycode === activityCode
+      if (!groupId || !activityCode) return null;
+      const item = window.herbisidaData.find(i =>
+        i.herbisidagroupid == groupId && i.activitycode === activityCode
       );
-      
-      if (group) {
-        return {
-          herbisidagroupid: group.herbisidagroupid,
-          herbisidagroupname: group.herbisidagroupname
-        };
-      }
-      
-      return null;
+      return item
+        ? { herbisidagroupid: item.herbisidagroupid, herbisidagroupname: item.herbisidagroupname }
+        : null;
     },
-    
-    // Method untuk set selected group dari outside
+
     setSelectedGroup(groupId, activityCode) {
-      const group = this.getGroupById(groupId, activityCode);
-      if (group) {
-        this.selectedGroup = group;
-      }
+      const g = this.getGroupById(groupId, activityCode);
+      if (g) this.selectedGroup = g;
     },
-    
+
     checkMaterial() {
-      if (this.hasMaterial) {
-        this.open = true;
-      }
+      if (this.hasMaterial) this.open = true;
     },
-    
+
     selectGroup(group) {
       this.selectedGroup = {
         herbisidagroupid: group.herbisidagroupid,
         herbisidagroupname: group.herbisidagroupname
       };
     },
-    
+
     clearSelection() {
       this.selectedGroup = null;
-      // Update hidden input untuk group
-      const groupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
-      if (groupInput) groupInput.value = '';
-      
-      const groupNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`);
-      if (groupNameInput) groupNameInput.value = '';
+      this.updateHiddenInputs();
     },
-    
+
+    // **Tambah ini** agar tombol “Selesai” berfungsi
     confirmSelection() {
-      if (this.selectedGroup) {
-        // Update hidden inputs untuk menyimpan data grup yang dipilih
-        let groupInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
-        if (!groupInput) {
-          groupInput = document.createElement('input');
-          groupInput.type = 'hidden';
-          groupInput.name = `rows[${this.rowIndex}][material_group_id]`;
-          document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`).appendChild(groupInput);
-        }
-        groupInput.value = this.selectedGroup.herbisidagroupid;
-        
-        let groupNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`);
-        if (!groupNameInput) {
-          groupNameInput = document.createElement('input');
-          groupNameInput.type = 'hidden';
-          groupNameInput.name = `rows[${this.rowIndex}][material_group_name]`;
-          document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`).appendChild(groupNameInput);
-        }
-        groupNameInput.value = this.selectedGroup.herbisidagroupname;
-      }
+      this.updateHiddenInputs();
       this.open = false;
     },
-    
+
+    // Update value hidden inputs
+    updateHiddenInputs() {
+      this.ensureHiddenInputsExist();
+      document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`).value =
+        this.selectedGroup ? this.selectedGroup.herbisidagroupid : '';
+      document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`).value =
+        this.selectedGroup ? this.selectedGroup.herbisidagroupname : '';
+      document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`).value =
+        this.selectedGroup ? '1' : '0';
+    },
+
+    // Pastikan hidden inputs ada di DOM
+    ensureHiddenInputsExist() {
+      const cell = document.querySelector(
+        `tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`
+      );
+      if (!cell) return;
+      ['material_group_id','material_group_name','usingmaterial'].forEach(name => {
+        if (!cell.querySelector(`input[name="rows[${this.rowIndex}][${name}]"]`)) {
+          const inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = `rows[${this.rowIndex}][${name}]`;
+          inp.value = name === 'usingmaterial' ? '0' : '';
+          cell.appendChild(inp);
+        }
+      });
+    },
+
     init() {
-      // PERBAIKAN: Gunakan event listener untuk mendengar perubahan activity
-      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
+      // sama seperti sebelumnya: observasi activity input dan reset selection
+      const activityInput = document.querySelector(
+        `input[name="rows[${this.rowIndex}][nama]"]`
+      );
       if (activityInput) {
-        // Observer untuk mendeteksi perubahan value
         const observer = new MutationObserver(() => {
           this.currentActivityCode = activityInput.value || '';
-          this.selectedGroup = null; // Reset selection saat activity berubah
-          this.clearSelection(); // Clear hidden inputs juga
+          this.selectedGroup = null;
+          this.updateHiddenInputs();
         });
-        
-        observer.observe(activityInput, {
-          attributes: true,
-          attributeFilter: ['value']
-        });
-        
-        // Juga tambahkan event listener untuk input event
+        observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
         activityInput.addEventListener('input', () => {
           this.currentActivityCode = activityInput.value || '';
           this.selectedGroup = null;
-          this.clearSelection();
+          this.updateHiddenInputs();
         });
-        
-        // Set initial activity code
         this.currentActivityCode = activityInput.value || '';
+        this.updateHiddenInputs();
       }
     }
   }
