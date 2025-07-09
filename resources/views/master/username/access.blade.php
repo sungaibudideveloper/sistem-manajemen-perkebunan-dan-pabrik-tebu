@@ -25,9 +25,10 @@
             @click="show = false">&times;</span>
     </div>
     @endif
-
     <div class="mx-4 pb-6">
-        <form action="{{ route('masterdata.username.setaccess', $user->userid) }}" method="POST" class="space-y-4">
+        {{-- Di paling atas file blade --}}
+
+        <form action="{{ route('masterdata.username.setaccess', $userdata->userid) }}" method="POST" class="space-y-4">
             @csrf
             @method('PUT')
 
@@ -36,7 +37,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <input type="text"
                     name="usernm"
-                    value="{{ $user->userid }}"
+                    value="{{ $userdata->userid }}"
                     readonly
                     class="w-full border border-gray-300 px-3 py-1.5 rounded bg-gray-100 text-sm text-gray-600" />
             </div>
@@ -59,7 +60,7 @@
                                     data-menuid="{{ $m->menuid }}"
                                     name="permissions[]"
                                     value="{{ $m->name }}"
-                                    {{ in_array($m->name, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                    {{ in_array($m->name, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                 {{ $m->name }}
                             </label>
                             @if($sub->isNotEmpty())
@@ -119,7 +120,7 @@
                                                             data-submenuid="{{ $sm->submenuid }}"
                                                             name="permissions[]"
                                                             value="{{ $permissionValue }}"
-                                                            {{ in_array($permissionValue, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                                            {{ in_array($permissionValue, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                                         {{ $sm->name }}
                                                     </label>
                                                     @if($subsub->isNotEmpty())
@@ -141,7 +142,7 @@
                                                             name="permissions[]"
                                                             value="{{ $ss->name }}"
                                                             class="w-3 h-3 mr-2"
-                                                            {{ in_array($ss->name, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                                            {{ in_array($ss->name, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                                         {{ $ss->name }}
                                                     </label>
                                                     @endforeach
@@ -176,7 +177,7 @@
                                                 data-submenuid="{{ $sm->submenuid }}"
                                                 name="permissions[]"
                                                 value="{{ $permissionValue }}"
-                                                {{ in_array($permissionValue, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                                {{ in_array($permissionValue, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                             {{ $sm->name }}
                                         </label>
                                         @if($subsub->isNotEmpty())
@@ -198,7 +199,7 @@
                                                 name="permissions[]"
                                                 value="{{ $ss->name }}"
                                                 class="w-3 h-3 mr-2"
-                                                {{ in_array($ss->name, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                                {{ in_array($ss->name, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                             {{ $ss->name }}
                                         </label>
                                         @endforeach
@@ -220,7 +221,7 @@
                                 <input type="checkbox"
                                     name="permissions[]"
                                     value="{{ $custom }}"
-                                    {{ in_array($custom, json_decode($user->permissions ?? '[]', true)) ? 'checked' : '' }}>
+                                    {{ in_array($custom, json_decode($userdata->permissions ?? '[]', true)) ? 'checked' : '' }}>
                                 <span class="ml-2">{{ $custom }}</span>
                             </label>
                         </div>

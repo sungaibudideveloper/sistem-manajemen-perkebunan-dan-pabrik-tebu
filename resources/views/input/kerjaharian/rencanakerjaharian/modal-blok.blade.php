@@ -3,7 +3,6 @@
   x-show="open"
   x-cloak
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-  style="display: none;"
   x-transition:enter="transition ease-out duration-300"
   x-transition:enter-start="opacity-0"
   x-transition:enter-end="opacity-100"
@@ -111,31 +110,12 @@
 
 @push('scripts')
 <script>
-  document.addEventListener('alpine:init', () => {
-  // Store global untuk menyimpan blok yang dipilih per baris
-  Alpine.store('blokPerRow', {
-    selected: {}, // { 0: 'A01', 1: 'B02', ... }
-    
-    setBlok(rowIndex, blok) {
-      this.selected[rowIndex] = blok;
-    },
-    
-    getBlok(rowIndex) {
-      return this.selected[rowIndex] || '';
-    },
-    
-    hasBlok(rowIndex) {
-      return !!this.selected[rowIndex];
-    }
-  });
-});
-
-// Komponen blokPicker yang diperbarui dengan parameter rowIndex
+// ===== HANYA FUNCTION COMPONENT - TIDAK ADA DUPLIKASI =====
 function blokPicker(rowIndex) {
   return {
     open: false,
     searchQuery: '',
-    bloks: window.bloksData || [], // Pastikan data bloks tersedia secara global
+    bloks: window.bloksData || [], // Ambil dari global yang sudah di-set di create.blade.php
     selected: { blok: '', id: '' },
     rowIndex: rowIndex,
 
@@ -149,7 +129,7 @@ function blokPicker(rowIndex) {
 
     selectBlok(item) {
       this.selected = item;
-      // Simpan blok yang dipilih untuk baris ini
+      // Simpan blok yang dipilih untuk baris ini menggunakan store global
       Alpine.store('blokPerRow').setBlok(this.rowIndex, item.blok);
       
       // Reset plot selection untuk baris ini
@@ -175,12 +155,12 @@ function blokPicker(rowIndex) {
       }
     },
 
-          clear() {
-      // clear this component’s selection
+    clear() {
+      // Clear this component's selection
       this.selected = { blok: '', id: '' };
-      // clear the global store so plotPicker knows there's no blok
+      // Clear the global store so plotPicker knows there's no blok
       Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
-      // also clear any plot selection within the same row
+      // Also clear any plot selection within the same row
       const plotEl = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
       if (plotEl && plotEl._x_dataStack) {
         plotEl._x_dataStack[0].selected = { plot: '' };
@@ -190,28 +170,6 @@ function blokPicker(rowIndex) {
     }
   }
 }
-
-  // Pastikan data bloks tersedia secara global
-  @if(isset($bloks))
-    window.bloksData = @json($bloks);
-  @endif
-
-  // Tambahkan sebelum closing script tag
-document.addEventListener('alpine:init', () => {
-  // Store untuk menyimpan activity yang dipilih per baris
-  Alpine.store('activityPerRow', {
-    selected: {},
-    
-    setActivity(rowIndex, activity) {
-      this.selected[rowIndex] = activity;
-    }
-  });
-});
-
-// Pastikan data herbisida tersedia secara global
-@if(isset($herbisidagroups))
-  window.herbisidaData = @json($herbisidagroups);
-@endif
 </script>
 @endpush
 

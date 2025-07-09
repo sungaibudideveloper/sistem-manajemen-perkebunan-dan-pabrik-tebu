@@ -21,6 +21,7 @@ use App\Http\Controllers\MasterData\AplikasiController;
 use App\Http\Controllers\MasterData\Aplikasi\MenuController;
 use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
 use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
+use App\Http\Controllers\MasterData\UpahController;
 
 
 
@@ -232,3 +233,11 @@ Route::group(['middleware' => ['auth', 'permission:Subsubmenu']], function () {
 });
 Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->middleware(['auth', 'permission:Edit Subsubmenu'])->name('masterdata.subsubmenu.update');
 Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Subsubmenu'])->name('masterdata.subsubmenu.destroy');
+
+// Upah Routes
+Route::group(['middleware' => ['auth', 'permission:Upah']], function () {
+    Route::get('masterdata/upah', [UpahController::class, 'index'])->name('masterdata.upah.index');
+    Route::post('masterdata/upah', [UpahController::class, 'store'])->name('masterdata.upah.store');
+});
+Route::put('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'update'])->middleware(['auth', 'permission:Edit Upah'])->name('masterdata.upah.update');
+Route::delete('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Upah'])->name('masterdata.upah.destroy');
