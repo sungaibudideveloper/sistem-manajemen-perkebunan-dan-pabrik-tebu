@@ -22,13 +22,31 @@ class MapsController extends Controller
       $title = "Dashboard Agronomi";
       $nav = "Agronomi";
       $header = DB::table('testgpshdr')->where('companycode', session('companycode'))->orderBy('plot')->get();
-      $list = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
+      //old
+      //$list1 = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
+      //new
+      $list = DB::table('testgpslst as a')
+      ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
+      ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
+      ->where('a.companycode', session('companycode'))
+      ->whereIn('a.plot', Arr::pluck($header, 'plot'))
+      ->select('a.plot', 'a.latitude', 'a.longitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
+      ->get();
+
+      // $plotKodeStatus = collect($list)
+      // ->whereNotNull('kodestatus')
+      // ->where('kodestatus', '!=', '')
+      // ->groupBy('plot')
+      // ->map(function($items) {
+      //     return $items->first()->kodestatus;
+      // });
       
-    //   dd($header->first(), $list->first());
-      return view('dashboard\maps\mapscio')->with([
+      //  dd($list, $header);
+      return view('dashboard\maps\mapsfilter')->with([
         'title' => $title,
         'nav'   => $nav,
         'header' => $header,
+        // 'plotKodeStatus' => $plotKodeStatus,
         'list' => $list
       ]);
     }
