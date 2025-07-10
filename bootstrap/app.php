@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
+
+        // CSRF exceptions
+        $middleware->validateCsrfTokens(except: [
+            'dashboard/mapsapi',  
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

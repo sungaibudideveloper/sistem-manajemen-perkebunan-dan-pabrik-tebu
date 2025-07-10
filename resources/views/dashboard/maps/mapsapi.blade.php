@@ -326,7 +326,7 @@
         <div class="control-panel mx-4 p-6 rounded-2xl shadow-xl mb-8">
             <div class="flex flex-col lg:flex-row gap-6 items-center">
                 <!-- Upload Zone -->
-                <div class="flex-1 w-full">
+                <div class="flex-1 w-full" hidden>
                     <div class="upload-zone border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer bg-white/50 hover:bg-white/70 transition-all">
                         <form action="{{ route('dashboard.maps.upload') }}" id="frm-submit" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
                             @csrf
@@ -766,32 +766,47 @@
                 });
 
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="font-family: 'Inter', sans-serif; max-width: 300px; padding: 4px;">
-                            <div style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; display: flex; align-items: center;">
-                                <span style="margin-right: 8px;">🌱</span>
-                                Block ${blockLetter} - ${point.code}
-                            </div>
-                            <div style="font-size: 14px; line-height: 1.6; color: #374151;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                                    <div><strong>Block:</strong> ${blockLetter}</div>
-                                    <div><strong>Plot:</strong> ${point.code}</div>
-                                </div>
-                                <div style="background: #f3f4f6; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
-                                    <div hidden><strong>Batch No:</strong> ${plotDetails.batchno || 'N/A'}</div>
-                                    <div hidden><strong>Batch Date:</strong> ${plotDetails.batchdate || 'N/A'}</div>
-                                    <div><strong>Age:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.age || 'N/A'} months</span></div>
-                                </div>
-                                <div><strong>Plot Status:</strong> <span style="color: ${getPlotStatusColor(plotDetails.status)}; font-weight: 600;">${plotDetails.status || 'N/A'}</span></div>
-                                <div><strong>Kode Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.kodestatus || 'N/A'}</span></div>
-                                <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
-                                    <div>Lat: ${point.lat.toFixed(6)}</div>
-                                    <div>Lng: ${point.lng.toFixed(6)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `
-                });
+    content: `
+        <div style="font-family: Arial, sans-serif; max-width: 300px; padding: 4px;">
+            <div style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; display: flex; align-items: center;">
+                <span style="margin-right: 8px;">🌱</span>
+                Block ${blockLetter} - ${point.code}
+            </div>
+            <div style="font-size: 14px; line-height: 1.6; color: #374151;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div><strong>Block:</strong> ${blockLetter}</div>
+                    <div><strong>Plot:</strong> ${point.code}</div>
+                </div>
+                <div style="background: #f3f4f6; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                    <div hidden><strong>Batch No:</strong> ${plotDetails.batchno || 'N/A'}</div>
+                    <div hidden><strong>Batch Date:</strong> ${plotDetails.batchdate || 'N/A'}</div>
+                    <div><strong>Age:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.age || 'N/A'} months</span></div>
+                </div>
+                <div><strong>Plot Status:</strong> <span style="color: ${getPlotStatusColor(plotDetails.status)}; font-weight: 600;">${plotDetails.status || 'N/A'}</span></div>
+                <div><strong>Kode Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.kodestatus || 'N/A'}</span></div>
+                <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+                    <div>Lat: ${point.lat.toFixed(6)}</div>
+                    <div>Lng: ${point.lng.toFixed(6)}</div>
+                </div>
+                <div style="margin-top: 12px; text-align: center;">
+                    <button onclick="openInGoogleMaps(${point.lat}, ${point.lng}, '${point.code}')" 
+                            style="background: linear-gradient(135deg, #4285F4, #1976D2); 
+                                   color: white; 
+                                   border: none; 
+                                   padding: 8px 16px; 
+                                   border-radius: 20px; 
+                                   font-size: 12px; 
+                                   font-weight: 600; 
+                                   cursor: pointer; 
+                                   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+                                   transition: all 0.2s ease;">
+                        📍 Open in Google Maps
+                    </button>
+                </div>
+            </div>
+        </div>
+    `
+});
 
                 marker.addListener('click', () => {
                     infoWindow.open(map, marker);
@@ -826,7 +841,7 @@
                 
                 const infoWindow = new google.maps.InfoWindow({
                     content: `
-                        <div style="font-family: 'Inter', sans-serif; max-width: 350px; padding: 4px;">
+                        <div style="max-width: 350px; padding: 4px;">
                             <div style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; display: flex; align-items: center;">
                                 <span style="margin-right: 8px;">🌿</span>
                                 Block ${blockLetter} - Plot ${point.code}
@@ -975,7 +990,7 @@
                 // Initialize filters
                 document.getElementById('filteredCount').textContent = headerData.length;
                 initializeWiFiLocationTracking();
-                testLocation();
+                
             } catch (error) {
                 console.error('Error initializing Google Maps:', error);
                 showNotification('Error memuat Google Maps', 'error');
@@ -1165,7 +1180,7 @@
             // Create info window
             const infoWindow = new google.maps.InfoWindow({
                 content: `
-                    <div style="font-family: 'Inter', sans-serif; padding: 4px;">
+                    <div style="padding: 4px;">
                         <div style="font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">
                             📍 Your Location
                         </div>
@@ -1189,25 +1204,46 @@
 
 
 
-        function testLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                console.log('TEST - Location received:', position);
-                showNotification(`TEST - Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-            },
-            (error) => {
-                console.log('TEST - Location error:', error);
-                showNotification(`TEST - Location error: ${error.code}`, 'error');
-            },
-            {
-                enableHighAccuracy: false,
-                timeout: 60000,
-                maximumAge: 60000
+
+        // Function to open Google Maps with coordinates
+        function openInGoogleMaps(lat, lng, plotCode) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Create the label for the location
+            const label = encodeURIComponent(`Agricultural Plot ${plotCode}`);
+            
+            if (isMobile) {
+                // For mobile devices, use the Google Maps app URL scheme
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${label}`;
+                
+                // Try to open Google Maps app, fallback to browser
+                const appUrl = `comgooglemaps://?q=${lat},${lng}&label=${label}`;
+                
+                // Create a temporary link to test if the app opens
+                const tempLink = document.createElement('a');
+                tempLink.href = appUrl;
+                tempLink.style.display = 'none';
+                document.body.appendChild(tempLink);
+                
+                // Try to open the app
+                tempLink.click();
+                
+                // Fallback to browser after a short delay
+                setTimeout(() => {
+                    window.open(mapsUrl, '_blank');
+                    document.body.removeChild(tempLink);
+                }, 1000);
+                
+                showNotification(`📍 Opening ${plotCode} in Google Maps...`);
+            } else {
+                // For desktop, open in browser
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${label}`;
+                window.open(mapsUrl, '_blank');
+                showNotification(`📍 Opening ${plotCode} in Google Maps...`);
             }
-        );
-    }
-}
+        }
+
+        
 
 
 

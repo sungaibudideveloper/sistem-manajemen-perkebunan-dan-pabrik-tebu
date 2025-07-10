@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Arr;
@@ -53,7 +54,7 @@ class MapsController extends Controller
       ]);
     }
 
-    public function indexapi()
+    public function indexapi(Request $request) 
     {
         $usematerialhdr = new usematerialhdr;
         $title = "Dashboard Agronomi";
@@ -62,12 +63,7 @@ class MapsController extends Controller
         $rkhno = $request->rkhno ?? 'RKH21050234';
         $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
         $detailsPlots = Arr::pluck($details, 'plot');
-
-        $dummy = [
-          'latitude' => -4.124500,
-          'longitude' => 105.300000
-        ];
-    
+        
         $list = DB::table('testgpslst as a')
             ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
             ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
@@ -76,7 +72,7 @@ class MapsController extends Controller
             ->whereIn('a.plot', $detailsPlots)
             ->select('a.companycode', 'a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
             ->get();
-    
+        
         $header = $list->map(function($item) {
             return (object)[
                 'companycode' => $item->companycode,
@@ -85,14 +81,41 @@ class MapsController extends Controller
                 'centerlongitude' => $item->centerlongitude
             ];
         })->unique('plot')->values();
-
-        return view('dashboard\maps\mapsapi')->with([
+        
+        $data = [
             'title' => $title,
             'nav' => $nav,
             'header' => $header,
-            'dummy' => $dummy,
-            'list' => $list
-        ]);
+            'list' => $list,
+            'rkhno' => $rkhno
+        ];
+        
+        // Always return the HTML view (whether accessed directly or via API)
+        return view('dashboard.maps.mapsapi', $data);
+    }
+
+    public function callmapsapi(Request $request) 
+    {
+        $rkhno = $request->rkhno ?? 'RKH21050234';
+        
+        try {
+            // Generate the URL with the rkhno parameter
+            $mapUrl = env('MAPS_API_URL', 'http://localhost/tebu/public/dashboard/mapsapi') . '?rkhno=' . $rkhno;
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Map URL generated successfully',
+                'url' => $mapUrl,
+                'rkhno' => $rkhno
+            ], 200, [], JSON_UNESCAPED_SLASHES);
+            
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating map URL',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     
 

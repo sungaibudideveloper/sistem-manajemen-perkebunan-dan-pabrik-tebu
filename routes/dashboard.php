@@ -23,10 +23,11 @@ Route::match(['POST', 'GET'], 'dashboard/timeline',  [TimelineController::class,
     ->name('dashboard.timeline');//->middleware('permission:Dashboard HPT');
 
     Route::match(['POST', 'GET'], 'dashboard/maps',  [MapsController::class, 'index'])
-        ->name('dashboard.maps');
-
+    ->name('dashboard.maps');
     Route::match(['POST', 'GET'], 'dashboard/mapsapi',  [MapsController::class, 'indexapi'])
     ->name('dashboard.mapsapi');
+    Route::match(['POST', 'GET'], 'dashboard/callmapsapi', [MapsController::class, 'callmapsapi'])
+    ->name('dashboard.callmapsapi');
 
         Route::match(['POST', 'GET'], 'dashboard/maps/upload',  [MapsController::class, 'upload'])
             ->name('dashboard.maps.upload');
