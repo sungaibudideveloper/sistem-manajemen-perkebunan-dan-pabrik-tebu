@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Arr;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
+use App\Models\usematerialhdr;
+use App\Models\usemateriallst;
 
 class MapsController extends Controller
 {
@@ -50,6 +52,49 @@ class MapsController extends Controller
         'list' => $list
       ]);
     }
+
+    public function indexapi()
+    {
+        $usematerialhdr = new usematerialhdr;
+        $title = "Dashboard Agronomi";
+        $nav = "Agronomi";
+        
+        $rkhno = $request->rkhno ?? 'RKH21050234';
+        $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
+        $detailsPlots = Arr::pluck($details, 'plot');
+
+        $dummy = [
+          'latitude' => -4.124500,
+          'longitude' => 105.300000
+        ];
+    
+        $list = DB::table('testgpslst as a')
+            ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
+            ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
+            ->leftJoin('testgpshdr as d', 'a.plot', '=', 'd.plot')
+            ->where('a.companycode', session('companycode'))
+            ->whereIn('a.plot', $detailsPlots)
+            ->select('a.companycode', 'a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
+            ->get();
+    
+        $header = $list->map(function($item) {
+            return (object)[
+                'companycode' => $item->companycode,
+                'plot' => $item->plot,
+                'centerlatitude' => $item->centerlatitude,
+                'centerlongitude' => $item->centerlongitude
+            ];
+        })->unique('plot')->values();
+
+        return view('dashboard\maps\mapsapi')->with([
+            'title' => $title,
+            'nav' => $nav,
+            'header' => $header,
+            'dummy' => $dummy,
+            'list' => $list
+        ]);
+    }
+    
 
     public function upload(Request $request)
     {
