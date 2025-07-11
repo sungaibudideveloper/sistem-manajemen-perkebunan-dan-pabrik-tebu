@@ -8,16 +8,17 @@ class Upah extends Model
     protected $table = 'upah'; // Nama tabel
     public $timestamps = false;
 
-    protected $primaryKey = 'jenisupah'; // ? Tambahkan baris ini
+    protected $primaryKey = 'upahid'; // ? Tambahkan baris ini
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'jenisupah',
+        'upahid',
         'harga',
         'tanggalefektif',
         'inputby',
         'createdat',
+        'companycode',
     ];
 
     protected $casts = [

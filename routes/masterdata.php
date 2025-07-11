@@ -239,5 +239,5 @@ Route::group(['middleware' => ['auth', 'permission:Upah']], function () {
     Route::get('masterdata/upah', [UpahController::class, 'index'])->name('masterdata.upah.index');
     Route::post('masterdata/upah', [UpahController::class, 'store'])->name('masterdata.upah.store');
 });
-Route::put('masterdata/upah/{jenisupah}', [UpahController::class, 'update'])->middleware(['auth', 'permission:Edit Upah'])->name('masterdata.upah.update');
-Route::delete('masterdata/upah/{jenisupah}', [UpahController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Upah'])->name('masterdata.upah.destroy');
+Route::put('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'update'])->middleware(['auth', 'permission:Edit Upah'])->name('masterdata.upah.update');
+Route::delete('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Upah'])->name('masterdata.upah.destroy');

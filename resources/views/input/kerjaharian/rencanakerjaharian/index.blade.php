@@ -38,7 +38,7 @@
                     >
                         Approve RKH
                     </button>
-                    {{-- RKH Approval Button --}}
+                    {{-- LKH Approval Button --}}
                     <button
                         type="button"
                         @click="showLkhApprovalModal = true; loadPendingLKHApprovals()"
@@ -58,7 +58,6 @@
                     </button>
                 </div>
             </div>
-
 
             <form action="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" method="GET" id="filterForm">
                 <input type="hidden" name="search" value="{{ $search }}">
@@ -105,7 +104,7 @@
                         <!-- Absen & Generate DTH Buttons -->
                         <button
                             type="button"
-                            @click="openAbsenModal()"
+                            @click="showAbsenModal = true; loadAbsenData(absenDate)"
                             class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Check Data Absen
@@ -330,11 +329,7 @@
                 </div>
             </div>
 
-            <!-- =========================== -->
-            <!-- RKH APPROVAL MODALS SECTION -->
-            <!-- =========================== -->
-
-            <!-- RKH Approval Detail/Info Modal -->
+            <!-- RKH APPROVAL INFO MODAL -->
             <div
                 x-show="showRkhApprovalInfoModal"
                 x-transition.opacity
@@ -347,22 +342,21 @@
                 >
                     <!-- Header -->
                     <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-lg font-semibold text-gray-900">RKH Approval Status Detail</h2>
-                        </div>
+                        <h2 class="text-lg font-semibold text-gray-900">RKH Approval Status Detail</h2>
                         <button
-                            @click="showRkhApprovalInfoModal = false; clearRkhApprovalDetail()"
-                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none flex-shrink-0"
+                            @click="showRkhApprovalInfoModal = false"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
                         >&times;</button>
                     </div>
 
-                    <!-- Body -->
-                    <div class="p-6 overflow-hidden flex-grow">
+                    <!-- Loading State -->
+                    <div x-show="isRkhInfoLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading approval details</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div x-show="!isRkhInfoLoading" class="p-6 overflow-hidden flex-grow">
                         <!-- RKH Info -->
                         <div class="bg-gray-50 rounded-lg p-4 mb-6">
                             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -373,7 +367,7 @@
                             </div>
                         </div>
 
-                        <!-- RKH Approval Progress -->
+                        <!-- Approval Progress -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-semibold text-gray-900">RKH Approval Progress</h3>
                             
@@ -395,19 +389,16 @@
                                                  'bg-yellow-100': level.status === 'waiting',
                                                  'bg-gray-100': level.status === 'not_required'
                                              }">
-                                            <!-- Approved -->
+                                            <!-- Icons -->
                                             <svg x-show="level.status === 'approved'" class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                             </svg>
-                                            <!-- Declined -->
                                             <svg x-show="level.status === 'declined'" class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                             </svg>
-                                            <!-- Waiting -->
                                             <svg x-show="level.status === 'waiting'" class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <!-- Not Required -->
                                             <svg x-show="level.status === 'not_required'" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                                             </svg>
@@ -450,16 +441,16 @@
                     </div>
 
                     <!-- Footer -->
-                    <div class="flex justify-end p-4 border-t bg-gray-50">
+                    <div x-show="!isRkhInfoLoading" class="flex justify-end p-4 border-t bg-gray-50">
                         <button
-                            @click="showRkhApprovalInfoModal = false; clearRkhApprovalDetail()"
+                            @click="showRkhApprovalInfoModal = false"
                             class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded"
                         >Close</button>
                     </div>
                 </div>
             </div>
 
-            <!-- RKH Approval Action Modal -->
+            <!-- RKH APPROVAL ACTION MODAL -->
             <div
                 x-show="showRkhApprovalModal"
                 x-transition.opacity
@@ -472,17 +463,10 @@
                 >
                     <!-- Header -->
                     <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-gray-50 to-white-50">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-lg font-semibold text-gray-900">RKH Approval Actions</h2>
-                        </div>
+                        <h2 class="text-lg font-semibold text-gray-900">RKH Approval Actions</h2>
                         <button
                             @click="showRkhApprovalModal = false"
-                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none flex-shrink-0"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
                         >&times;</button>
                     </div>
 
@@ -490,24 +474,24 @@
                     <div class="p-4 bg-blue-50 border-b">
                         <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
                                 <span class="font-medium text-blue-900">Logged in as:</span>
                                 <span class="text-blue-800" x-text="rkhUserInfo.name"></span>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
                                 <span class="font-medium text-blue-900">Position:</span>
                                 <span class="text-blue-800" x-text="rkhUserInfo.jabatan_name"></span>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Loading State -->
+                    <div x-show="isRkhApprovalLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading approval data</p>
+                    </div>
+
                     <!-- Body -->
-                    <div class="p-4 overflow-hidden flex-grow">
+                    <div x-show="!isRkhApprovalLoading" class="p-4 overflow-hidden flex-grow">
                         <div class="mb-4">
                             <p class="text-sm text-gray-600">RKH yang menunggu persetujuan Anda:</p>
                         </div>
@@ -564,7 +548,7 @@
                     </div>
 
                     <!-- Footer -->
-                    <div class="flex justify-between items-center p-4 border-t bg-gray-50 flex-shrink-0">
+                    <div x-show="!isRkhApprovalLoading" class="flex justify-between items-center p-4 border-t bg-gray-50">
                         <div class="text-sm text-gray-600">
                             <span x-text="selectedRKHs.length"></span> of <span x-text="pendingRkhApprovals.length"></span> selected
                         </div>
@@ -572,21 +556,15 @@
                             <button
                                 @click="bulkApproveRkh()"
                                 :disabled="selectedRKHs.length === 0"
-                                class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded transition-colors"
+                                class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded"
                             >
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
                                 Approve Selected
                             </button>
                             <button
                                 @click="bulkDeclineRkh()"
                                 :disabled="selectedRKHs.length === 0"
-                                class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded transition-colors"
+                                class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded"
                             >
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
                                 Decline Selected
                             </button>
                             <button
@@ -598,11 +576,7 @@
                 </div>
             </div>
 
-            <!-- =========================== -->
-            <!-- LKH APPROVAL MODALS SECTION -->
-            <!-- =========================== -->
-
-            <!-- LKH Approval Detail/Info Modal -->
+            <!-- LKH APPROVAL INFO MODAL -->
             <div
                 x-show="showLkhApprovalInfoModal"
                 x-transition.opacity
@@ -615,22 +589,21 @@
                 >
                     <!-- Header -->
                     <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-lg font-semibold text-gray-900">LKH Approval Status Detail</h2>
-                        </div>
+                        <h2 class="text-lg font-semibold text-gray-900">LKH Approval Status Detail</h2>
                         <button
-                            @click="showLkhApprovalInfoModal = false; clearLkhApprovalDetail()"
-                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none flex-shrink-0"
+                            @click="showLkhApprovalInfoModal = false"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
                         >&times;</button>
                     </div>
 
+                    <!-- Loading State -->
+                    <div x-show="isLkhInfoLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading LKH approval details</p>
+                    </div>
+
                     <!-- Body -->
-                    <div class="p-6 overflow-hidden flex-grow">
+                    <div x-show="!isLkhInfoLoading" class="p-6 overflow-hidden flex-grow">
                         <!-- LKH Info -->
                         <div class="bg-gray-50 rounded-lg p-4 mb-6">
                             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -665,19 +638,16 @@
                                                  'bg-yellow-100': level.status === 'waiting',
                                                  'bg-gray-100': level.status === 'not_required'
                                              }">
-                                            <!-- Approved -->
+                                            <!-- Icons -->
                                             <svg x-show="level.status === 'approved'" class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                             </svg>
-                                            <!-- Declined -->
                                             <svg x-show="level.status === 'declined'" class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                             </svg>
-                                            <!-- Waiting -->
                                             <svg x-show="level.status === 'waiting'" class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <!-- Not Required -->
                                             <svg x-show="level.status === 'not_required'" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                                             </svg>
@@ -720,16 +690,16 @@
                     </div>
 
                     <!-- Footer -->
-                    <div class="flex justify-end p-4 border-t bg-gray-50">
+                    <div x-show="!isLkhInfoLoading" class="flex justify-end p-4 border-t bg-gray-50">
                         <button
-                            @click="showLkhApprovalInfoModal = false; clearLkhApprovalDetail()"
+                            @click="showLkhApprovalInfoModal = false"
                             class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded"
                         >Close</button>
                     </div>
                 </div>
             </div>
 
-            <!-- LKH Approval Action Modal -->
+            <!-- LKH APPROVAL ACTION MODAL -->
             <div
                 x-show="showLkhApprovalModal"
                 x-transition.opacity
@@ -742,17 +712,10 @@
                 >
                     <!-- Header -->
                     <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-gray-50 to-white-50">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-lg font-semibold text-gray-900">LKH Approval Actions</h2>
-                        </div>
+                        <h2 class="text-lg font-semibold text-gray-900">LKH Approval Actions</h2>
                         <button
                             @click="showLkhApprovalModal = false"
-                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none flex-shrink-0"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
                         >&times;</button>
                     </div>
 
@@ -760,24 +723,24 @@
                     <div class="p-4 bg-blue-50 border-b">
                         <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
                                 <span class="font-medium text-blue-900">Logged in as:</span>
                                 <span class="text-blue-800" x-text="lkhUserInfo.name"></span>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
                                 <span class="font-medium text-blue-900">Position:</span>
                                 <span class="text-blue-800" x-text="lkhUserInfo.jabatan_name"></span>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Loading State -->
+                    <div x-show="isLkhApprovalLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading LKH approval data</p>
+                    </div>
+
                     <!-- Body -->
-                    <div class="p-4 overflow-hidden flex-grow">
+                    <div x-show="!isLkhApprovalLoading" class="p-4 overflow-hidden flex-grow">
                         <div class="mb-4">
                             <p class="text-sm text-gray-600">LKH yang menunggu persetujuan Anda:</p>
                         </div>
@@ -836,7 +799,7 @@
                     </div>
 
                     <!-- Footer -->
-                    <div class="flex justify-between items-center p-4 border-t bg-gray-50 flex-shrink-0">
+                    <div x-show="!isLkhApprovalLoading" class="flex justify-between items-center p-4 border-t bg-gray-50">
                         <div class="text-sm text-gray-600">
                             <span x-text="selectedLKHs.length"></span> of <span x-text="pendingLKHApprovals.length"></span> selected
                         </div>
@@ -844,21 +807,15 @@
                             <button
                                 @click="bulkApproveLKH()"
                                 :disabled="selectedLKHs.length === 0"
-                                class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded transition-colors"
+                                class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded"
                             >
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
                                 Approve Selected
                             </button>
                             <button
                                 @click="bulkDeclineLKH()"
                                 :disabled="selectedLKHs.length === 0"
-                                class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded transition-colors"
+                                class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded"
                             >
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
                                 Decline Selected
                             </button>
                             <button
@@ -870,7 +827,7 @@
                 </div>
             </div>
 
-            <!-- Absen Modal -->
+            <!-- ABSEN MODAL -->
             <div
                 x-show="showAbsenModal"
                 x-transition.opacity
@@ -882,7 +839,7 @@
                     class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-2/3 max-h-[90vh] flex flex-col"
                 >
                     <!-- Header -->
-                    <div class="flex justify-between items-center p-4 border-b flex-shrink-0">
+                    <div class="flex justify-between items-center p-4 border-b">
                         <h2 class="text-lg font-semibold">Data Absen Tenaga Kerja</h2>
                         <div class="flex items-center space-x-2">
                             <label for="absen_date" class="text-sm">Tanggal:</label>
@@ -896,7 +853,7 @@
                         </div>
                         <button
                             @click="showAbsenModal = false"
-                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none flex-shrink-0"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
                         >&times;</button>
                     </div>
 
@@ -916,8 +873,14 @@
                         </select>
                     </div>
 
+                    <!-- Loading State -->
+                    <div x-show="isAbsenLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading absen data</p>
+                    </div>
+
                     <!-- Body -->
-                    <div class="p-4 overflow-hidden flex-grow">
+                    <div x-show="!isAbsenLoading" class="p-4 overflow-hidden flex-grow">
                         <div class="overflow-x-auto">
                             <div class="max-h-[400px] overflow-y-auto">
                                 <table class="min-w-full table-auto text-sm">
@@ -956,7 +919,7 @@
                     </div>
 
                     <!-- Footer -->
-                    <div class="flex justify-between items-center p-4 border-t flex-shrink-0">
+                    <div x-show="!isAbsenLoading" class="flex justify-between items-center p-4 border-t">
                         <div class="text-sm space-x-4">
                             <span>Total Laki-laki: <span x-text="absenList.filter(p => p.gender==='L').length"></span></span>
                             <span>Total Perempuan: <span x-text="absenList.filter(p => p.gender==='P').length"></span></span>
@@ -970,7 +933,7 @@
                 </div>
             </div>
 
-            <!-- Generate DTH Modal -->
+            <!-- GENERATE DTH MODAL -->
             <div
                 x-show="showGenerateDTHModal"
                 x-transition.opacity
@@ -1015,7 +978,7 @@
                 </div>
             </div>
 
-            <!-- LKH Modal -->
+            <!-- LKH MODAL -->
             <div x-show="showLKHModal"
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1024,22 +987,21 @@
                     class="bg-white rounded-lg shadow-lg w-11/12 md:w-4/5 lg:w-3/5 max-h-[90vh] flex flex-col">
                     <!-- Header -->
                     <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-lg font-semibold text-gray-900">Daftar LKH</h2>
-                        </div>
+                        <h2 class="text-lg font-semibold text-gray-900">Daftar LKH</h2>
                         <div class="text-sm text-gray-600">
                             RKH: <span class="font-mono font-medium" x-text="selectedRkhno"></span>
                         </div>
                         <button @click="showLKHModal = false" class="text-gray-600 hover:text-gray-800 text-2xl leading-none">&times;</button>
                     </div>
                     
+                    <!-- Loading State -->
+                    <div x-show="isLkhModalLoading" class="p-6 text-center">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-500 loading-dots">Loading LKH data</p>
+                    </div>
+
                     <!-- Body -->
-                                                        <div class="p-4 overflow-hidden flex-grow">
+                    <div x-show="!isLkhModalLoading" class="p-4 overflow-hidden flex-grow">
                         <div class="overflow-x-auto">
                             <div class="max-h-[400px] overflow-y-auto">
                                 <table class="min-w-full table-auto text-sm">
@@ -1141,14 +1103,13 @@
                     </div>
                     
                     <!-- Footer -->
-                    <div class="flex justify-between items-center p-4 border-t bg-gray-50">
+                    <div x-show="!isLkhModalLoading" class="flex justify-between items-center p-4 border-t bg-gray-50">
                         <div class="text-sm text-gray-600">
                             Total: <span x-text="Array.isArray(lkhData) ? lkhData.length : 0"></span> LKH
-                            <span x-show="!Array.isArray(lkhData)" class="text-yellow-600 ml-2">(Loading...)</span>
                         </div>
                         <button
                             @click="showLKHModal = false; lkhData = []"
-                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded transition-colors"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded"
                         >Close</button>
                     </div>
                 </div>
@@ -1231,29 +1192,25 @@
 
         function mainData() {
             return {
-                // =========================
-                // GENERAL MODAL FLAGS
-                // =========================
+                // Modal flags
                 showLKHModal: false,
                 showAbsenModal: false,
                 showGenerateDTHModal: false,
                 showDateModal: false,
-
-                // =========================
-                // RKH APPROVAL MODAL FLAGS
-                // =========================
                 showRkhApprovalModal: false,
                 showRkhApprovalInfoModal: false,
-
-                // =========================
-                // LKH APPROVAL MODAL FLAGS  
-                // =========================
                 showLkhApprovalModal: false,
                 showLkhApprovalInfoModal: false,
 
-                // =========================
-                // GENERAL DATA PROPERTIES
-                // =========================
+                // Loading states
+                isRkhApprovalLoading: false,
+                isLkhApprovalLoading: false,
+                isRkhInfoLoading: false,
+                isLkhInfoLoading: false,
+                isLkhModalLoading: false,
+                isAbsenLoading: false,
+
+                // Data properties
                 dthDate: '{{ request('filter_date', date('Y-m-d')) }}',
                 selectedRkhno: '',
                 selectedLkhno: '',
@@ -1265,17 +1222,13 @@
                 createDate: new Date().toISOString().split('T')[0],
                 today: new Date().toISOString().split('T')[0],
                 
-                // =========================
-                // RKH APPROVAL DATA
-                // =========================
+                // RKH Approval data
                 pendingRkhApprovals: [],
                 rkhUserInfo: {},
                 selectedRKHs: [],
                 rkhApprovalDetail: {},
                 
-                // =========================
-                // LKH APPROVAL DATA
-                // =========================
+                // LKH Approval data
                 pendingLKHApprovals: [],
                 lkhUserInfo: {},
                 selectedLKHs: [],
@@ -1287,9 +1240,6 @@
                     return date.toISOString().split('T')[0];
                 },
 
-                // =========================
-                // GENERAL METHODS
-                // =========================
                 proceedToCreate() {
                     if (!this.createDate) {
                         alert('Silakan pilih tanggal terlebih dahulu');
@@ -1300,6 +1250,7 @@
                 },
 
                 async loadAbsenData(date, mandorId = '') {
+                    this.isAbsenLoading = true;
                     try {
                         const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.loadAbsenByDate') }}?date=${date}&mandor_id=${mandorId}`);
                         const data = await response.json();
@@ -1313,12 +1264,9 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat data absen');
+                    } finally {
+                        this.isAbsenLoading = false;
                     }
-                },
-
-                openAbsenModal() {
-                    this.showAbsenModal = true;
-                    this.loadAbsenData(this.absenDate); // Load data saat modal dibuka
                 },
 
                 async generateDTH() {
@@ -1353,20 +1301,13 @@
                     }
                 },
 
-                // =========================
-                // LKH METHODS
-                // =========================
+                // LKH methods
                 async loadLKHData(rkhno) {
-                    // Reset data dan loading state
+                    this.isLkhModalLoading = true;
                     this.lkhData = [];
                     
                     try {
-                        console.log('Loading LKH data for RKH:', rkhno);
-                        
-                        // Construct correct URL
                         const url = `{{ url('input/kerjaharian/rencanakerjaharian') }}/${rkhno}/lkh`;
-                        console.log('Fetching URL:', url);
-                        
                         const response = await fetch(url);
                         
                         if (!response.ok) {
@@ -1374,13 +1315,9 @@
                         }
                         
                         const data = await response.json();
-                        console.log('LKH API Response:', data);
                         
                         if (data.success) {
-                            // Pastikan data adalah array dan memiliki struktur yang benar
                             const lkhArray = Array.isArray(data.lkh_data) ? data.lkh_data : [];
-                            
-                            // Validate each item has required properties
                             this.lkhData = lkhArray.map(lkh => ({
                                 lkhno: lkh.lkhno || '',
                                 activity: lkh.activity || 'Unknown Activity',
@@ -1396,21 +1333,19 @@
                                 view_url: lkh.view_url || '#',
                                 edit_url: lkh.edit_url || '#'
                             }));
-                            
-                            console.log('Processed LKH Data:', this.lkhData);
                         } else {
                             this.lkhData = [];
-                            console.error('LKH API Error:', data.message);
                             alert('Gagal memuat data LKH: ' + data.message);
                         }
                     } catch (error) {
                         console.error('LKH Loading Error:', error);
                         this.lkhData = [];
                         alert('Terjadi kesalahan saat memuat data LKH: ' + error.message);
+                    } finally {
+                        this.isLkhModalLoading = false;
                     }
                 },
 
-                // Submit LKH method (changed from lockLKH to submitLKH)
                 async submitLKH(lkhno) {
                     if (!confirm('Apakah Anda yakin ingin mengirim LKH ini? LKH yang dikirim akan masuk ke proses approval.')) {
                         return;
@@ -1432,7 +1367,6 @@
 
                         if (data.success) {
                             alert(data.message);
-                            // Reload LKH data for current RKH
                             await this.loadLKHData(this.selectedRkhno);
                         } else {
                             alert('Gagal mengirim LKH: ' + data.message);
@@ -1443,10 +1377,9 @@
                     }
                 },
 
-                // =========================
-                // RKH APPROVAL METHODS
-                // =========================
+                // RKH Approval methods
                 async loadPendingApprovals() {
+                    this.isRkhApprovalLoading = true;
                     try {
                         const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.getPendingApprovals") }}');
                         const data = await response.json();
@@ -1461,10 +1394,13 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat data approval');
+                    } finally {
+                        this.isRkhApprovalLoading = false;
                     }
                 },
 
                 async loadRkhApprovalDetail(rkhno) {
+                    this.isRkhInfoLoading = true;
                     this.rkhApprovalDetail = {};
                     
                     try {
@@ -1479,6 +1415,8 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat detail approval');
+                    } finally {
+                        this.isRkhInfoLoading = false;
                     }
                 },
 
@@ -1580,15 +1518,9 @@
                     }
                 },
 
-                clearRkhApprovalDetail() {
-                    this.rkhApprovalDetail = {};
-                    this.selectedRkhno = '';
-                },
-
-                // =========================
-                // LKH APPROVAL METHODS
-                // =========================
+                // LKH Approval methods
                 async loadPendingLKHApprovals() {
+                    this.isLkhApprovalLoading = true;
                     try {
                         const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.getPendingLKHApprovals") }}');
                         const data = await response.json();
@@ -1603,10 +1535,13 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat data approval LKH');
+                    } finally {
+                        this.isLkhApprovalLoading = false;
                     }
                 },
 
                 async loadLkhApprovalDetail(lkhno) {
+                    this.isLkhInfoLoading = true;
                     this.lkhApprovalDetail = {};
                     
                     try {
@@ -1621,6 +1556,8 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat memuat detail approval LKH');
+                    } finally {
+                        this.isLkhInfoLoading = false;
                     }
                 },
 
@@ -1720,11 +1657,6 @@
                         console.error('Error:', error);
                         return { success: false, message: 'Network error' };
                     }
-                },
-
-                clearLkhApprovalDetail() {
-                    this.lkhApprovalDetail = {};
-                    this.selectedLkhno = '';
                 }
             };
         }

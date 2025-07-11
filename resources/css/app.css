@@ -502,3 +502,30 @@ body {
         color: #f9fafb;
     }
 }
+
+    .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spinner-spin 1s linear infinite;
+    }
+
+    @keyframes spinner-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-dots::after {
+        content: '';
+        animation: loading-dots 1.5s infinite;
+    }
+
+    @keyframes loading-dots {
+        0%, 20% { content: ''; }
+        40% { content: '.'; }
+        60% { content: '..'; }
+        80%, 100% { content: '...'; }
+    }
+
