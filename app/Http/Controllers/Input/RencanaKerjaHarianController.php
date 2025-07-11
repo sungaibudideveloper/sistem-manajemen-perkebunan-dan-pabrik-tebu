@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Input\KerjaHarian;
+namespace App\Http\Controllers\Input;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;

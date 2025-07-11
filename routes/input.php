@@ -2,7 +2,7 @@
 use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\GudangController;
-use App\Http\Controllers\Input\KerjaHarian\RencanaKerjaHarianController;
+use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
 
