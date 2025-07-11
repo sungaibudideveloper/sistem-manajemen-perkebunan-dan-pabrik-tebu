@@ -63,7 +63,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 Route::middleware('auth')->group(function () {
     // RKH Routes Group
     Route::prefix('input/kerjaharian/rencanakerjaharian')
-        ->name('input.kerjaharian.rencanakerjaharian.')
+        ->name('input.rencanakerjaharian.')
         ->controller(RencanaKerjaHarianController::class)
         ->group(function () {
             

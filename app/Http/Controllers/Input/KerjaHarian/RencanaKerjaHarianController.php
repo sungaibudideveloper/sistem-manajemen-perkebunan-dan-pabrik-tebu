@@ -139,7 +139,7 @@ class RencanaKerjaHarianController extends Controller
             Carbon::parse($filterDate ?? Carbon::today())
         );
 
-        return view('input.kerjaharian.rencanakerjaharian.index', [
+        return view('input.rencanakerjaharian.index', [
             'title' => 'Rencana Kerja Harian',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -160,7 +160,7 @@ class RencanaKerjaHarianController extends Controller
         $selectedDate = $request->input('date');
         
         if (!$selectedDate) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Silakan pilih tanggal terlebih dahulu');
         }
 
@@ -169,7 +169,7 @@ class RencanaKerjaHarianController extends Controller
         $maxDate = Carbon::today()->addDays(7);
         
         if ($targetDate->lt($today) || $targetDate->gt($maxDate)) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
         }
 
@@ -199,7 +199,7 @@ class RencanaKerjaHarianController extends Controller
         $absenData = $absenModel->getDataAbsenFull($companycode, $targetDate); // Updated method call
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
 
-        return view('input.kerjaharian.rencanakerjaharian.create', [
+        return view('input.rencanakerjaharian.create', [
             'title' => 'Form RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -341,11 +341,11 @@ class RencanaKerjaHarianController extends Controller
                     'success' => true,
                     'message' => "Data berhasil disimpan dengan nomor RKH: <strong>{$rkhno}</strong>",
                     'rkhno' => $rkhno,
-                    'redirect_url' => route('input.kerjaharian.rencanakerjaharian.index')
+                    'redirect_url' => route('input.rencanakerjaharian.index')
                 ]);
             }
 
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('success', 'RKH berhasil disimpan!');
 
         } catch (\Exception $e) {
@@ -408,7 +408,7 @@ class RencanaKerjaHarianController extends Controller
             ->first();
         
         if (!$rkhHeader) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Data RKH tidak ditemukan');
         }
         
@@ -426,7 +426,7 @@ class RencanaKerjaHarianController extends Controller
         $absenModel = new AbsenHdr; // Updated to use new model
         $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
         
-        return view('input.kerjaharian.rencanakerjaharian.show', [
+        return view('input.rencanakerjaharian.show', [
             'title' => 'Detail RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -449,7 +449,7 @@ class RencanaKerjaHarianController extends Controller
             ->first();
         
         if (!$rkhHeader) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Data RKH tidak ditemukan');
         }
         
@@ -475,7 +475,7 @@ class RencanaKerjaHarianController extends Controller
         $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         
-        return view('input.kerjaharian.rencanakerjaharian.edit', [
+        return view('input.rencanakerjaharian.edit', [
             'title' => 'Edit RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -620,11 +620,11 @@ class RencanaKerjaHarianController extends Controller
                     'success' => true,
                     'message' => "RKH berhasil diupdate!",
                     'rkhno' => $rkhno,
-                    'redirect_url' => route('input.kerjaharian.rencanakerjaharian.index')
+                    'redirect_url' => route('input.rencanakerjaharian.index')
                 ]);
             }
 
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('success', 'RKH berhasil diupdate!');
                 
         } catch (\Exception $e) {
@@ -757,8 +757,8 @@ class RencanaKerjaHarianController extends Controller
                     'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
                     'can_edit' => $canEdit,
                     'can_submit' => $canSubmit,
-                    'view_url' => route('input.kerjaharian.rencanakerjaharian.showLKH', $lkh->lkhno),
-                    'edit_url' => route('input.kerjaharian.rencanakerjaharian.editLKH', $lkh->lkhno)
+                    'view_url' => route('input.rencanakerjaharian.showLKH', $lkh->lkhno),
+                    'edit_url' => route('input.rencanakerjaharian.editLKH', $lkh->lkhno)
                 ];
             });
 
@@ -1576,7 +1576,7 @@ class RencanaKerjaHarianController extends Controller
             ->first();
 
         if (!$lkhData) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Data LKH tidak ditemukan');
         }
 
@@ -1608,7 +1608,7 @@ class RencanaKerjaHarianController extends Controller
             $approvals->jabatan4name = null;
         }
 
-        return view('input.kerjaharian.rencanakerjaharian.lkh-report', [
+        return view('input.rencanakerjaharian.lkh-report', [
             'title' => 'Laporan Kegiatan Harian (LKH)',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -1619,7 +1619,7 @@ class RencanaKerjaHarianController extends Controller
 
     } catch (\Exception $e) {
         \Log::error("Error showing LKH: " . $e->getMessage());
-        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+        return redirect()->route('input.rencanakerjaharian.index')
             ->with('error', 'Terjadi kesalahan saat menampilkan LKH: ' . $e->getMessage());
     }
 }
@@ -1648,13 +1648,13 @@ public function editLKH($lkhno)
             ->first();
 
         if (!$lkhData) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Data LKH tidak ditemukan');
         }
 
         // Check if LKH can be edited (not locked/submitted)
         if ($lkhData->issubmit) {
-            return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+            return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'LKH sudah disubmit dan tidak dapat diedit');
         }
 
@@ -1681,7 +1681,7 @@ public function editLKH($lkhno)
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
 
-        return view('input.kerjaharian.rencanakerjaharian.edit-lkh', [
+        return view('input.rencanakerjaharian.edit-lkh', [
             'title' => 'Edit LKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
@@ -1698,7 +1698,7 @@ public function editLKH($lkhno)
 
     } catch (\Exception $e) {
         \Log::error("Error editing LKH: " . $e->getMessage());
-        return redirect()->route('input.kerjaharian.rencanakerjaharian.index')
+        return redirect()->route('input.rencanakerjaharian.index')
             ->with('error', 'Terjadi kesalahan saat membuka edit LKH: ' . $e->getMessage());
     }
 }
@@ -1821,7 +1821,7 @@ public function updateLKH(Request $request, $lkhno)
 
         DB::commit();
 
-        return redirect()->route('input.kerjaharian.rencanakerjaharian.showLKH', $lkhno)
+        return redirect()->route('input.rencanakerjaharian.showLKH', $lkhno)
             ->with('success', 'LKH berhasil diupdate');
 
     } catch (\Exception $e) {
@@ -1908,13 +1908,13 @@ public function updateLKH(Request $request, $lkhno)
     public function showDTHReport(Request $request)
     {
         $date = $request->query('date', date('Y-m-d'));
-        return view('input.kerjaharian.rencanakerjaharian.dth-report', ['date' => $date]);
+        return view('input.rencanakerjaharian.dth-report', ['date' => $date]);
     }
 
     public function generateDTH(Request $request)
     {
         $request->validate(['date' => 'required|date']);
-        $url = route('input.kerjaharian.rencanakerjaharian.dth-report', ['date' => $request->date]);
+        $url = route('input.rencanakerjaharian.dth-report', ['date' => $request->date]);
         
         return response()->json([
             'success' => true,

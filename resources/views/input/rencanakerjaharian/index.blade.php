@@ -10,7 +10,7 @@
             <div class="flex flex-col md:flex-row justify-between mb-4">
                 {{-- Search + Approve RKH in one div --}}
                 <div class="flex flex-wrap gap-2 items-center">
-                    <form class="flex items-center space-x-2" action="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" method="GET">
+                    <form class="flex items-center space-x-2" action="{{ route('input.rencanakerjaharian.index') }}" method="GET">
                         <input
                             type="text"
                             name="search"
@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" method="GET" id="filterForm">
+            <form action="{{ route('input.rencanakerjaharian.index') }}" method="GET" id="filterForm">
                 <input type="hidden" name="search" value="{{ $search }}">
                 
                 <div class="flex items-center justify-between mb-4">
@@ -140,7 +140,7 @@
                         <tr class="text-xs">
                             <td class="border px-2 py-1">{{ $rkhData->firstItem() + $index }}</td>
                             <td class="border px-2 py-1">
-                                <a href="{{ route('input.kerjaharian.rencanakerjaharian.show', $rkh->rkhno) }}" 
+                                <a href="{{ route('input.rencanakerjaharian.show', $rkh->rkhno) }}" 
                                 class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
                                     {{ $rkh->rkhno }}
                                 </a>
@@ -230,7 +230,7 @@
                                         {{-- Jika belum approved, tampilkan button normal --}}
                                         <button
                                             type="button"
-                                            onclick="window.location.href='{{ route('input.kerjaharian.rencanakerjaharian.edit', $rkh->rkhno) }}'"
+                                            onclick="window.location.href='{{ route('input.rencanakerjaharian.edit', $rkh->rkhno) }}'"
                                             class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
                                             title="Edit RKH"
                                         >
@@ -1130,7 +1130,7 @@
                 return;
             }
 
-            fetch('{{ route("input.kerjaharian.rencanakerjaharian.updateStatus") }}', {
+            fetch('{{ route("input.rencanakerjaharian.updateStatus") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1160,7 +1160,7 @@
                 return;
             }
 
-            fetch('{{ route("input.kerjaharian.rencanakerjaharian.destroy", ":rkhno") }}'.replace(':rkhno', rkhno), {
+            fetch('{{ route("input.rencanakerjaharian.destroy", ":rkhno") }}'.replace(':rkhno', rkhno), {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1246,13 +1246,13 @@
                         return;
                     }
                     
-                    window.location.href = `{{ route('input.kerjaharian.rencanakerjaharian.create') }}?date=${this.createDate}`;
+                    window.location.href = `{{ route('input.rencanakerjaharian.create') }}?date=${this.createDate}`;
                 },
 
                 async loadAbsenData(date, mandorId = '') {
                     this.isAbsenLoading = true;
                     try {
-                        const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.loadAbsenByDate') }}?date=${date}&mandor_id=${mandorId}`);
+                        const response = await fetch(`{{ route('input.rencanakerjaharian.loadAbsenByDate') }}?date=${date}&mandor_id=${mandorId}`);
                         const data = await response.json();
                         
                         if (data.success) {
@@ -1276,7 +1276,7 @@
                     }
 
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.generateDTH") }}', {
+                        const response = await fetch('{{ route("input.rencanakerjaharian.generateDTH") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1352,7 +1352,7 @@
                     }
 
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.submitLKH") }}', {
+                        const response = await fetch('{{ route("input.rencanakerjaharian.submitLKH") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1381,7 +1381,7 @@
                 async loadPendingApprovals() {
                     this.isRkhApprovalLoading = true;
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.getPendingApprovals") }}');
+                        const response = await fetch('{{ route("input.rencanakerjaharian.getPendingApprovals") }}');
                         const data = await response.json();
                         
                         if (data.success) {
@@ -1404,7 +1404,7 @@
                     this.rkhApprovalDetail = {};
                     
                     try {
-                        const response = await fetch(`{{ route("input.kerjaharian.rencanakerjaharian.getApprovalDetail", ":rkhno") }}`.replace(':rkhno', rkhno));
+                        const response = await fetch(`{{ route("input.rencanakerjaharian.getApprovalDetail", ":rkhno") }}`.replace(':rkhno', rkhno));
                         const data = await response.json();
                         
                         if (data.success) {
@@ -1498,7 +1498,7 @@
 
                 async processRkhApproval(rkhno, action, level) {
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.processApproval") }}', {
+                        const response = await fetch('{{ route("input.rencanakerjaharian.processApproval") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1522,7 +1522,7 @@
                 async loadPendingLKHApprovals() {
                     this.isLkhApprovalLoading = true;
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.getPendingLKHApprovals") }}');
+                        const response = await fetch('{{ route("input.rencanakerjaharian.getPendingLKHApprovals") }}');
                         const data = await response.json();
                         
                         if (data.success) {
@@ -1545,7 +1545,7 @@
                     this.lkhApprovalDetail = {};
                     
                     try {
-                        const response = await fetch(`{{ route("input.kerjaharian.rencanakerjaharian.getLkhApprovalDetail", ":lkhno") }}`.replace(':lkhno', lkhno));
+                        const response = await fetch(`{{ route("input.rencanakerjaharian.getLkhApprovalDetail", ":lkhno") }}`.replace(':lkhno', lkhno));
                         const data = await response.json();
                         
                         if (data.success) {
@@ -1639,7 +1639,7 @@
 
                 async processLKHApproval(lkhno, action, level) {
                     try {
-                        const response = await fetch('{{ route("input.kerjaharian.rencanakerjaharian.processLKHApproval") }}', {
+                        const response = await fetch('{{ route("input.rencanakerjaharian.processLKHApproval") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

@@ -19,7 +19,7 @@
             'upload-gpx-file' => 'upload.gpx.view',
             'export-kml' => 'export.kml.view',
             'export-kml-file' => 'export.kml.view',
-            'kerja-harian' => 'input.kerjaharian.rencanakerjaharian.index',
+            'kerja-harian' => 'input.rencanakerjaharian.index',
         ];
         
         if (isset($specialRoutes[$submenuSlug])) {

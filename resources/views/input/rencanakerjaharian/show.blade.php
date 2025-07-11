@@ -326,7 +326,7 @@
   <div class="mt-8 flex flex-wrap justify-center gap-4">
     <!-- Back Button -->
     <button
-      onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}';"
+      onclick="window.location.href = '{{ route('input.rencanakerjaharian.index') }}';"
       class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors flex items-center"
     >
       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +338,7 @@
     <!-- Edit Button (if allowed) -->
     @if($rkhHeader->status !== 'Done')
       <button
-        onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.edit', $rkhHeader->rkhno) }}';"
+        onclick="window.location.href = '{{ route('input.rencanakerjaharian.edit', $rkhHeader->rkhno) }}';"
         class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors flex items-center"
       >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

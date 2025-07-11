@@ -52,7 +52,7 @@
                 </div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Berhasil!</h3>
                 <p class="text-sm text-gray-600 mb-4" x-html="modalMessage"></p>
-                <button @click="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.showLKH', $lkhData->lkhno) }}'"
+                <button @click="window.location.href = '{{ route('input.rencanakerjaharian.showLKH', $lkhData->lkhno) }}'"
                         class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                     OK
                 </button>
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    <form id="lkh-form" action="{{ route('input.kerjaharian.rencanakerjaharian.updateLKH', $lkhData->lkhno) }}" method="POST">
+    <form id="lkh-form" action="{{ route('input.rencanakerjaharian.updateLKH', $lkhData->lkhno) }}" method="POST">
         @csrf
         @method('PUT')
 

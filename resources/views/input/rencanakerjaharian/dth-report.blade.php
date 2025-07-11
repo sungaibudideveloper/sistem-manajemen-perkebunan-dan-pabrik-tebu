@@ -416,7 +416,7 @@
         // Load DTH data
         async function loadDTHData() {
             try {
-                const response = await fetch(`{{ route('input.kerjaharian.rencanakerjaharian.dth-data') }}?date=${reportDate}`);
+                const response = await fetch(`{{ route('input.rencanakerjaharian.dth-data') }}?date=${reportDate}`);
                 const data = await response.json();
                 
                 if (data.success) {
