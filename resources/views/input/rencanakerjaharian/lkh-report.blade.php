@@ -288,7 +288,7 @@
         <div class="mt-8 flex justify-center space-x-4 no-print">
             @if($lkhData->status != 'APPROVED')
             <button 
-                onclick="window.location.href='{{ route('input.kerjaharian.rencanakerjaharian.editLKH', $lkhData->lkhno) }}'"
+                onclick="window.location.href='{{ route('input.rencanakerjaharian.editLKH', $lkhData->lkhno) }}'"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >
                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

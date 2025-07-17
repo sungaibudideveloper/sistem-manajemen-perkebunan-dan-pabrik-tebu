@@ -51,7 +51,7 @@
                             </p>
                             
                             <div class="flex flex-col sm:flex-row gap-4">
-                                <a href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" 
+                                <a href="{{ route('input.rencanakerjaharian.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -232,7 +232,7 @@
                         </a>
 
                         <!-- Rencana Kerja Harian Card -->
-                        <a href="{{ route('input.kerjaharian.rencanakerjaharian.index') }}" class="group">
+                        <a href="{{ route('input.rencanakerjaharian.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
                                     <div class="flex items-center justify-between mb-6">

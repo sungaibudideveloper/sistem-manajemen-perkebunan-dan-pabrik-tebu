@@ -2,7 +2,7 @@
 use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\GudangController;
-use App\Http\Controllers\Input\KerjaHarian\RencanaKerjaHarianController;
+use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
 use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
 
@@ -63,7 +63,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 Route::middleware('auth')->group(function () {
     // RKH Routes Group
     Route::prefix('input/kerjaharian/rencanakerjaharian')
-        ->name('input.kerjaharian.rencanakerjaharian.')
+        ->name('input.rencanakerjaharian.')
         ->controller(RencanaKerjaHarianController::class)
         ->group(function () {
             

@@ -36,6 +36,8 @@
       </div>
     </div>
   </div>
+
+  <!-- SUCCESS/ERROR MODAL -->
   <div x-data="{ showModal: false, modalType: '', modalMessage: '', modalErrors: [] }" 
        x-show="showModal" 
        x-cloak
@@ -51,18 +53,44 @@
         </div>
         <h3 class="text-lg font-medium text-gray-900 mb-2">Berhasil!</h3>
         <p class="text-sm text-gray-600 mb-4" x-html="modalMessage"></p>
-        <button @click="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}'"
+        <button @click="window.location.href = '{{ route('input.rencanakerjaharian.index') }}'"
                 class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
           OK
+        </button>
+      </div>
+
+      <!-- Error Modal -->
+      <div x-show="modalType === 'error'" class="p-6 text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Terjadi Kesalahan</h3>
+        <p class="text-sm text-gray-600 mb-4" x-text="modalMessage"></p>
+        
+        <!-- Error List -->
+        <div x-show="modalErrors.length > 0" class="text-left bg-red-50 rounded-lg p-3 mb-4">
+          <ul class="text-sm text-red-700 space-y-1">
+            <template x-for="error in modalErrors" :key="error">
+              <li x-text="error"></li>
+            </template>
+          </ul>
+        </div>
+
+        <button @click="showModal = false"
+                class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+          Tutup
         </button>
       </div>
     </div>
   </div>
 
-  <form id="rkh-form" action="{{ route('input.kerjaharian.rencanakerjaharian.store') }}" method="POST">
+  <form id="rkh-form" action="{{ route('input.rencanakerjaharian.update', $rkhHeader->rkhno) }}" method="POST">
     @csrf
+    @method('PUT')
 
-    <!-- OLD ERROR HANDLING - Keep for non-AJAX fallback -->
+       {{-- ERROR HANDLING - TARUH DI SINI --}}
     @if ($errors->any())
         <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
             <div class="flex">
@@ -87,19 +115,60 @@
         </div>
     @endif
 
+    @if (session('success'))
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded-lg shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-green-800">
+                        {{ session('success') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-red-800">
+                        {{ session('error') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+    {{-- END ERROR HANDLING --}}
+
   <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
     <div class="flex justify-between items-start">
       <!-- KIRI: No RKH + Mandor + Tanggal -->
       <div class="flex flex-col space-y-6 w-2/3">
-        <!-- No RKH - HIDDEN FROM UI FOR RACE CONDITION SAFETY -->
-        <input type="hidden" name="rkhno" value="{{ $rkhno }}">
+        <!-- No RKH -->
+        <div>
+          <label for="rkhno" class="block text-sm font-semibold text-gray-700 mb-2">No RKH</label>
+          <p id="rkhno" class="text-5xl font-mono tracking-wider text-gray-800">
+            {{ $rkhHeader->rkhno ?? '-' }}
+          </p>
+          <input type="hidden" name="rkhno" value="{{ $rkhHeader->rkhno }}">
+        </div>
 
       <!-- Mandor & Tanggal -->
       <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
-    @if(old('mandor_id'))
+    @if(old('mandor_id', $rkhHeader->mandorid))
         selected = {
-            userid: '{{ old('mandor_id') }}',
-            name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
+            userid: '{{ old('mandor_id', $rkhHeader->mandorid) }}',
+            name: '{{ old('mandor', $rkhHeader->mandor_nama) }}'
         }
     @endif
 ">
@@ -113,26 +182,31 @@
             readonly
             placeholder="Pilih Mandor"
             @click="open = true"
-            :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
+            :value="selected.userid && selected.name ? `${selected.userid} – ${selected.name}` : ''"
             class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <input type="hidden" name="mandor_id" x-model="selected.userid">
         </div>
 
-        <!-- Input Tanggal - LOCKED FROM INDEX -->
+        <!-- Input Tanggal -->
         <div>
           <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
-          <input
-            type="date"
-            name="tanggal"
-            id="tanggal"
-            value="{{ $selectedDate }}"
-            readonly
-            class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium cursor-not-allowed"
-          />
+<input
+  type="date"
+  name="tanggal"
+  id="tanggal"
+  value="{{ old('tanggal', \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('Y-m-d')) }}"
+  class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium"
+  readonly
+/>
+@error('tanggal')
+  <p class="mt-1 text-red-600 text-sm">{{ $message }}</p>
+@enderror
         </div>
         
-        @include('input.kerjaharian.rencanakerjaharian.modal-mandor')
+
+        <!-- include modal di sini jika perlu -->
+        @include('input.rencanakerjaharian.modal-mandor')
       </div>
     </div>
 
@@ -145,7 +219,7 @@
         </div>
         <!-- Mandor & Tanggal Info (moved to top right) -->
         <div class="text-right">
-          <p class="text-xs text-gray-600" id="absen-info">{{ \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') }}</p>
+          <p class="text-xs text-gray-600" id="absen-info">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
         </div>
       </div>
       <div class="grid grid-cols-3 gap-4 text-center">
@@ -205,17 +279,31 @@
             </thead>
 
             <tbody class="divide-y divide-gray-100">
+              {{-- Modifikasi untuk bagian table rows dengan pre-filled data --}}
               @for ($i = 0; $i < 8; $i++)
-                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors" x-init="
-                  @if(old('rows.'.$i.'.nama'))
-                    selected = {
-                      activitycode: '{{ old('rows.'.$i.'.nama') }}',
-                      activityname: '{{ collect($activities)->firstWhere('activitycode', old('rows.'.$i.'.nama'))->activityname ?? '' }}',
-                      usingvehicle: {{ old('rows.'.$i.'.usingvehicle', 'null') }},
-                      jenistenagakerja: {{ collect($activities)->firstWhere('activitycode', old('rows.'.$i.'.nama'))->jenistenagakerja ?? 'null' }}
-                    };
-                    updateJenisField();
-                  @endif
+                @php
+                  $detail = $rkhDetails->get($i);
+                  $oldBlok = old("rows.$i.blok", $detail->blok ?? '');
+                  $oldPlot = old("rows.$i.plot", $detail->plot ?? '');
+                  $oldActivity = old("rows.$i.nama", $detail->activitycode ?? '');
+                  $oldLuas = old("rows.$i.luas", $detail->luasarea ?? '');
+                  $oldLaki = old("rows.$i.laki_laki", $detail->jumlahlaki ?? '');
+                  $oldPerempuan = old("rows.$i.perempuan", $detail->jumlahperempuan ?? '');
+                  $oldUsingVehicle = old("rows.$i.usingvehicle", $detail->usingvehicle ?? 0);
+                  $oldMaterialGroupId = old("rows.$i.material_group_id", $detail->herbisidagroupid ?? '');
+                  $oldMaterialGroupName = old("rows.$i.material_group_name", $detail->herbisidagroupname ?? '');
+                  $oldKeterangan = old("rows.$i.keterangan", $detail->description ?? '');
+                @endphp
+                <tr x-data="activityPicker({{ $i }})" class="rkh-row hover:bg-blue-50 transition-colors" 
+                  x-init="
+                    @if($oldActivity)
+                      selected = {
+                        activitycode: '{{ $oldActivity }}',
+                        activityname: '{{ $detail->activityname ?? '' }}', // Ambil langsung dari detail
+                        usingvehicle: {{ $oldUsingVehicle }},
+                        jenistenagakerja: {{ $detail->jenistenagakerja ?? 'null' }}
+                      }
+                    @endif
                 ">
 
                   <!-- #No -->
@@ -224,24 +312,23 @@
                   <!-- #Blok -->
                   <td class="px-1 py-3">
                     <div x-data="blokPicker({{ $i }})" class="relative" x-init="
-                      init();
-                      @if(old('rows.'.$i.'.blok'))
-                        selected = {
-                          blok: '{{ old('rows.'.$i.'.blok') }}'
-                        };
-                        Alpine.store('blokPerRow').setBlok({{ $i }}, '{{ old('rows.'.$i.'.blok') }}');
+                      @if($oldBlok)
+                        selected = { blok: '{{ $oldBlok }}' }
                       @endif
                     ">
                       <input
                         type="text"
                         readonly
+                        required
                         @click="open = true"
                         :value="selected.blok ? selected.blok : ''"
                         class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         data-validation-message="Blok harus dipilih"
                       >
                       <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.blok">
-                      @include('input.kerjaharian.rencanakerjaharian.modal-blok')
+
+                      {{-- Include modal-blok --}}
+                      @include('input.rencanakerjaharian.modal-blok')
                     </div>
                   </td>
 
@@ -249,10 +336,8 @@
                   <td class="px-1 py-3">
                     <div x-data="plotPicker({{ $i }})" class="relative" x-init="
                       init();
-                      @if(old('rows.'.$i.'.plot'))
-                        selected = {
-                          plot: '{{ old('rows.'.$i.'.plot') }}'
-                        };
+                      @if($oldPlot)
+                        selected = { plot: '{{ $oldPlot }}' }
                       @endif
                     ">
                       <input
@@ -270,7 +355,8 @@
                         data-validation-message="Plot harus dipilih"
                       >
                       <input type="hidden" name="rows[{{ $i }}][plot]" x-model="selected.plot">
-                      @include('input.kerjaharian.rencanakerjaharian.modal-plot')
+
+                      @include('input.rencanakerjaharian.modal-plot')
                     </div>
                   </td>
 
@@ -300,43 +386,25 @@
                       x-model="selected.activitycode"
                       x-ref="activityInput"
                     >
-                    @include('input.kerjaharian.rencanakerjaharian.modal-activity')
+                    <input 
+                      type="hidden" 
+                      name="rows[{{ $i }}][usingvehicle]" 
+                      x-model="selected.usingvehicle"
+                    >
+                    @include('input.rencanakerjaharian.modal-activity')
                   </td>
 
                   <!-- #Luas -->
                   <td class="px-1 py-3">
-                    <input 
-                      type="number" 
-                      name="rows[{{ $i }}][luas]" 
-                      min="0" 
-                      value="{{ old('rows.'.$i.'.luas') }}" 
-                      step="0.01" 
-                      class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      data-validation-message="Luas area harus diisi"
-                      data-row-index="{{ $i }}"
-                    >
+                    <input type="number" name="rows[{{ $i }}][luas]" min="0" value="{{ $oldLuas }}" step="0.01" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Luas area harus diisi" data-row-index="{{ $i }}">
                   </td>
 
                   <!-- #Tenaga Kerja -->
                   <td class="px-1 py-3">
-                    <input 
-                      type="number" 
-                      name="rows[{{ $i }}][laki_laki]" 
-                      min="0" 
-                      value="{{ old('rows.'.$i.'.laki_laki', '0') }}" 
-                      class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      data-validation-message="Jumlah laki-laki harus diisi"
-                    >
+                    <input type="number" name="rows[{{ $i }}][laki_laki]" min="0" value="{{ $oldLaki }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Jumlah laki-laki harus diisi">
                   </td>
                   <td class="px-1 py-3">
-                    <input 
-                      type="number" 
-                      name="rows[{{ $i }}][perempuan]" 
-                      min="0" 
-                      value="{{ old('rows.'.$i.'.perempuan', '0') }}" 
-                      class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      data-validation-message="Jumlah perempuan harus diisi"
-                    >
+                    <input type="number" name="rows[{{ $i }}][perempuan]" min="0" value="{{ $oldPerempuan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-validation-message="Jumlah perempuan harus diisi">
                   </td>
                   <td class="px-1 py-3">
                     <input type="number" name="rows[{{ $i }}][jumlah_tenaga]" class="w-full text-sm border-2 border-gray-300 rounded-lg px-3 py-2 text-right bg-gray-100 font-semibold text-gray-700" readonly placeholder="-">
@@ -352,46 +420,72 @@
                     >
                   </td>
 
-                  <!-- #Material -->
-                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="init()">
-                    <div class="relative">
-                      <div 
-                        @click="checkMaterial()"
-                        :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
-                          'cursor-not-allowed bg-gray-100': !hasMaterial,
-                          'border-green-500 bg-green-50': hasMaterial && selectedGroup,
-                          'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
-                          'border-gray-300': !hasMaterial
-                        }"
-                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
-                      >
-                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
-                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
-                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                          </svg>
-                          Pilih Grup
-                        </div>
-                        <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
-                          <div class="font-semibold" x-text="selectedGroup ? selectedGroup.herbisidagroupname : ''"></div>
-                        </div>
-                      </div>
-                      
-                      <!-- Hidden inputs - akan di-create otomatis oleh JavaScript -->
-                    </div>
-                    
-                    @include('input.kerjaharian.rencanakerjaharian.modal-material')
-                  </td>
+
+<!-- Material Picker - Fixed Version -->
+<td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
+  // Set initial activity code
+  currentActivityCode = '{{ $oldActivity }}';
+  
+  // Set selected group jika ada data
+  @if($oldMaterialGroupId && $oldActivity)
+    // Tunggu sampai herbisida data ready
+    const checkAndSetGroup = () => {
+      if (window.herbisidaData) {
+        setSelectedGroup({{ $oldMaterialGroupId }}, '{{ $oldActivity }}');
+      } else {
+        setTimeout(checkAndSetGroup, 100);
+      }
+    };
+    checkAndSetGroup();
+  @endif
+">
+  <div class="relative">
+    <div 
+      @click="checkMaterial()"
+      :class="{
+        'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
+        'cursor-not-allowed bg-gray-100': !hasMaterial,
+        'border-green-500 bg-green-50': hasMaterial && selectedGroup,
+        'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
+        'border-gray-300': !hasMaterial
+      }"
+      class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
+    >
+      <!-- 1. Default sebelum pilih activity -->
+      <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+
+      <!-- 2. Sudah pilih activity tapi kosong grup -->
+      <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
+      <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+        Pilih Grup
+      </div>
+      <!-- FIXED: Added null check for selectedGroup -->
+      <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
+        <div class="font-semibold" x-text="selectedGroup && selectedGroup.herbisidagroupname ? selectedGroup.herbisidagroupname : ''"></div>
+      </div>
+    </div>
+    
+    <!-- Hidden inputs untuk menyimpan selected group -->
+    <input type="hidden" name="rows[{{ $i }}][material_group_id]" :value="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
+    <input type="hidden" name="rows[{{ $i }}][material_group_name]" :value="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
+  </div>
+  
+  @include('input.rencanakerjaharian.modal-material')
+</td>
 
                   <!-- #Kendaraan -->
                   <td class="px-1 py-3">
+                    <!-- hidden input untuk usingvehicle, terikat ke Alpine -->
                     <input 
                       type="hidden" 
                       name="rows[{{ $i }}][usingvehicle]" 
                       x-model.number="selected.usingvehicle"
                     >
+
+                    <!-- kolom Kendaraan -->
                     <input 
                       type="text" 
                       name="rows[{{ $i }}][kendaraan]" 
@@ -410,7 +504,7 @@
                   </td>
 
                   <td class="px-1 py-3">
-                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ old('rows.'.$i.'.keterangan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ $oldKeterangan }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                   </td>
 
                 </tr>
@@ -455,7 +549,7 @@
           </button>
           <button
             type="button"
-            onclick="window.location.href = '{{ route('input.kerjaharian.rencanakerjaharian.index') }}';"
+            onclick="window.location.href = '{{ route('input.rencanakerjaharian.index') }}';"
             class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,28 +559,26 @@
           </button>
         </div>
         
-        <!-- Primary Submit Button -->
+        <!-- Primary Update Button -->
         <button
           type="submit"
           id="submit-btn"
-          class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+          class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="submit-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
           <!-- Loading Spinner (hidden by default) -->
           <svg class="animate-spin w-5 h-5 mr-2 hidden" fill="none" viewBox="0 0 24 24" id="loading-spinner">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span id="submit-text">Submit RKH</span>
+          <span id="submit-text">Update RKH</span>
         </button>
       </div>
     
   </div>
 </form>
-
-
 
 <script>
 // ===== GLOBAL DATA - SEMUA DI SINI =====
@@ -495,7 +587,7 @@ window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
-window.activitiesData = @json($activities ?? []);
+window.activitiesData = @json($activities ?? []); // ← TAMBAHAN YANG KURANG
 
 // ===== ALPINE STORES - SEMUA DI SINI =====
 document.addEventListener('alpine:init', () => {
@@ -524,7 +616,7 @@ document.addEventListener('alpine:init', () => {
     }
   });
   
-  // Activity tracking per row
+  // Activity tracking per row (← TAMBAHAN YANG KURANG)
   Alpine.store('activityPerRow', {
     selected: {},
     
@@ -544,6 +636,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   rows.forEach(row => attachListeners(row));
   calculateTotals();
+
+  // Initialize absen summary dengan data mandor yang sudah ada
+  const mandorId = '{{ old('mandor_id', $rkhHeader->mandorid) }}';
+  const mandorName = '{{ old('mandor', $rkhHeader->mandor_nama) }}';
+  
+  if (mandorId && mandorName) {
+    updateAbsenSummary(mandorId, mandorId, mandorName);
+  }
 
   // MODERN FORM SUBMISSION with AJAX
   document.getElementById('rkh-form').addEventListener('submit', function(e) {
@@ -683,7 +783,7 @@ function showLoadingState() {
   const loadingSpinner = document.getElementById('loading-spinner');
   
   submitBtn.disabled = true;
-  submitText.textContent = 'Menyimpan...';
+  submitText.textContent = 'Updating...';
   submitIcon.classList.add('hidden');
   loadingSpinner.classList.remove('hidden');
 }
@@ -695,7 +795,7 @@ function hideLoadingState() {
   const loadingSpinner = document.getElementById('loading-spinner');
   
   submitBtn.disabled = false;
-  submitText.textContent = 'Submit RKH';
+  submitText.textContent = 'Update RKH';
   submitIcon.classList.remove('hidden');
   loadingSpinner.classList.add('hidden');
 }
@@ -782,12 +882,12 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     document.getElementById('summary-laki').textContent = '0';
     document.getElementById('summary-perempuan').textContent = '0';
     document.getElementById('summary-total').textContent = '0';
-    const selectedDate = '{{ \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') }}';
+    const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
     document.getElementById('absen-info').textContent = selectedDate;
     return;
   }
 
-  const selectedDate = '{{ \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') }}';
+  const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
 
   if (selectedMandorCode && selectedMandorName) {
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
@@ -813,7 +913,341 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
 
-// ===== MATERIAL PICKER FUNCTION =====
+// ===== COMPONENT FUNCTIONS =====
+
+// MANDOR PICKER FUNCTION
+function mandorPicker() {
+  return {
+    open: false,
+    searchQuery: '',
+    mandors: window.mandorsData || [],
+    selected: { companycode: '', userid: '', name: '' },
+
+    get filteredMandors() {
+      if (!this.searchQuery) return this.mandors;
+      const q = this.searchQuery.toString().toUpperCase();
+      return this.mandors.filter(m =>
+        m.name.toUpperCase().includes(q) ||
+        m.userid.toString().toUpperCase().includes(q)
+      );
+    },
+
+    selectMandor(mandor) {
+      this.selected = {
+        companycode: mandor.companycode,
+        userid: mandor.userid,
+        name: mandor.name
+      };
+      this.open = false;
+      
+      updateAbsenSummary(mandor.userid, mandor.userid, mandor.name);
+    },
+
+    clear() {
+      this.selected = { companycode: '', userid: '', name: '' };
+      this.searchQuery = '';
+      updateAbsenSummary(null);
+      this.open = false;
+    }
+  }
+}
+
+// ACTIVITY PICKER FUNCTION
+function activityPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    selectedGroup: '',
+    selectedSubGroup: '',
+    activities: window.activitiesData || [],
+    selected: { 
+      activitycode: '', 
+      activityname: '',
+      usingvehicle: null,
+      jenistenagakerja: null 
+    },
+    rowIndex: rowIndex || 0,
+
+    get activityGroups() {
+      const groups = {}
+      this.activities.forEach(a => {
+        const code = a.activitygroup || 'Uncategorized'
+        if (!groups[code]) {
+          groups[code] = {
+            code,
+            groupName: a.group?.groupname || code,
+            activities: []
+          }
+        }
+        groups[code].activities.push(a)
+      })
+      return Object.values(groups).map(g => ({
+        code: g.code,
+        groupName: g.groupName,
+        activities: g.activities,
+        count: g.activities.length
+      }))
+    },
+
+    get subGroups() {
+      if (!this.selectedGroup) return []
+      const list = this.activities.filter(a => a.activitygroup === this.selectedGroup)
+      const prefixes = [...new Set(list.map(a => a.activitycode.split('.').slice(0,3).join('.')))]
+      const subs = prefixes.map(code => {
+        const subList = list.filter(a =>
+          a.activitycode === code ||
+          a.activitycode.startsWith(code + '.')
+        )
+        const childCount = subList.filter(a => a.activitycode.startsWith(code + '.')).length
+        return {
+          code,
+          activityname: subList[0].activityname,
+          count: childCount
+        }
+      })
+      subs.sort((a,b) => a.code.localeCompare(b.code, undefined, {numeric:true}))
+      return subs
+    },
+
+    get filteredGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return q
+        ? this.activityGroups.filter(g =>
+            g.code.toUpperCase().includes(q) ||
+            g.groupName.toUpperCase().includes(q)
+          )
+        : this.activityGroups
+    },
+
+    get filteredSubGroups() {
+      const q = this.searchQuery.toUpperCase()
+      return this.subGroups.filter(sg =>
+        sg.code.toUpperCase().includes(q) ||
+        sg.activityname.toUpperCase().includes(q)
+      )
+    },
+
+    get filteredActivities() {
+      if (!this.selectedSubGroup) return []
+      const q = this.searchQuery.toUpperCase()
+      return this.activities
+        .filter(a => a.activitycode.startsWith(this.selectedSubGroup + '.'))
+        .filter(a =>
+          !q ||
+          a.activitycode.toUpperCase().includes(q) ||
+          a.activityname.toUpperCase().includes(q)
+        )
+        .sort((a,b) => a.activitycode.localeCompare(b.activitycode, undefined, {numeric: true}))
+    },
+
+    selectGroup(code) {
+      this.selectedGroup = code
+      this.searchQuery = ''
+    },
+
+    selectSubGroup(code) {
+      const matched = this.activities.filter(a => a.activitycode.startsWith(code))
+      
+      const children = this.activities.filter(a => a.activitycode.startsWith(code + '.'))
+      
+      if (children.length === 0 && matched.length > 0) {
+        const exactMatch = matched.find(a => a.activitycode === code)
+        return this.selectActivity(exactMatch || matched[0])
+      }
+      
+      this.selectedSubGroup = code
+      this.searchQuery = ''
+    },
+
+    backToGroups() {
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    backToSubGroups() {
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    selectActivity(activity) {
+      this.selected = {
+        activitycode: activity.activitycode,
+        activityname: activity.activityname,
+        usingvehicle: activity.usingvehicle,
+        jenistenagakerja: activity.jenistenagakerja
+      };
+      
+      Alpine.store('activityPerRow').setActivity(this.rowIndex, this.selected);
+      
+      this.updateJenisField();
+      
+      this.closeModal();
+    },
+
+    updateJenisField() {
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      
+      if (jenisField) {
+        let jenisId = null;
+        
+        if (this.selected.jenistenagakerja) {
+          if (typeof this.selected.jenistenagakerja === 'object' && this.selected.jenistenagakerja.idjenistenagakerja) {
+            jenisId = this.selected.jenistenagakerja.idjenistenagakerja;
+          } else if (typeof this.selected.jenistenagakerja === 'number') {
+            jenisId = this.selected.jenistenagakerja;
+          }
+        }
+        
+        if (jenisId === 1) {
+          jenisField.value = 'Harian';  
+        } else if (jenisId === 2) {
+          jenisField.value = 'Borongan';  
+        } else if (jenisId === 3) {
+          jenisField.value = 'Operator'; 
+        } else if (jenisId === 4) {
+          jenisField.value = 'Helper';
+        } else {
+          jenisField.value = '-';
+        }
+      }
+    },
+
+    closeModal() {
+      this.open = false
+      this.selectedGroup = ''
+      this.selectedSubGroup = ''
+      this.searchQuery = ''
+    },
+
+    clear() {
+      this.selected = { activitycode: '', activityname: '', usingvehicle: null, jenistenagakerja: null };
+      
+      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
+      if (kendaraanField) {
+        kendaraanField.value = '-';
+      }
+
+      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
+      if (jenisField) {
+        jenisField.value = '-';
+      }
+
+      this.closeModal()
+    }
+  }
+}
+
+// BLOK PICKER FUNCTION
+function blokPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    bloks: window.bloksData || [],
+    selected: { blok: '', id: '' },
+    rowIndex: rowIndex,
+
+    get filteredBloks() {
+      if (!this.searchQuery) return this.bloks;
+      const q = this.searchQuery.toUpperCase();
+      return this.bloks.filter(b =>
+        b.blok && b.blok.toUpperCase().includes(q)
+      );
+    },
+
+    selectBlok(item) {
+      this.selected = item;
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, item.blok);
+      
+      const plotPicker = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotPicker && plotPicker._x_dataStack) {
+        const plotComponent = plotPicker._x_dataStack[0];
+        if (plotComponent.selected) {
+          plotComponent.selected = { plot: '' };
+        }
+      }
+      
+      this.open = false;
+    },
+
+    init() {
+      const savedBlok = Alpine.store('blokPerRow').getBlok(this.rowIndex);
+      if (savedBlok) {
+        const foundBlok = this.bloks.find(b => b.blok === savedBlok);
+        if (foundBlok) {
+          this.selected = foundBlok;
+        }
+      }
+    },
+
+    clear() {
+      this.selected = { blok: '', id: '' };
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
+      
+      const plotEl = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotEl && plotEl._x_dataStack) {
+        plotEl._x_dataStack[0].selected = { plot: '' };
+      }
+      
+      this.open = false;
+    }
+  }
+}
+
+// PLOT PICKER FUNCTION
+function plotPicker(rowIndex) {
+  return {
+    open: false,
+    searchQuery: '',
+    masterlist: window.masterlistData || [],
+    selected: { plot: '' },
+    rowIndex: rowIndex,
+
+    get isBlokSelected() {
+      return Alpine.store('blokPerRow').hasBlok(this.rowIndex);
+    },
+
+    get selectedBlok() {
+      return Alpine.store('blokPerRow').getBlok(this.rowIndex);
+    },
+
+    get filteredPlots() {
+      const blok = this.selectedBlok;
+      const q = this.searchQuery.toUpperCase();
+      
+      if (!blok) return [];
+      
+      return this.masterlist.filter(item =>
+        item.blok === blok &&
+        (!q || item.plot.toUpperCase().includes(q))
+      );
+    },
+
+    selectPlot(item) {
+      if (!this.isBlokSelected) return;
+      
+      this.selected = item;
+      this.open = false;
+      
+      window.dispatchEvent(new CustomEvent('plot-changed', {
+        detail: {
+          plotCode: item.plot,
+          rowIndex: this.rowIndex
+        }
+      }));
+    },
+
+    init() {
+      this.$watch('selectedBlok', (newBlok, oldBlok) => {
+        if (newBlok !== oldBlok) {
+          this.selected = { plot: '' };
+        }
+      });
+    }
+  }
+}
+
+// MATERIAL PICKER FUNCTION
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -957,7 +1391,5 @@ function materialPicker(rowIndex) {
   }
 }
 </script>
-
-
 
 </x-layout>
