@@ -47,7 +47,7 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {   $usematerialhdr = new usematerialhdr; 
-        $usehdr= $usematerialhdr->selectuse(session('companycode'));
+        $usehdr2= $usematerialhdr->selectuse(session('companycode'));
         
         $title = "Gudang";
 
@@ -58,7 +58,14 @@ class GudangController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $usehdr = usematerialhdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
+        // $usehdr = usematerialhdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
+        $usehdr = usematerialhdr::from('usematerialhdr as a')
+        ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
+        ->join('user as c', 'b.mandorid', '=', 'c.userid')
+        ->where('a.companycode', session('companycode'))
+        ->select('a.*', 'c.name')
+        ->orderBy('a.createdat', 'desc')
+        ->paginate($perPage);
         
         return view('input.gudang.home')->with([
             'title'         => 'Gudang',

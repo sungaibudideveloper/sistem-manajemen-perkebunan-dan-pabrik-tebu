@@ -128,7 +128,8 @@
         }
 
         .header-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #046C4E 0%, #058f6d 100%);
+            box-shadow: 0 8px 32px rgba(4, 108, 78, 0.4);
             position: relative;
             overflow: hidden;
         }
