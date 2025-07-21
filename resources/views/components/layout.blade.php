@@ -1,3 +1,4 @@
+{{--resources\views\components\layout.blade.php--}}
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-gray-50">
 

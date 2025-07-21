@@ -1,5 +1,5 @@
 <?php
-
+// app\Http\Controllers\Input\RencanaKerjaHarianController.php
 namespace App\Http\Controllers\Input;
 
 use Illuminate\Http\Request;
