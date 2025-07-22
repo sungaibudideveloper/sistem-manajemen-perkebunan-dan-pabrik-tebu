@@ -25,6 +25,9 @@ class Rkhlst extends Model
         'usingmaterial',
         'herbisidagroupid',
         'usingvehicle',
+        'operatorid',
+        'usinghelper',
+        'helperid',
         'description',
     ];
 

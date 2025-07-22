@@ -387,27 +387,43 @@
                   </td>
 
                   <!-- #Kendaraan -->
-                  <td class="px-1 py-3">
-                    <input 
-                      type="hidden" 
-                      name="rows[{{ $i }}][usingvehicle]" 
-                      x-model.number="selected.usingvehicle"
-                    >
-                    <input 
-                      type="text" 
-                      name="rows[{{ $i }}][kendaraan]" 
-                      readonly 
-                      x-bind:value="
-                      selected.usingvehicle === 1 
-                        ? 'Ya' 
-                        : (selected.usingvehicle === 0 
-                            ? 'Tidak' 
-                            : '-'
-                          )
-                    "
-                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
-                      id="kendaraan-{{ $i }}"
-                    >
+                  <td class="px-1 py-3" x-data="kendaraanPicker({{ $i }})" x-init="init()">
+                    <div class="relative">
+                      <div
+                        @click="checkVehicle()"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': hasVehicle,
+                          'cursor-not-allowed bg-gray-100': !hasVehicle,
+                          'border-green-500 bg-green-50': hasVehicle && selectedOperator,
+                          'border-green-300 bg-green-25': hasVehicle && !selectedOperator,
+                          'border-gray-300': !hasVehicle
+                        }"
+                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-green-500 min-h-[40px] flex items-center justify-center"
+                      >
+                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+                        <div x-show="currentActivityCode && !hasVehicle" class="text-xs font-medium">Tidak</div>
+                        <div x-show="hasVehicle && !selectedOperator" class="text-green-600 text-xs font-medium">
+                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Pilih Operator
+                        </div>
+                        <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-medium text-center">
+                          <!-- Tampilkan info operator -->
+                          <div class="font-semibold" x-text="selectedOperator ? selectedOperator.nokendaraan : ''"></div>
+                          <div class="text-gray-600 text-[10px]" x-text="selectedOperator ? selectedOperator.nama : ''"></div>
+                          
+                          <!-- TAMBAHAN: Tampilkan info helper jika ada -->
+                          <div x-show="useHelper && selectedHelper" class="text-purple-600 text-[9px] mt-1">
+                            + Helper: <span x-text="selectedHelper ? selectedHelper.nama : ''"></span>
+                          </div>
+                        </div>
+                      </div>
+                    
+                      <!-- Hidden inputs - Akan dibuat otomatis oleh JavaScript -->
+                    </div>
+                  
+                    @include('input.rencanakerjaharian.modal-kendaraan')
                   </td>
 
                   <td class="px-1 py-3">
@@ -494,9 +510,11 @@
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
+window.operatorsData = @json($operatorsData ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
+window.helpersData = @json($helpersData ?? []);
 
 // ===== ALPINE STORES - SEMUA DI SINI =====
 document.addEventListener('alpine:init', () => {

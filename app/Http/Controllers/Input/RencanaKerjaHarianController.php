@@ -21,6 +21,8 @@ use App\Models\AbsenHdr;
 use App\Models\AbsenLst;
 use App\Models\Lkhhdr;
 use App\Models\Lkhlst;
+use App\Models\Kendaraan;
+use App\Models\TenagaKerja;
 
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
@@ -198,6 +200,13 @@ class RencanaKerjaHarianController extends Controller
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
         $absenData = $absenModel->getDataAbsenFull($companycode, $targetDate); // Updated method call
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+        $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
+        $helpers = TenagaKerja::where('companycode', $companycode)
+            ->where('jenistenagakerja', 4)
+            ->where('isactive', 1)
+            ->select(['tenagakerjaid', 'nama', 'nik'])
+            ->orderBy('nama')
+            ->get();
 
         return view('input.rencanakerjaharian.create', [
             'title' => 'Form RKH',
@@ -214,8 +223,10 @@ class RencanaKerjaHarianController extends Controller
             'bloksData' => $bloks,
             'masterlistData' => $masterlist,
             'plotsData' => $plots,
-            'absentenagakerja' => $absenData, // Keep the same variable name for view compatibility
+            'absentenagakerja' => $absenData,
             'oldInput' => old(),
+            'operatorsData' => $operatorsWithVehicles,
+            'helpersData' => $helpers,
         ]);
     }
 
@@ -248,6 +259,8 @@ class RencanaKerjaHarianController extends Controller
                 'rows.*.laki_laki'       => 'required|integer|min:0',
                 'rows.*.perempuan'       => 'required|integer|min:0',
                 'rows.*.usingvehicle'    => 'required|boolean',
+                'rows.*.usinghelper'     => 'required|boolean',
+                'rows.*.helperid'        => 'nullable|string',
                 'rows.*.material_group_id' => 'nullable|integer',
                 'rows.*.keterangan'      => 'nullable|string|max:300',
             ]);
@@ -329,6 +342,9 @@ class RencanaKerjaHarianController extends Controller
                         'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                         'herbisidagroupid'    => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
                         'usingvehicle'        => $row['usingvehicle'],
+                        'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
+                        'usinghelper'         => $row['usinghelper'] ?? 0,
+                        'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
                         'description'         => $row['keterangan'] ?? null,
                     ];
                 }
@@ -386,7 +402,6 @@ class RencanaKerjaHarianController extends Controller
                 'app.idjabatanapproval1',
                 'app.idjabatanapproval2',
                 'app.idjabatanapproval3',
-                // Enhanced approval status logic
                 DB::raw('CASE 
                     WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
                     WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
@@ -412,19 +427,31 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Data RKH tidak ditemukan');
         }
         
+        // Query detail dengan JOIN ke tenagakerja saja
         $rkhDetails = DB::table('rkhlst as r')
             ->leftJoin('herbisidagroup as hg', function($join) {
                 $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->leftJoin('tenagakerja as tk', 'r.operatorid', '=', 'tk.tenagakerjaid')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
-            ->select(['r.*', 'hg.herbisidagroupname', 'a.activityname', 'a.jenistenagakerja'])
+            ->select([
+                'r.*', 
+                'hg.herbisidagroupname', 
+                'a.activityname', 
+                'a.jenistenagakerja',
+                'tk.nama as operator_name',
+                'tk.nik as operator_nik'
+            ])
             ->get();
         
-        $absenModel = new AbsenHdr; // Updated to use new model
-        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
+        $absenModel = new AbsenHdr;
+        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate));
+        
+        // Get operators data untuk mapping nomor kendaraan
+        $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
         
         return view('input.rencanakerjaharian.show', [
             'title' => 'Detail RKH',
@@ -432,7 +459,8 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
-            'absentenagakerja' => $absenData, // Keep the same variable name for view compatibility
+            'absentenagakerja' => $absenData,
+            'operatorsData' => $operatorsWithVehicles, // Untuk mapping kendaraan
         ]);
     }
 
@@ -474,6 +502,7 @@ class RencanaKerjaHarianController extends Controller
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
         $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+        $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
         
         return view('input.rencanakerjaharian.edit', [
             'title' => 'Edit RKH',
@@ -492,6 +521,7 @@ class RencanaKerjaHarianController extends Controller
             'plotsData' => $plots,
             'absentenagakerja' => $absenData,
             'oldInput' => old(),
+            'operatorsData' => $operatorsWithVehicles,
         ]);
     }
 
@@ -608,6 +638,7 @@ class RencanaKerjaHarianController extends Controller
                         'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                         'herbisidagroupid'    => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
                         'usingvehicle'        => $row['usingvehicle'],
+                        'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
                         'description'         => $row['keterangan'] ?? null,
                     ];
                 }
@@ -2157,6 +2188,14 @@ public function updateLKH(Request $request, $lkhno)
                 'message' => 'Gagal generate material usage: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get operators with vehicle data for kendaraan picker
+     */
+    private function getOperatorsWithVehicles($companycode)
+    {
+        return Kendaraan::getOperatorsWithVehicles($companycode);
     }
 
 }

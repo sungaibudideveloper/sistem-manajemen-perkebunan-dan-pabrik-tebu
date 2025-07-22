@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\edit.blade.php--}}
 <x-layout>
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -421,86 +422,127 @@
                   </td>
 
 
-<!-- Material Picker - Fixed Version -->
-<td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
-  // Set initial activity code
-  currentActivityCode = '{{ $oldActivity }}';
-  
-  // Set selected group jika ada data
-  @if($oldMaterialGroupId && $oldActivity)
-    // Tunggu sampai herbisida data ready
-    const checkAndSetGroup = () => {
-      if (window.herbisidaData) {
-        setSelectedGroup({{ $oldMaterialGroupId }}, '{{ $oldActivity }}');
-      } else {
-        setTimeout(checkAndSetGroup, 100);
-      }
-    };
-    checkAndSetGroup();
-  @endif
-">
-  <div class="relative">
-    <div 
-      @click="checkMaterial()"
-      :class="{
-        'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
-        'cursor-not-allowed bg-gray-100': !hasMaterial,
-        'border-green-500 bg-green-50': hasMaterial && selectedGroup,
-        'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
-        'border-gray-300': !hasMaterial
-      }"
-      class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
-    >
-      <!-- 1. Default sebelum pilih activity -->
-      <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+                  <!-- Material Picker - Fixed Version -->
+                  <td class="px-1 py-3" x-data="materialPicker({{ $i }})" x-init="
+                    // Set initial activity code
+                    currentActivityCode = '{{ $oldActivity }}';
+                    
+                    // Set selected group jika ada data
+                    @if($oldMaterialGroupId && $oldActivity)
+                      // Tunggu sampai herbisida data ready
+                      const checkAndSetGroup = () => {
+                        if (window.herbisidaData) {
+                          setSelectedGroup({{ $oldMaterialGroupId }}, '{{ $oldActivity }}');
+                        } else {
+                          setTimeout(checkAndSetGroup, 100);
+                        }
+                      };
+                      checkAndSetGroup();
+                    @endif
+                  ">
+                    <div class="relative">
+                      <div 
+                        @click="checkMaterial()"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': hasMaterial,
+                          'cursor-not-allowed bg-gray-100': !hasMaterial,
+                          'border-green-500 bg-green-50': hasMaterial && selectedGroup,
+                          'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
+                          'border-gray-300': !hasMaterial
+                        }"
+                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
+                      >
+                        <!-- 1. Default sebelum pilih activity -->
+                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
 
-      <!-- 2. Sudah pilih activity tapi kosong grup -->
-      <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
-      <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
-        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-        </svg>
-        Pilih Grup
-      </div>
-      <!-- FIXED: Added null check for selectedGroup -->
-      <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
-        <div class="font-semibold" x-text="selectedGroup && selectedGroup.herbisidagroupname ? selectedGroup.herbisidagroupname : ''"></div>
-      </div>
-    </div>
-    
-    <!-- Hidden inputs untuk menyimpan selected group -->
-    <input type="hidden" name="rows[{{ $i }}][material_group_id]" :value="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
-    <input type="hidden" name="rows[{{ $i }}][material_group_name]" :value="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
-  </div>
-  
-  @include('input.rencanakerjaharian.modal-material')
-</td>
+                        <!-- 2. Sudah pilih activity tapi kosong grup -->
+                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
+                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Pilih Grup
+                        </div>
+                        <!-- FIXED: Added null check for selectedGroup -->
+                        <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-medium text-center">
+                          <div class="font-semibold" x-text="selectedGroup && selectedGroup.herbisidagroupname ? selectedGroup.herbisidagroupname : ''"></div>
+                        </div>
+                      </div>
+                      
+                      <!-- Hidden inputs untuk menyimpan selected group -->
+                      <input type="hidden" name="rows[{{ $i }}][material_group_id]" :value="selectedGroup ? selectedGroup.herbisidagroupid : ''" value="{{ $oldMaterialGroupId }}">
+                      <input type="hidden" name="rows[{{ $i }}][material_group_name]" :value="selectedGroup ? selectedGroup.herbisidagroupname : ''" value="{{ $detail->herbisidagroupname ?? '' }}">
+                    </div>
+                    
+                    @include('input.rencanakerjaharian.modal-material')
+                  </td>
 
                   <!-- #Kendaraan -->
-                  <td class="px-1 py-3">
-                    <!-- hidden input untuk usingvehicle, terikat ke Alpine -->
-                    <input 
-                      type="hidden" 
-                      name="rows[{{ $i }}][usingvehicle]" 
-                      x-model.number="selected.usingvehicle"
-                    >
-
-                    <!-- kolom Kendaraan -->
-                    <input 
-                      type="text" 
-                      name="rows[{{ $i }}][kendaraan]" 
-                      readonly 
-                      x-bind:value="
-                      selected.usingvehicle === 1 
-                        ? 'Ya' 
-                        : (selected.usingvehicle === 0 
-                            ? 'Tidak' 
-                            : '-'
-                          )
-                    "
-                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
-                      id="kendaraan-{{ $i }}"
-                    >
+                  <td class="px-1 py-3" x-data="kendaraanPicker({{ $i }})" x-init="
+                    // Set initial activity code
+                    currentActivityCode = '{{ $oldActivity }}';
+                    
+                    // Set selected operator jika ada data
+                    @if($detail && $detail->operatorid)
+                      // Tunggu sampai operators data ready
+                      const checkAndSetOperator = () => {
+                        if (window.operatorsData && window.operatorsData.length > 0) {
+                          const operator = window.operatorsData.find(op => op.tenagakerjaid === '{{ $detail->operatorid }}');
+                          if (operator) {
+                            selectedOperator = {
+                              tenagakerjaid: operator.tenagakerjaid,
+                              nama: operator.nama,
+                              nokendaraan: operator.nokendaraan,
+                              jenis: operator.jenis
+                            };
+                            updateHiddenInputs();
+                          }
+                        } else {
+                          setTimeout(checkAndSetOperator, 100);
+                        }
+                      };
+                      checkAndSetOperator();
+                    @endif
+                    
+                    init();
+                  ">
+                    <div class="relative">
+                      <div 
+                        @click="checkVehicle()"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': hasVehicle,
+                          'cursor-not-allowed bg-gray-100': !hasVehicle,
+                          'border-green-500 bg-green-50': hasVehicle && selectedOperator,
+                          'border-green-300 bg-green-25': hasVehicle && !selectedOperator,
+                          'border-gray-300': !hasVehicle
+                        }"
+                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-green-500 min-h-[40px] flex items-center justify-center"
+                      >
+                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
+                        <div x-show="currentActivityCode && !hasVehicle" class="text-xs font-medium">Tidak</div>
+                        <div x-show="hasVehicle && !selectedOperator" class="text-green-600 text-xs font-medium">
+                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Pilih Operator
+                        </div>
+                        <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-medium text-center">
+                          <div class="font-semibold" x-text="selectedOperator ? selectedOperator.nokendaraan : ''"></div>
+                          <div class="text-gray-600 text-[10px]" x-text="selectedOperator ? selectedOperator.nama : ''"></div>
+                        </div>
+                      </div>
+                      
+                      <!-- Hidden inputs untuk operator data -->
+                      <input type="hidden" name="rows[{{ $i }}][operatorid]" 
+                            :value="selectedOperator ? selectedOperator.tenagakerjaid : ''" 
+                            value="{{ $detail->operatorid ?? '' }}">
+                      <input type="hidden" name="rows[{{ $i }}][operator_name]" 
+                            :value="selectedOperator ? selectedOperator.nama : ''">
+                      <input type="hidden" name="rows[{{ $i }}][vehicle_no]" 
+                            :value="selectedOperator ? selectedOperator.nokendaraan : ''">
+                    </div>
+                    
+                    @include('input.rencanakerjaharian.modal-kendaraan')
                   </td>
 
                   <td class="px-1 py-3">
@@ -585,9 +627,10 @@
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
+window.operatorsData = @json($operatorsData ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
-window.activitiesData = @json($activities ?? []); // ← TAMBAHAN YANG KURANG
+window.activitiesData = @json($activities ?? []);
 
 // ===== ALPINE STORES - SEMUA DI SINI =====
 document.addEventListener('alpine:init', () => {

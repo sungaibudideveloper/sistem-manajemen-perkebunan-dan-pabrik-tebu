@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\show.blade.php--}}
 <x-layout>
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -156,7 +157,7 @@
           <col style="width: 60px"><!-- Total -->
           <col style="width: 80px"><!-- Jenis -->
           <col style="width: 120px"><!-- Material -->
-          <col style="width: 80px"><!-- Kendaraan -->
+          <col style="width: 120px"><!-- Kendaraan -->
           <col style="width: 200px"><!-- Keterangan -->
         </colgroup>
 
@@ -234,14 +235,40 @@
                 @endif
               </td>
               
-              <!-- Kendaraan -->
-              <td class="px-3 py-3 text-xs text-center">
-                @if($detail->usingvehicle == 1)
-                  <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">Ya</span>
-                @else
-                  <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Tidak</span>
-                @endif
-              </td>
+              <!-- Kendaraan - Fixed Version -->
+<td class="px-3 py-3 text-xs text-center">
+  @if($detail->usingvehicle == 1)
+    @if($detail->operatorid)
+      @php
+        // Cari data kendaraan dari operatorsData
+        $operatorData = collect($operatorsData ?? [])->firstWhere('tenagakerjaid', $detail->operatorid);
+      @endphp
+      
+      @if($operatorData)
+        <!-- Show operator & vehicle details -->
+        <div class="bg-green-100 text-green-800 px-2 py-1 rounded-lg">
+          <div class="font-semibold text-xs">{{ $operatorData->nokendaraan ?? 'N/A' }}</div>
+          <div class="text-[10px] text-green-600">{{ $detail->operator_name }}</div>
+          <div class="text-[10px] text-gray-600">ID: {{ $detail->operatorid }}</div>
+        </div>
+      @else
+        <!-- Fallback jika data operator tidak ditemukan -->
+        <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
+          <div class="font-semibold text-xs">{{ $detail->operator_name }}</div>
+          <div class="text-[10px]">ID: {{ $detail->operatorid }}</div>
+        </div>
+      @endif
+    @else
+      <!-- Using vehicle but no operator assigned -->
+      <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
+        <div class="font-semibold text-xs">Perlu Operator</div>
+        <div class="text-[10px]">Kendaraan: Ya</div>
+      </div>
+    @endif
+  @else
+    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Tidak</span>
+  @endif
+</td>
               
               <!-- Keterangan -->
               <td class="px-3 py-3 text-sm">

@@ -1,4 +1,4 @@
-{{-- Modal Material --}}
+{{-- resources\views\input\rencanakerjaharian\modal-material.blade.php --}}
 <div
   x-show="open"
   x-cloak
