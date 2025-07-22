@@ -32,7 +32,6 @@
                 <table class="min-w-full bg-white text-sm text-center">
                     <thead>
                         <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode
                                 Company</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Nama
@@ -51,10 +50,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($company as $item)
+                        @foreach ($companies as $item)
                             <tr>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
-                                    {{ $item->no }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companycode }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -105,13 +102,13 @@
             </div>
         </div>
         <div class="mx-4 my-1">
-            @if ($company->hasPages())
-                {{ $company->appends(['perPage' => $company->perPage()])->links() }}
+            @if ($companies->hasPages())
+                {{ $companies->appends(['perPage' => $company->perPage()])->links() }}
             @else
                 <div class="flex items-center justify-between">
                     <p class="text-sm text-gray-700">
-                        Showing <span class="font-medium">{{ $company->count() }}</span> of <span
-                            class="font-medium">{{ $company->total() }}</span> results
+                        Showing <span class="font-medium">{{ $companies->count() }}</span> of <span
+                            class="font-medium">{{ $companies->total() }}</span> results
                     </p>
                 </div>
             @endif
