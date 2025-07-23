@@ -9,6 +9,8 @@ use App\Http\Controllers\UnpostController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\LiveChatController;
 
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login');
@@ -19,6 +21,9 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/',  [HomeController::class, 'index'])
         ->name('home');
     Route::post('/set-session', [HomeController::class, 'setSession'])->name('setSession');
+
+    Route::post('/chat/send', [LiveChatController::class, 'send'])->name('chat.send');
+    Route::get('/chat/messages', [LiveChatController::class, 'getMessages'])->name('chat.messages');
 
     Route::get('/notification',  [NotificationController::class, 'index'])
         ->name('notifications.index');

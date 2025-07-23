@@ -1,4 +1,3 @@
-{{--resources\views\components\layout.blade.php--}}
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-gray-50">
 
@@ -8,13 +7,56 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
+    <meta name="user-id" content="{{ auth()->user()->userid }}">
+    <meta name="user-name" content="{{ auth()->user()->name }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
     <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
+    
     <style>
+        /* Prevent Alpine.js flicker */
         [x-cloak] { display: none !important; }
+        
+        /* CSS variables for sidebar width */
+        :root {
+            --sidebar-width: 18rem; /* 288px = ml-72 */
+            --sidebar-collapsed-width: 4rem; /* 64px = ml-16 */
+        }
+        
+        /* Main content positioning */
+        .main-content-area {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* When sidebar is minimized */
+        .sidebar-minimized .main-content-area {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        
+        /* Disable transitions on initial load */
+        .no-transitions * {
+            -webkit-transition: none !important;
+            -moz-transition: none !important;
+            -ms-transition: none !important;
+            -o-transition: none !important;
+            transition: none !important;
+        }
     </style>
+    
+    <!-- Set sidebar state before render -->
+    <script>
+        (function() {
+            const isMinimized = localStorage.getItem('sidebar-minimized') === 'true';
+            if (isMinimized) {
+                document.documentElement.classList.add('sidebar-minimized');
+            }
+            // Add no-transitions class to prevent animation on load
+            document.documentElement.classList.add('no-transitions');
+        })();
+    </script>
+    
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
     <script src="{{ asset('asset/chartjs-plugin-datalabels@2.0.0.js') }}"></script>
@@ -31,8 +73,8 @@
         <x-sidebar></x-sidebar>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 transition-all duration-300"
-             :class="sidebarMinimized ? 'ml-16' : 'ml-72'">
+        <div class="flex-1 flex flex-col min-w-0 main-content-area"
+             x-ref="mainContent">
             
             <!-- Header -->
             <x-header>{{ $title }}
@@ -115,6 +157,13 @@
     @endif
 
     <script>
+        // Enable transitions after page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.documentElement.classList.remove('no-transitions');
+            }, 50);
+        });
+
         // Main layout Alpine.js component
         function mainLayoutData() {
             return {
@@ -122,9 +171,18 @@
                 sidebarMinimized: false,
                 
                 init() {
+                    // Get initial state from localStorage
+                    this.sidebarMinimized = JSON.parse(localStorage.getItem('sidebar-minimized') || 'false');
+                    
                     // Listen untuk sidebar toggle event
                     window.addEventListener('sidebar-toggle', (e) => {
                         this.sidebarMinimized = e.detail.minimized;
+                        // Update class on document element
+                        if (this.sidebarMinimized) {
+                            document.documentElement.classList.add('sidebar-minimized');
+                        } else {
+                            document.documentElement.classList.remove('sidebar-minimized');
+                        }
                     });
                     
                     // Set initial state dari store jika ada
@@ -145,6 +203,14 @@
                 toggle() {
                     this.isMinimized = !this.isMinimized;
                     localStorage.setItem('sidebar-minimized', this.isMinimized);
+                    
+                    // Update class on document element
+                    if (this.isMinimized) {
+                        document.documentElement.classList.add('sidebar-minimized');
+                    } else {
+                        document.documentElement.classList.remove('sidebar-minimized');
+                    }
+                    
                     // Dispatch event for other components to listen
                     window.dispatchEvent(new CustomEvent('sidebar-toggle', {
                         detail: { minimized: this.isMinimized }

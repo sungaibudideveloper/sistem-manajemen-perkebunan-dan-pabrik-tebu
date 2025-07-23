@@ -274,6 +274,7 @@
             <!-- DATE SELECTION MODAL FOR CREATE RKH -->
             <div
                 x-show="showDateModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -332,6 +333,7 @@
             <!-- RKH APPROVAL INFO MODAL -->
             <div
                 x-show="showRkhApprovalInfoModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -453,6 +455,7 @@
             <!-- RKH APPROVAL ACTION MODAL -->
             <div
                 x-show="showRkhApprovalModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -579,6 +582,7 @@
             <!-- LKH APPROVAL INFO MODAL -->
             <div
                 x-show="showLkhApprovalInfoModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60"
             >
@@ -702,6 +706,7 @@
             <!-- LKH APPROVAL ACTION MODAL -->
             <div
                 x-show="showLkhApprovalModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -830,6 +835,7 @@
             <!-- ABSEN MODAL -->
             <div
                 x-show="showAbsenModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -936,6 +942,7 @@
             <!-- GENERATE DTH MODAL -->
             <div
                 x-show="showGenerateDTHModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             >
@@ -980,6 +987,7 @@
 
             <!-- LKH MODAL -->
             <div x-show="showLKHModal"
+                x-cloak
                 x-transition.opacity
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div x-show="showLKHModal"

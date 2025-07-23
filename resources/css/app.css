@@ -1,23 +1,38 @@
+/* resources\css\app.css*/
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ===================================
-   MODERN LAYOUT STYLES
-   File: resources/css/modern-layout.css
-   =================================== */
 
-/* ===== GLOBAL STYLES ===== */
+
+/* GLOBAL STYLES */
 * {
     box-sizing: border-box;
 }
 
+/* Hide number input spinners */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+
 html {
     scroll-behavior: smooth;
+    zoom:0.8;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.flex.min-h-screen {
+    min-height: 125vh !important;
 }
 
 /* ===== SIDEBAR STYLES ===== */

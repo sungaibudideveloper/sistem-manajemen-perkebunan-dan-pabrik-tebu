@@ -1,3 +1,4 @@
+{{--resources\views\components\sidebar.blade.php--}}
 @props(['navigationMenus' => null, 'allSubmenus' => null, 'userPermissions' => null, 'companyName' => null])
 
 @php

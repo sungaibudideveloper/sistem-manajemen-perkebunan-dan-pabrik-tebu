@@ -341,4 +341,6 @@
             }
         }
     </script>
+    <!-- Live Chat Component -->
+<x-live-chat />
 </x-layout>
