@@ -43,9 +43,6 @@
             if (isMinimized) {
                 document.documentElement.classList.add('sidebar-minimized');
             }
-            
-            // Debug
-            console.log('Initial state:', { localState, cookieState: cookieState?.[1], isMinimized });
         })();
     </script>
     
@@ -187,12 +184,6 @@
                         ? localState === 'true' 
                         : (cookieState === 'true');
                     
-                    console.log('Alpine init state:', {
-                        localState,
-                        cookieState,
-                        sidebarMinimized: this.sidebarMinimized
-                    });
-                    
                     // Apply state to HTML
                     if (this.sidebarMinimized) {
                         document.documentElement.classList.add('sidebar-minimized');
@@ -202,7 +193,6 @@
                     
                     // Listen for toggle events
                     window.addEventListener('sidebar-toggle', (e) => {
-                        console.log('Sidebar toggle event:', e.detail);
                         this.sidebarMinimized = e.detail.minimized;
                         
                         // Update HTML class
@@ -239,8 +229,6 @@
                 
                 toggle() {
                     this.isMinimized = !this.isMinimized;
-                    
-                    console.log('Toggling sidebar:', this.isMinimized);
                     
                     // Save to both localStorage and cookie
                     localStorage.setItem('sidebar-minimized', this.isMinimized);
