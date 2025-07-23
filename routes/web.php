@@ -13,7 +13,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LiveChatController;
 
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [UsernameLoginController::class, 'login'])->name('login');
+Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::any('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
 
 Route::group(['middleware' => 'auth'], function () {
