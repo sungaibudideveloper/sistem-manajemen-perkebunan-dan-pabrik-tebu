@@ -31,9 +31,10 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.flex.min-h-screen {
-    min-height: 125vh !important;
+.layout-container {
+    min-height: 125vh;
 }
+
 
 /* ===== SIDEBAR STYLES ===== */
 .sidebar-scroll {
