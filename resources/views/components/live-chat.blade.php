@@ -10,19 +10,19 @@
             </svg>
         </div>
         <!-- Close Icon -->
-        <div x-show="isOpen" class="w-6 h-6">
+        <div x-show="isOpen" class="w-6 h-6" x-cloak>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
         </div>
         <!-- Notification Badge -->
-        <span x-show="unreadCount > 0" x-text="unreadCount" 
+        <span x-show="unreadCount > 0" x-text="unreadCount" x-cloak
               class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-pulse">
         </span>
     </button>
 
     <!-- Chat Window -->
-    <div x-show="isOpen" 
+    <div x-show="isOpen" x-cloak 
          x-transition:enter="transition ease-out duration-300 transform"
          x-transition:enter-start="opacity-0 scale-75 translate-y-4"
          x-transition:enter-end="opacity-100 scale-100 translate-y-0"
