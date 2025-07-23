@@ -7,55 +7,52 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
-    <meta name="user-id" content="{{ auth()->user()->userid }}">
-    <meta name="user-name" content="{{ auth()->user()->name }}">
+    
+    <!-- Preload font awesome untuk prevent icon flash -->
+    <link rel="preload" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}" as="style">
+    <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
+    
+    <!-- Critical CSS inline - Load FIRST before anything -->
+    <style>
+        /* Hide everything initially */
+        body { visibility: hidden; opacity: 0; }
+        
+        /* Base layout styles to prevent flash */
+        .layout-container { display: flex; min-height: 100vh; }
+        .sidebar-wrapper { width: 18rem; transition: width 0.3s ease; }
+        .main-wrapper { flex: 1; margin-left: 0; transition: margin-left 0.3s ease; }
+        
+        /* Minimized state */
+        .sidebar-minimized .sidebar-wrapper { width: 4rem; }
+        
+        /* Show body after state determined */
+        body.ready { visibility: visible; opacity: 1; transition: opacity 0.15s ease; }
+        
+        [x-cloak] { display: none !important; }
+    </style>
+    
+    <!-- Set initial state IMMEDIATELY -->
+    <script>
+        (function() {
+            // Check localStorage first (client priority), then cookie (server fallback)
+            const localState = localStorage.getItem('sidebar-minimized');
+            const cookieState = document.cookie.match(/sidebar_minimized=([^;]+)/);
+            const isMinimized = localState ? localState === 'true' : (cookieState ? cookieState[1] === 'true' : false);
+            
+            // Apply state to HTML element
+            if (isMinimized) {
+                document.documentElement.classList.add('sidebar-minimized');
+            }
+            
+            // Debug
+            console.log('Initial state:', { localState, cookieState: cookieState?.[1], isMinimized });
+        })();
+    </script>
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
     <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
-    
-    <style>
-        /* Prevent Alpine.js flicker */
-        [x-cloak] { display: none !important; }
-        
-        /* CSS variables for sidebar width */
-        :root {
-            --sidebar-width: 18rem; /* 288px = ml-72 */
-            --sidebar-collapsed-width: 4rem; /* 64px = ml-16 */
-        }
-        
-        /* Main content positioning */
-        .main-content-area {
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-        }
-        
-        /* When sidebar is minimized */
-        .sidebar-minimized .main-content-area {
-            margin-left: var(--sidebar-collapsed-width);
-        }
-        
-        /* Disable transitions on initial load */
-        .no-transitions * {
-            -webkit-transition: none !important;
-            -moz-transition: none !important;
-            -ms-transition: none !important;
-            -o-transition: none !important;
-            transition: none !important;
-        }
-    </style>
-    
-    <!-- Set sidebar state before render -->
-    <script>
-        (function() {
-            const isMinimized = localStorage.getItem('sidebar-minimized') === 'true';
-            if (isMinimized) {
-                document.documentElement.classList.add('sidebar-minimized');
-            }
-            // Add no-transitions class to prevent animation on load
-            document.documentElement.classList.add('no-transitions');
-        })();
-    </script>
     
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
@@ -68,13 +65,14 @@
 </head>
 
 <body class="h-full bg-gray-50">
-    <div class="flex min-h-screen" x-data="mainLayoutData()" x-init="init()">
+    <div class="layout-container" x-data="mainLayoutData()" x-init="init()">
         <!-- Sidebar -->
-        <x-sidebar></x-sidebar>
+        <aside class="sidebar-wrapper" x-cloak>
+            <x-sidebar></x-sidebar>
+        </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 main-content-area"
-             x-ref="mainContent">
+        <div class="main-wrapper flex flex-col">
             
             <!-- Header -->
             <x-header>{{ $title }}
@@ -151,33 +149,63 @@
         </div>
     </div>
 
-    <!-- Global Company Modal - Available on all pages -->
+    <!-- Global Company Modal -->
     @if(isset($company) && $company)
         <x-company-modal :companies="$company" />
     @endif
 
     <script>
-        // Enable transitions after page load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.documentElement.classList.remove('no-transitions');
-            }, 50);
+        // Show body after everything loads
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('ready');
         });
 
-        // Main layout Alpine.js component
+        // Cookie helper functions
+        function setCookie(name, value, days = 365) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : null;
+        }
+
+        // Main layout Alpine component
         function mainLayoutData() {
             return {
                 sidebarOpen: false,
                 sidebarMinimized: false,
                 
                 init() {
-                    // Get initial state from localStorage
-                    this.sidebarMinimized = JSON.parse(localStorage.getItem('sidebar-minimized') || 'false');
+                    // Get initial state from localStorage or cookie
+                    const localState = localStorage.getItem('sidebar-minimized');
+                    const cookieState = getCookie('sidebar_minimized');
                     
-                    // Listen untuk sidebar toggle event
+                    // localStorage takes priority over cookie
+                    this.sidebarMinimized = localState !== null 
+                        ? localState === 'true' 
+                        : (cookieState === 'true');
+                    
+                    console.log('Alpine init state:', {
+                        localState,
+                        cookieState,
+                        sidebarMinimized: this.sidebarMinimized
+                    });
+                    
+                    // Apply state to HTML
+                    if (this.sidebarMinimized) {
+                        document.documentElement.classList.add('sidebar-minimized');
+                    } else {
+                        document.documentElement.classList.remove('sidebar-minimized');
+                    }
+                    
+                    // Listen for toggle events
                     window.addEventListener('sidebar-toggle', (e) => {
+                        console.log('Sidebar toggle event:', e.detail);
                         this.sidebarMinimized = e.detail.minimized;
-                        // Update class on document element
+                        
+                        // Update HTML class
                         if (this.sidebarMinimized) {
                             document.documentElement.classList.add('sidebar-minimized');
                         } else {
@@ -185,38 +213,55 @@
                         }
                     });
                     
-                    // Set initial state dari store jika ada
+                    // Sync with Alpine store
                     this.$nextTick(() => {
                         if (Alpine.store('sidebar')) {
-                            this.sidebarMinimized = Alpine.store('sidebar').isMinimized;
+                            Alpine.store('sidebar').isMinimized = this.sidebarMinimized;
                         }
                     });
                 }
             }
         }
 
-        // Global Alpine.js store for app-wide state
+        // Global Alpine store
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
-                isMinimized: JSON.parse(localStorage.getItem('sidebar-minimized') || 'false'),
+                isMinimized: false,
+                
+                init() {
+                    // Initialize from storage
+                    const localState = localStorage.getItem('sidebar-minimized');
+                    const cookieState = getCookie('sidebar_minimized');
+                    this.isMinimized = localState !== null 
+                        ? localState === 'true' 
+                        : (cookieState === 'true');
+                },
                 
                 toggle() {
                     this.isMinimized = !this.isMinimized;
-                    localStorage.setItem('sidebar-minimized', this.isMinimized);
                     
-                    // Update class on document element
+                    console.log('Toggling sidebar:', this.isMinimized);
+                    
+                    // Save to both localStorage and cookie
+                    localStorage.setItem('sidebar-minimized', this.isMinimized);
+                    setCookie('sidebar_minimized', this.isMinimized);
+                    
+                    // Update HTML class
                     if (this.isMinimized) {
                         document.documentElement.classList.add('sidebar-minimized');
                     } else {
                         document.documentElement.classList.remove('sidebar-minimized');
                     }
                     
-                    // Dispatch event for other components to listen
+                    // Dispatch event
                     window.dispatchEvent(new CustomEvent('sidebar-toggle', {
                         detail: { minimized: this.isMinimized }
                     }));
                 }
             });
+            
+            // Initialize store
+            Alpine.store('sidebar').init();
         });
     </script>
 
