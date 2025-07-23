@@ -1,3 +1,4 @@
+{{--resources\views\components\header.blade.php--}}
 <header class="bg-green-700 shadow-sm border-b border-gray-200 sticky top-0 z-40">
     <div class="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Desktop toggle button + Mobile menu button + Page title -->
