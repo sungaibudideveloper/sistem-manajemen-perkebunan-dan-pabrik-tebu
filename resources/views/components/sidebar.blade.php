@@ -351,6 +351,44 @@
             @endif
         @endforeach
     </nav>
+
+    <!-- NEW: Bottom Collapse Button -->
+    <div class="bg-green-50 border-t border-gray-200 p-3">
+        <button @click="toggleSidebar()" 
+                class="flex items-center justify-center w-full p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all duration-200 group"
+                :class="$store.sidebar.isMinimized ? 'px-1.5' : 'px-3'">
+            
+            <!-- Collapse Icon (when expanded) -->
+            <div x-show="!$store.sidebar.isMinimized" 
+                 x-transition:enter="transition ease-out duration-150" 
+                 x-transition:enter-start="opacity-0" 
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="flex items-center space-x-2">
+                <svg class="w-4 h-4 transition-colors duration-200" 
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+                <span class="text-xs font-medium">Collapse</span>
+            </div>
+            
+            <!-- Expand Icon (when minimized) -->
+            <div x-show="$store.sidebar.isMinimized" 
+                 x-transition:enter="transition ease-out duration-150 delay-50" 
+                 x-transition:enter-start="opacity-0" 
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0">
+                <svg class="w-4 h-4 transition-colors duration-200" 
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+            </div>
+        </button>
+    </div>
 </div>
 
 <script>
