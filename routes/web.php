@@ -9,7 +9,6 @@ use App\Http\Controllers\UnpostController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
-use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LiveChatController;
 
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');

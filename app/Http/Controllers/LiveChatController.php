@@ -56,7 +56,7 @@ class LiveChatController extends Controller
         broadcast(new MessageSent($message, [
             'id' => $user->userid,
             'name' => $user->name,
-        ]));
+        ]))->toOthers();
 
         return response()->json([
             'success' => true,
