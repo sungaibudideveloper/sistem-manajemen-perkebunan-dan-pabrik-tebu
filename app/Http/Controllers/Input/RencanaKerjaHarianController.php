@@ -1632,8 +1632,6 @@ class RencanaKerjaHarianController extends Controller
         return $jabatan ? $jabatan->namajabatan : 'Unknown';
     }
 
-    // ... (other existing methods like showLKH, editLKH, DTH methods, etc. remain the same) ...
-
     public function showLKH($lkhno)
 {
     try {
@@ -1943,13 +1941,14 @@ public function updateLKH(Request $request, $lkhno)
         $companycode = Session::get('companycode');
         
         try {
-            $query = DB::table('rkhhdr as h')
+            // Query untuk Tenaga Harian dan Borongan
+            $tenagaQuery = DB::table('rkhhdr as h')
                 ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
                 ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
                 ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
                 ->where('h.companycode', $companycode)
                 ->whereDate('h.rkhdate', $date)
-                ->where('h.approval1flag', '1')
+                //->where('h.approval1flag', '1')
                 ->select([
                     'l.rkhno',
                     'l.blok',
@@ -1959,24 +1958,64 @@ public function updateLKH(Request $request, $lkhno)
                     'l.jumlahperempuan',
                     'l.jumlahtenagakerja',
                     'l.jenistenagakerja',
-                    'l.description',
                     'u.name as mandor_nama',
                     'a.activityname'
                 ]);
 
-            $allData = $query->get();
-            $harianData = $allData->where('jenistenagakerja', 1)->values()->toArray();
-            $boronganData = $allData->where('jenistenagakerja', 2)->values()->toArray();
+            $tenagaData = $tenagaQuery->get();
+            $harianData = $tenagaData->where('jenistenagakerja', 1)->values()->toArray();
+            $boronganData = $tenagaData->where('jenistenagakerja', 2)->values()->toArray();
+
+            // Query untuk Distribusi Alat
+            $alatQuery = DB::table('rkhhdr as h')
+                ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
+                ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+                ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
+                ->leftJoin('tenagakerja as operator', function($join) use ($companycode) {
+                    $join->on('l.operatorid', '=', 'operator.tenagakerjaid')
+                        ->where('operator.companycode', '=', $companycode);
+                })
+                ->leftJoin('tenagakerja as helper', function($join) use ($companycode) {
+                    $join->on('l.helperid', '=', 'helper.tenagakerjaid')
+                        ->where('helper.companycode', '=', $companycode);
+                })
+                ->leftJoin('kendaraan as k', function($join) use ($companycode) {
+                    $join->on('l.operatorid', '=', 'k.idtenagakerja')
+                        ->where('k.companycode', '=', $companycode)
+                        ->where('k.isactive', '=', 1);
+                })
+                ->where('h.companycode', $companycode)
+                ->whereDate('h.rkhdate', $date)
+                //->where('h.approval1flag', '1')
+                ->where('l.usingvehicle', 1)
+                ->select([
+                    'l.rkhno',
+                    'l.blok',
+                    'l.plot',
+                    'l.luasarea',
+                    'l.operatorid',
+                    'l.helperid',
+                    'u.name as mandor_nama',
+                    'a.activityname',
+                    'operator.nama as operator_nama',
+                    'helper.nama as helper_nama',
+                    'k.nokendaraan',
+                    'k.jenis'
+                ]);
+
+            $alatData = $alatQuery->get()->toArray();
 
             return response()->json([
                 'success' => true,
                 'harian' => $harianData,
                 'borongan' => $boronganData,
+                'alat' => $alatData,
                 'date' => $date,
                 'debug' => [
-                    'total_records' => $allData->count(),
+                    'total_tenaga_records' => $tenagaData->count(),
                     'harian_count' => count($harianData),
-                    'borongan_count' => count($boronganData)
+                    'borongan_count' => count($boronganData),
+                    'alat_count' => count($alatData)
                 ]
             ]);
             
