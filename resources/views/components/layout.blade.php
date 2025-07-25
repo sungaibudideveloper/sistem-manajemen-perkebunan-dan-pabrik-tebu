@@ -19,8 +19,8 @@
         
         /* Base layout styles to prevent flash */
         .layout-container { display: flex; min-height: 100vh; }
-        .sidebar-wrapper { width: 18rem; transition: width 0.3s ease; }
-        .main-wrapper { flex: 1; margin-left: 0; transition: margin-left 0.3s ease; }
+        .sidebar-wrapper {width: 18rem;flex-shrink: 0; transition: width 0.3s ease; }
+        .main-wrapper { flex: 1;margin-left: 0; }
         
         /* Minimized state */
         .sidebar-minimized .sidebar-wrapper { width: 4rem; }
