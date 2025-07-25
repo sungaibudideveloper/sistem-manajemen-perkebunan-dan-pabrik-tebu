@@ -102,7 +102,7 @@
             <!-- Main Content -->
             <main class="bg-gray-200 flex-1 overflow-y-auto">
                 {{ $hero ?? null }}
-                <div class="px-4 py-6 sm:px-6 lg:px-8">
+                <div class="px-2 py-3 sm:px-3 lg:px-4">
                     @error('duplicateClosing')
                         <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
                             {{ $message }}

@@ -28,7 +28,6 @@ class Rkhlst extends Model
         'operatorid',
         'usinghelper',
         'helperid',
-        'description',
     ];
 
     protected $casts = [

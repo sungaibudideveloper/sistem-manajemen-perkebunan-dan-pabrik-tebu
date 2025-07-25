@@ -191,14 +191,14 @@ class RencanaKerjaHarianController extends Controller
         $previewRkhNo = "RKH{$day}{$month}{$newNumber}{$year}";
 
         $herbisidadosages = new Herbisidadosage;
-        $absenModel = new AbsenHdr; // Updated to use new model
+        $absenModel = new AbsenHdr;
 
         $mandors = User::getMandorByCompany($companycode);
         $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
         $bloks = Blok::orderBy('blok')->get();
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
-        $absenData = $absenModel->getDataAbsenFull($companycode, $targetDate); // Updated method call
+        $absenData = $absenModel->getDataAbsenFull($companycode, $targetDate);
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
         $helpers = TenagaKerja::where('companycode', $companycode)
@@ -251,6 +251,7 @@ class RencanaKerjaHarianController extends Controller
             $request->validate([
                 'mandor_id'              => 'required|exists:user,userid',
                 'tanggal'                => 'required|date',
+                'keterangan'             => 'nullable|string|max:500',
                 'rows'                   => 'required|array|min:1',
                 'rows.*.blok'            => 'required|string',
                 'rows.*.plot'            => 'required|string',
@@ -262,7 +263,6 @@ class RencanaKerjaHarianController extends Controller
                 'rows.*.usinghelper'     => 'required|boolean',
                 'rows.*.helperid'        => 'nullable|string',
                 'rows.*.material_group_id' => 'nullable|integer',
-                'rows.*.keterangan'      => 'nullable|string|max:300',
             ]);
 
             $rkhno = null;
@@ -314,6 +314,7 @@ class RencanaKerjaHarianController extends Controller
                     'manpower'    => $totalManpower,
                     'mandorid'    => $request->input('mandor_id'),
                     'activitygroup' => $primaryActivityGroup,
+                    'keterangan'  => $request->input('keterangan'),
                     'inputby'     => Auth::user()->userid,
                     'createdat'   => now(),
                 ], $approvalData);
@@ -345,7 +346,6 @@ class RencanaKerjaHarianController extends Controller
                         'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
                         'usinghelper'         => $row['usinghelper'] ?? 0,
                         'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
-                        'description'         => $row['keterangan'] ?? null,
                     ];
                 }
 
@@ -480,11 +480,17 @@ class RencanaKerjaHarianController extends Controller
             return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Data RKH tidak ditemukan');
         }
+
+        // Check if approved (Security check)
+        if ($this->isRkhApproved($rkhHeader)) {
+            return redirect()->route('input.rencanakerjaharian.index')
+                ->with('error', 'RKH tidak dapat diedit karena sudah disetujui');
+        }
         
         $rkhDetails = DB::table('rkhlst as r')
             ->leftJoin('herbisidagroup as hg', function($join) {
                 $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
-                     ->on('r.activitycode', '=', 'hg.activitycode');
+                    ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->where('r.companycode', $companycode)
@@ -493,16 +499,22 @@ class RencanaKerjaHarianController extends Controller
             ->get();
         
         $herbisidadosages = new Herbisidadosage;
-        $absenModel = new AbsenHdr; // Updated to use new model
+        $absenModel = new AbsenHdr;
         
         $mandors = User::getMandorByCompany($companycode);
         $activities = Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get();
         $bloks = Blok::orderBy('blok')->get();
         $masterlist = Masterlist::orderBy('companycode')->orderBy('plot')->get();
         $plots = DB::table('plot')->where('companycode', $companycode)->get();
-        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate)); // Updated method call
+        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($rkhHeader->rkhdate));
         $herbisidagroups = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
+        $helpers = TenagaKerja::where('companycode', $companycode)
+            ->where('jenistenagakerja', 4)
+            ->where('isactive', 1)
+            ->select(['tenagakerjaid', 'nama', 'nik'])
+            ->orderBy('nama')
+            ->get();
         
         return view('input.rencanakerjaharian.edit', [
             'title' => 'Edit RKH',
@@ -522,11 +534,25 @@ class RencanaKerjaHarianController extends Controller
             'absentenagakerja' => $absenData,
             'oldInput' => old(),
             'operatorsData' => $operatorsWithVehicles,
+            'helpersData' => $helpers,
         ]);
     }
 
     public function update(Request $request, $rkhno)
-    {
+    {   
+        // Check approval status
+        $rkhHeader = DB::table('rkhhdr')
+            ->where('companycode', Session::get('companycode'))
+            ->where('rkhno', $rkhno)
+            ->first();
+            
+        if ($this->isRkhApproved($rkhHeader)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'RKH tidak dapat diubah karena sudah disetujui'
+            ], 403);
+        }
+
         $filteredRows = collect($request->input('rows', []))
             ->filter(function ($row) {
                 return !empty($row['blok']);
@@ -545,6 +571,7 @@ class RencanaKerjaHarianController extends Controller
             $request->validate([
                 'mandor_id'              => 'required|exists:user,userid',
                 'tanggal'                => 'required|date',
+                'keterangan'             => 'nullable|string|max:500',
                 'rows'                   => 'required|array|min:1',
                 'rows.*.blok'            => 'required|string',
                 'rows.*.plot'            => 'required|string',
@@ -553,8 +580,9 @@ class RencanaKerjaHarianController extends Controller
                 'rows.*.laki_laki'       => 'required|integer|min:0',
                 'rows.*.perempuan'       => 'required|integer|min:0',
                 'rows.*.usingvehicle'    => 'required|boolean',
+                'rows.*.usinghelper'     => 'required|boolean',
+                'rows.*.helperid'        => 'nullable|string',
                 'rows.*.material_group_id' => 'nullable|integer',
-                'rows.*.keterangan'      => 'nullable|string|max:300',
             ]);
 
             DB::transaction(function () use ($request, $rkhno) {
@@ -609,6 +637,7 @@ class RencanaKerjaHarianController extends Controller
                     'totalluas'   => $totalLuas,
                     'manpower'    => $totalManpower,
                     'mandorid'    => $request->input('mandor_id'),
+                    'keterangan'  => $request->input('keterangan'),
                     'updateby'    => Auth::user()->userid,
                     'updatedat'   => now(),
                 ], $approvalData);
@@ -639,7 +668,8 @@ class RencanaKerjaHarianController extends Controller
                         'herbisidagroupid'    => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
                         'usingvehicle'        => $row['usingvehicle'],
                         'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
-                        'description'         => $row['keterangan'] ?? null,
+                        'usinghelper'         => $row['usinghelper'] ?? 0,
+                        'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
                     ];
                 }
 
@@ -676,7 +706,20 @@ class RencanaKerjaHarianController extends Controller
 
 
     public function destroy($rkhno)
-    {
+    {   
+        // Check approval status
+        $rkhHeader = DB::table('rkhhdr')
+        ->where('companycode', Session::get('companycode'))
+        ->where('rkhno', $rkhno)
+        ->first();
+        
+        if ($this->isRkhApproved($rkhHeader)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'RKH tidak dapat dihapus karena sudah disetujui'
+            ], 403);
+        }
+
         $companycode = Session::get('companycode');
         
         try {
@@ -1551,6 +1594,16 @@ class RencanaKerjaHarianController extends Controller
             default:
                 return false;
         }
+    }
+
+    private function isRkhApproved($rkh)
+    {
+        if (!$rkh || !$rkh->jumlahapproval) return false;
+        
+        // Check if any level approved
+        return $rkh->approval1flag === '1' || 
+            $rkh->approval2flag === '1' || 
+            $rkh->approval3flag === '1';
     }
 
     private function isRkhFullyApproved($rkh)

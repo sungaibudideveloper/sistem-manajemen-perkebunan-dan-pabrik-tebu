@@ -88,25 +88,26 @@
         </div>
     @endif
 
-  <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
-    <div class="flex justify-between items-start">
-      <!-- KIRI: No RKH + Mandor + Tanggal -->
-      <div class="flex flex-col space-y-6 w-2/3">
-        <!-- No RKH - HIDDEN FROM UI FOR RACE CONDITION SAFETY -->
-        <input type="hidden" name="rkhno" value="{{ $rkhno }}">
+  <!-- HEADER CONTENT -->
+<div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
+  <div class="flex justify-between items-start">
+    <!-- KIRI: No RKH, Mandor, Tanggal, Keterangan -->
+    <div class="flex flex-col w-2/3 space-y-2">
+      <!-- Hidden No RKH -->
+      <input type="hidden" name="rkhno" value="{{ $rkhno }}">
 
       <!-- Mandor & Tanggal -->
-      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
-    @if(old('mandor_id'))
-        selected = {
-            userid: '{{ old('mandor_id') }}',
-            name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
-        }
-    @endif
-">
+      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-4 max-w-md" x-init="
+        @if(old('mandor_id'))
+            selected = {
+                userid: '{{ old('mandor_id') }}',
+                name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
+            }
+        @endif
+      ">
         <!-- Input Mandor -->
         <div>
-          <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-2">Mandor</label>
+          <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
           <input
             type="text"
             name="mandor"
@@ -115,29 +116,50 @@
             placeholder="Pilih Mandor"
             @click="open = true"
             :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
-            class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-2 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <input type="hidden" name="mandor_id" x-model="selected.userid">
         </div>
 
-        <!-- Input Tanggal - LOCKED FROM INDEX -->
+        <!-- Input Tanggal -->
         <div>
-          <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
+          <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-1">Tanggal</label>
           <input
             type="date"
             name="tanggal"
             id="tanggal"
             value="{{ $selectedDate }}"
             readonly
-            class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium cursor-not-allowed"
+            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 bg-gray-100 text-sm font-medium cursor-not-allowed"
           />
         </div>
-        
+
         @include('input.rencanakerjaharian.modal-mandor')
       </div>
+
+      <!-- Keterangan Dokumen -->
+      <div class="max-w-2xl">
+        <label for="keterangan" class="block text-sm font-semibold text-gray-700 mb-1">
+          Keterangan Dokumen
+          <span class="text-xs text-gray-500 font-normal">(opsional)</span>
+        </label>
+        <input 
+          type="text"
+          name="keterangan"
+          id="keterangan"
+          placeholder="Masukkan keterangan untuk dokumen RKH ini..."
+          value="{{ old('keterangan') }}"
+          maxlength="500"
+          class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        @error('keterangan')
+          <p class="mt-1 text-red-600 text-sm">{{ $message }}</p>
+        @enderror
+      </div>
+
     </div>
 
-    <!-- KANAN: Ringkasan Tenaga Kerja -->
+    <!-- RIGHT HEADER: Absen Tenaga Kerja -->
     <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center">
@@ -166,23 +188,22 @@
     </div>
   </div>
 
-      <!-- Modern Table -->
-      <div class="bg-white mt-12 rounded-xl p-6 border border-gray-300 border-r shadow-md">
+      <!-- Main Table -->
+      <div class="bg-white mt-6 rounded-xl border border-gray-300 border-r shadow-md">
         <div class="overflow-x-auto">
           <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
             <colgroup>
               <col style="width: 32px"><!-- No. -->
               <col style="width: 32px"><!-- Blok -->
               <col style="width: 48px"><!-- Plot -->
-              <col style="width: 208px"><!-- Aktivitas -->
-              <col style="width: 48px"><!-- Luas -->
-              <col style="width: 32px"><!-- L -->
-              <col style="width: 32px"><!-- P -->
-              <col style="width: 32px"><!-- Total -->
-              <col style="width: 55px"><!-- Jenis -->
-              <col style="width: 105px"><!-- Material -->
-              <col style="width: 40px"><!-- Kendaraan -->
-              <col style="width: 150px"><!-- Keterangan -->
+              <col style="width: 150px"><!-- Aktivitas -->
+              <col style="width: 60px"><!-- Luas -->
+              <col style="width: 45px"><!-- L -->
+              <col style="width: 45px"><!-- P -->
+              <col style="width: 50px"><!-- Total -->
+              <col style="width: 70px"><!-- Jenis -->
+              <col style="width: 80px"><!-- Material -->
+              <col style="width: 80px"><!-- Kendaraan -->
             </colgroup>
 
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
@@ -195,7 +216,6 @@
                 <th colspan="4" class="text-center">Tenaga Kerja</th>
                 <th rowspan="2">Material</th>
                 <th rowspan="2">Kendaraan</th>
-                <th rowspan="2">Keterangan</th>
               </tr>
               <tr class="bg-gray-700">
                 <th>L</th>
@@ -348,7 +368,7 @@
                       name="rows[{{ $i }}][jenistenagakerja]" 
                       readonly 
                        onfocus="this.blur()" 
-                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium cursor-not-allowed"
+                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-sm font-medium cursor-not-allowed"
                       placeholder="-"
                       id="jenistenagakerja-{{ $i }}"
                     >
@@ -427,10 +447,6 @@
                     @include('input.rencanakerjaharian.modal-kendaraan')
                   </td>
 
-                  <td class="px-1 py-3">
-                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ old('rows.'.$i.'.keterangan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  </td>
-
                 </tr>
               @endfor
             </tbody>
@@ -441,7 +457,7 @@
                 <td id="total-laki" class="px-1 py-3 text-center text-sm font-bold bg-blue-50">0</td>
                 <td id="total-perempuan" class="px-1 py-3 text-center text-sm font-bold bg-red-50">0</td>
                 <td id="total-tenaga" class="px-1 py-3 text-center text-sm font-bold bg-green-50">0</td>
-                <td colspan="4" class="px-1 py-3 bg-gray-100"></td>
+                <td colspan="3" class="px-1 py-3 bg-gray-100"></td>
               </tr>
             </tfoot>
           </table>

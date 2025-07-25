@@ -22,12 +22,13 @@ class Rkhhdr extends Model
         'manpower',
         'totalluas',
         'mandorid',
-        'activitygroup', // TAMBAHAN BARU
+        'activitygroup',
+        'keterangan',
         'jumlahapproval',
         'approval1idjabatan',
         'approval1userid',
         'approval1date',
-        'approval1flag', // Tambahan untuk flag approval
+        'approval1flag',
         'approval2idjabatan',
         'approval2userid',
         'approval2date',
