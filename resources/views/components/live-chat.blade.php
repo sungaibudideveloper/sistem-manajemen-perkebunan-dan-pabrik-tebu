@@ -29,21 +29,21 @@
          x-transition:leave="transition ease-in duration-200 transform"
          x-transition:leave-start="opacity-100 scale-100 translate-y-0"
          x-transition:leave-end="opacity-0 scale-75 translate-y-4"
-         class="fixed bottom-24 right-6 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-         style="width: 640px; height: 768px;">
+         class="fixed bottom-24 right-6 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden
+                w-80 h-96 sm:w-96 sm:h-[500px] lg:w-[540px] lg:h-[668px]">
         
         <!-- Chat Header -->
-        <div class="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-3 lg:p-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2 lg:space-x-3">
+                <div class="w-6 h-6 lg:w-8 lg:h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <svg class="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-2M5 8h2V5a2 2 0 012-2h6a2 2 0 012 2v3"></path>
                     </svg>
                 </div>
                 <div>
-                    <h3 class="font-semibold text-sm">Live Chat Tebu</h3>
-                    <p class="text-xs text-emerald-100">
-                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                    <h3 class="font-semibold text-xs lg:text-sm">Live Chat Tebu</h3>
+                    <p class="text-xs lg:text-xs text-emerald-100">
+                        <span class="inline-block w-1.5 h-1.5 lg:w-2 lg:h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
                         <span x-text="onlineUsers + ' online'"></span>
                     </p>
                 </div>
@@ -51,11 +51,11 @@
         </div>
 
         <!-- Chat Messages -->
-        <div class="flex-1 p-4 overflow-y-auto bg-gray-50" x-ref="messagesContainer">
-            <div class="space-y-3">
+        <div class="flex-1 p-3 lg:p-4 overflow-y-auto bg-gray-50" x-ref="messagesContainer">
+            <div class="space-y-2 lg:space-y-3">
                 <!-- Welcome Message -->
                 <div class="text-center py-2">
-                    <span class="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">
+                    <span class="text-xs text-gray-500 bg-white px-2 lg:px-3 py-1 rounded-full">
                         Welcome to Tebu Live Chat
                     </span>
                 </div>
@@ -63,9 +63,9 @@
                 <!-- Messages -->
                 <template x-for="message in messages" :key="message.id">
                     <div class="flex" :class="message.isOwn ? 'justify-end' : 'justify-start'">
-                        <div class="max-w-xs">
+                        <div class="max-w-xs lg:max-w-xs">
                             <div x-show="!message.isOwn" class="text-xs text-gray-600 mb-1" x-text="message.user.name"></div>
-                            <div class="rounded-2xl px-4 py-2 text-sm" 
+                            <div class="rounded-xl lg:rounded-2xl px-3 lg:px-4 py-2 text-xs lg:text-sm" 
                                  :class="message.isOwn ? 'bg-emerald-500 text-white' : 'bg-white text-gray-800 border'">
                                 <p x-text="message.message"></p>
                                 <div class="text-xs mt-1 opacity-70" x-text="message.timestamp"></div>
@@ -76,11 +76,11 @@
 
                 <!-- Typing Indicator -->
                 <div x-show="isTyping" class="flex justify-start">
-                    <div class="bg-white border rounded-2xl px-4 py-2">
+                    <div class="bg-white border rounded-xl lg:rounded-2xl px-3 lg:px-4 py-2">
                         <div class="flex space-x-1">
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div class="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                            <div class="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                         </div>
                     </div>
                 </div>
@@ -88,17 +88,17 @@
         </div>
 
         <!-- Chat Input -->
-        <div class="p-4 border-t bg-white">
+        <div class="p-3 lg:p-4 border-t bg-white">
             <form @submit.prevent="sendMessage()" class="flex space-x-2">
                 <input type="text" 
                        x-model="newMessage" 
                        placeholder="Type your message..." 
-                       class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                       class="flex-1 border border-gray-300 rounded-full px-3 lg:px-4 py-2 text-xs lg:text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                        maxlength="500">
                 <button type="submit" 
                         :disabled="!newMessage.trim() || sending"
                         class="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white rounded-full p-2 transition-colors duration-200">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                     </svg>
                 </button>
