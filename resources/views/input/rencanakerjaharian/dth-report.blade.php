@@ -217,6 +217,11 @@
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
+
+            /* Hide page info during print to avoid confusion */
+            #page-info {
+                display: none;
+            }
         }
 
         /* Empty State */
@@ -252,15 +257,27 @@
                     Export Excel
                 </button>
             </div>
-            <div class="header-right">
-                <div class="date">Tanggal: <span id="report-date"></span></div>
-                <div>Revisi: 1</div>
-                <div>Halaman: 1 dari 1</div>
-            </div>
         </div>
 
         <!-- Title -->
         <h1 class="main-title">Distribusi Tenaga Harian, Borongan dan Alat</h1>
+
+        <!-- RKH List & Statistics -->
+        <div style="margin-bottom: 20px; font-size: 11px; color: #6b7280; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <div id="rkh-list" style="margin-bottom: 8px;">RKH: Loading...</div>
+                <div id="statistics" style="display: flex; gap: 25px; font-size: 10px;">
+                    <span>Total Luas: <strong id="stat-total-luas">0</strong> ha</span>
+                    <span>Total Tenaga Kerja: <strong id="stat-total-tenaga">0</strong> orang</span>
+                    <span>Total Kendaraan: <strong id="stat-total-kendaraan">0</strong> unit</span>
+                </div>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #6b7280;">
+                <div class="date" style="font-weight: 600; color: #111827">Tanggal: <span id="report-date"></span></div>
+                <div id="printed-at">Printed at: <span id="print-timestamp"></span></div>
+                <div id="divisi-info"style="font-weight: 600; color: #111827" >Divisi: <span id="company-info">Loading...</span></div>
+            </div>
+        </div>
 
         <!-- Tenaga Harian Section -->
         <h2 class="section-title">Distribusi Tenaga Harian</h2>
@@ -358,13 +375,6 @@
                         <td colspan="9" class="loading">Memuat data...</td>
                     </tr>
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="6" style="text-align: center; font-weight: bold;">TOTAL LUAS ALAT</td>
-                        <td id="sum-luas-alat">0</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
 
@@ -408,6 +418,9 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    // Update RKH list dan timestamp
+                    updateHeaderInfo(data);
+                    
                     populateHarianTable(data.harian);
                     populateBoronganTable(data.borongan);
                     populateAlatTable(data.alat);
@@ -418,6 +431,73 @@
                 console.error('Error loading DTH data:', error);
                 showError('Terjadi kesalahan saat memuat data');
             }
+        }
+
+        function updateHeaderInfo(data) {
+            // Update RKH list
+            const rkhListElement = document.getElementById('rkh-list');
+            if (rkhListElement) {
+                if (data.rkh_numbers && data.rkh_numbers.length > 0) {
+                    rkhListElement.textContent = `RKH: ${data.rkh_numbers.join(', ')}`;
+                } else {
+                    rkhListElement.textContent = 'RKH: Tidak ada data';
+                }
+            }
+            
+            // Update print timestamp
+            const printTimestamp = document.getElementById('print-timestamp');
+            if (printTimestamp) {
+                printTimestamp.textContent = data.generated_at || new Date().toLocaleString('id-ID');
+            }
+            
+            // Update company info
+            const companyInfo = document.getElementById('company-info');
+            if (companyInfo) {
+                if (data.company_info) {
+                    companyInfo.textContent = data.company_info;
+                } else {
+                    companyInfo.textContent = 'N/A';
+                }
+            }
+            
+            // Update statistics
+            updateStatistics(data);
+        }
+
+        function updateStatistics(data) {
+            let totalLuas = 0;
+            let totalTenaga = 0;
+            let totalKendaraan = 0;
+
+            // Calculate from harian data
+            if (data.harian) {
+                data.harian.forEach(item => {
+                    totalLuas += parseFloat(item.luasarea || 0);
+                    totalTenaga += parseInt(item.jumlahlaki || 0) + parseInt(item.jumlahperempuan || 0);
+                });
+            }
+
+            // Calculate from borongan data
+            if (data.borongan) {
+                data.borongan.forEach(item => {
+                    totalLuas += parseFloat(item.luasarea || 0);
+                    totalTenaga += parseInt(item.jumlahlaki || 0) + parseInt(item.jumlahperempuan || 0);
+                });
+            }
+
+            // Calculate kendaraan from alat data
+            if (data.alat) {
+                totalKendaraan = data.alat.length;
+            }
+
+            // Update DOM with null checks
+            const luasEl = document.getElementById('stat-total-luas');
+            const tenagaEl = document.getElementById('stat-total-tenaga');
+            const kendaraanEl = document.getElementById('stat-total-kendaraan');
+            
+            if (luasEl) luasEl.textContent = totalLuas.toFixed(1);
+            if (tenagaEl) tenagaEl.textContent = totalTenaga;
+            if (kendaraanEl) kendaraanEl.textContent = totalKendaraan;
         }
 
         function populateHarianTable(data) {
@@ -527,8 +607,6 @@
                 return;
             }
 
-            let totalLuas = 0;
-
             data.forEach((item, index) => {
                 const row = document.createElement('tr');
                 
@@ -544,12 +622,7 @@
                     <td style="text-align: left;">${item.jenis || '-'}</td>
                 `;
                 tbody.appendChild(row);
-                
-                totalLuas += parseFloat(item.luasarea);
             });
-
-            // Update total
-            document.getElementById('sum-luas-alat').textContent = totalLuas.toFixed(1);
         }
 
         function showError(message) {
