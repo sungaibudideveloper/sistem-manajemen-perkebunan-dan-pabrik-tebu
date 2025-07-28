@@ -806,6 +806,25 @@ function updateLuasFromPlot(plotCode, rowIndex) {
       const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
       if (luasInput) {
         luasInput.value = plotData.luasarea;
+        luasInput.setAttribute('max', plotData.luasarea);
+        luasInput.setAttribute('title', `Maksimal: ${plotData.luasarea} Ha`);
+        
+        // TAMBAH VALIDASI REAL-TIME
+        luasInput.addEventListener('input', function() {
+          const currentValue = parseFloat(this.value);
+          const maxValue = parseFloat(plotData.luasarea);
+          
+          if (currentValue > maxValue) {
+            this.value = maxValue; // Reset ke max value
+            this.style.borderColor = '#ef4444';
+            
+            // Show warning toast (optional)
+            showToast(`Luas maksimal untuk plot ${plotCode}: ${maxValue} Ha`);
+          } else {
+            this.style.borderColor = '';
+          }
+        });
+        
         luasInput.dispatchEvent(new Event('input'));
       }
     }
