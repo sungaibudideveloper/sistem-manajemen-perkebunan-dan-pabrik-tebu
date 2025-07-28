@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\index.blade.php--}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -105,7 +106,7 @@
                         <button
                             type="button"
                             @click="showAbsenModal = true; loadAbsenData(absenDate)"
-                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Check Data Absen
                         </button>
@@ -115,6 +116,13 @@
                             class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
                         >
                             Generate DTH
+                        </button>
+                        <button
+                            type="button"
+                            @click="showGenerateRekapLKHModal = true"
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded"
+                        >
+                            Generate Rekap LKH
                         </button>
                     </div>
                 </div>
@@ -985,6 +993,64 @@
                 </div>
             </div>
 
+            <!-- GENERATE REKAP LKH MODAL -->
+            <div
+                x-show="showGenerateRekapLKHModal"
+                x-cloak
+                x-transition.opacity
+                class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            >
+                <div
+                    x-show="showGenerateRekapLKHModal"
+                    x-transition.scale
+                    class="bg-white rounded-lg shadow-lg w-11/12 md:w-1/3"
+                >
+                    <!-- Header -->
+                    <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-lg font-semibold text-gray-900">Generate Rekap LKH</h2>
+                        </div>
+                        <button
+                            @click="showGenerateRekapLKHModal = false"
+                            class="text-gray-600 hover:text-gray-800 text-2xl leading-none"
+                        >&times;</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label for="rekap_lkh_date" class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal:</label>
+                            <input
+                                type="date"
+                                id="rekap_lkh_date"
+                                x-model="rekapLkhDate"
+                                class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">Pilih tanggal untuk generate rekap laporan kegiatan harian</p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex justify-end space-x-2 p-4 border-t bg-gray-50">
+                        <button
+                            @click="showGenerateRekapLKHModal = false"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded-lg transition-colors"
+                        >Cancel</button>
+                        <button
+                            @click="generateRekapLKH()"
+                            :disabled="!rekapLkhDate"
+                            class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-2 text-sm rounded-lg transition-colors"
+                        >Generate</button>
+                    </div>
+                </div>
+            </div>
+
+
             <!-- LKH MODAL -->
             <div x-show="showLKHModal"
                 x-cloak
@@ -1204,6 +1270,7 @@
                 showLKHModal: false,
                 showAbsenModal: false,
                 showGenerateDTHModal: false,
+                showGenerateRekapLKHModal: false,
                 showDateModal: false,
                 showRkhApprovalModal: false,
                 showRkhApprovalInfoModal: false,
@@ -1220,6 +1287,7 @@
 
                 // Data properties
                 dthDate: '{{ request('filter_date', date('Y-m-d')) }}',
+                rekapLkhDate: '{{ request('filter_date', date('Y-m-d')) }}',
                 selectedRkhno: '',
                 selectedLkhno: '',
                 lkhData: [],
@@ -1277,6 +1345,7 @@
                     }
                 },
 
+                // Generate DTH
                 async generateDTH() {
                     if (!this.dthDate) {
                         alert('Silakan pilih tanggal terlebih dahulu');
@@ -1306,6 +1375,39 @@
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Terjadi kesalahan saat generate DTH');
+                    }
+                },
+
+                // Generate Rekap LKH
+                async generateRekapLKH() {
+                    if (!this.rekapLkhDate) {
+                        alert('Silakan pilih tanggal terlebih dahulu');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('{{ route("input.rencanakerjaharian.generateRekapLKH") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                date: this.rekapLkhDate
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.showGenerateRekapLKHModal = false;
+                            window.open(data.redirect_url, '_blank');
+                        } else {
+                            alert('Gagal generate Rekap LKH: ' + data.message);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Terjadi kesalahan saat generate Rekap LKH');
                     }
                 },
 

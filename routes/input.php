@@ -97,13 +97,17 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', [RencanaKerjaHarianController::class, 'getPendingLKHApprovals'])->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', [RencanaKerjaHarianController::class, 'processLKHApproval'])->name('processLKHApproval');
             
+
             // Other utility routes
             Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
             Route::get('/load-absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate');
             Route::post('/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('generateDTH');
+            Route::post('/generate-rekap-lkh', [RencanaKerjaHarianController::class, 'generateRekapLKH'])->name('generateRekapLKH');
             Route::get('/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('dth-report');
+            Route::get('/rekap-lkh-report', [RencanaKerjaHarianController::class, 'showRekapLKHReport'])->name('rekap-lkh-report');
             Route::post('/{rkhno}/generate-lkh', [RencanaKerjaHarianController::class, 'manualGenerateLkh'])->name('manualGenerateLkh');
             Route::get('/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('dth-data');
+            Route::get('/lkh-rekap-data', [RencanaKerjaHarianController::class, 'getLKHRekapData'])->name('lkh-rekap-data');
             Route::get('/{rkhno}/material-usage', [RencanaKerjaHarianController::class, 'getMaterialUsageApi'])->name('getMaterialUsage');
             Route::post('/generate-material-usage', [RencanaKerjaHarianController::class, 'generateMaterialUsage'])->name('generateMaterialUsage');
         });

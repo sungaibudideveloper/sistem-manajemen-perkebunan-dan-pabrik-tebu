@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\lkh-report.blade.php--}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>

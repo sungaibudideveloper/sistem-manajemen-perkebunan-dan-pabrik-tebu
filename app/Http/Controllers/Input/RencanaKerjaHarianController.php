@@ -694,6 +694,195 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
+    /**
+     * Generate LKH Rekap report
+     */
+    public function generateRekapLKH(Request $request)
+    {
+        $request->validate(['date' => 'required|date']);
+        $url = route('input.rencanakerjaharian.rekap-lkh-report', ['date' => $request->date]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Membuka laporan Rekap LKH...',
+            'redirect_url' => $url
+        ]);
+    }
+
+    /**
+     * Show LKH Rekap report view
+     */
+    public function showRekapLKHReport(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        return view('input.rencanakerjaharian.lkh-rekap', ['date' => $date]);
+    }
+
+    /**
+     * Get LKH Rekap data
+     */
+    public function getLKHRekapData(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $companycode = Session::get('companycode');
+
+        try {
+            $companyInfo = $this->getCompanyInfo($companycode);
+            $lkhNumbers = $this->getLkhNumbersForDate($companycode, $date);
+            
+            $rekapData = [
+                'pengolahan' => $this->getPengolahanData($companycode, $date),
+                'perawatan_manual' => [
+                    'pc' => $this->getPerawatanManualPCData($companycode, $date),
+                    'rc' => $this->getPerawatanManualRCData($companycode, $date)
+                ]
+            ];
+
+            return response()->json([
+                'success' => true,
+                'company_info' => $companyInfo,
+                'pengolahan' => $rekapData['pengolahan'],
+                'perawatan_manual' => $rekapData['perawatan_manual'],
+                'lkh_numbers' => $lkhNumbers,
+                'date' => $date,
+                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'debug' => [
+                    'pengolahan_count' => count($rekapData['pengolahan']),
+                    'perawatan_pc_count' => count($rekapData['perawatan_manual']['pc']),
+                    'perawatan_rc_count' => count($rekapData['perawatan_manual']['rc']),
+                    'total_lkh' => count($lkhNumbers)
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error("LKH Rekap Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data LKH Rekap: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get LKH numbers for specific date
+     */
+    private function getLkhNumbersForDate($companycode, $date)
+    {
+        return DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->whereDate('lkhdate', $date)
+            ->pluck('lkhno')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Get Pengolahan data (Activity II, III, IV)
+     */
+    private function getPengolahanData($companycode, $date)
+    {
+        $data = DB::table('lkhhdr as h')
+            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.lkhdate', $date)
+            ->where(function($query) {
+                $query->where('h.activitycode', 'like', 'II.%')
+                    ->orWhere('h.activitycode', 'like', 'III.%')
+                    ->orWhere('h.activitycode', 'like', 'IV.%');
+            })
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'h.blok',
+                'h.totalworkers',
+                'h.totalluasactual',
+                'h.totalhasil',
+                'u.name as mandor_nama',
+                'a.activityname',
+                'tk.nama as operator',
+                'l.plot'
+            ])
+            ->orderBy('h.activitycode')
+            ->orderBy('h.lkhno')
+            ->get();
+
+        // Group by activity code
+        return $data->groupBy('activitycode')->toArray();
+    }
+
+    /**
+     * Get Perawatan Manual PC data (Activity V dengan PC)
+     */
+    private function getPerawatanManualPCData($companycode, $date)
+    {
+        $data = DB::table('lkhhdr as h')
+            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.lkhdate', $date)
+            ->where('h.activitycode', 'like', 'V.%')
+            ->where('l.blok', 'like', '%PC%') // Dummy condition for PC - adjust based on your data structure
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'h.blok',
+                'h.totalworkers',
+                'h.totalluasactual',
+                'h.totalhasil',
+                'u.name as mandor_nama',
+                'a.activityname',
+                'tk.nama as operator',
+                'l.plot'
+            ])
+            ->orderBy('h.activitycode')
+            ->orderBy('h.lkhno')
+            ->get();
+
+        // Group by activity code
+        return $data->groupBy('activitycode')->toArray();
+    }
+
+    /**
+     * Get Perawatan Manual RC data (Activity V dengan RC)
+     */
+    private function getPerawatanManualRCData($companycode, $date)
+    {
+        $data = DB::table('lkhhdr as h')
+            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.lkhdate', $date)
+            ->where('h.activitycode', 'like', 'V.%')
+            ->where('l.blok', 'like', '%RC%') // Dummy condition for RC - adjust based on your data structure
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'h.blok',
+                'h.totalworkers',
+                'h.totalluasactual',
+                'h.totalhasil',
+                'u.name as mandor_nama',
+                'a.activityname',
+                'tk.nama as operator',
+                'l.plot'
+            ])
+            ->orderBy('h.activitycode')
+            ->orderBy('h.lkhno')
+            ->get();
+
+        // Group by activity code
+        return $data->groupBy('activitycode')->toArray();
+    }
+
+
     // =====================================
     // SECTION 5: DTH REPORT MANAGEMENT
     // =====================================
