@@ -435,6 +435,7 @@ class RencanaKerjaHarianController extends Controller
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk', 'r.operatorid', '=', 'tk.tenagakerjaid')
+            ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
@@ -443,7 +444,8 @@ class RencanaKerjaHarianController extends Controller
                 'a.activityname', 
                 'a.jenistenagakerja',
                 'tk.nama as operator_name',
-                'tk.nik as operator_nik'
+                'tk.nik as operator_nik',
+                'tk_helper.nama as helper_name'
             ])
             ->get();
         
@@ -493,9 +495,18 @@ class RencanaKerjaHarianController extends Controller
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->leftJoin('tenagakerja as tk_operator', 'r.operatorid', '=', 'tk_operator.tenagakerjaid')
+            ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
-            ->select(['r.*', 'hg.herbisidagroupname', 'a.activityname', 'a.jenistenagakerja'])
+            ->select([
+                'r.*', 
+                'hg.herbisidagroupname', 
+                'a.activityname', 
+                'a.jenistenagakerja',
+                'tk_operator.nama as operator_name',
+                'tk_helper.nama as helper_name'
+            ])
             ->get();
         
         $herbisidadosages = new Herbisidadosage;

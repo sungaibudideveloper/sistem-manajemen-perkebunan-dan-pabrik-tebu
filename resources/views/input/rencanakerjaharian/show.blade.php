@@ -255,14 +255,28 @@
                         <!-- Show operator & vehicle details -->
                         <div class="bg-green-100 text-green-800 px-2 py-1 rounded-lg">
                           <div class="font-semibold text-xs">{{ $operatorData->nokendaraan ?? 'N/A' }}</div>
-                          <div class="text-[10px] text-green-600">{{ $detail->operator_name }}</div>
-                          <div class="text-[10px] text-gray-600">ID: {{ $detail->operatorid }}</div>
+                          <div class="text-sm text-green-600">{{ $detail->operator_name }}</div>
+                          <div class="text-xs text-gray-600">ID: {{ $detail->operatorid }}</div>
+                          
+                          {{-- Tampilkan helper jika ada --}}
+                          @if($detail->usinghelper == 1 && $detail->helperid)
+                            <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
+                              + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
+                            </div>
+                          @endif
                         </div>
                       @else
                         <!-- Fallback jika data operator tidak ditemukan -->
                         <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
-                          <div class="font-semibold text-xs">{{ $detail->operator_name }}</div>
-                          <div class="text-[10px]">ID: {{ $detail->operatorid }}</div>
+                          <div class="font-semibold text-sm">{{ $detail->operator_name }}</div>
+                          <div class="text-xs">ID: {{ $detail->operatorid }}</div>
+                          
+                          {{-- Tampilkan helper jika ada --}}
+                          @if($detail->usinghelper == 1 && $detail->helperid)
+                            <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
+                              + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
+                            </div>
+                          @endif
                         </div>
                       @endif
                     @else

@@ -523,29 +523,55 @@
 
                   <!-- #Kendaraan -->
                   <td class="px-1 py-3" x-data="kendaraanPicker({{ $i }})" x-init="
-                    // Set initial activity code
-                    currentActivityCode = '{{ $oldActivity }}';
-                    
-                    // Set selected operator jika ada data
-                    @if($detail && $detail->operatorid)
-                      // Tunggu sampai operators data ready
-                      const checkAndSetOperator = () => {
-                        if (window.operatorsData && window.operatorsData.length > 0) {
-                          const operator = window.operatorsData.find(op => op.tenagakerjaid === '{{ $detail->operatorid }}');
-                          if (operator) {
-                            selectedOperator = {
-                              tenagakerjaid: operator.tenagakerjaid,
-                              nama: operator.nama,
-                              nokendaraan: operator.nokendaraan,
-                              jenis: operator.jenis
-                            };
-                            updateHiddenInputs();
+                    @if($detail)
+                      // Set initial activity code
+                      currentActivityCode = '{{ $detail->activitycode }}';
+                      
+                      // Set useHelper dari database
+                      @if(isset($detail->usinghelper) && $detail->usinghelper == 1)
+                        useHelper = true;
+                      @endif
+                      
+                      // Set selected operator jika ada data
+                      @if($detail->operatorid)
+                        const checkAndSetOperator = () => {
+                          if (window.operatorsData && window.operatorsData.length > 0) {
+                            const operator = window.operatorsData.find(op => op.tenagakerjaid === '{{ $detail->operatorid }}');
+                            if (operator) {
+                              selectedOperator = {
+                                tenagakerjaid: operator.tenagakerjaid,
+                                nama: operator.nama,
+                                nokendaraan: operator.nokendaraan,
+                                jenis: operator.jenis
+                              };
+                              updateHiddenInputs();
+                            }
+                          } else {
+                            setTimeout(checkAndSetOperator, 100);
                           }
-                        } else {
-                          setTimeout(checkAndSetOperator, 100);
-                        }
-                      };
-                      checkAndSetOperator();
+                        };
+                        checkAndSetOperator();
+                      @endif
+                      
+                      // Set selected helper jika ada data
+                      @if($detail->helperid)
+                        const checkAndSetHelper = () => {
+                          if (window.helpersData && window.helpersData.length > 0) {
+                            const helper = window.helpersData.find(h => h.tenagakerjaid === '{{ $detail->helperid }}');
+                            if (helper) {
+                              selectedHelper = {
+                                tenagakerjaid: helper.tenagakerjaid,
+                                nama: helper.nama,
+                                nik: helper.nik
+                              };
+                              updateHiddenInputs();
+                            }
+                          } else {
+                            setTimeout(checkAndSetHelper, 100);
+                          }
+                        };
+                        checkAndSetHelper();
+                      @endif
                     @endif
                     
                     init();
@@ -572,18 +598,16 @@
                         </div>
                         <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-medium text-center">
                           <div class="font-semibold" x-text="selectedOperator ? selectedOperator.nokendaraan : ''"></div>
-                          <div class="text-gray-600 text-[10px]" x-text="selectedOperator ? selectedOperator.nama : ''"></div>
+                          <div class="text-gray-600 text-xa" x-text="selectedOperator ? selectedOperator.nama : ''"></div>
+                          
+                          <!-- Tampilkan info helper jika ada -->
+                          <div x-show="useHelper && selectedHelper" x-cloak class="text-purple-600 text-xs mt-1">
+                            + Helper: <span x-text="selectedHelper ? selectedHelper.nama : ''"></span>
+                          </div>
                         </div>
                       </div>
                       
-                      <!-- Hidden inputs untuk operator data -->
-                      <input type="hidden" name="rows[{{ $i }}][operatorid]" 
-                            :value="selectedOperator ? selectedOperator.tenagakerjaid : ''" 
-                            value="{{ $detail->operatorid ?? '' }}">
-                      <input type="hidden" name="rows[{{ $i }}][operator_name]" 
-                            :value="selectedOperator ? selectedOperator.nama : ''">
-                      <input type="hidden" name="rows[{{ $i }}][vehicle_no]" 
-                            :value="selectedOperator ? selectedOperator.nokendaraan : ''">
+                      <!-- Hidden inputs akan dibuat otomatis oleh ensureHiddenInputsExist() -->
                     </div>
                     
                     @include('input.rencanakerjaharian.modal-kendaraan')
