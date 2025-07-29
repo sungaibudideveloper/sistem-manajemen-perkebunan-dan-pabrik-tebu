@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
 use App\Http\Controllers\GPXController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PivotController;
@@ -139,3 +141,20 @@ Route::get('/test-dashboard-with-middleware', function() {
 Route::get('/test-dashboard-agronomi-call', function() {
     return app(\App\Http\Controllers\Dashboard\DashboardController::class)->agronomi();
 })->middleware('auth');
+
+
+
+
+
+Route::get('/mandor/dashboard', function () {
+    return Inertia::render('dashboard-mandor', [
+        'title' => 'Mandor Dashboard',
+        'user' => auth()->user()
+    ]);
+})->middleware('auth')->name('mandor.dashboard');
+
+// Route mandor lainnya juga cukup middleware auth saja
+Route::prefix('mandor')->name('mandor.')->middleware('auth')->group(function () {
+    // Route::get('/absensi', [MandorController::class, 'absensi'])->name('absensi');
+    // Route::get('/field-data', [MandorController::class, 'fieldData'])->name('field-data');
+});

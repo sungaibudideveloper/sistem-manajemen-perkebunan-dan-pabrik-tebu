@@ -8,10 +8,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->user()->userid }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
+    <meta name="theme-color" content="#3b82f6">
     
     <!-- Preload font awesome untuk prevent icon flash -->
     <link rel="preload" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}" as="style">
     <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
     
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
@@ -50,7 +52,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
-    <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
@@ -251,6 +253,18 @@
             
             // Initialize store
             Alpine.store('sidebar').init();
+
+            // register Service Worker
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/tebu/public/sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                    }, function(error) {
+                        console.log('SW registration failed: ', error);
+                    });
+                });
+            }
         });
     </script>
 

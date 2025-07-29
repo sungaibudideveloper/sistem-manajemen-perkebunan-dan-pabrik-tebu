@@ -29,6 +29,11 @@ class UsernameLoginController extends Controller
                 return back()->withErrors(['error' => 'Akun ini sedang digunakan di perangkat lain.']);
             }
 
+            // TAMBAHKAN INI: Redirect berdasarkan jabatan
+            if ($user->idjabatan == 5) {
+                return redirect()->route('mandor.dashboard');
+            }
+
             return redirect()->route('home');
         }
 
@@ -39,7 +44,6 @@ class UsernameLoginController extends Controller
 
     public function logout(Request $request)
     {
-
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

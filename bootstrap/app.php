@@ -21,6 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'mandor.access' => \App\Http\Middleware\MandorAccessManagement::class,
+        ]);
+
+        // Apply mandor access management globally to web routes
+        $middleware->web(append: [
+            \App\Http\Middleware\MandorAccessManagement::class,
         ]);
 
         // CSRF exceptions
