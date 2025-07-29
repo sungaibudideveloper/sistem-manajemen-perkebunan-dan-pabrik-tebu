@@ -13,7 +13,9 @@
     <!-- Preload font awesome untuk prevent icon flash -->
     <link rel="preload" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}" as="style">
     <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    
+    <!-- Dynamic Manifest Link -->
+    <link rel="manifest" href="{{ url('/manifest.json') }}">
     
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
@@ -254,14 +256,21 @@
             // Initialize store
             Alpine.store('sidebar').init();
 
-            // register Service Worker
+            // Register Service Worker dengan path yang dinamis
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/tebu/public/sw.js')
+                    // Deteksi environment
+                    const isProduction = !['localhost', '127.0.0.1'].includes(location.hostname);
+                    const swPath = isProduction ? '/sw.js' : '/tebu/public/sw.js';
+                    
+                    navigator.serviceWorker.register(swPath)
                     .then(function(registration) {
                         console.log('SW registered: ', registration);
-                    }, function(error) {
+                        console.log('SW path used: ', swPath);
+                    })
+                    .catch(function(error) {
                         console.log('SW registration failed: ', error);
+                        console.log('SW path attempted: ', swPath);
                     });
                 });
             }

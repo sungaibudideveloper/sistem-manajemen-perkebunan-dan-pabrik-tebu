@@ -158,3 +158,44 @@ Route::prefix('mandor')->name('mandor.')->middleware('auth')->group(function () 
     // Route::get('/absensi', [MandorController::class, 'absensi'])->name('absensi');
     // Route::get('/field-data', [MandorController::class, 'fieldData'])->name('field-data');
 });
+
+
+Route::get('/manifest.json', function () {
+    // Deteksi environment
+    $isProduction = !in_array(request()->getHost(), ['localhost', '127.0.0.1']);
+    $basePath = $isProduction ? '' : '/tebu/public';
+    
+    $manifest = [
+        'name' => 'SB Tebu App',
+        'short_name' => 'SB Tebu',
+        'description' => 'Aplikasi untuk absen dan data collection tenaga kerja',
+        'start_url' => $basePath . '/',
+        'display' => 'standalone',
+        'background_color' => '#ffffff',
+        'theme_color' => '#153B50',
+        'orientation' => 'portrait-primary',
+        'scope' => $basePath . '/',
+        'icons' => [
+            [
+                'src' => $basePath . '/img/icon-sb-tebu-circle.png',
+                'sizes' => '1024x1024',
+                'type' => 'image/png',
+                'purpose' => 'maskable any'
+            ],
+            [
+                'src' => $basePath . '/img/icon-192x192.png',
+                'sizes' => '192x192',
+                'type' => 'image/png'
+            ],
+            [
+                'src' => $basePath . '/img/icon-512x512.png',
+                'sizes' => '512x512',
+                'type' => 'image/png'
+            ]
+        ]
+    ];
+    
+    return response()->json($manifest)
+        ->header('Content-Type', 'application/json')
+        ->header('Cache-Control', 'public, max-age=3600');
+});
