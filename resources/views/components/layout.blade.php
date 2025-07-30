@@ -15,7 +15,12 @@
     <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
     
     <!-- Dynamic Manifest Link -->
-    <link rel="manifest" href="{{ url('manifest.json') }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="SB Tebu App">
+    <link rel="apple-touch-icon" href="{{ asset('img/icon-sb-tebu-circle.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
     
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
@@ -256,22 +261,15 @@
             // Initialize store
             Alpine.store('sidebar').init();
 
-            // Register Service Worker dengan path yang dinamis
+            // PWA Service Worker Registration
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                    // Deteksi environment
-                    const isProduction = !['localhost', '127.0.0.1'].includes(location.hostname);
-                    const swPath = isProduction ? '{{ asset('sw.js') }}' : '{{ asset('tebu/public/sw.js') }}';
-                    
-                    navigator.serviceWorker.register(swPath)
-                    .then(function(registration) {
-                        console.log('SW registered: ', registration);
-                        console.log('SW path used: ', swPath);
-                    })
-                    .catch(function(error) {
-                        console.log('SW registration failed: ', error);
-                        console.log('SW path attempted: ', swPath);
-                    });
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(function(registration) {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        }, function(err) {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
                 });
             }
         });
