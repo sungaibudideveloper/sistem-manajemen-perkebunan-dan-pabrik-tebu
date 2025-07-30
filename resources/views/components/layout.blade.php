@@ -15,7 +15,7 @@
     <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
     
     <!-- Dynamic Manifest Link -->
-    <link rel="manifest" href="{{ url('/manifest.json') }}">
+    <link rel="manifest" href="{{ url('manifest.json') }}">
     
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
@@ -261,7 +261,7 @@
                 window.addEventListener('load', function() {
                     // Deteksi environment
                     const isProduction = !['localhost', '127.0.0.1'].includes(location.hostname);
-                    const swPath = isProduction ? '/sw.js' : '/tebu/public/sw.js';
+                    const swPath = isProduction ? '{{ asset('sw.js') }}' : '{{ asset('tebu/public/sw.js') }}';
                     
                     navigator.serviceWorker.register(swPath)
                     .then(function(registration) {

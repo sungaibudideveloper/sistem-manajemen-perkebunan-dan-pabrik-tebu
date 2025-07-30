@@ -3,6 +3,7 @@
   "short_name": "SB Tebu",
   "description": "Aplikasi untuk absen dan data collection tenaga kerja",
   "start_url": "/tebu/public/",
+  "scope": "/tebu/public/", 
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#153B50",
