@@ -33,6 +33,7 @@ interface Routes {
   logout: string;
   home: string;
   mandor_dashboard: string;
+  mandor_field_data: string;
 }
 
 interface FieldDataProps extends PageProps {

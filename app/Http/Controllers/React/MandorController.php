@@ -25,6 +25,7 @@ class MandorController extends Controller
                 'logout' => route('logout'),
                 'home' => route('home'),
                 'mandor_dashboard' => route('mandor.dashboard'),
+                'mandor_field_data' => route('mandor.field-data'),
             ],
             'stats' => [
                 'total_workers' => 156,
@@ -183,6 +184,7 @@ class MandorController extends Controller
                 'logout' => route('logout'),
                 'home' => route('home'),
                 'mandor_dashboard' => route('mandor.dashboard'),
+                'mandor_field_data' => route('mandor.field-data'),
             ],
             'field_activities' => [
                 [

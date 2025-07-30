@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PageProps } from '@inertiajs/core';
+import { router } from '@inertiajs/react';
 import {
   FiCamera, FiArrowRight, FiArrowLeft,
   FiUser, FiTrendingUp, FiActivity, FiDatabase
@@ -305,6 +306,7 @@ interface Routes {
   logout: string;
   home: string;
   mandor_dashboard: string;
+  mandor_field_data: string;
 }
 
 interface DashboardProps extends PageProps {
@@ -398,7 +400,7 @@ const DashboardMandor: React.FC<DashboardProps> = ({
 
               {/* Field Data Card - will navigate to separate page */}
               <div
-                onClick={() => window.location.href = '/mandor/field-data'}
+                onClick={() => router.visit(routes.mandor_field_data)}
                 className="group cursor-pointer"
               >
                 <div className="relative h-64 overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-600 hover:-translate-y-2 transition-transform duration-300 border-2 border-neutral-300 hover:border-neutral-400 shadow-lg hover:shadow-xl">

@@ -14,6 +14,7 @@ interface SidebarProps {
     logout: string;
     home: string;
     mandor_dashboard: string;
+    mandor_field_data: string;
   };
 }
 
@@ -44,8 +45,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleSectionChange = (sectionId: string) => {
     if (sectionId === 'field-data') {
-      // Navigate to separate field-data page
-      router.visit('/mandor/field-data');
+      // Navigate to separate field-data page using Laravel route
+      router.visit(routes.mandor_field_data);
     } else {
       // Handle internal sections
       onSectionChange(sectionId);
