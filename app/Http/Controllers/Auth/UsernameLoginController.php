@@ -29,9 +29,9 @@ class UsernameLoginController extends Controller
                 return back()->withErrors(['error' => 'Akun ini sedang digunakan di perangkat lain.']);
             }
 
-            // TAMBAHKAN INI: Redirect berdasarkan jabatan
+            // Redirect berdasarkan jabatan
             if ($user->idjabatan == 5) {
-                return redirect()->route('mandor.dashboard');
+                return redirect()->route('mandor.splash');
             }
 
             return redirect()->route('home');

@@ -23,6 +23,8 @@ Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('l
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
 
+
+
 /*
 |--------------------------------------------------------------------------
 | Protected Routes - Require Authentication
@@ -94,6 +96,7 @@ Route::group(['middleware' => 'auth'], function () {
     | Mandor Dashboard Routes (React SPA)
     |--------------------------------------------------------------------------
     */
+    Route::get('/mandor/splash', function () {return Inertia::render('splash-screen');})->middleware('auth')->name('mandor.splash');
     Route::get('/mandor/dashboard', [MandorController::class, 'dashboard'])->name('mandor.dashboard');
     Route::get('/mandor/field-data', [MandorController::class, 'fieldData'])->name('mandor.field-data');
     
