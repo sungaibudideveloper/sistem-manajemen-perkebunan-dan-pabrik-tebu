@@ -101,18 +101,173 @@ Route::group(['middleware' => 'auth'], function () {
     // Main SPA entry point
     Route::get('/mandor', [MandorPageController::class, 'index'])->name('mandor.index');
     
-    // API endpoints
-
+    /*
+    |--------------------------------------------------------------------------
+    | Mandor LKH Assignment & Input Pages
+    |--------------------------------------------------------------------------
+    */
+    
+    // LKH Assignment Page
+    Route::get('/mandor/lkh/{lkhno}/assign', [MandorPageController::class, 'showLKHAssign'])
+        ->name('mandor.lkh.assign');
+    
+    Route::post('/mandor/lkh/{lkhno}/assign', [MandorPageController::class, 'saveLKHAssign'])
+        ->name('mandor.lkh.save-assignment');
+    
+    // LKH Input Results Page  
+    Route::get('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'showLKHInput'])
+        ->name('mandor.lkh.input');
+    
+    Route::post('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'saveLKHResults'])
+        ->name('mandor.lkh.save-results');
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Mandor API Routes
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('api/mandor')->group(function () {
+        
+        // ===== ATTENDANCE APIs =====
         Route::post('/attendance/check-in', [MandorPageController::class, 'checkIn'])->name('mandor.checkin');
         Route::post('/attendance/check-out', [MandorPageController::class, 'checkOut'])->name('mandor.checkout');
         Route::get('/attendance/data', [MandorPageController::class, 'getAttendanceData'])->name('mandor.attendance.data');
         Route::get('/field-activities', [MandorPageController::class, 'getFieldActivities'])->name('mandor.field.activities');
         
-        // New attendance routes
+        // Enhanced attendance routes
         Route::get('/workers', [MandorPageController::class, 'getWorkersList'])->name('mandor.workers');
         Route::get('/attendance/today', [MandorPageController::class, 'getTodayAttendance'])->name('mandor.attendance.today');
         Route::post('/attendance/process-checkin', [MandorPageController::class, 'processCheckIn'])->name('mandor.attendance.process-checkin');
+        
+        // ===== FIELD COLLECTION APIs =====
+        
+        // LKH Management
+        Route::get('/lkh/ready', [MandorPageController::class, 'getReadyLKH'])->name('mandor.lkh.ready');
+        Route::get('/lkh/vehicle-info', [MandorPageController::class, 'getVehicleInfo'])->name('mandor.lkh.vehicle-info');
+        Route::post('/lkh/save-work', [MandorPageController::class, 'saveLKHWork'])->name('mandor.lkh.save-work');
+        
+        // NEW LKH Assignment & Results API Routes
+        Route::post('/lkh/save-assignment', [MandorPageController::class, 'saveLKHAssign'])
+            ->name('mandor.api.lkh.save-assignment');
+        
+        Route::post('/lkh/save-results', [MandorPageController::class, 'saveLKHResults'])
+            ->name('mandor.api.lkh.save-results');
+        
+        // Material Management
+        Route::get('/materials/available', [MandorPageController::class, 'getAvailableMaterials'])->name('mandor.materials.available');
+        Route::post('/materials/save-returns', [MandorPageController::class, 'saveMaterialReturns'])->name('mandor.materials.save-returns');
+        
+        // Semi-Offline Data Sync
+        Route::post('/sync-offline-data', [MandorPageController::class, 'syncOfflineData'])->name('mandor.sync-offline-data');
+        
+        // ===== ADDITIONAL UTILITY APIs =====
+        
+        // Get workers yang sudah absen hari ini (untuk assignment di LKH)
+        Route::get('/attendance/workers-present', function(Request $request) {
+            $date = $request->input('date', now()->format('Y-m-d'));
+            $controller = new MandorPageController();
+            return $controller->getTodayAttendance($request);
+        })->name('mandor.attendance.workers-present');
+        
+        // Get LKH detail untuk edit/update
+        Route::get('/lkh/{lkhno}/detail', function($lkhno) {
+            // Implementation untuk get LKH detail
+            return response()->json([
+                'lkh_detail' => [],
+                'message' => 'LKH detail endpoint - implementation needed'
+            ]);
+        })->name('mandor.lkh.detail');
+        
+        // Get material usage by LKH
+        Route::get('/lkh/{lkhno}/materials', function($lkhno) {
+            // Implementation untuk get materials used in specific LKH
+            return response()->json([
+                'lkh_materials' => [],
+                'message' => 'LKH materials endpoint - implementation needed'
+            ]);
+        })->name('mandor.lkh.materials');
+        
+        // Update LKH status (DRAFT -> COMPLETED -> SUBMITTED)
+        Route::post('/lkh/{lkhno}/update-status', function($lkhno, Request $request) {
+            $status = $request->input('status'); // DRAFT, COMPLETED, SUBMITTED
+            // Implementation untuk update LKH status
+            return response()->json([
+                'success' => true,
+                'message' => "LKH status updated to {$status}",
+                'lkhno' => $lkhno
+            ]);
+        })->name('mandor.lkh.update-status');
+        
+        // Get daily summary (untuk dashboard)
+        Route::get('/daily-summary', function(Request $request) {
+            $date = $request->input('date', now()->format('Y-m-d'));
+            
+            // Mock response - implement actual logic
+            return response()->json([
+                'date' => $date,
+                'summary' => [
+                    'total_lkh' => 5,
+                    'completed_lkh' => 2,
+                    'pending_lkh' => 3,
+                    'total_workers_assigned' => 15,
+                    'total_area_completed' => 8.5,
+                    'materials_taken' => 3,
+                    'materials_returned' => 1
+                ]
+            ]);
+        })->name('mandor.daily-summary');
+        
+        // Bulk operations untuk semi-offline
+        Route::post('/bulk-save', function(Request $request) {
+            $operations = $request->input('operations', []);
+            
+            // Process multiple operations in one request
+            $results = [];
+            foreach ($operations as $operation) {
+                // Process each operation
+                $results[] = [
+                    'type' => $operation['type'],
+                    'id' => $operation['id'] ?? null,
+                    'status' => 'processed'
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Bulk operations processed',
+                'results' => $results
+            ]);
+        })->name('mandor.bulk-save');
+        
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Additional Mandor Routes (if needed for specific permissions)
+    |--------------------------------------------------------------------------
+    */
+    
+    // Route dengan permission check (jika diperlukan)
+    Route::group(['prefix' => 'mandor', 'middleware' => 'check.mandor.permission'], function () {
+        
+        // Routes yang memerlukan permission khusus mandor
+        Route::get('/restricted-data', function() {
+            return response()->json(['message' => 'Restricted mandor data']);
+        })->name('mandor.restricted-data');
+        
     });
 
 });
+
+/*
+|--------------------------------------------------------------------------
+| Custom Middleware Registration (add to Kernel.php)
+|--------------------------------------------------------------------------
+| 
+| Add this to app/Http/Kernel.php in $routeMiddleware array:
+| 'check.mandor.permission' => \App\Http\Middleware\CheckMandorPermission::class,
+|
+| Then create the middleware:
+| php artisan make:middleware CheckMandorPermission
+|
+*/

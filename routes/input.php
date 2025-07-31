@@ -3,8 +3,6 @@ use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\GudangController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
-use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
-use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
 
 
 
@@ -113,22 +111,6 @@ Route::middleware('auth')->group(function () {
         });
 });
 
-
-
-
-
-
-
-
-
-Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
-});
-
-Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
-    Route::get('input/kerjaharian/laporankerjaharian/{lkhno}', [LaporanKerjaHarianController::class, 'show'])->name('input.kerjaharian.laporankerjaharian.show');
-});
 
 
 
