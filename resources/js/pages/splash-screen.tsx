@@ -12,7 +12,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ baseUrl }) => {
   // Fungsi untuk mendapatkan URL yang benar
   const getDashboardUrl = () => {
     if (baseUrl) {
-      return `${baseUrl}/mandor/dashboard`;
+      return `${baseUrl}/mandor`;
     }
     
     // Fallback: deteksi otomatis dari window.location
@@ -21,7 +21,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ baseUrl }) => {
       ? '/tebu/public' 
       : '';
     
-    return `${basePath}/mandor/dashboard`;
+    return `${basePath}/mandor`;
   };
 
   useEffect(() => {

@@ -12,7 +12,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
 use App\Http\Controllers\LiveChatController;
-use App\Http\Controllers\React\MandorController;
+use App\Http\Controllers\React\MandorPageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,8 +22,6 @@ use App\Http\Controllers\React\MandorController;
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -93,19 +91,22 @@ Route::group(['middleware' => 'auth'], function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Mandor Dashboard Routes (React SPA)
+    | Mandor SPA Routes
     |--------------------------------------------------------------------------
     */
-    Route::get('/mandor/splash', function () {return Inertia::render('splash-screen');})->middleware('auth')->name('mandor.splash');
-    Route::get('/mandor/dashboard', [MandorController::class, 'dashboard'])->name('mandor.dashboard');
-    Route::get('/mandor/field-data', [MandorController::class, 'fieldData'])->name('mandor.field-data');
+    Route::get('/mandor/splash', function () {
+        return Inertia::render('splash-screen');
+    })->name('mandor.splash');
+    
+    // Main SPA entry point
+    Route::get('/mandor', [MandorPageController::class, 'index'])->name('mandor.index');
     
     // API endpoints for real-time data updates
     Route::prefix('api/mandor')->group(function () {
-        Route::post('/attendance/check-in', [MandorController::class, 'checkIn'])->name('mandor.checkin');
-        Route::post('/attendance/check-out', [MandorController::class, 'checkOut'])->name('mandor.checkout');
-        Route::get('/attendance/data', [MandorController::class, 'getAttendanceData'])->name('mandor.attendance.data');
-        Route::get('/field-activities', [MandorController::class, 'getFieldActivities'])->name('mandor.field.activities');
+        Route::post('/attendance/check-in', [MandorPageController::class, 'checkIn'])->name('mandor.checkin');
+        Route::post('/attendance/check-out', [MandorPageController::class, 'checkOut'])->name('mandor.checkout');
+        Route::get('/attendance/data', [MandorPageController::class, 'getAttendanceData'])->name('mandor.attendance.data');
+        Route::get('/field-activities', [MandorPageController::class, 'getFieldActivities'])->name('mandor.field.activities');
     });
 
     /*

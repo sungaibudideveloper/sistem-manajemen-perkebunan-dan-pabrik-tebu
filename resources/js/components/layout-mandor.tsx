@@ -19,8 +19,7 @@ interface LayoutMandorProps {
   routes: {
     logout: string;
     home: string;
-    mandor_dashboard: string;
-    mandor_field_data: string;
+    mandor_index: string;
   };
   activeSection: string;
   onSectionChange: (section: string) => void;

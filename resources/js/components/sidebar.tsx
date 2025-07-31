@@ -20,12 +20,11 @@ interface SidebarProps {
   onClose: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
-  csrf_token: string; // Add this
+  csrf_token: string;
   routes: {
     logout: string;
     home: string;
-    mandor_dashboard: string;
-    mandor_field_data: string;
+    mandor_index: string;
   };
 }
 
@@ -45,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     setIsLoggingOut(true);
     
-    // POST dengan CSRF token (sama seperti header)
+    // POST dengan CSRF token
     router.post(routes.logout, {
       _token: csrf_token
     }, {
@@ -59,14 +58,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleSectionChange = (sectionId: string) => {
-    if (sectionId === 'field-data') {
-      // Navigate to separate field-data page using Laravel route
-      router.visit(routes.mandor_field_data);
-    } else {
-      // Handle internal sections
-      onSectionChange(sectionId);
-      onClose();
-    }
+    onClose(); // Always close sidebar first
+    onSectionChange(sectionId); // Handle internal SPA navigation
   };
 
   return (
@@ -87,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {[
             { id: 'dashboard', icon: FiGrid, label: 'Beranda' },
             { id: 'absensi', icon: FiCheckCircle, label: 'Absensi' },
-            { id: 'field-data', icon: FiClipboard, label: 'Koleksi Data' },
+            { id: 'data-collection', icon: FiClipboard, label: 'Koleksi Data' },
           ].map((item) => (
             <motion.button
               key={item.id}

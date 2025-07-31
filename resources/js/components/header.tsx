@@ -18,7 +18,7 @@ interface SharedProps {
     url: string;
     logo_url: string;
   };
-  [key: string]: any; // Index signature
+  [key: string]: any;
 }
 
 interface HeaderProps {
@@ -30,8 +30,7 @@ interface HeaderProps {
   routes: {
     logout: string;
     home: string;
-    mandor_dashboard: string;
-    mandor_field_data: string;
+    mandor_index: string;
   };
 }
 
