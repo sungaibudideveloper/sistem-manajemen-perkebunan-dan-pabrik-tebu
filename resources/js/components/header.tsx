@@ -4,6 +4,7 @@ import { router } from '@inertiajs/react';
 import {
   FiGrid, FiClock, FiWifi, FiWifiOff, FiBell, FiLogOut
 } from 'react-icons/fi';
+import { usePage } from '@inertiajs/react';
 
 interface User {
   id: number;
@@ -11,12 +12,21 @@ interface User {
   email: string;
 }
 
+interface SharedProps {
+  app: {
+    name: string;
+    url: string;
+    logo_url: string;
+  };
+  [key: string]: any; // Index signature
+}
+
 interface HeaderProps {
   onMenuClick: () => void;
   user: User;
   isOnline: boolean;
   currentTime: Date;
-  csrf_token: string; // Add this
+  csrf_token: string;
   routes: {
     logout: string;
     home: string;
@@ -34,6 +44,7 @@ const Header: React.FC<HeaderProps> = ({
   routes 
 }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { app } = usePage<SharedProps>().props;
 
   const scrollProgress = useSpring({
     from: { width: '0%' },
@@ -78,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({
             
             <div className="hidden md:flex items-center gap-3">
               <div className="p-2 rounded-lg">
-                <img src="/tebu/public/img/logo-tebu.png" alt="Logo Tebu" className="w-8 h-8 object-contain" />
+                <img src={app.logo_url} alt="Logo Tebu" className="w-8 h-8 object-contain" />
               </div>
               <div>
                 <h1 className="text-sm font-medium">SB Tebu Apps</h1>

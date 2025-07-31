@@ -4,6 +4,16 @@ import { router } from '@inertiajs/react';
 import {
   FiGrid, FiCheckCircle, FiClipboard, FiArrowRight, FiLogOut
 } from 'react-icons/fi';
+import { usePage } from '@inertiajs/react';
+
+interface SharedProps {
+  app: {
+    name: string;
+    url: string;
+    logo_url: string;
+  };
+  [key: string]: any;
+}
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   routes 
 }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { app } = usePage<SharedProps>().props;
 
   const handleLogout = () => {
     if (isLoggingOut) return;
@@ -51,11 +62,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (sectionId === 'field-data') {
       // Navigate to separate field-data page using Laravel route
       router.visit(routes.mandor_field_data);
-    } else if (sectionId === 'dashboard') {
-      // Navigate back to dashboard page
-      router.visit(routes.mandor_dashboard);
     } else {
-      // Handle other internal sections (absensi)
+      // Handle internal sections
       onSectionChange(sectionId);
       onClose();
     }
@@ -69,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-6 border-b border-neutral-800">
           <div className="text-white flex items-center gap-3">
             <div className="p-2 rounded-lg">
-              <img src="/tebu/public/img/logo-tebu.png" alt="Logo Tebu" className="w-8 h-8 object-contain" />
+              <img src={app.logo_url} alt="Logo Tebu" className="w-8 h-8 object-contain" />
             </div>
             <span className="font-light tracking-wide">SB TEBU APPS</span>
           </div>

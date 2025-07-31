@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 import Header from './header';
 import Sidebar from './sidebar';
 
@@ -6,6 +7,11 @@ interface User {
   id: number;
   name: string;
   email: string;
+}
+
+interface SharedProps {
+  csrf_token: string;
+  [key: string]: any;
 }
 
 interface LayoutMandorProps {
@@ -31,6 +37,9 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Get csrf_token from shared props
+  const { csrf_token } = usePage<SharedProps>().props;
 
   useEffect(() => {
     // Online/Offline detection
@@ -70,6 +79,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         onClose={() => setSidebarOpen(false)}
         activeSection={activeSection}
         onSectionChange={onSectionChange}
+        csrf_token={csrf_token}
         routes={routes}
       />
       
@@ -78,6 +88,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         user={user}
         isOnline={isOnline}
         currentTime={currentTime}
+        csrf_token={csrf_token}
         routes={routes}
       />
       
