@@ -1,3 +1,5 @@
+// resources\js\pages\data-collection-mandor.tsx
+
 import React from 'react';
 import {
   FiArrowLeft, FiCamera, FiFileText, FiShield, FiCheck, FiClock
