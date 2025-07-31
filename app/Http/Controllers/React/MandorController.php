@@ -19,6 +19,7 @@ class MandorController extends Controller
                 'email' => auth()->user()->email,
                 // Add other user fields as needed
             ],
+            'csrf_token' => csrf_token(), // ✅ Tambahkan ini untuk header
             'logoutUrl' => route('logout'),
             'appUrl' => config('app.url'),
             'routes' => [
@@ -180,6 +181,7 @@ class MandorController extends Controller
                 'name' => auth()->user()->name,
                 'email' => auth()->user()->email,
             ],
+            'csrf_token' => csrf_token(), // ✅ Tambahkan ini juga untuk field-data page
             'routes' => [
                 'logout' => route('logout'),
                 'home' => route('home'),

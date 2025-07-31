@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { router } from '@inertiajs/react';
 import {
@@ -10,6 +10,7 @@ interface SidebarProps {
   onClose: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  csrf_token: string; // Add this
   routes: {
     logout: string;
     home: string;
@@ -23,32 +24,38 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose, 
   activeSection, 
   onSectionChange,
+  csrf_token,
   routes 
 }) => {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = routes.logout;
+    if (isLoggingOut) return;
     
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (csrfToken) {
-      const tokenInput = document.createElement('input');
-      tokenInput.type = 'hidden';
-      tokenInput.name = '_token';
-      tokenInput.value = csrfToken;
-      form.appendChild(tokenInput);
-    }
+    setIsLoggingOut(true);
     
-    document.body.appendChild(form);
-    form.submit();
+    // POST dengan CSRF token (sama seperti header)
+    router.post(routes.logout, {
+      _token: csrf_token
+    }, {
+      preserveState: false,
+      preserveScroll: false,
+      replace: true,
+      onError: () => {
+        setIsLoggingOut(false);
+      }
+    });
   };
 
   const handleSectionChange = (sectionId: string) => {
     if (sectionId === 'field-data') {
       // Navigate to separate field-data page using Laravel route
       router.visit(routes.mandor_field_data);
+    } else if (sectionId === 'dashboard') {
+      // Navigate back to dashboard page
+      router.visit(routes.mandor_dashboard);
     } else {
-      // Handle internal sections
+      // Handle other internal sections (absensi)
       onSectionChange(sectionId);
       onClose();
     }
@@ -97,12 +104,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 border-t border-neutral-800">
           <motion.button
             onClick={handleLogout}
+            disabled={isLoggingOut}
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white hover:bg-red-900/50 hover:text-red-100 transition-all"
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              isLoggingOut 
+                ? 'text-neutral-400 cursor-not-allowed' 
+                : 'text-white hover:bg-red-900/50 hover:text-red-100'
+            }`}
           >
-            <FiLogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
+            <FiLogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
+            <span className="font-medium">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
           </motion.button>
         </div>
       </div>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
+import { router } from '@inertiajs/react';
 import {
   FiGrid, FiClock, FiWifi, FiWifiOff, FiBell, FiLogOut
 } from 'react-icons/fi';
@@ -15,6 +16,7 @@ interface HeaderProps {
   user: User;
   isOnline: boolean;
   currentTime: Date;
+  csrf_token: string; // Add this
   routes: {
     logout: string;
     home: string;
@@ -28,8 +30,11 @@ const Header: React.FC<HeaderProps> = ({
   user, 
   isOnline, 
   currentTime,
+  csrf_token,
   routes 
 }) => {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const scrollProgress = useSpring({
     from: { width: '0%' },
     to: { width: '100%' },
@@ -37,21 +42,21 @@ const Header: React.FC<HeaderProps> = ({
   });
 
   const handleLogout = () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = routes.logout;
+    if (isLoggingOut) return;
     
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (csrfToken) {
-      const tokenInput = document.createElement('input');
-      tokenInput.type = 'hidden';
-      tokenInput.name = '_token';
-      tokenInput.value = csrfToken;
-      form.appendChild(tokenInput);
-    }
+    setIsLoggingOut(true);
     
-    document.body.appendChild(form);
-    form.submit();
+    // POST dengan CSRF token
+    router.post(routes.logout, {
+      _token: csrf_token
+    }, {
+      preserveState: false,
+      preserveScroll: false,
+      replace: true,
+      onError: () => {
+        setIsLoggingOut(false);
+      }
+    });
   };
 
   return (
@@ -115,10 +120,15 @@ const Header: React.FC<HeaderProps> = ({
               
               <button
                 onClick={handleLogout}
-                className="p-2 hover:bg-red-50 rounded-lg transition-colors text-neutral-600 hover:text-red-600"
-                title="Logout"
+                disabled={isLoggingOut}
+                className={`p-2 hover:bg-red-50 rounded-lg transition-colors ${
+                  isLoggingOut 
+                    ? 'text-neutral-400 cursor-not-allowed' 
+                    : 'text-neutral-600 hover:text-red-600'
+                }`}
+                title={isLoggingOut ? 'Logging out...' : 'Logout'}
               >
-                <FiLogOut className="w-5 h-5" />
+                <FiLogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
