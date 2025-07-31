@@ -4,6 +4,7 @@ import {
   FiArrowLeft, FiRefreshCw, FiCamera, FiUsers, FiCheck, FiCalendar, FiEye, FiX
 } from 'react-icons/fi';
 import Camera from '../components/camera';
+import { LoadingCard, LoadingInline, LoadingOverlay } from '../components/loading-spinner';
 
 interface Worker {
   tenagakerjaid: string;
@@ -48,34 +49,44 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]); // Separate state for attendance filter
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  
+  // Loading states
+  const [isLoadingWorkers, setIsLoadingWorkers] = useState(true);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
   useEffect(() => {
-    loadWorkersData(); // Workers always for today
+    loadWorkersData();
   }, []);
 
   useEffect(() => {
-    loadAttendanceData(); // Attendance data based on selected date
+    loadAttendanceData();
   }, [attendanceDate]);
 
   const loadWorkersData = async () => {
+    setIsLoadingWorkers(true);
     try {
       const response = await fetch(routes.workers);
       const data = await response.json();
       setWorkers(data.workers || []);
     } catch (error) {
       console.error('Error loading workers:', error);
+    } finally {
+      setIsLoadingWorkers(false);
     }
   };
 
   const loadAttendanceData = async () => {
+    setIsLoadingAttendance(true);
     try {
       const response = await fetch(`${routes.attendance_today}?date=${attendanceDate}`);
       const data = await response.json();
       setTodayAttendance(data.attendance || []);
     } catch (error) {
       console.error('Error loading attendance:', error);
+    } finally {
+      setIsLoadingAttendance(false);
     }
   };
 
@@ -85,7 +96,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
   };
 
   const handleWorkerSelect = (worker: Worker) => {
-    // Only allow check-in for today
     setSelectedWorker(worker);
     setIsCameraOpen(true);
   };
@@ -153,6 +163,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
     }
   };
 
+  // Loading Spinner Component - REMOVED, using separate component now
+
   const availableWorkers = getAvailableWorkers();
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
 
@@ -176,7 +188,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
             </div>
           </div>
           
-          {/* Date Info - Only for Today */}
+          {/* Date Info */}
           <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -185,12 +197,20 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                   <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Hari ini</span>
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {availableWorkers.length} pekerja belum absen • {workers.length} total pekerja
+                  {isLoadingWorkers ? (
+                    "Memuat data pekerja..."
+                  ) : (
+                    `${availableWorkers.length} pekerja belum absen • ${workers.length} total pekerja`
+                  )}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-black">
-                  {workers.length > 0 ? Math.round(((workers.length - availableWorkers.length) / workers.length) * 100) : 0}%
+                  {isLoadingWorkers ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  ) : (
+                    `${workers.length > 0 ? Math.round(((workers.length - availableWorkers.length) / workers.length) * 100) : 0}%`
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">Kehadiran</div>
               </div>
@@ -198,7 +218,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           </div>
         </div>
 
-        {/* Main Content - 2 Cards Side by Side (Desktop) */}
+        {/* Main Content */}
         <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8">
           
           {/* Left Card - Belum Absen */}
@@ -207,13 +227,18 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
               <div className="flex items-center gap-3">
                 <FiUsers className="w-5 h-5 text-orange-500" />
                 <h2 className="text-xl font-semibold text-black">
-                  Belum Absen ({availableWorkers.length})
+                  Belum Absen {isLoadingWorkers ? '' : `(${availableWorkers.length})`}
                 </h2>
+                {isLoadingWorkers && (
+                  <LoadingInline color="orange" />
+                )}
               </div>
             </div>
             
             <div className="max-h-96 overflow-y-auto">
-              {availableWorkers.length > 0 ? (
+              {isLoadingWorkers ? (
+                <LoadingCard text="Memuat data pekerja..." />
+              ) : availableWorkers.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {availableWorkers.map((worker) => (
                     <div
@@ -248,17 +273,20 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
             </div>
           </div>
 
-          {/* Right Card - Data Absen dengan Filter */}
+          {/* Right Card - Data Absen */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-3">
                 <FiCheck className="w-5 h-5 text-blue-500" />
                 <h2 className="text-xl font-semibold text-black">
-                  Data Absen ({todayAttendance.length})
+                  Data Absen {isLoadingAttendance ? '' : `(${todayAttendance.length})`}
                 </h2>
+                {isLoadingAttendance && (
+                  <LoadingInline color="blue" />
+                )}
               </div>
               
-              {/* Date Filter - Below title */}
+              {/* Date Filter */}
               <div className="flex items-center gap-2">
                 <FiCalendar className="w-4 h-4 text-gray-500" />
                 <input
@@ -274,7 +302,9 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
             </div>
             
             <div className="max-h-96 overflow-y-auto">
-              {todayAttendance.length > 0 ? (
+              {isLoadingAttendance ? (
+                <LoadingCard text="Memuat data absensi..." />
+              ) : todayAttendance.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {todayAttendance.map((record) => (
                     <div
@@ -339,14 +369,9 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           </div>
         )}
 
-        {/* Loading Overlay */}
+        {/* Loading Overlay for Submission */}
         {isSubmitting && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 text-center max-w-sm mx-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-black mx-auto mb-4"></div>
-              <p className="text-black font-medium">Menyimpan absensi...</p>
-            </div>
-          </div>
+          <LoadingOverlay text="Menyimpan absensi..." />
         )}
       </div>
     </div>

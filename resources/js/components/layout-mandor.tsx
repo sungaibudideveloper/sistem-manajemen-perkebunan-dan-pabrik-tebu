@@ -1,3 +1,4 @@
+// resources\js\components\layout-mandor.tsx
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header';

@@ -1,6 +1,6 @@
-// resources\js\components\camera.tsx - MINIMAL VERSION
+// resources\js\components\camera.tsx - WITH REAR CAMERA
 import React, { useRef, useState, useEffect } from 'react';
-import { FiCamera, FiX, FiRotateCcw, FiCheck } from 'react-icons/fi';
+import { FiCamera, FiX, FiRotateCcw, FiCheck, FiRefreshCw } from 'react-icons/fi';
 
 interface CameraProps {
   isOpen: boolean;
@@ -20,33 +20,47 @@ const Camera: React.FC<CameraProps> = ({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user'); // user = depan, environment = belakang
 
-  useEffect(() => {
-    if (isOpen && videoRef.current && !stream) {
-      console.log('Starting camera...');
+  const startCamera = async (facing: 'user' | 'environment') => {
+    // Stop existing stream
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsReady(false);
+    }
+
+    try {
+      console.log('Starting camera with facingMode:', facing);
       
-      navigator.mediaDevices.getUserMedia({ 
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           width: { ideal: 1280 },
-          height: { ideal: 720 }
+          height: { ideal: 720 },
+          facingMode: { ideal: facing } // gunakan object untuk fleksibilitas
         } 
-      })
-      .then(mediaStream => {
-        console.log('Got stream:', mediaStream);
-        setStream(mediaStream);
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            console.log('Video metadata loaded');
-            setIsReady(true);
-          };
-        }
-      })
-      .catch(err => {
-        console.error('Camera error:', err);
-        alert('Error: ' + err.message);
       });
+
+      console.log('Got stream:', mediaStream);
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          setIsReady(true);
+        };
+      }
+    } catch (err) {
+      console.error('Camera error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown camera error';
+      alert('Error: ' + errorMessage);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && videoRef.current) {
+      startCamera(facingMode);
     }
 
     return () => {
@@ -56,7 +70,11 @@ const Camera: React.FC<CameraProps> = ({
         setIsReady(false);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, facingMode]); // Tambah facingMode ke dependency
+
+  const switchCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
 
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current || !isReady) {
@@ -192,6 +210,48 @@ const Camera: React.FC<CameraProps> = ({
           }}>
             {isReady ? '✓ Camera Ready' : 'Loading...'}
           </div>
+
+          {/* Camera Switch Button */}
+          <button
+              onClick={switchCamera}
+              disabled={!isReady}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                color: 'black',
+                border: '2px solid white',
+                borderRadius: '50%',
+                width: '44px',
+                height: '44px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              }}
+              title={facingMode === 'user' ? 'Switch to Back Camera' : 'Switch to Front Camera'}
+            >
+              <FiRefreshCw />
+            </button>
+
+          {/* Camera Mode Indicator */}
+          {!capturedPhoto && (
+            <div style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '10px',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '12px'
+            }}>
+              {facingMode === 'user' ? 'Front' : 'Back'}
+            </div>
+          )}
 
           {/* Hidden Canvas */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />

@@ -1,3 +1,5 @@
+// resources\js\pages\index.tsx
+
 import React, { useState } from 'react';
 import { PageProps } from '@inertiajs/core';
 import LayoutMandor from '../components/layout-mandor';
