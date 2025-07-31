@@ -1,5 +1,5 @@
 <?php
-
+// app\Models\AbsenLst.php - FIXED
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\DB;
 class AbsenLst extends Model
 {
     protected $table = 'absenlst';
+    
+    // FIXED: Remove problematic primary key settings
     public $incrementing = false;
     public $timestamps = false;
-    protected $primaryKey = null;
+    
+    // Don't set primaryKey to null - let Eloquent handle it
+    // protected $primaryKey = null; // REMOVE THIS LINE
 
     protected $fillable = [
         'absenno',
@@ -19,11 +23,20 @@ class AbsenLst extends Model
         'absenmasuk',
         'absenpulang',
         'keterangan',
+        'fotoabsen',
+        'lokasifotolat',
+        'lokasifotolng',
+        'createdat',
+        'updatedat',
     ];
 
     protected $casts = [
         'absenmasuk' => 'datetime',
         'absenpulang' => 'datetime',
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime',
+        'lokasifotolat' => 'decimal:8',
+        'lokasifotolng' => 'decimal:8',
     ];
 
     // Relasi ke header absen
@@ -38,50 +51,43 @@ class AbsenLst extends Model
         return $this->belongsTo(TenagaKerja::class, 'tenagakerjaid', 'tenagakerjaid');
     }
 
-    // Get detail absen by absenno
-    public static function getDetailsByAbsenNo($absenno)
+    // Get attendance by mandor and date with photos
+    public static function getAttendanceByMandorAndDate($companyCode, $mandorId, $date)
     {
-        return DB::table('absenlst as l')
-            ->join('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
-            ->where('l.absenno', $absenno)
+        return self::join('absenhdr as ah', 'absenlst.absenno', '=', 'ah.absenno')
+            ->join('tenagakerja as tk', 'absenlst.tenagakerjaid', '=', 'tk.tenagakerjaid')
+            ->where('ah.companycode', $companyCode)
+            ->where('ah.mandorid', $mandorId)
+            ->whereDate('absenlst.absenmasuk', $date)
             ->select([
-                'l.*',
-                't.nama',
-                't.gender',
-                't.jenistenagakerja',
-                DB::raw('TIME(l.absenmasuk) as jam_masuk'),
-                DB::raw('TIME(l.absenpulang) as jam_pulang')
+                'absenlst.tenagakerjaid',
+                'absenlst.absenmasuk',
+                'absenlst.fotoabsen',
+                'absenlst.lokasifotolat',
+                'absenlst.lokasifotolng',
+                'tk.nama',
+                'tk.nik',
+                'tk.gender',
+                'tk.jenistenagakerja'
             ])
-            ->orderBy('l.id')
+            ->orderBy('absenlst.absenmasuk')
             ->get();
     }
 
-    // Get absen summary by date and mandor (hanya yang approved)
-    public static function getAbsenSummary($companycode, $date, $mandorId = null)
+    // Check if worker already checked in today
+    public static function hasCheckedInToday($companyCode, $mandorId, $tenagakerjaId, $date)
     {
-        $query = DB::table('absenlst as l')
-            ->join('absenhdr as h', 'l.absenno', '=', 'h.absenno')
-            ->join('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
-            ->where('h.companycode', $companycode)
-            ->where('h.status', 'A') // Hanya ambil yang approved
-            ->whereDate('h.uploaddate', $date);
+        return self::join('absenhdr as ah', 'absenlst.absenno', '=', 'ah.absenno')
+            ->where('ah.companycode', $companyCode)
+            ->where('ah.mandorid', $mandorId) 
+            ->where('absenlst.tenagakerjaid', $tenagakerjaId)
+            ->whereDate('absenlst.absenmasuk', $date)
+            ->exists();
+    }
 
-        if ($mandorId) {
-            $query->where('h.mandorid', $mandorId);
-        }
-
-        return $query->select([
-            'h.mandorid',
-            'h.absenno',
-            't.jenistenagakerja',
-            't.gender',
-            DB::raw('COUNT(*) as jumlah_pekerja'),
-            DB::raw('SUM(CASE WHEN t.gender = "L" THEN 1 ELSE 0 END) as laki_laki'),
-            DB::raw('SUM(CASE WHEN t.gender = "P" THEN 1 ELSE 0 END) as perempuan'),
-            DB::raw('MIN(l.absenmasuk) as jam_masuk_pertama'),
-            DB::raw('MAX(l.absenpulang) as jam_pulang_terakhir')
-        ])
-        ->groupBy('h.mandorid', 'h.absenno', 't.jenistenagakerja', 't.gender')
-        ->get();
+    // ALTERNATIVE: Use DB facade for insert to avoid Eloquent primary key issues
+    public static function createRecord($data)
+    {
+        return DB::table('absenlst')->insert($data);
     }
 }

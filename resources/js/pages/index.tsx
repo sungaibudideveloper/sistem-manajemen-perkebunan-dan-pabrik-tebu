@@ -56,12 +56,17 @@ interface Routes {
   logout: string;
   home: string;
   mandor_index: string;
+  // API routes untuk absensi
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
 }
 
 interface MandorIndexProps extends PageProps {
   title: string;
   user: User;
   routes: Routes;
+  csrf_token: string;
   initialData: {
     stats: Stats;
     attendance_summary: AttendanceSummary[];
@@ -74,6 +79,7 @@ interface MandorIndexProps extends PageProps {
 const MandorIndex: React.FC<MandorIndexProps> = ({ 
   user, 
   routes, 
+  csrf_token,
   initialData 
 }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -86,6 +92,7 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
     <LayoutMandor
       user={user}
       routes={routes}
+      csrf_token={csrf_token}
       activeSection={activeSection}
       onSectionChange={handleSectionChange}
     >
@@ -97,8 +104,12 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
       )}
       {activeSection === 'absensi' && (
         <AbsenMandor 
-          attendance_summary={initialData.attendance_summary}
-          attendance_stats={initialData.attendance_stats}
+          routes={{
+            workers: routes.workers,
+            attendance_today: routes.attendance_today,
+            process_checkin: routes.process_checkin
+          }}
+          csrf_token={csrf_token}
           onSectionChange={handleSectionChange}
         />
       )}
@@ -106,6 +117,8 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
         <DataCollectionMandor 
           field_activities={initialData.field_activities}
           collection_stats={initialData.collection_stats}
+          routes={routes} // Kirim seluruh routes object
+          csrf_token={csrf_token}
           onSectionChange={handleSectionChange}
         />
       )}

@@ -19,15 +19,33 @@ interface CollectionStat {
   gradient: string;
 }
 
+interface ExtendedRoutes {
+  logout: string;
+  home: string;
+  mandor_index: string;
+  // API routes untuk absensi
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
+  // Tambahkan routes untuk data collection bila diperlukan nanti
+  // upload_photo?: string;
+  // create_report?: string;
+  // safety_check?: string;
+}
+
 interface DataCollectionMandorProps {
   field_activities: FieldActivity[];
   collection_stats: CollectionStat[];
+  routes: ExtendedRoutes;
+  csrf_token: string;
   onSectionChange: (section: string) => void;
 }
 
 const DataCollectionMandor: React.FC<DataCollectionMandorProps> = ({ 
   field_activities, 
-  collection_stats, 
+  collection_stats,
+  routes,
+  csrf_token,
   onSectionChange 
 }) => {
   const getIconComponent = (iconName: string) => {
@@ -47,6 +65,25 @@ const DataCollectionMandor: React.FC<DataCollectionMandorProps> = ({
   const getStatusColor = (status: string) => {
     if (status === 'Selesai') return 'text-green-600 bg-green-50 border-green-200';
     return 'text-amber-600 bg-amber-50 border-amber-200';
+  };
+
+  // Handler untuk quick actions (siap untuk implementasi API calls)
+  const handleTakePhoto = () => {
+    // TODO: Implementasi ambil foto
+    // Bisa menggunakan routes dan csrf_token untuk API calls
+    console.log('Take photo clicked');
+  };
+
+  const handleCreateReport = () => {
+    // TODO: Implementasi buat laporan
+    // Bisa menggunakan routes dan csrf_token untuk API calls
+    console.log('Create report clicked');
+  };
+
+  const handleSafetyCheck = () => {
+    // TODO: Implementasi cek keselamatan
+    // Bisa menggunakan routes dan csrf_token untuk API calls
+    console.log('Safety check clicked');
   };
 
   return (
@@ -114,7 +151,10 @@ const DataCollectionMandor: React.FC<DataCollectionMandorProps> = ({
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group">
+          <div 
+            onClick={handleTakePhoto}
+            className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group"
+          >
             <div className="text-center">
               <div className="inline-flex p-4 bg-neutral-100 rounded-2xl mb-4 group-hover:bg-neutral-200 transition-colors">
                 <FiCamera className="w-8 h-8 text-neutral-600" />
@@ -124,7 +164,10 @@ const DataCollectionMandor: React.FC<DataCollectionMandorProps> = ({
             </div>
           </div>
 
-          <div className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group">
+          <div 
+            onClick={handleCreateReport}
+            className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group"
+          >
             <div className="text-center">
               <div className="inline-flex p-4 bg-neutral-100 rounded-2xl mb-4 group-hover:bg-neutral-200 transition-colors">
                 <FiFileText className="w-8 h-8 text-neutral-600" />
@@ -134,7 +177,10 @@ const DataCollectionMandor: React.FC<DataCollectionMandorProps> = ({
             </div>
           </div>
 
-          <div className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group">
+          <div 
+            onClick={handleSafetyCheck}
+            className="bg-white border border-neutral-200 rounded-2xl p-6 hover:shadow-lg transition-all cursor-pointer group"
+          >
             <div className="text-center">
               <div className="inline-flex p-4 bg-neutral-100 rounded-2xl mb-4 group-hover:bg-neutral-200 transition-colors">
                 <FiShield className="w-8 h-8 text-neutral-600" />

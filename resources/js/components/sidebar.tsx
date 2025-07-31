@@ -15,17 +15,23 @@ interface SharedProps {
   [key: string]: any;
 }
 
+interface ExtendedRoutes {
+  logout: string;
+  home: string;
+  mandor_index: string;
+  // API routes untuk absensi
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
   csrf_token: string;
-  routes: {
-    logout: string;
-    home: string;
-    mandor_index: string;
-  };
+  routes: ExtendedRoutes;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 

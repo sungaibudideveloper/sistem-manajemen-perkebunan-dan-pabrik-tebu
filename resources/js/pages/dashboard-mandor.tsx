@@ -38,14 +38,11 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-700 to-neutral-900">
-                SB Tebu
-              </span>
               <br />
-              <span className="text-neutral-400">Sungaibudi Tebu Apps</span>
+              <span className="text-neutral-400">SB Tebu Apps</span>
             </h1>
             <p className="text-xl text-neutral-500 max-w-2xl mx-auto">
-              Aplikasi koleksi data lapangan untuk kegiatan perkebunan tebu
+              Aplikasi Absen dan Koleksi data lapangan kegiatan perkebunan tebu
             </p>
           </div>
 
@@ -74,11 +71,11 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
                     <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
                       <HiOutlineFingerPrint className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">
+                    <h3 className="text-2xl font-bold text-neutral mb-2">
                       Sistem Absensi
                     </h3>
                     <p className="text-neutral-200">
-                      Pencatatan kehadiran pekerja dengan biometrik
+                      Pencatatan kehadiran pekerja dengan foto
                     </p>
                   </div>
                   
@@ -113,7 +110,7 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
                     <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
                       <HiOutlineCollection className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">
+                    <h3 className="text-2xl font-bold text-neutral mb-2">
                       Koleksi Data Lapangan
                     </h3>
                     <p className="text-neutral-200">

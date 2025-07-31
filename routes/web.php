@@ -101,21 +101,18 @@ Route::group(['middleware' => 'auth'], function () {
     // Main SPA entry point
     Route::get('/mandor', [MandorPageController::class, 'index'])->name('mandor.index');
     
-    // API endpoints for real-time data updates
+    // API endpoints
+
     Route::prefix('api/mandor')->group(function () {
         Route::post('/attendance/check-in', [MandorPageController::class, 'checkIn'])->name('mandor.checkin');
         Route::post('/attendance/check-out', [MandorPageController::class, 'checkOut'])->name('mandor.checkout');
         Route::get('/attendance/data', [MandorPageController::class, 'getAttendanceData'])->name('mandor.attendance.data');
         Route::get('/field-activities', [MandorPageController::class, 'getFieldActivities'])->name('mandor.field.activities');
+        
+        // New attendance routes
+        Route::get('/workers', [MandorPageController::class, 'getWorkersList'])->name('mandor.workers');
+        Route::get('/attendance/today', [MandorPageController::class, 'getTodayAttendance'])->name('mandor.attendance.today');
+        Route::post('/attendance/process-checkin', [MandorPageController::class, 'processCheckIn'])->name('mandor.attendance.process-checkin');
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Additional Dashboard Routes (if needed)
-    |--------------------------------------------------------------------------
-    */
-    // Uncomment and customize these routes as needed:
-    // Route::get('/dashboard/agronomi', [DashboardController::class, 'agronomi'])->name('dashboard.agronomi');
-    // Route::get('/dashboard/hpt', [DashboardController::class, 'hpt'])->name('dashboard.hpt');
 
 });

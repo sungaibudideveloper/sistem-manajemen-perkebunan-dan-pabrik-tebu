@@ -14,13 +14,20 @@ interface SharedProps {
   [key: string]: any;
 }
 
+interface ExtendedRoutes {
+  logout: string;
+  home: string;
+  mandor_index: string;
+  // API routes untuk absensi
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
+}
+
 interface LayoutMandorProps {
   user: User;
-  routes: {
-    logout: string;
-    home: string;
-    mandor_index: string;
-  };
+  routes: ExtendedRoutes;
+  csrf_token?: string; // Optional karena bisa didapat dari usePage
   activeSection: string;
   onSectionChange: (section: string) => void;
   children: React.ReactNode;
@@ -29,6 +36,7 @@ interface LayoutMandorProps {
 const LayoutMandor: React.FC<LayoutMandorProps> = ({
   user,
   routes,
+  csrf_token: propsCsrfToken,
   activeSection,
   onSectionChange,
   children
@@ -37,8 +45,11 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Get csrf_token from shared props
-  const { csrf_token } = usePage<SharedProps>().props;
+  // Get csrf_token from shared props as fallback
+  const { csrf_token: pageCsrfToken } = usePage<SharedProps>().props;
+  
+  // Use props csrf_token first, fallback to page csrf_token
+  const csrf_token = propsCsrfToken || pageCsrfToken;
 
   useEffect(() => {
     // Online/Offline detection

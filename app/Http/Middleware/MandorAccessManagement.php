@@ -23,6 +23,7 @@ class MandorAccessManagement
             $allowedPaths = [
                 'mandor',
                 'logout', 
+                'api/mandor', // TAMBAHKAN INI untuk API routes
                 'chat/send',
                 'chat/messages',
                 'notifications/unread-count',
@@ -38,12 +39,12 @@ class MandorAccessManagement
                 }
             }
             
-            // Jika tidak diizinkan DAN bukan sudah di mandor dashboard, redirect
-            if (!$isAllowed && $currentPath !== 'mandor/dashboard') {
-                return redirect()->route('mandor.dashboard')
+            if (!$isAllowed && $currentPath !== 'mandor') {
+                return redirect()->route('mandor.index') // UBAH INI
                     ->with('error', 'Akses ditolak. Anda hanya dapat mengakses halaman Mandor.');
             }
-        } 
+        }
+
         // Jika user BUKAN mandor tapi mencoba akses halaman mandor
         else if (str_starts_with($currentPath, 'mandor')) {
             return redirect()->route('home')

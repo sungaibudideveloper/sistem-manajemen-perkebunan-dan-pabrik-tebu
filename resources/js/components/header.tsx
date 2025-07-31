@@ -21,17 +21,23 @@ interface SharedProps {
   [key: string]: any;
 }
 
+interface ExtendedRoutes {
+  logout: string;
+  home: string;
+  mandor_index: string;
+  // API routes untuk absensi
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
+}
+
 interface HeaderProps {
   onMenuClick: () => void;
   user: User;
   isOnline: boolean;
   currentTime: Date;
   csrf_token: string;
-  routes: {
-    logout: string;
-    home: string;
-    mandor_index: string;
-  };
+  routes: ExtendedRoutes;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
