@@ -1,13 +1,13 @@
 // ===============================================
-// FILE 2: resources/js/pages/lkh-input.tsx
+// FILE: resources/js/pages/lkh-input.tsx
 // ===============================================
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
-  FiArrowLeft, FiUsers, FiSave, FiLoader, FiMapPin, 
-  FiCheckCircle, FiEdit3, FiUser
-} from 'react-icons/fi';
+  ArrowLeft, Users, Save, Loader, MapPin, 
+  CheckCircle, Edit3, User, Package, AlertCircle
+} from 'lucide-react';
 
 interface LKHData {
   lkhno: string;
@@ -20,6 +20,7 @@ interface LKHData {
   rkhno: string;
   lkhdate: string;
   mandor_nama: string;
+  needs_material?: boolean;
 }
 
 interface AssignedWorker {
@@ -30,10 +31,17 @@ interface AssignedWorker {
 
 interface PlotInput {
   plot: string;
-  luasplot: number;
-  hasil: number;
-  sisa: number;
+  luasplan: number; // Read from database
+  hasil: number;    // User input
+  sisa: number;     // Calculated: luasplan - hasil
   materialused: number;
+}
+
+interface MaterialInfo {
+  itemcode: string;
+  itemname: string;
+  qty: number;
+  unit: string;
 }
 
 interface SharedProps {
@@ -49,8 +57,12 @@ interface LKHInputProps extends SharedProps {
   title: string;
   lkhData: LKHData;
   assignedWorkers: AssignedWorker[];
+  plotData: Array<{plot: string, luasarea: number}>; // From rkhlst
+  materials?: MaterialInfo[];
   routes: {
     lkh_save_results: string;
+    lkh_assign: string;
+    mandor_index: string;
     [key: string]: string;
   };
   csrf_token: string;
@@ -58,112 +70,135 @@ interface LKHInputProps extends SharedProps {
     success?: string;
     error?: string;
   };
-  success?: boolean;
 }
 
 const LKHInputPage: React.FC<LKHInputProps> = ({
   app,
-  title,
   lkhData,
   assignedWorkers,
+  plotData = [],
+  materials = [],
   routes,
-  csrf_token
+  csrf_token,
+  flash
 }) => {
   const [plotInputs, setPlotInputs] = useState<PlotInput[]>([]);
+  const [materialUsage, setMaterialUsage] = useState<{[key: string]: number}>({});
   const [isLoading, setIsLoading] = useState(false);
   const [keterangan, setKeterangan] = useState('');
 
-  // Initialize plot inputs
+  // Handle flash messages
   useEffect(() => {
-    const initialPlots: PlotInput[] = lkhData.plot.map(plot => ({
-      plot,
-      luasplot: 0,
-      hasil: 0,
-      sisa: 0,
+    if (flash?.success) {
+      alert(flash.success);
+    }
+    if (flash?.error) {
+      alert('Error: ' + flash.error);
+    }
+  }, [flash]);
+
+  // Initialize plot inputs with data from database
+  useEffect(() => {
+    const initialPlots: PlotInput[] = plotData.map(plot => ({
+      plot: plot.plot,
+      luasplan: plot.luasarea, // Read-only from database
+      hasil: 0,               // User input
+      sisa: plot.luasarea,    // Initially same as luasplan
       materialused: 0
     }));
     setPlotInputs(initialPlots);
-  }, [lkhData.plot]);
+  }, [plotData]);
 
-  const updatePlotInput = (index: number, field: keyof PlotInput, value: number) => {
+  const updatePlotInput = (index: number, field: 'hasil', value: number) => {
     setPlotInputs(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      const plot = { ...updated[index] };
+      
+      if (field === 'hasil') {
+        plot.hasil = Math.max(0, Math.min(value, plot.luasplan)); // Max = luasplan
+        plot.sisa = Math.max(0, plot.luasplan - plot.hasil); // Auto calculate sisa
+      }
+      
+      updated[index] = plot;
       return updated;
     });
   };
 
+  const updateMaterialUsage = (itemcode: string, value: number) => {
+    setMaterialUsage(prev => ({
+      ...prev,
+      [itemcode]: Math.max(0, value)
+    }));
+  };
+
   const calculateTotals = () => {
     return plotInputs.reduce((totals, plot) => ({
-      totalLuasPlot: totals.totalLuasPlot + plot.luasplot,
+      totalLuasPlan: totals.totalLuasPlan + plot.luasplan,
       totalHasil: totals.totalHasil + plot.hasil,
       totalSisa: totals.totalSisa + plot.sisa,
-      totalMaterial: totals.totalMaterial + plot.materialused
     }), {
-      totalLuasPlot: 0,
+      totalLuasPlan: 0,
       totalHasil: 0,
       totalSisa: 0,
-      totalMaterial: 0
     });
   };
 
   const saveResults = async () => {
     // Validation
-    const hasValidInput = plotInputs.some(plot => plot.hasil > 0 || plot.luasplot > 0);
+    const hasValidInput = plotInputs.some(plot => plot.hasil > 0);
     if (!hasValidInput) {
-      alert('Input minimal 1 plot dengan hasil atau luas yang dikerjakan');
+      alert('Input minimal 1 plot dengan hasil yang dikerjakan');
       return;
     }
+
+    // Calculate total material used
+    const totalMaterialUsed = Object.values(materialUsage).reduce((sum, qty) => sum + qty, 0);
 
     setIsLoading(true);
     
     try {
-      // Use Inertia router for POST request
       router.post(routes.lkh_save_results, {
         assigned_workers: assignedWorkers as any,
-        plot_inputs: plotInputs as any,
+        plot_inputs: plotInputs.map(plot => ({
+          plot: plot.plot,
+          luasplot: plot.luasplan,
+          hasil: plot.hasil,
+          sisa: plot.sisa, 
+          materialused: totalMaterialUsed / plotInputs.length // Distribute equally
+        })) as any,
+        material_usage: materialUsage as any,
         keterangan: keterangan,
         _token: csrf_token
       }, {
         preserveState: false,
         preserveScroll: false,
         onSuccess: (page: any) => {
-          // Check if response contains success message
-          if (page.props?.flash?.success || page.props?.success) {
-            alert('Data hasil pekerjaan berhasil disimpan! LKH sudah masuk ke sistem untuk review admin.');
-            // Navigate back to mandor index with field collection tab
-            router.get('/mandor', {}, {
-              preserveState: false,
-              preserveScroll: false,
-              onSuccess: () => {
-                // Set hash after navigation completes
-                window.location.hash = '#field-collection';
-              }
-            });
+          if (page.props?.flash?.success) {
+            // Navigate back to mandor index
+            router.get(routes.mandor_index);
           }
         },
         onError: (errors) => {
           console.error('Save results errors:', errors);
-          alert('Error menyimpan hasil pekerjaan: ' + (errors.message || 'Unknown error'));
+          const errorMessage = errors.message || 
+                              Object.values(errors).flat().join(', ') || 
+                              'Unknown error occurred';
+          alert('Error: ' + errorMessage);
         },
         onFinish: () => {
           setIsLoading(false);
         }
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving results:', error);
-      alert('Error menyimpan hasil pekerjaan');
+      alert('Network error: ' + (error instanceof Error ? error.message : 'Unknown error'));
       setIsLoading(false);
     }
   };
 
   const goBack = () => {
-    // Navigate back to assignment page
-    router.get(`/mandor/lkh/${lkhData.lkhno}/assign`, {}, {
-      preserveState: false,
-      preserveScroll: false
-    });
+    router.get(routes.lkh_assign);
   };
 
   const totals = calculateTotals();
@@ -177,93 +212,39 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
             onClick={goBack}
             className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
           >
-            <FiArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" />
             <span>Kembali</span>
           </button>
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
-                  Input Hasil Pekerjaan
-                </h2>
-                <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activityname}</p>
-              </div>
-            </div>
-            
-            <button
-              onClick={saveResults}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <FiLoader className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <>
-                  <FiSave className="w-4 h-4" />
-                  <span>Simpan Hasil</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* LKH Info Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <FiMapPin className="w-5 h-5 text-blue-600" />
-              Informasi LKH
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div>
-                <label className="text-sm font-medium text-neutral-500">Tanggal</label>
-                <p className="text-lg font-semibold">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-500">Blok</label>
-                <p className="text-lg font-semibold">Blok {lkhData.blok}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-500">Target Luas</label>
-                <p className="text-lg font-semibold">{lkhData.totalluasplan} Ha</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-500">Jenis Tenaga Kerja</label>
-                <p className="text-lg font-semibold">{lkhData.jenistenagakerja}</p>
-              </div>
+          <div className="flex items-center gap-4">
+            <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
+                Input Hasil Pekerjaan
+              </h2>
+              <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activityname}</p>
             </div>
           </div>
         </div>
 
-        {/* Assigned Workers */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <FiUsers className="w-5 h-5 text-green-600" />
-              Tim Pekerja ({assignedWorkers.length} orang)
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {assignedWorkers.map((worker) => (
-                <div
-                  key={worker.tenagakerjaid}
-                  className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3"
-                >
-                  <FiUser className="w-5 h-5 text-green-600" />
-                  <div>
-                    <h4 className="font-semibold text-green-900">{worker.nama}</h4>
-                    <p className="text-sm text-green-700">NIK: {worker.nik}</p>
-                  </div>
+        {/* Compact LKH Info */}
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 mb-6">
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <span className="text-sm text-neutral-500">Tanggal:</span>
+                  <span className="ml-2 font-medium">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</span>
                 </div>
-              ))}
+                <div>
+                  <span className="text-sm text-neutral-500">Blok:</span>
+                  <span className="ml-2 font-medium">{lkhData.blok}</span>
+                </div>
+                <div>
+                  <span className="text-sm text-neutral-500">Tim:</span>
+                  <span className="ml-2 font-medium">{assignedWorkers.length} pekerja</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -272,11 +253,11 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
-              <FiEdit3 className="w-5 h-5 text-blue-600" />
+              <Edit3 className="w-5 h-5 text-blue-600" />
               Input Hasil per Plot
             </h3>
             <p className="text-sm text-neutral-600 mt-1">
-              Input hasil tim untuk setiap plot. Backend akan otomatis distribusi ke setiap pekerja.
+              Input hasil tim untuk setiap plot. Sisa akan otomatis terhitung.
             </p>
           </div>
           
@@ -288,30 +269,26 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                     Plot {plotInput.plot}
                   </h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Luas Plot Dikerjakan (Ha)
+                        Luas Rencana (Ha)
                       </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={plotInput.luasplot}
-                        onChange={(e) => updatePlotInput(index, 'luasplot', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
+                      <div className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600">
+                        {plotInput.luasplan.toFixed(2)} Ha
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-1">Dari rencana kerja</p>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Hasil Selesai (Ha)
+                        Hasil Selesai (Ha) *
                       </label>
                       <input
                         type="number"
                         step="0.01"
                         min="0"
+                        max={plotInput.luasplan}
                         value={plotInput.hasil}
                         onChange={(e) => updatePlotInput(index, 'hasil', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -321,32 +298,16 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                     
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Sisa Belum Selesai (Ha)
+                        Sisa (Ha)
                       </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={plotInput.sisa}
-                        onChange={(e) => updatePlotInput(index, 'sisa', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Material Digunakan (Kg/L)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={plotInput.materialused}
-                        onChange={(e) => updatePlotInput(index, 'materialused', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
+                      <div className={`w-full px-3 py-2 border rounded-lg ${
+                        plotInput.sisa > 0 
+                          ? 'border-yellow-200 bg-yellow-50 text-yellow-800' 
+                          : 'border-green-200 bg-green-50 text-green-800'
+                      }`}>
+                        {plotInput.sisa.toFixed(2)} Ha
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-1">Otomatis terhitung</p>
                     </div>
                   </div>
                 </div>
@@ -355,38 +316,90 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Summary Card */}
+        {/* Material Usage */}
+        {materials.length > 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Package className="w-5 h-5 text-orange-600" />
+                Penggunaan Material
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {materials.map((material) => (
+                  <div key={material.itemcode} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+                    <div>
+                      <h4 className="font-medium">{material.itemname}</h4>
+                      <p className="text-sm text-neutral-600">
+                        Tersedia: {material.qty} {material.unit}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={material.qty}
+                        value={materialUsage[material.itemcode] || 0}
+                        onChange={(e) => updateMaterialUsage(material.itemcode, parseFloat(e.target.value) || 0)}
+                        className="w-24 px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-neutral-600">{material.unit}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Package className="w-5 h-5 text-neutral-600" />
+                Material
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-neutral-600">
+                <AlertCircle className="w-5 h-5" />
+                <span>LKH ini tidak menggunakan material</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
-              <FiCheckCircle className="w-5 h-5 text-green-600" />
+              <CheckCircle className="w-5 h-5 text-green-600" />
               Ringkasan Total
             </h3>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-blue-50 rounded-xl">
-                <p className="text-sm text-blue-600 font-medium">Total Luas Dikerjakan</p>
-                <p className="text-2xl font-bold text-blue-900">{totals.totalLuasPlot.toFixed(2)} Ha</p>
+                <p className="text-sm text-blue-600 font-medium">Luas Rencana</p>
+                <p className="text-2xl font-bold text-blue-900">{totals.totalLuasPlan.toFixed(2)} Ha</p>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-xl">
-                <p className="text-sm text-green-600 font-medium">Total Hasil Selesai</p>
+                <p className="text-sm text-green-600 font-medium">Total Hasil</p>
                 <p className="text-2xl font-bold text-green-900">{totals.totalHasil.toFixed(2)} Ha</p>
+                <p className="text-xs text-green-600 mt-1">
+                  {totals.totalLuasPlan > 0 ? Math.round((totals.totalHasil / totals.totalLuasPlan) * 100) : 0}% selesai
+                </p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-xl">
                 <p className="text-sm text-yellow-600 font-medium">Total Sisa</p>
                 <p className="text-2xl font-bold text-yellow-900">{totals.totalSisa.toFixed(2)} Ha</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-xl">
-                <p className="text-sm text-purple-600 font-medium">Total Material</p>
-                <p className="text-2xl font-bold text-purple-900">{totals.totalMaterial.toFixed(2)} Kg/L</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Keterangan */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
+        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold">Keterangan (Opsional)</h3>
           </div>
@@ -395,10 +408,31 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
               className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={4}
+              rows={3}
               placeholder="Catatan tambahan mengenai pekerjaan hari ini..."
             />
           </div>
+        </div>
+
+        {/* Save Button - Bottom */}
+        <div className="flex justify-center">
+          <button
+            onClick={saveResults}
+            disabled={isLoading}
+            className="flex items-center gap-3 px-8 py-4 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium shadow-lg"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="w-5 h-5 animate-spin" />
+                <span>Menyimpan...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                <span>Simpan Hasil Pekerjaan</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

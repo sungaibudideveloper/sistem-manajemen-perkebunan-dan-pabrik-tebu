@@ -1,13 +1,13 @@
 // ===============================================
-// FILE 1: resources/js/pages/lkh-assignment.tsx
+// FILE: resources/js/pages/lkh-assignment.tsx
 // ===============================================
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
-  FiArrowLeft, FiUsers, FiTruck, FiSave, FiCheck, FiLoader, 
-  FiMapPin, FiCalendar, FiExternalLink, FiCheckCircle
-} from 'react-icons/fi';
+  ArrowLeft, Users, Truck, Save, Check, Loader, 
+  MapPin, Calendar, ExternalLink, CheckCircle, Info
+} from 'lucide-react';
 
 interface LKHData {
   lkhno: string;
@@ -52,8 +52,11 @@ interface LKHAssignmentProps extends SharedProps {
   lkhData: LKHData;
   vehicleInfo?: VehicleInfo;
   availableWorkers: WorkerAssignment[];
+  existingAssignments?: string[];
   routes: {
     lkh_save_assignment: string;
+    lkh_input: string;
+    mandor_index: string;
     [key: string]: string;
   };
   csrf_token: string;
@@ -70,12 +73,36 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
   lkhData,
   vehicleInfo,
   availableWorkers,
+  existingAssignments = [],
   routes,
-  csrf_token
+  csrf_token,
+  flash
 }) => {
   const [assignedWorkers, setAssignedWorkers] = useState<WorkerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Handle flash messages
+  useEffect(() => {
+    if (flash?.success) {
+      setIsSaved(true);
+      alert(flash.success);
+    }
+    if (flash?.error) {
+      alert('Error: ' + flash.error);
+    }
+  }, [flash]);
+
+  // Set initial state from existing assignments
+  useEffect(() => {
+    if (existingAssignments.length > 0) {
+      const assigned = availableWorkers.filter(w => 
+        existingAssignments.includes(w.tenagakerjaid)
+      );
+      setAssignedWorkers(assigned);
+      setIsSaved(true);
+    }
+  }, [existingAssignments, availableWorkers]);
 
   const handleWorkerAssignment = (worker: WorkerAssignment) => {
     const isCurrentlyAssigned = assignedWorkers.some(w => w.tenagakerjaid === worker.tenagakerjaid);
@@ -96,10 +123,16 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
       return;
     }
 
+    const totalRecords = assignedWorkers.length * lkhData.plot.length;
+    const confirmMessage = `Akan membuat ${totalRecords} records di database (${assignedWorkers.length} pekerja × ${lkhData.plot.length} plot). Lanjutkan?`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      // Use Inertia router for POST request
       router.post(routes.lkh_save_assignment, {
         assigned_workers: assignedWorkers.map(w => ({
           tenagakerjaid: w.tenagakerjaid,
@@ -108,46 +141,51 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
         })),
         _token: csrf_token
       }, {
-        preserveState: true,
-        preserveScroll: true,
+        preserveState: false,
+        preserveScroll: false,
         onSuccess: (page: any) => {
-          // Check if response contains success message
-          if (page.props?.flash?.success || page.props?.success) {
+          if (page.props?.flash?.success) {
             setIsSaved(true);
-            alert('Assignment berhasil disimpan!');
+            // Don't show alert here, useEffect will handle it
           }
         },
         onError: (errors) => {
-          console.error('Assignment errors:', errors);
-          alert('Error menyimpan assignment: ' + (errors.message || 'Unknown error'));
+          const errorMessage = errors.message || 
+                              Object.values(errors).flat().join(', ') || 
+                              'Unknown error occurred';
+          alert('Error: ' + errorMessage);
         },
         onFinish: () => {
           setIsLoading(false);
         }
       });
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving assignments:', error);
-      alert('Error menyimpan assignment');
+      alert('Network error: ' + (error instanceof Error ? error.message : 'Unknown error'));
       setIsLoading(false);
     }
   };
 
   const navigateToInput = () => {
-    // Use Inertia router for navigation - construct route properly
-    router.get(`/mandor/lkh/${lkhData.lkhno}/input`, {}, {
+    // Use proper route from controller
+    router.get(routes.lkh_input, {}, {
       preserveState: false,
       preserveScroll: false
     });
   };
 
   const goBack = () => {
-    // Use Inertia router to go back
-    router.get('/mandor', {}, {
+    // Use proper route from controller
+    router.get(routes.mandor_index, {}, {
       preserveState: false,
       preserveScroll: false
     });
   };
+
+  // Filter out workers that are already assigned in database
+  const unassignedWorkers = availableWorkers.filter(w => 
+    !existingAssignments.includes(w.tenagakerjaid)
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
@@ -158,7 +196,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
             onClick={goBack}
             className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
           >
-            <FiArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" />
             <span>Kembali</span>
           </button>
           
@@ -181,12 +219,12 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
               >
                 {isLoading ? (
                   <>
-                    <FiLoader className="w-4 h-4 animate-spin" />
+                    <Loader className="w-4 h-4 animate-spin" />
                     <span>Menyimpan...</span>
                   </>
                 ) : (
                   <>
-                    <FiSave className="w-4 h-4" />
+                    <Save className="w-4 h-4" />
                     <span>Simpan Assignment</span>
                   </>
                 )}
@@ -196,19 +234,32 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
                 onClick={navigateToInput}
                 disabled={!isSaved}
                 className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!isSaved ? 'Simpan assignment terlebih dahulu' : 'Lanjut ke input hasil'}
               >
-                <FiExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-4 h-4" />
                 <span>Input Hasil</span>
               </button>
             </div>
           </div>
         </div>
 
+        {/* Status Info */}
+        {existingAssignments.length > 0 && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex items-center gap-2 text-blue-700">
+              <Info className="w-5 h-5" />
+              <span className="font-medium">
+                Assignment sudah ada: {existingAssignments.length} pekerja sudah ditugaskan untuk LKH ini
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* LKH Info Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
-              <FiMapPin className="w-5 h-5 text-blue-600" />
+              <MapPin className="w-5 h-5 text-blue-600" />
               Informasi LKH
             </h3>
           </div>
@@ -239,7 +290,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
-                <FiTruck className="w-5 h-5 text-orange-600" />
+                <Truck className="w-5 h-5 text-orange-600" />
                 Informasi Kendaraan
               </h3>
             </div>
@@ -271,17 +322,19 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold flex items-center gap-2">
-                <FiUsers className="w-5 h-5 text-blue-600" />
+                <Users className="w-5 h-5 text-blue-600" />
                 Pilih Pekerja ({assignedWorkers.length} terpilih)
               </h3>
-              <span className="text-sm text-neutral-500">
-                Estimasi: ~{lkhData.estimated_workers} pekerja
-              </span>
+              <div className="text-sm text-neutral-500">
+                <span>Estimasi: ~{lkhData.estimated_workers} pekerja</span>
+                <span className="mx-2">•</span>
+                <span>Total Records: {assignedWorkers.length} × {lkhData.plot.length} = {assignedWorkers.length * lkhData.plot.length}</span>
+              </div>
             </div>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availableWorkers.map((worker) => {
+              {unassignedWorkers.map((worker) => {
                 const isAssigned = assignedWorkers.some(w => w.tenagakerjaid === worker.tenagakerjaid);
                 return (
                   <div
@@ -303,7 +356,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
                           ? 'border-blue-500 bg-blue-500' 
                           : 'border-neutral-300'
                       }`}>
-                        {isAssigned && <FiCheck className="w-3 h-3 text-white" />}
+                        {isAssigned && <Check className="w-3 h-3 text-white" />}
                       </div>
                     </div>
                   </div>
@@ -311,9 +364,17 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
               })}
             </div>
             
+            {unassignedWorkers.length === 0 && availableWorkers.length > 0 && (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-green-300 mx-auto mb-4" />
+                <p className="text-green-600 font-medium">Semua pekerja sudah ditugaskan</p>
+                <p className="text-sm text-green-500 mt-1">Total {availableWorkers.length} pekerja sudah di-assign untuk LKH ini</p>
+              </div>
+            )}
+            
             {availableWorkers.length === 0 && (
               <div className="text-center py-8">
-                <FiUsers className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+                <Users className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
                 <p className="text-neutral-500">Tidak ada pekerja yang tersedia</p>
                 <p className="text-sm text-neutral-400 mt-1">Pastikan ada pekerja yang sudah absen hari ini</p>
               </div>
@@ -326,8 +387,11 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
-                <FiCheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-green-600" />
                 Pekerja yang Ditugaskan ({assignedWorkers.length})
+                <span className="ml-auto text-sm font-normal text-neutral-500">
+                  Will create {assignedWorkers.length * lkhData.plot.length} database records
+                </span>
               </h3>
             </div>
             <div className="p-6">
@@ -339,6 +403,9 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
                   >
                     <h4 className="font-semibold text-green-900">{worker.nama}</h4>
                     <p className="text-sm text-green-700">NIK: {worker.nik}</p>
+                    <p className="text-xs text-green-600 mt-1">
+                      × {lkhData.plot.length} plot{lkhData.plot.length > 1 ? 's' : ''}: {lkhData.plot.join(', ')}
+                    </p>
                   </div>
                 ))}
               </div>

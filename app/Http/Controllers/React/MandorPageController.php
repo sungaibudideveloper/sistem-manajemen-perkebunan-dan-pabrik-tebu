@@ -497,423 +497,426 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Show LKH Assignment Page
-     */
-    public function showLKHAssign($lkhno)
-    {
-        try {
-            if (!auth()->check()) {
-                return redirect()->route('login');
-            }
-            
-            $user = auth()->user();
-            $companyCode = $user->companycode;
-            $mandorUserId = $user->userid;
-            
-            // Get LKH data
-            $lkhData = DB::table('lkhhdr as lkh')
-                ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
-                ->leftJoin('rkhlst as rls', function($join) {
-                    $join->on('lkh.rkhno', '=', 'rls.rkhno')
-                         ->on('lkh.activitycode', '=', 'rls.activitycode');
-                })
-                ->where('lkh.companycode', $companyCode)
-                ->where('lkh.mandorid', $mandorUserId)
-                ->where('lkh.lkhno', $lkhno)
-                ->select([
-                    'lkh.lkhno',
-                    'lkh.activitycode',
-                    'act.description as activityname',
-                    'lkh.blok',
-                    'lkh.totalluasactual',
-                    'lkh.jenistenagakerja',
-                    'lkh.totalworkers as estimated_workers',
-                    'lkh.rkhno',
-                    'lkh.lkhdate',
-                    'u.name as mandor_nama',
-                    DB::raw('GROUP_CONCAT(DISTINCT rls.plot) as plots'),
-                    DB::raw('SUM(rls.luasarea) as totalluasplan')
-                ])
-                ->groupBy([
-                    'lkh.lkhno', 'lkh.activitycode', 'act.description', 'lkh.blok',
-                    'lkh.totalluasactual', 'lkh.jenistenagakerja', 'lkh.totalworkers',
-                    'lkh.rkhno', 'lkh.lkhdate', 'u.name'
-                ])
-                ->first();
-            
-            if (!$lkhData) {
-                return redirect()->route('mandor.index')
-                    ->with('error', 'LKH tidak ditemukan');
-            }
-            
-            // Get vehicle info if applicable
-            $vehicleInfo = $this->getVehicleInfoForLKH($lkhno);
-            
-            // Get available workers (from today's attendance)
-            $availableWorkers = $this->getAvailableWorkersForAssignment($companyCode, $mandorUserId, $lkhData->lkhdate);
-            
-            return Inertia::render('lkh-assignment', [
-                'title' => 'Assignment Pekerja - ' . $lkhno,
-                'lkhData' => [
-                    'lkhno' => $lkhData->lkhno,
-                    'activitycode' => $lkhData->activitycode,
-                    'activityname' => $lkhData->activityname,
-                    'blok' => $lkhData->blok,
-                    'plot' => $lkhData->plots ? explode(',', $lkhData->plots) : [],
-                    'totalluasplan' => (float) ($lkhData->totalluasplan ?? 0),
-                    'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
-                    'estimated_workers' => (int) $lkhData->estimated_workers,
-                    'rkhno' => $lkhData->rkhno,
-                    'lkhdate' => $lkhData->lkhdate,
-                    'mandor_nama' => $lkhData->mandor_nama
-                ],
-                'vehicleInfo' => $vehicleInfo,
-                'availableWorkers' => $availableWorkers,
-                'routes' => [
-                    'lkh_save_assignment' => route('mandor.lkh.save-assignment', $lkhno),
-                ],
-                'csrf_token' => csrf_token(),
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error in showLKHAssign', [
-                'message' => $e->getMessage(),
-                'lkhno' => $lkhno
-            ]);
-            
+ * Show LKH Assignment Page
+ */
+public function showLKHAssign($lkhno)
+{
+    try {
+        if (!auth()->check()) {
+            return redirect()->route('login');
+        }
+        
+        $user = auth()->user();
+        $companyCode = $user->companycode;
+        $mandorUserId = $user->userid;
+        
+        // Get LKH data
+        $lkhData = DB::table('lkhhdr as lkh')
+            ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
+            ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
+            ->leftJoin('rkhlst as rls', function($join) {
+                $join->on('lkh.rkhno', '=', 'rls.rkhno')
+                     ->on('lkh.activitycode', '=', 'rls.activitycode');
+            })
+            ->where('lkh.companycode', $companyCode)
+            ->where('lkh.mandorid', $mandorUserId)
+            ->where('lkh.lkhno', $lkhno)
+            ->select([
+                'lkh.lkhno',
+                'lkh.activitycode',
+                'act.description as activityname',
+                'lkh.blok',
+                'lkh.totalluasactual',
+                'lkh.jenistenagakerja',
+                'lkh.totalworkers as estimated_workers',
+                'lkh.rkhno',
+                'lkh.lkhdate',
+                'u.name as mandor_nama',
+                DB::raw('GROUP_CONCAT(DISTINCT rls.plot) as plots'),
+                DB::raw('SUM(rls.luasarea) as totalluasplan')
+            ])
+            ->groupBy([
+                'lkh.lkhno', 'lkh.activitycode', 'act.description', 'lkh.blok',
+                'lkh.totalluasactual', 'lkh.jenistenagakerja', 'lkh.totalworkers',
+                'lkh.rkhno', 'lkh.lkhdate', 'u.name'
+            ])
+            ->first();
+        
+        if (!$lkhData) {
             return redirect()->route('mandor.index')
-                ->with('error', 'Terjadi kesalahan saat membuka halaman assignment');
+                ->with('error', 'LKH tidak ditemukan');
         }
+        
+        // Get vehicle info if applicable
+        $vehicleInfo = $this->getVehicleInfoForLKH($lkhno);
+        
+        // Get available workers (from today's attendance)
+        $availableWorkers = $this->getAvailableWorkersForAssignment($companyCode, $mandorUserId, $lkhData->lkhdate);
+        
+        // ✅ Check existing assignments in lkhlst
+        $existingAssignments = DB::table('lkhlst')
+            ->where('lkhno', $lkhno)
+            ->select('idtenagakerja')
+            ->distinct()
+            ->pluck('idtenagakerja')
+            ->toArray();
+        
+        Log::info('Existing assignments found', [
+            'lkhno' => $lkhno,
+            'existing_count' => count($existingAssignments),
+            'existing_workers' => $existingAssignments
+        ]);
+        
+        return Inertia::render('lkh-assignment', [
+            'title' => 'Assignment Pekerja - ' . $lkhno,
+            'lkhData' => [
+                'lkhno' => $lkhData->lkhno,
+                'activitycode' => $lkhData->activitycode,
+                'activityname' => $lkhData->activityname,
+                'blok' => $lkhData->blok,
+                'plot' => $lkhData->plots ? explode(',', $lkhData->plots) : [],
+                'totalluasplan' => (float) ($lkhData->totalluasplan ?? 0),
+                'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
+                'estimated_workers' => (int) $lkhData->estimated_workers,
+                'rkhno' => $lkhData->rkhno,
+                'lkhdate' => $lkhData->lkhdate,
+                'mandor_nama' => $lkhData->mandor_nama
+            ],
+            'vehicleInfo' => $vehicleInfo,
+            'availableWorkers' => $availableWorkers,
+            'existingAssignments' => $existingAssignments, // ✅ Pass existing assignments
+            'routes' => [
+                'lkh_save_assignment' => route('mandor.lkh.save-assignment', $lkhno),
+                'lkh_input' => route('mandor.lkh.input', $lkhno), // ✅ ADD THIS
+                'mandor_index' => route('mandor.index'), // ✅ ADD THIS
+            ],
+            'csrf_token' => csrf_token(),
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in showLKHAssign', [
+            'message' => $e->getMessage(),
+            'lkhno' => $lkhno
+        ]);
+        
+        return redirect()->route('mandor.index')
+            ->with('error', 'Terjadi kesalahan saat membuka halaman assignment');
     }
+}
 
-    /**
-     * Save LKH Worker Assignment
-     */
-    public function saveLKHAssign(Request $request, $lkhno = null)
-    {
-        try {
-            // Get lkhno from route parameter or request
-            $lkhno = $lkhno ?? $request->input('lkhno');
-            
-            $request->validate([
-                'assigned_workers' => 'required|array|min:1',
-                'assigned_workers.*.tenagakerjaid' => 'required|string',
-                'assigned_workers.*.nama' => 'required|string',
-                'assigned_workers.*.nik' => 'required|string',
-            ]);
-            
-            if (!auth()->check()) {
-                return response()->json(['error' => 'User not authenticated'], 401);
-            }
-            
-            $user = auth()->user();
-            $assignedWorkers = $request->input('assigned_workers');
-            
-            Log::info('Saving LKH worker assignment', [
-                'lkhno' => $lkhno,
-                'workers_count' => count($assignedWorkers)
-            ]);
-            
-            DB::beginTransaction();
-            
-            try {
-                // Store assignment in lkhhdr
-                DB::table('lkhhdr')
-                    ->where('lkhno', $lkhno)
-                    ->update([
-                        'assigned_workers' => json_encode($assignedWorkers),
-                        'totalworkers' => count($assignedWorkers),
-                        'updateby' => $user->name,
-                        'updatedat' => now()
-                    ]);
-                
-                DB::commit();
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Assignment berhasil disimpan',
-                    'data' => [
-                        'lkhno' => $lkhno,
-                        'total_assigned' => count($assignedWorkers)
-                    ]
-                ]);
-                
-            } catch (\Exception $e) {
-                DB::rollback();
-                throw $e;
-            }
-            
-        } catch (\Exception $e) {
-            Log::error('Error in saveLKHAssign', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'error' => 'Internal server error: ' . $e->getMessage()
-            ], 500);
+/**
+ * Show LKH Input Results Page
+ */
+public function showLKHInput($lkhno)
+{
+    try {
+        if (!auth()->check()) {
+            return redirect()->route('login');
         }
-    }
-
-    /**
-     * Show LKH Input Results Page
-     */
-    public function showLKHInput($lkhno)
-    {
-        try {
-            if (!auth()->check()) {
-                return redirect()->route('login');
-            }
-            
-            $user = auth()->user();
-            $companyCode = $user->companycode;
-            $mandorUserId = $user->userid;
-            
-            // Get LKH data
-            $lkhData = DB::table('lkhhdr as lkh')
-                ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
-                ->leftJoin('rkhlst as rls', function($join) {
-                    $join->on('lkh.rkhno', '=', 'rls.rkhno')
-                         ->on('lkh.activitycode', '=', 'rls.activitycode');
-                })
-                ->where('lkh.companycode', $companyCode)
-                ->where('lkh.mandorid', $mandorUserId)
-                ->where('lkh.lkhno', $lkhno)
-                ->select([
-                    'lkh.lkhno',
-                    'lkh.activitycode',
-                    'act.description as activityname',
-                    'lkh.blok',
-                    'lkh.jenistenagakerja',
-                    'lkh.rkhno',
-                    'lkh.lkhdate',
-                    'lkh.assigned_workers',
-                    'u.name as mandor_nama',
-                    DB::raw('GROUP_CONCAT(DISTINCT rls.plot) as plots'),
-                    DB::raw('SUM(rls.luasarea) as totalluasplan')
-                ])
-                ->groupBy([
-                    'lkh.lkhno', 'lkh.activitycode', 'act.description', 'lkh.blok',
-                    'lkh.jenistenagakerja', 'lkh.rkhno', 'lkh.lkhdate',
-                    'lkh.assigned_workers', 'u.name'
-                ])
-                ->first();
-            
-            if (!$lkhData) {
-                return redirect()->route('mandor.index')
-                    ->with('error', 'LKH tidak ditemukan');
-            }
-            
-            // Check if workers are assigned
-            if (!$lkhData->assigned_workers) {
-                return redirect()->route('mandor.lkh.assign', $lkhno)
-                    ->with('error', 'Silakan assign pekerja terlebih dahulu');
-            }
-            
-            $assignedWorkers = json_decode($lkhData->assigned_workers, true);
-            
-            return Inertia::render('lkh-input', [
-                'title' => 'Input Hasil - ' . $lkhno,
-                'lkhData' => [
-                    'lkhno' => $lkhData->lkhno,
-                    'activitycode' => $lkhData->activitycode,
-                    'activityname' => $lkhData->activityname,
-                    'blok' => $lkhData->blok,
-                    'plot' => $lkhData->plots ? explode(',', $lkhData->plots) : [],
-                    'totalluasplan' => (float) ($lkhData->totalluasplan ?? 0),
-                    'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
-                    'rkhno' => $lkhData->rkhno,
-                    'lkhdate' => $lkhData->lkhdate,
-                    'mandor_nama' => $lkhData->mandor_nama
-                ],
-                'assignedWorkers' => $assignedWorkers,
-                'routes' => [
-                    'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
-                ],
-                'csrf_token' => csrf_token(),
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error in showLKHInput', [
-                'message' => $e->getMessage(),
-                'lkhno' => $lkhno
-            ]);
-            
+        
+        $user = auth()->user();
+        $companyCode = $user->companycode;
+        $mandorUserId = $user->userid;
+        
+        // Get LKH data
+        $lkhData = DB::table('lkhhdr as lkh')
+            ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
+            ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
+            ->where('lkh.companycode', $companyCode)
+            ->where('lkh.mandorid', $mandorUserId)
+            ->where('lkh.lkhno', $lkhno)
+            ->select([
+                'lkh.lkhno',
+                'lkh.activitycode',
+                'act.description as activityname',
+                'lkh.blok',
+                'lkh.jenistenagakerja',
+                'lkh.rkhno',
+                'lkh.lkhdate',
+                'u.name as mandor_nama'
+            ])
+            ->first();
+        
+        if (!$lkhData) {
             return redirect()->route('mandor.index')
-                ->with('error', 'Terjadi kesalahan saat membuka halaman input');
+                ->with('error', 'LKH tidak ditemukan');
         }
+        
+        // Get assigned workers from lkhlst table
+        $assignedWorkers = DB::table('lkhlst as lst')
+            ->join('tenagakerja as tk', 'lst.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->where('lst.lkhno', $lkhno)
+            ->select([
+                'tk.tenagakerjaid',
+                'tk.nama', 
+                'tk.nik'
+            ])
+            ->distinct()
+            ->get()
+            ->map(function($worker) {
+                return [
+                    'tenagakerjaid' => $worker->tenagakerjaid,
+                    'nama' => $worker->nama,
+                    'nik' => $worker->nik,
+                    'assigned' => true
+                ];
+            })
+            ->toArray();
+        
+        // Check if workers are assigned
+        if (empty($assignedWorkers)) {
+            return redirect()->route('mandor.lkh.assign', $lkhno)
+                ->with('error', 'Silakan assign pekerja terlebih dahulu');
+        }
+        
+        // Get plot data from rkhlst table
+        $plotData = DB::table('rkhlst as rls')
+            ->join('lkhhdr as lkh', function($join) {
+                $join->on('rls.rkhno', '=', 'lkh.rkhno')
+                     ->on('rls.activitycode', '=', 'lkh.activitycode');
+            })
+            ->where('lkh.lkhno', $lkhno)
+            ->select([
+                'rls.plot', 
+                'rls.luasarea'
+            ])
+            ->get()
+            ->map(function($plot) {
+                return [
+                    'plot' => $plot->plot,
+                    'luasarea' => (float) $plot->luasarea
+                ];
+            })
+            ->toArray();
+        
+        if (empty($plotData)) {
+            return redirect()->route('mandor.lkh.assign', $lkhno)
+                ->with('error', 'Data plot tidak ditemukan untuk LKH ini');
+        }
+        
+        // Get materials if this activity uses materials
+        $materials = DB::table('usemateriallst as uml')
+            ->join('usematerialhdr as umh', function($join) {
+                $join->on('uml.companycode', '=', 'umh.companycode')
+                     ->on('uml.rkhno', '=', 'umh.rkhno');
+            })
+            ->join('lkhhdr as lkh', 'umh.rkhno', '=', 'lkh.rkhno')
+            ->where('lkh.lkhno', $lkhno)
+            ->where('umh.flagstatus', 'SUBMITTED') // Only submitted materials
+            ->select([
+                'uml.itemcode',
+                'uml.itemname', 
+                'uml.qty',
+                'uml.unit'
+            ])
+            ->get()
+            ->map(function($material) {
+                return [
+                    'itemcode' => $material->itemcode,
+                    'itemname' => $material->itemname,
+                    'qty' => (float) $material->qty,
+                    'unit' => $material->unit
+                ];
+            })
+            ->toArray();
+        
+        // Calculate total luas plan
+        $totalLuasPlan = array_sum(array_column($plotData, 'luasarea'));
+        
+        Log::info('LKH Input page accessed', [
+            'lkhno' => $lkhno,
+            'assigned_workers_count' => count($assignedWorkers),
+            'plots_count' => count($plotData),
+            'materials_count' => count($materials),
+            'total_luas_plan' => $totalLuasPlan
+        ]);
+        
+        return Inertia::render('lkh-input', [
+            'title' => 'Input Hasil - ' . $lkhno,
+            'lkhData' => [
+                'lkhno' => $lkhData->lkhno,
+                'activitycode' => $lkhData->activitycode,  
+                'activityname' => $lkhData->activityname,
+                'blok' => $lkhData->blok,
+                'plot' => array_column($plotData, 'plot'), // For backward compatibility
+                'totalluasplan' => $totalLuasPlan,
+                'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
+                'rkhno' => $lkhData->rkhno,
+                'lkhdate' => $lkhData->lkhdate,
+                'mandor_nama' => $lkhData->mandor_nama,
+                'needs_material' => count($materials) > 0
+            ],
+            'assignedWorkers' => $assignedWorkers,
+            'plotData' => $plotData, // Detailed plot data with luasarea
+            'materials' => $materials, // Available materials
+            'routes' => [
+                'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
+                'lkh_assign' => route('mandor.lkh.assign', $lkhno),
+                'mandor_index' => route('mandor.index'),
+            ],
+            'csrf_token' => csrf_token(),
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in showLKHInput', [
+            'message' => $e->getMessage(),
+            'lkhno' => $lkhno,
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return redirect()->route('mandor.index')
+            ->with('error', 'Terjadi kesalahan saat membuka halaman input: ' . $e->getMessage());
     }
+}
 
     /**
-     * Save LKH Results (Team-based input distributed to workers)
-     */
-    public function saveLKHResults(Request $request, $lkhno = null)
-    {
+ * Save LKH Results (Team-based input distributed to workers)
+ */
+public function saveLKHResults(Request $request, $lkhno = null)
+{
+    try {
+        $lkhno = $lkhno ?? $request->input('lkhno');
+        
+        $request->validate([
+            'assigned_workers' => 'required|array|min:1',
+            'plot_inputs' => 'required|array|min:1',
+            'plot_inputs.*.plot' => 'required|string',
+            'plot_inputs.*.hasil' => 'required|numeric|min:0',
+            'plot_inputs.*.luasplot' => 'required|numeric|min:0',
+            'plot_inputs.*.sisa' => 'nullable|numeric|min:0',
+            'plot_inputs.*.materialused' => 'nullable|numeric|min:0',
+            'keterangan' => 'nullable|string|max:500'
+        ]);
+        
+        if (!auth()->check()) {
+            return back()->withErrors(['message' => 'User not authenticated']);
+        }
+        
+        $user = auth()->user();
+        $assignedWorkers = $request->input('assigned_workers');
+        $plotInputs = $request->input('plot_inputs');
+        $keterangan = $request->input('keterangan');
+        
+        Log::info('Saving LKH results', [
+            'lkhno' => $lkhno,
+            'workers_count' => count($assignedWorkers),
+            'plots_count' => count($plotInputs)
+        ]);
+        
+        DB::beginTransaction();
+        
         try {
-            // Get lkhno from route parameter or request
-            $lkhno = $lkhno ?? $request->input('lkhno');
+            // Get LKH info for calculations
+            $lkhInfo = DB::table('lkhhdr')->where('lkhno', $lkhno)->first();
             
-            $request->validate([
-                'assigned_workers' => 'required|array|min:1',
-                'plot_inputs' => 'required|array|min:1',
-                'plot_inputs.*.plot' => 'required|string',
-                'plot_inputs.*.hasil' => 'required|numeric|min:0',
-                'plot_inputs.*.luasplot' => 'required|numeric|min:0',
-                'plot_inputs.*.sisa' => 'nullable|numeric|min:0',
-                'plot_inputs.*.materialused' => 'nullable|numeric|min:0',
-                'keterangan' => 'nullable|string|max:500'
-            ]);
-            
-            if (!auth()->check()) {
-                return response()->json(['error' => 'User not authenticated'], 401);
+            if (!$lkhInfo) {
+                return back()->withErrors(['message' => 'LKH tidak ditemukan']);
             }
             
-            $user = auth()->user();
-            $assignedWorkers = $request->input('assigned_workers');
-            $plotInputs = $request->input('plot_inputs');
-            $keterangan = $request->input('keterangan');
-            
-            Log::info('Saving LKH results', [
-                'lkhno' => $lkhno,
-                'workers_count' => count($assignedWorkers),
-                'plots_count' => count($plotInputs)
-            ]);
-            
-            DB::beginTransaction();
-            
-            try {
-                // Clear existing records
-                DB::table('lkhlst')->where('lkhno', $lkhno)->delete();
-                
-                $sequence = 1;
-                $totalLuasActual = 0;
-                $totalHasil = 0;
-                $totalSisa = 0;
-                $totalUpahAll = 0;
-                
-                // Get LKH info for calculations
-                $lkhInfo = DB::table('lkhhdr')->where('lkhno', $lkhno)->first();
-                
-                // TEAM-BASED DISTRIBUTION: Create records for each worker-plot combination
-                foreach ($assignedWorkers as $worker) {
-                    foreach ($plotInputs as $plotInput) {
-                        // Skip if no work done on this plot
-                        if (($plotInput['hasil'] ?? 0) == 0 && ($plotInput['luasplot'] ?? 0) == 0) {
-                            continue;
-                        }
-                        
-                        // Distribute plot data among workers (equal distribution)
-                        $workerCount = count($assignedWorkers);
-                        $workerLuasplot = ($plotInput['luasplot'] ?? 0) / $workerCount;
+            // Update existing lkhlst records instead of clearing and recreating
+            foreach ($plotInputs as $plotInput) {
+                if (($plotInput['hasil'] ?? 0) > 0) {
+                    // Get workers assigned to this plot
+                    $plotWorkers = DB::table('lkhlst')
+                        ->where('lkhno', $lkhno)
+                        ->where('plot', $plotInput['plot'])
+                        ->get();
+                    
+                    if ($plotWorkers->count() > 0) {
+                        $workerCount = $plotWorkers->count();
                         $workerHasil = ($plotInput['hasil'] ?? 0) / $workerCount;
-                        $workerSisa = ($plotInput['sisa'] ?? 0) / $workerCount;
                         $workerMaterial = ($plotInput['materialused'] ?? 0) / $workerCount;
                         
                         // Calculate upah based on jenis tenaga kerja
-                        $upahharian = 0;
-                        $totalupahharian = 0;
                         $costperha = 0;
                         $totalbiayaborongan = 0;
+                        $upahharian = 0;
                         
                         if ($lkhInfo->jenistenagakerja == 1) {
                             // Harian
-                            $upahharian = $this->calculateDailyWage($worker['tenagakerjaid'], $workerLuasplot);
-                            $totalupahharian = $upahharian;
-                            $totalUpahAll += $totalupahharian;
+                            $upahharian = $this->calculateDailyWage('', $workerHasil);
                         } else {
                             // Borongan
                             $costperha = $this->calculateCostPerHa($lkhInfo->activitycode);
                             $totalbiayaborongan = $workerHasil * $costperha;
-                            $totalUpahAll += $totalbiayaborongan;
                         }
                         
-                        DB::table('lkhlst')->insert([
-                            'lkhno' => $lkhno,
-                            'workersequence' => $sequence++,
-                            'workername' => $worker['nama'],
-                            'noktp' => $worker['nik'],
-                            'blok' => $lkhInfo->blok,
-                            'plot' => $plotInput['plot'],
-                            'luasplot' => $workerLuasplot,
-                            'hasil' => $workerHasil,
-                            'sisa' => $workerSisa,
-                            'materialused' => $workerMaterial,
-                            'jammasuk' => '07:00:00',
-                            'jamselesai' => '16:00:00',
-                            'overtimehours' => 0,
-                            'premi' => 0,
-                            'upahharian' => $upahharian,
-                            'totalupahharian' => $totalupahharian,
-                            'costperha' => $costperha,
-                            'totalbiayaborongan' => $totalbiayaborongan,
-                            'createdat' => now(),
-                            'updatedat' => now()
-                        ]);
-                        
-                        // Accumulate totals (only once per plot, not per worker)
-                        if ($worker === $assignedWorkers[0]) { // Only count once
-                            $totalLuasActual += $plotInput['luasplot'] ?? 0;
-                            $totalHasil += $plotInput['hasil'] ?? 0;
-                            $totalSisa += $plotInput['sisa'] ?? 0;
-                        }
+                        // Update all workers for this plot
+                        DB::table('lkhlst')
+                            ->where('lkhno', $lkhno)
+                            ->where('plot', $plotInput['plot'])
+                            ->update([
+                                'hasil' => $workerHasil,
+                                'sisa' => max(0, $plotWorkers->first()->luasplot - $workerHasil), // Calculate sisa
+                                'materialused' => $workerMaterial > 0 ? json_encode(['total_used' => $workerMaterial]) : null,
+                                'jammasuk' => '07:00:00',
+                                'jamselesai' => '16:00:00',
+                                'upahharian' => $upahharian,
+                                'totalupahharian' => $upahharian,
+                                'costperha' => $costperha,
+                                'totalbiayaborongan' => $totalbiayaborongan,
+                                'updatedat' => now()
+                            ]);
                     }
                 }
-                
-                // Update LKH header
-                DB::table('lkhhdr')
-                    ->where('lkhno', $lkhno)
-                    ->update([
-                        'totalworkers' => count($assignedWorkers),
-                        'totalluasactual' => $totalLuasActual,
-                        'totalhasil' => $totalHasil,
-                        'totalsisa' => $totalSisa,
-                        'totalupahall' => $totalUpahAll,
-                        'status' => 'DRAFT',
-                        'keterangan' => $keterangan,
-                        'updateby' => $user->name,
-                        'updatedat' => now(),
-                        'mobileupdatedat' => now(),
-                        'webreceivedat' => now()
-                    ]);
-                
-                DB::commit();
-                
-                Log::info('LKH results saved successfully', [
-                    'lkhno' => $lkhno,
-                    'total_records' => $sequence - 1,
-                    'total_luas_actual' => $totalLuasActual,
-                    'total_workers' => count($assignedWorkers)
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Data hasil pekerjaan berhasil disimpan! LKH sudah masuk ke sistem untuk review admin.',
-                    'data' => [
-                        'lkhno' => $lkhno,
-                        'total_records_created' => $sequence - 1,
-                        'total_luas_actual' => $totalLuasActual,
-                        'total_workers' => count($assignedWorkers)
-                    ]
-                ]);
-                
-            } catch (\Exception $e) {
-                DB::rollback();
-                throw $e;
             }
             
-        } catch (\Exception $e) {
-            Log::error('Error in saveLKHResults', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            // Calculate totals for header update
+            $totals = DB::table('lkhlst')
+                ->where('lkhno', $lkhno)
+                ->selectRaw('
+                    SUM(luasplot) as total_luas_actual,
+                    SUM(hasil) as total_hasil,
+                    SUM(sisa) as total_sisa,
+                    SUM(COALESCE(totalupahharian, 0) + COALESCE(totalbiayaborongan, 0)) as total_upah
+                ')
+                ->first();
+            
+            // Update LKH header
+            DB::table('lkhhdr')
+                ->where('lkhno', $lkhno)
+                ->update([
+                    'totalluasactual' => $totals->total_luas_actual ?? 0,
+                    'totalhasil' => $totals->total_hasil ?? 0,
+                    'totalsisa' => $totals->total_sisa ?? 0,
+                    'totalupahall' => $totals->total_upah ?? 0,
+                    'status' => 'COMPLETED',
+                    'keterangan' => $keterangan,
+                    'updateby' => $user->name,
+                    'updatedat' => now(),
+                    'mobileupdatedat' => now(),
+                ]);
+            
+            DB::commit();
+            
+            Log::info('LKH results saved successfully', [
+                'lkhno' => $lkhno,
+                'total_hasil' => $totals->total_hasil ?? 0,
             ]);
             
-            return response()->json([
-                'error' => 'Internal server error: ' . $e->getMessage()
-            ], 500);
+            return back()->with([
+                'success' => true,
+                'flash' => [
+                    'success' => 'Data hasil pekerjaan berhasil disimpan! LKH sudah masuk ke sistem untuk review admin.'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
         }
+        
+    } catch (\Exception $e) {
+        Log::error('Error in saveLKHResults', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return back()->withErrors([
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ]);
     }
+}
 
     /*
     |--------------------------------------------------------------------------
