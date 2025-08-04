@@ -778,7 +778,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Pengolahan data (Activity II, III, IV)
+     * Get Pengolahan data (Activity II, III, IV) - UPDATED: no blok in header
      */
     private function getPengolahanData($companycode, $date)
     {
@@ -797,13 +797,14 @@ class RencanaKerjaHarianController extends Controller
             ->select([
                 'h.lkhno',
                 'h.activitycode',
-                'h.blok',
+                // REMOVED: 'h.blok',
                 'h.totalworkers',
                 'h.totalluasactual',
                 'h.totalhasil',
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
+                'l.blok', // NOW from lkhlst
                 'l.plot'
             ])
             ->orderBy('h.activitycode')
@@ -815,7 +816,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Perawatan Manual PC data (Activity V dengan PC)
+     * Get Perawatan Manual PC data - UPDATED: blok from lkhlst
      */
     private function getPerawatanManualPCData($companycode, $date)
     {
@@ -827,29 +828,28 @@ class RencanaKerjaHarianController extends Controller
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
             ->where('h.activitycode', 'like', 'V.%')
-            ->where('l.blok', 'like', '%PC%') // Dummy condition for PC - adjust based on your data structure
+            ->where('l.blok', 'like', '%PC%') // NOW from lkhlst
             ->select([
                 'h.lkhno',
                 'h.activitycode',
-                'h.blok',
                 'h.totalworkers',
                 'h.totalluasactual',
                 'h.totalhasil',
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
+                'l.blok', // NOW from lkhlst
                 'l.plot'
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
             ->get();
 
-        // Group by activity code
         return $data->groupBy('activitycode')->toArray();
     }
 
     /**
-     * Get Perawatan Manual RC data (Activity V dengan RC)
+     * Get Perawatan Manual RC data - UPDATED: blok from lkhlst
      */
     private function getPerawatanManualRCData($companycode, $date)
     {
@@ -861,24 +861,23 @@ class RencanaKerjaHarianController extends Controller
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
             ->where('h.activitycode', 'like', 'V.%')
-            ->where('l.blok', 'like', '%RC%') // Dummy condition for RC - adjust based on your data structure
+            ->where('l.blok', 'like', '%RC%') // NOW from lkhlst
             ->select([
                 'h.lkhno',
                 'h.activitycode',
-                'h.blok',
                 'h.totalworkers',
                 'h.totalluasactual',
                 'h.totalhasil',
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
+                'l.blok', // NOW from lkhlst
                 'l.plot'
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
             ->get();
 
-        // Group by activity code
         return $data->groupBy('activitycode')->toArray();
     }
 
@@ -2030,7 +2029,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Build LKH data query
+     * Build LKH data query - UPDATED: no blok in header
      */
     private function buildLkhDataQuery($companycode, $rkhno)
     {
@@ -2038,7 +2037,7 @@ class RencanaKerjaHarianController extends Controller
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
             ->leftJoin('approval as app', function($join) use ($companycode) {
                 $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
+                    ->where('app.companycode', '=', $companycode);
             })
             ->where('h.companycode', $companycode)
             ->where('h.rkhno', $rkhno)
@@ -2046,7 +2045,7 @@ class RencanaKerjaHarianController extends Controller
                 'h.lkhno',
                 'h.activitycode',
                 'a.activityname',
-                'h.blok',
+                // REMOVED: 'h.blok',
                 'h.jenistenagakerja',
                 'h.status',
                 'h.lkhdate',
@@ -2067,7 +2066,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Format LKH data for response
+     * Format LKH data for response - UPDATED: show plots from lkhlst
      */
     private function formatLkhData($lkhList)
     {
@@ -2076,10 +2075,21 @@ class RencanaKerjaHarianController extends Controller
             $canEdit = !$lkh->issubmit && !$this->isLKHFullyApproved($lkh);
             $canSubmit = !$lkh->issubmit && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
 
+            // Get plots for this LKH from lkhlst
+            $plots = DB::table('lkhlst')
+                ->where('lkhno', $lkh->lkhno)
+                ->select('blok', 'plot')
+                ->get()
+                ->map(function($item) {
+                    return $item->blok . '-' . $item->plot;
+                })
+                ->unique()
+                ->join(', ');
+
             return [
                 'lkhno' => $lkh->lkhno,
                 'activity' => $lkh->activitycode . ' - ' . ($lkh->activityname ?? 'Unknown Activity'),
-                'blok' => $lkh->blok ?? 'N/A',
+                'plots' => $plots ?: 'No plots assigned', // CHANGED: from single blok to multiple plots
                 'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
                 'status' => $lkh->status ?? 'EMPTY',
                 'approval_status' => $approvalStatus,

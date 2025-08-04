@@ -14,6 +14,7 @@ class LkhGeneratorService
 {
     /**
      * Generate LKH from fully approved RKH
+     * NEW LOGIC: 1 LKH = 1 Mandor = 1 Kegiatan = Many Plot
      * 
      * @param string $rkhno
      * @return array
@@ -39,7 +40,7 @@ class LkhGeneratorService
                 throw new \Exception("LKH untuk RKH {$rkhno} sudah pernah di-generate");
             }
 
-            // 3. Ambil detail aktivitas dari RKH
+            // 3. Ambil detail aktivitas dari RKH dan group by activitycode + jenistenagakerja
             $rkhActivities = Rkhlst::where('rkhno', $rkhno)
                 ->where('companycode', $rkh->companycode)
                 ->get();
@@ -48,38 +49,52 @@ class LkhGeneratorService
                 throw new \Exception("Tidak ada aktivitas ditemukan untuk RKH {$rkhno}");
             }
 
+            // 4. Group aktivitas berdasarkan activitycode + jenistenagakerja
+            $groupedActivities = $rkhActivities->groupBy(function($item) {
+                return $item->activitycode . '|' . $item->jenistenagakerja;
+            });
+
             $generatedLkh = [];
             $lkhIndex = 1;
 
-            // 4. Generate LKH untuk setiap aktivitas
-            foreach ($rkhActivities as $activity) {
+            // 5. Generate LKH untuk setiap group (1 LKH per kegiatan + jenis tenaga kerja)
+            foreach ($groupedActivities as $groupKey => $activities) {
+                $firstActivity = $activities->first();
+                
+                // Parse group key
+                [$activitycode, $jenistenagakerja] = explode('|', $groupKey);
+                
                 $lkhno = $this->generateLkhNumber($rkhno, $lkhIndex);
                 
                 // Get approval requirements untuk activity ini
-                $approvalData = $this->getApprovalRequirements($rkh->companycode, $activity->activitycode);
+                $approvalData = $this->getApprovalRequirements($rkh->companycode, $activitycode);
+                
+                // Calculate totals dari semua plot dalam group ini
+                $totalLuas = $activities->sum('luasarea');
+                $plotList = $activities->pluck('plot')->unique()->join(', ');
+                $blokList = $activities->pluck('blok')->unique()->join(', ');
                 
                 // Buat LKH Header dengan approval requirements
                 $lkhHeaderData = array_merge([
                     'lkhno' => $lkhno,
                     'rkhno' => $rkhno,
                     'companycode' => $rkh->companycode,
-                    'activitycode' => $activity->activitycode,
-                    'blok' => $activity->blok,
-                    'plot' => $activity->plot,
+                    'activitycode' => $activitycode,
+                    // REMOVED: 'blok' => tidak ada lagi di header
                     'mandorid' => $rkh->mandorid,
                     'lkhdate' => $rkh->rkhdate,
-                    'jenistenagakerja' => $activity->jenistenagakerja,
+                    'jenistenagakerja' => $jenistenagakerja,
                     'totalworkers' => 0,
                     'totalluasactual' => 0.00,
                     'totalhasil' => 0.00,
-                    'totalsisa' => $activity->luasarea, // Sisa = luas area awal
+                    'totalsisa' => $totalLuas, // Sisa = total luas area awal dari semua plot
                     'totalupahall' => 0.00,
                     'jammulaikerja' => null,
                     'jamselesaikerja' => null,
                     'totalovertimehours' => 0.00,
                     'status' => 'DRAFT',
-                    'issubmit' => 0, // NEW: Default unlocked
-                    'keterangan' => "Auto-generated from RKH {$rkhno}",
+                    'issubmit' => 0,
+                    'keterangan' => "Auto-generated from RKH {$rkhno} - Plots: {$plotList}",
                     'inputby' => auth()->user()->userid ?? 'SYSTEM',
                     'createdat' => now(),
                 ], $approvalData);
@@ -88,10 +103,11 @@ class LkhGeneratorService
 
                 $generatedLkh[] = [
                     'lkhno' => $lkhno,
-                    'activitycode' => $activity->activitycode,
-                    'blok' => $activity->blok,
-                    'plot' => $activity->plot,
-                    'jenistenagakerja' => $activity->jenistenagakerja,
+                    'activitycode' => $activitycode,
+                    'plots' => $plotList,
+                    'bloks' => $blokList,
+                    'jenistenagakerja' => $jenistenagakerja,
+                    'total_luas' => $totalLuas,
                     'status' => 'DRAFT'
                 ];
 
@@ -174,7 +190,7 @@ class LkhGeneratorService
     }
 
     /**
-     * NEW: Get approval requirements untuk activity
+     * Get approval requirements untuk activity
      */
     private function getApprovalRequirements($companycode, $activitycode)
     {
@@ -215,6 +231,7 @@ class LkhGeneratorService
 
     /**
      * Get LKH summary for specific RKH
+     * UPDATED: Show plots aggregated per LKH
      * 
      * @param string $rkhno
      * @return array
@@ -234,12 +251,22 @@ class LkhGeneratorService
                 return $group->count();
             })->toArray(),
             'details' => $lkhList->map(function ($lkh) {
+                // Get plots for this LKH from lkhlst
+                $plots = DB::table('lkhlst')
+                    ->where('lkhno', $lkh->lkhno)
+                    ->select('blok', 'plot')
+                    ->get()
+                    ->map(function($item) {
+                        return $item->blok . '-' . $item->plot;
+                    })
+                    ->unique()
+                    ->join(', ');
+
                 return [
                     'lkhno' => $lkh->lkhno,
                     'activitycode' => $lkh->activitycode,
                     'activityname' => $lkh->activity->activityname ?? 'Unknown',
-                    'blok' => $lkh->blok,
-                    'plot' => $lkh->plot,
+                    'plots' => $plots ?: 'No plots assigned',
                     'status' => $lkh->status,
                     'jenistenagakerja' => $lkh->jenistenagakerja,
                     'totalworkers' => $lkh->totalworkers,
