@@ -19,16 +19,16 @@
     
     <!-- Service Worker Registration -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('{{ asset('sw.js') }}')
-                    .then(function(registration) {
-                        console.log('SW registered: ', registration);
-                    }, function(error) {
-                        console.log('SW registration failed: ', error);
-                    });
-            });
-        }
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('{{ asset('sw.js') }}')
+                .then(function(registration) {
+                    console.log('SW registered: ', registration);
+                }, function(error) {
+                    console.log('SW registration failed: ', error);
+                });
+        });
+    }
     </script>
 </body>
 </html>
