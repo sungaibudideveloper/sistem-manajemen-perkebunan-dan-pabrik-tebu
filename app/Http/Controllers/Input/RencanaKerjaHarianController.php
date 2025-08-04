@@ -28,6 +28,7 @@ use App\Models\TenagaKerja;
 // Services
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
+use App\Services\WageCalculationService;
 
 /**
  * RencanaKerjaHarianController
@@ -422,11 +423,7 @@ class RencanaKerjaHarianController extends Controller
         try {
             $companycode = Session::get('companycode');
             
-            \Log::info("Getting LKH data for RKH: {$rkhno}, Company: {$companycode}");
-            
             $lkhList = $this->buildLkhDataQuery($companycode, $rkhno)->get();
-
-            \Log::info("Found {$lkhList->count()} LKH records for RKH {$rkhno}");
 
             $formattedData = $this->formatLkhData($lkhList);
             $generateInfo = $this->getLkhGenerateInfo($companycode, $rkhno, $lkhList);

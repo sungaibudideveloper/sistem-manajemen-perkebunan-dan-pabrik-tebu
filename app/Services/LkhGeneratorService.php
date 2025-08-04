@@ -5,16 +5,35 @@ namespace App\Services;
 use App\Models\Rkhhdr;
 use App\Models\Rkhlst;
 use App\Models\Lkhhdr;
-use App\Models\Lkhlst;
+use App\Models\LkhDetailWorker;
+use App\Models\LkhDetailPlot;
+use App\Services\WageCalculationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
+/**
+ * FIXED LkhGeneratorService
+ * 
+ * Generate LKH from fully approved RKH using new split table design:
+ * - lkhdetailplot (plot assignments & areas) - Generated immediately
+ * - lkhdetailworker (worker assignments & wages) - Assigned by mandor via handheld
+ * 
+ * FIXED: Proper area calculation and data type handling
+ */
 class LkhGeneratorService
 {
+    protected $wageCalculationService;
+
+    public function __construct(WageCalculationService $wageCalculationService = null)
+    {
+        $this->wageCalculationService = $wageCalculationService ?: new WageCalculationService();
+    }
+
     /**
      * Generate LKH from fully approved RKH
      * NEW LOGIC: 1 LKH = 1 Mandor = 1 Kegiatan = Many Plot
+     * UPDATED: Using split tables - Only plots generated, workers assigned by mandor
      * 
      * @param string $rkhno
      * @return array
@@ -66,49 +85,21 @@ class LkhGeneratorService
                 
                 $lkhno = $this->generateLkhNumber($rkhno, $lkhIndex);
                 
-                // Get approval requirements untuk activity ini
-                $approvalData = $this->getApprovalRequirements($rkh->companycode, $activitycode);
+                // Generate LKH Header
+                $lkhHeaderResult = $this->createLkhHeader($rkh, $lkhno, $activitycode, $jenistenagakerja, $activities);
                 
-                // Calculate totals dari semua plot dalam group ini
-                $totalLuas = $activities->sum('luasarea');
-                $plotList = $activities->pluck('plot')->unique()->join(', ');
-                $blokList = $activities->pluck('blok')->unique()->join(', ');
+                // Generate LKH Detail Plots (Workers akan diassign oleh mandor)
+                $plotResult = $this->createLkhDetailPlots($lkhno, $activities, $rkh->companycode);
                 
-                // Buat LKH Header dengan approval requirements
-                $lkhHeaderData = array_merge([
-                    'lkhno' => $lkhno,
-                    'rkhno' => $rkhno,
-                    'companycode' => $rkh->companycode,
-                    'activitycode' => $activitycode,
-                    // REMOVED: 'blok' => tidak ada lagi di header
-                    'mandorid' => $rkh->mandorid,
-                    'lkhdate' => $rkh->rkhdate,
-                    'jenistenagakerja' => $jenistenagakerja,
-                    'totalworkers' => 0,
-                    'totalluasactual' => 0.00,
-                    'totalhasil' => 0.00,
-                    'totalsisa' => $totalLuas, // Sisa = total luas area awal dari semua plot
-                    'totalupahall' => 0.00,
-                    'jammulaikerja' => null,
-                    'jamselesaikerja' => null,
-                    'totalovertimehours' => 0.00,
-                    'status' => 'DRAFT',
-                    'issubmit' => 0,
-                    'keterangan' => "Auto-generated from RKH {$rkhno} - Plots: {$plotList}",
-                    'inputby' => auth()->user()->userid ?? 'SYSTEM',
-                    'createdat' => now(),
-                ], $approvalData);
-
-                $lkhHeader = Lkhhdr::create($lkhHeaderData);
-
                 $generatedLkh[] = [
                     'lkhno' => $lkhno,
                     'activitycode' => $activitycode,
-                    'plots' => $plotList,
-                    'bloks' => $blokList,
+                    'plots' => $lkhHeaderResult['plots_summary'],
+                    'plots_count' => count($plotResult),
                     'jenistenagakerja' => $jenistenagakerja,
-                    'total_luas' => $totalLuas,
-                    'status' => 'DRAFT'
+                    'total_luas' => $lkhHeaderResult['total_luas'],
+                    'planned_workers' => $lkhHeaderResult['planned_workers'],
+                    'status' => 'EMPTY'
                 ];
 
                 $lkhIndex++;
@@ -123,7 +114,7 @@ class LkhGeneratorService
 
             return [
                 'success' => true,
-                'message' => 'LKH berhasil di-generate otomatis',
+                'message' => 'LKH berhasil di-generate otomatis (plots only, workers assigned by mandor)',
                 'generated_lkh' => $generatedLkh,
                 'total_lkh' => count($generatedLkh)
             ];
@@ -146,6 +137,99 @@ class LkhGeneratorService
     }
 
     /**
+     * Create LKH Header
+     * 
+     * @param Rkhhdr $rkh
+     * @param string $lkhno
+     * @param string $activitycode
+     * @param int $jenistenagakerja
+     * @param \Illuminate\Support\Collection $activities
+     * @return array
+     */
+    private function createLkhHeader($rkh, $lkhno, $activitycode, $jenistenagakerja, $activities)
+    {
+        // Get approval requirements untuk activity ini
+        $approvalData = $this->getApprovalRequirements($rkh->companycode, $activitycode);
+        
+        // Calculate totals dari semua plot dalam group ini - FIXED: ensure proper numeric conversion
+        $totalLuas = $activities->sum(function($activity) {
+            return (float) $activity->luasarea;
+        });
+        $totalWorkersPlanned = $activities->sum('jumlahtenagakerja');
+        $plotList = $activities->pluck('plot')->unique()->join(', ');
+        $blokList = $activities->pluck('blok')->unique()->join(', ');
+        
+        // Buat LKH Header dengan approval requirements
+        $lkhHeaderData = array_merge([
+            'lkhno' => $lkhno,
+            'rkhno' => $rkh->rkhno,
+            'companycode' => $rkh->companycode,
+            'activitycode' => $activitycode,
+            'mandorid' => $rkh->mandorid,
+            'lkhdate' => $rkh->rkhdate,
+            'jenistenagakerja' => $jenistenagakerja,
+            'totalworkers' => 0, // Will be updated when mandor assigns workers
+            'totalluasactual' => 0.00, // Will be updated when work is completed
+            'totalhasil' => 0.00, // Will be updated when work is completed
+            'totalsisa' => $totalLuas, // Sisa = total luas area awal dari semua plot
+            'totalupahall' => 0.00, // Will be calculated when wages are computed
+            'jammulaikerja' => null,
+            'jamselesaikerja' => null,
+            'totalovertimehours' => 0.00,
+            'status' => 'EMPTY',
+            'issubmit' => 0,
+            'keterangan' => "Auto-generated from RKH {$rkh->rkhno} - Plots: {$plotList} - Planned workers: {$totalWorkersPlanned}",
+            'inputby' => auth()->user()->userid ?? 'SYSTEM',
+            'createdat' => now(),
+        ], $approvalData);
+
+        $lkhHeader = Lkhhdr::create($lkhHeaderData);
+
+        return [
+            'success' => true,
+            'lkh_header' => $lkhHeader,
+            'total_luas' => $totalLuas,
+            'planned_workers' => $totalWorkersPlanned,
+            'plots_summary' => $plotList
+        ];
+    }
+
+    /**
+     * Create LKH Detail Plot records
+     * FIXED: Proper area conversion and data type handling
+     * 
+     * @param string $lkhno
+     * @param \Illuminate\Support\Collection $activities
+     * @param string $companycode
+     * @return array
+     */
+    private function createLkhDetailPlots($lkhno, $activities, $companycode)
+    {
+        $plotDetails = [];
+        
+        foreach ($activities as $activity) {
+            // FIXED: Ensure proper numeric conversion and validation
+            $luasArea = (float) $activity->luasarea;
+            
+            $plotDetail = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'blok' => $activity->blok,
+                'plot' => $activity->plot,
+                'luasrkh' => $luasArea,  // FIXED: use converted float value
+                'luashasil' => 0.00,
+                'luassisa' => $luasArea, // FIXED: initialize with luasarea, not null
+                'createdat' => now()
+            ];
+            
+            LkhDetailPlot::create($plotDetail);
+            $plotDetails[] = $plotDetail;
+        }
+        
+        return $plotDetails;
+    }
+
+    /**
      * Generate LKH number based on RKH number and index
      * Format: LKH{DDMM}{XX}{YY}-{INDEX}
      * 
@@ -155,8 +239,8 @@ class LkhGeneratorService
      */
     private function generateLkhNumber($rkhno, $index)
     {
-        // RKH format: RKH19061325
-        // LKH format: LKH19061325-1
+        // RKH format: RKH04080125
+        // LKH format: LKH04080125-1
         $rkhPart = substr($rkhno, 3); // Remove "RKH" prefix
         return "LKH{$rkhPart}-{$index}";
     }
@@ -231,7 +315,7 @@ class LkhGeneratorService
 
     /**
      * Get LKH summary for specific RKH
-     * UPDATED: Show plots aggregated per LKH
+     * UPDATED: Use new column names (luasrkh instead of luasplot)
      * 
      * @param string $rkhno
      * @return array
@@ -251,16 +335,20 @@ class LkhGeneratorService
                 return $group->count();
             })->toArray(),
             'details' => $lkhList->map(function ($lkh) {
-                // Get plots for this LKH from lkhlst
-                $plots = DB::table('lkhlst')
+                // Get plots for this LKH from lkhdetailplot
+                $plots = LkhDetailPlot::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
-                    ->select('blok', 'plot')
+                    ->select('blok', 'plot', 'luasrkh')
                     ->get()
                     ->map(function($item) {
-                        return $item->blok . '-' . $item->plot;
+                        return $item->blok . '-' . $item->plot . ' (' . $item->luasrkh . ' ha)';
                     })
-                    ->unique()
                     ->join(', ');
+
+                // Get worker assignments count (akan diisi oleh mandor)
+                $assignedWorkers = LkhDetailWorker::where('companycode', $lkh->companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->count();
 
                 return [
                     'lkhno' => $lkh->lkhno,
@@ -269,14 +357,128 @@ class LkhGeneratorService
                     'plots' => $plots ?: 'No plots assigned',
                     'status' => $lkh->status,
                     'jenistenagakerja' => $lkh->jenistenagakerja,
-                    'totalworkers' => $lkh->totalworkers,
+                    'workers_assigned' => $assignedWorkers,
                     'totalhasil' => $lkh->totalhasil,
                     'totalsisa' => $lkh->totalsisa,
+                    'totalupah' => $lkh->totalupahall
                 ];
             })->toArray()
         ];
 
         return $summary;
+    }
+
+    /**
+     * Calculate and update LKH wages
+     * Using WageCalculationService for complex calculations
+     * Called when mandor completes work assignment via handheld
+     * UPDATED: Use new column names (luashasil, luasrkh)
+     * 
+     * @param string $lkhno
+     * @return array
+     */
+    public function calculateLkhWages($lkhno)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Get LKH data
+            $lkh = Lkhhdr::where('lkhno', $lkhno)->first();
+            if (!$lkh) {
+                throw new \Exception("LKH {$lkhno} not found");
+            }
+
+            // Get assigned workers (assigned by mandor via handheld)
+            $workers = LkhDetailWorker::where('companycode', $lkh->companycode)
+                ->where('lkhno', $lkhno)
+                ->get();
+
+            if ($workers->isEmpty()) {
+                return [
+                    'success' => false,
+                    'message' => 'No workers assigned to this LKH by mandor'
+                ];
+            }
+
+            // Get plot data for borongan calculations - UPDATED: filter by company
+            $plots = LkhDetailPlot::where('companycode', $lkh->companycode)
+                ->where('lkhno', $lkhno)
+                ->get();
+            $plotsData = $plots->map(function($plot) {
+                return [
+                    'blok' => $plot->blok,
+                    'plot' => $plot->plot,
+                    'luashasil' => $plot->luashasil,    // CHANGED: was luasactual
+                    'luasrkh' => $plot->luasrkh         // CHANGED: was luastargeted
+                ];
+            })->toArray();
+
+            $totalWages = 0;
+            $calculatedWorkers = 0;
+
+            // Calculate wages for each worker
+            foreach ($workers as $worker) {
+                $workerData = [
+                    'tenagakerjaid' => $worker->tenagakerjaid,
+                    'totaljamkerja' => $worker->totaljamkerja,
+                    'overtimehours' => $worker->overtimehours,
+                    'premi' => $worker->premi
+                ];
+
+                $wageResult = $this->wageCalculationService->calculateWorkerWage(
+                    $lkh->companycode,
+                    $lkh->activitycode,
+                    $lkh->jenistenagakerja,
+                    $lkh->lkhdate,
+                    $workerData,
+                    $plotsData
+                );
+
+                if ($wageResult['success']) {
+                    // Update worker record with calculated wages
+                    $worker->update([
+                        'upahharian' => $wageResult['upahharian'],
+                        'upahperjam' => $wageResult['upahperjam'],
+                        'upahlembur' => $wageResult['upahlembur'],
+                        'upahborongan' => $wageResult['upahborongan'],
+                        'totalupah' => $wageResult['totalupah'],
+                        'keterangan' => $wageResult['notes'] ?? $worker->keterangan,
+                        'updatedat' => now()
+                    ]);
+
+                    $totalWages += $wageResult['totalupah'];
+                    $calculatedWorkers++;
+                }
+            }
+
+            // Update LKH header with totals
+            $lkh->update([
+                'totalworkers' => $workers->count(),
+                'totalupahall' => $totalWages,
+                'updatedat' => now()
+            ]);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => "Wages calculated for {$calculatedWorkers} workers",
+                'total_wages' => $totalWages,
+                'workers_calculated' => $calculatedWorkers,
+                'total_workers' => $workers->count(),
+                'lkhno' => $lkhno
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error("Failed to calculate LKH wages for {$lkhno}: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Error calculating wages: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -330,11 +532,17 @@ class LkhGeneratorService
         try {
             DB::beginTransaction();
 
-            // Hapus LKH yang sudah ada
+            // Hapus LKH yang sudah ada beserta detail tables
             $existingLkh = Lkhhdr::where('rkhno', $rkhno)->get();
             foreach ($existingLkh as $lkh) {
-                // Hapus detail terlebih dahulu
-                Lkhlst::where('lkhno', $lkh->lkhno)->delete();
+                // Hapus detail workers (if any assigned by mandor)
+                LkhDetailWorker::where('companycode', $lkh->companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->delete();
+                // Hapus detail plots
+                LkhDetailPlot::where('companycode', $lkh->companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->delete();
                 // Hapus header
                 $lkh->delete();
             }
