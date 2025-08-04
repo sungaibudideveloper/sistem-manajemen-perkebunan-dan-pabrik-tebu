@@ -21,7 +21,9 @@ use App\Models\Herbisidagroup;
 use App\Models\AbsenHdr;
 use App\Models\AbsenLst;
 use App\Models\Lkhhdr;
-use App\Models\Lkhlst;
+use App\Models\LkhDetailPlot; // FIXED: Import new model
+use App\Models\LkhDetailWorker; // FIXED: Import new model
+use App\Models\LkhDetailMaterial; // FIXED: Import new model
 use App\Models\Kendaraan;
 use App\Models\TenagaKerja;
 
@@ -417,6 +419,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Get LKH data for specific RKH
+     * FIXED: Updated to use new table structure
      */
     public function getLKHData($rkhno)
     {
@@ -425,7 +428,7 @@ class RencanaKerjaHarianController extends Controller
             
             $lkhList = $this->buildLkhDataQuery($companycode, $rkhno)->get();
 
-            $formattedData = $this->formatLkhData($lkhList);
+            $formattedData = $this->formatLkhData($lkhList, $companycode);
             $generateInfo = $this->getLkhGenerateInfo($companycode, $rkhno, $lkhList);
 
             return response()->json([
@@ -451,6 +454,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Show LKH report
+     * FIXED: Updated to use new table structure
      */
     public function showLKH($lkhno)
     {
@@ -464,7 +468,10 @@ class RencanaKerjaHarianController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            $lkhDetails = $this->getLkhDetailsForShow($lkhno);
+            // FIXED: Get details from new tables
+            $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
+            $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
+            $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
             $approvals = $this->getLkhApprovalsData($lkhData);
 
             return view('input.rencanakerjaharian.lkh-report', [
@@ -472,7 +479,9 @@ class RencanaKerjaHarianController extends Controller
                 'navbar' => 'Input',
                 'nav' => 'Rencana Kerja Harian',
                 'lkhData' => $lkhData,
-                'lkhDetails' => $lkhDetails,
+                'lkhPlotDetails' => $lkhPlotDetails,
+                'lkhWorkerDetails' => $lkhWorkerDetails,
+                'lkhMaterialDetails' => $lkhMaterialDetails,
                 'approvals' => $approvals
             ]);
 
@@ -485,6 +494,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Show LKH edit form
+     * FIXED: Updated to use new table structure
      */
     public function editLKH($lkhno)
     {
@@ -504,7 +514,10 @@ class RencanaKerjaHarianController extends Controller
                     ->with('error', 'LKH sudah disubmit dan tidak dapat diedit');
             }
 
-            $lkhDetails = $this->getLkhDetailsForEdit($lkhno);
+            // FIXED: Get details from new tables
+            $lkhPlotDetails = $this->getLkhPlotDetailsForEdit($companycode, $lkhno);
+            $lkhWorkerDetails = $this->getLkhWorkerDetailsForEdit($companycode, $lkhno);
+            $lkhMaterialDetails = $this->getLkhMaterialDetailsForEdit($companycode, $lkhno);
             $formData = $this->loadLkhEditFormData($companycode);
 
             return view('input.rencanakerjaharian.edit-lkh', array_merge([
@@ -512,7 +525,9 @@ class RencanaKerjaHarianController extends Controller
                 'navbar' => 'Input',
                 'nav' => 'Rencana Kerja Harian',
                 'lkhData' => $lkhData,
-                'lkhDetails' => $lkhDetails,
+                'lkhPlotDetails' => $lkhPlotDetails,
+                'lkhWorkerDetails' => $lkhWorkerDetails,
+                'lkhMaterialDetails' => $lkhMaterialDetails,
             ], $formData));
 
         } catch (\Exception $e) {
@@ -524,6 +539,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Update LKH record
+     * FIXED: Updated to use new table structure
      */
     public function updateLKH(Request $request, $lkhno)
     {
@@ -538,8 +554,8 @@ class RencanaKerjaHarianController extends Controller
             // Security checks
             $lkhData = $this->validateLkhForUpdate($companycode, $lkhno);
             
-            // Update LKH
-            $this->updateLkhRecord($request, $lkhno, $lkhData, $currentUser);
+            // Update LKH using new structure
+            $this->updateLkhRecordNew($request, $lkhno, $lkhData, $currentUser);
 
             DB::commit();
 
@@ -625,7 +641,7 @@ class RencanaKerjaHarianController extends Controller
             }
 
             $pendingLKH = $this->buildPendingLkhApprovalsQuery($companycode, $currentUser)->get();
-            $formattedData = $this->formatPendingLkhApprovalsData($pendingLKH);
+            $formattedData = $this->formatPendingLkhApprovalsData($pendingLKH, $companycode);
 
             return response()->json([
                 'success' => true,
@@ -717,6 +733,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Get LKH Rekap data
+     * FIXED: Updated to use new table structure
      */
     public function getLKHRekapData(Request $request)
     {
@@ -760,6 +777,888 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
+    // =====================================
+    // PRIVATE HELPER METHODS FOR LKH (SECTIONS 3-4)
+    // =====================================
+
+    /**
+     * Build LKH data query
+     * FIXED: Updated column references
+     */
+    private function buildLkhDataQuery($companycode, $rkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->where('h.companycode', $companycode)
+            ->where('h.rkhno', $rkhno)
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'a.activityname',
+                'h.jenistenagakerja',
+                'h.status',
+                'h.lkhdate',
+                'h.totalworkers',
+                'h.totalhasil',
+                'h.totalsisa',
+                'h.totalupahall',
+                'h.createdat',
+                'h.issubmit',
+                'h.submitby',
+                'h.submitat',
+                'h.jumlahapproval',
+                'h.approval1flag',
+                'h.approval2flag',
+                'h.approval3flag',
+                'app.jumlahapproval as required_approvals'
+            ])
+            ->orderBy('h.lkhno');
+    }
+
+    /**
+     * Format LKH data for response
+     */
+    private function formatLkhData($lkhList, $companycode)
+    {
+        return $lkhList->map(function($lkh) use ($companycode) {
+            $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
+            
+            // FIXED: Logic yang lebih sederhana dan benar
+            $canEdit = !$lkh->issubmit;  // Bisa edit kalau belum di-submit
+            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';  // Bisa submit kalau belum di-submit dan status DRAFT
+
+            // FIXED: Get plots for this LKH from lkhdetailplot table - HANYA PLOT
+            $plots = LkhDetailPlot::where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->select('blok', 'plot', 'luasrkh')
+                ->get()
+                ->map(function($item) {
+                    return $item->plot; // HANYA plot saja, format: B002
+                })
+                ->unique()
+                ->join(', ');
+
+            // FIXED: Get workers count from lkhdetailworker table
+            $workersAssigned = LkhDetailWorker::where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->count();
+
+            // FIXED: Get material count from lkhdetailmaterial table
+            $materialCount = LkhDetailMaterial::where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->count();
+
+            return [
+                'lkhno' => $lkh->lkhno,
+                'activitycode' => $lkh->activitycode,
+                'activityname' => $lkh->activityname ?? 'Unknown Activity',
+                'plots' => $plots ?: 'No plots assigned',
+                'jenistenagakerja' => $lkh->jenistenagakerja, // Add this for jenis detection
+                'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
+                'status' => $lkh->status ?? 'EMPTY',
+                'approval_status' => $approvalStatus,
+                'workers_assigned' => $workersAssigned,
+                'material_count' => $materialCount,
+                'totalhasil' => $lkh->totalhasil,
+                'totalsisa' => $lkh->totalsisa,
+                'totalupah' => $lkh->totalupahall ?? 0,
+                'issubmit' => (bool) $lkh->issubmit,
+                'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
+                'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
+                'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
+                'can_edit' => $canEdit,
+                'can_submit' => $canSubmit,  // FIXED: Logic yang benar
+                'view_url' => route('input.rencanakerjaharian.showLKH', $lkh->lkhno),
+                'edit_url' => route('input.rencanakerjaharian.editLKH', $lkh->lkhno)
+            ];
+        });
+    }
+
+    /**
+     * Get LKH generate info
+     */
+    private function getLkhGenerateInfo($companycode, $rkhno, $lkhList)
+    {
+        $canGenerateLkh = false;
+        $generateMessage = '';
+        
+        $rkhData = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
+            
+        if ($rkhData) {
+            if ($this->isRkhFullyApproved($rkhData)) {
+                if ($lkhList->isEmpty()) {
+                    $canGenerateLkh = true;
+                    $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
+                } else {
+                    $generateMessage = 'LKH sudah pernah di-generate';
+                }
+            } else {
+                $generateMessage = 'RKH belum fully approved';
+            }
+        }
+
+        return [
+            'can_generate' => $canGenerateLkh,
+            'message' => $generateMessage
+        ];
+    }
+
+    /**
+     * Calculate LKH approval status
+     * FIXED: Handle status SUBMITTED
+     */
+    private function calculateLKHApprovalStatus($lkh)
+    {
+        if (!$lkh->issubmit) {
+            return 'Not Yet Submitted';
+        }
+
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return 'No Approval Required';
+        }
+
+        if ($this->isLKHFullyApproved($lkh)) {
+            return 'Approved';
+        }
+
+        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
+            return 'Declined';
+        }
+
+        $completed = 0;
+        if ($lkh->approval1flag === '1') $completed++;
+        if ($lkh->approval2flag === '1') $completed++;
+        if ($lkh->approval3flag === '1') $completed++;
+
+        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
+    }
+
+    /**
+     * Check if LKH is fully approved
+     */
+    private function isLKHFullyApproved($lkh)
+    {
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return true;
+        }
+
+        switch ($lkh->jumlahapproval) {
+            case 1:
+                return $lkh->approval1flag === '1';
+            case 2:
+                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
+            case 3:
+                return $lkh->approval1flag === '1' && 
+                       $lkh->approval2flag === '1' && 
+                       $lkh->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Get LKH data for show
+     */
+    private function getLkhDataForShow($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                     ->where('app.companycode', '=', $companycode);
+            })
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3'
+            ])
+            ->first();
+    }
+
+    /**
+     * Get LKH plot details for show
+     * NEW METHOD: Use lkhdetailplot table
+     */
+    private function getLkhPlotDetailsForShow($companycode, $lkhno)
+    {
+        return LkhDetailPlot::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->orderBy('blok')
+            ->orderBy('plot')
+            ->get();
+    }
+
+    /**
+     * Get LKH worker details for show
+     * NEW METHOD: Use lkhdetailworker table
+     */
+    private function getLkhWorkerDetailsForShow($companycode, $lkhno)
+    {
+        return LkhDetailWorker::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->with('tenagakerja')
+            ->orderBy('tenagakerjaurutan')
+            ->get();
+    }
+
+    /**
+     * Get LKH material details for show
+     * NEW METHOD: Use lkhdetailmaterial table
+     */
+    private function getLkhMaterialDetailsForShow($companycode, $lkhno)
+    {
+        return LkhDetailMaterial::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->with('herbisida')
+            ->get();
+    }
+
+    /**
+     * Get LKH approvals data
+     */
+    private function getLkhApprovalsData($lkhData)
+    {
+        $approvals = new \stdClass();
+        if ($lkhData->jumlahapproval > 0) {
+            $jabatanData = DB::table('jabatan')
+                ->whereIn('idjabatan', array_filter([
+                    $lkhData->idjabatanapproval1,
+                    $lkhData->idjabatanapproval2,
+                    $lkhData->idjabatanapproval3
+                ]))
+                ->pluck('namajabatan', 'idjabatan');
+
+            $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
+            $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
+            $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
+            $approvals->jabatan4name = null;
+        }
+
+        return $approvals;
+    }
+
+    /**
+     * Get LKH data for edit
+     */
+    private function getLkhDataForEdit($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname'
+            ])
+            ->first();
+    }
+
+    /**
+     * Get LKH plot details for edit
+     * NEW METHOD: Use lkhdetailplot table
+     */
+    private function getLkhPlotDetailsForEdit($companycode, $lkhno)
+    {
+        return LkhDetailPlot::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->orderBy('blok')
+            ->orderBy('plot')
+            ->get();
+    }
+
+    /**
+     * Get LKH worker details for edit
+     * NEW METHOD: Use lkhdetailworker table
+     */
+    private function getLkhWorkerDetailsForEdit($companycode, $lkhno)
+    {
+        return LkhDetailWorker::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->with('tenagakerja')
+            ->orderBy('tenagakerjaurutan')
+            ->get();
+    }
+
+    /**
+     * Get LKH material details for edit
+     * NEW METHOD: Use lkhdetailmaterial table
+     */
+    private function getLkhMaterialDetailsForEdit($companycode, $lkhno)
+    {
+        return LkhDetailMaterial::where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->with('herbisida')
+            ->get();
+    }
+
+    /**
+     * Load LKH edit form data
+     */
+    private function loadLkhEditFormData($companycode)
+    {
+        return [
+            'tenagaKerja' => DB::table('tenagakerja')
+                ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->select(['tenagakerjaid', 'nama', 'nik', 'jenistenagakerja'])
+                ->orderBy('nama')
+                ->get(),
+            'bloks' => Blok::orderBy('blok')->get(),
+            'masterlist' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
+            'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
+            'bloksData' => Blok::orderBy('blok')->get(),
+            'masterlistData' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
+            'plotsData' => DB::table('plot')->where('companycode', $companycode)->get()
+        ];
+    }
+
+    /**
+     * Validate LKH update request
+     * FIXED: Updated for new structure
+     */
+    private function validateLkhUpdateRequest($request)
+    {
+        $request->validate([
+            'keterangan' => 'nullable|string|max:500',
+            'plots' => 'nullable|array',
+            'plots.*.blok' => 'required_with:plots|string',
+            'plots.*.plot' => 'required_with:plots|string',
+            'plots.*.luasrkh' => 'required_with:plots|numeric|min:0',
+            'plots.*.luashasil' => 'required_with:plots|numeric|min:0',
+            'plots.*.luassisa' => 'required_with:plots|numeric|min:0',
+            'workers' => 'nullable|array',
+            'workers.*.tenagakerjaid' => 'required_with:workers|string',
+            'workers.*.jammasuk' => 'nullable|date_format:H:i',
+            'workers.*.jamselesai' => 'nullable|date_format:H:i',
+            'workers.*.totaljamkerja' => 'nullable|numeric|min:0',
+            'workers.*.overtimehours' => 'nullable|numeric|min:0',
+            'workers.*.premi' => 'nullable|numeric|min:0',
+            'workers.*.upahharian' => 'nullable|numeric|min:0',
+            'workers.*.upahborongan' => 'nullable|numeric|min:0',
+            'workers.*.totalupah' => 'nullable|numeric|min:0',
+            'materials' => 'nullable|array',
+            'materials.*.itemcode' => 'required_with:materials|string',
+            'materials.*.qtyditerima' => 'required_with:materials|numeric|min:0',
+            'materials.*.qtysisa' => 'required_with:materials|numeric|min:0',
+        ]);
+    }
+
+    /**
+     * Validate LKH for update
+     */
+    private function validateLkhForUpdate($companycode, $lkhno)
+    {
+        $lkhData = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->first();
+
+        if (!$lkhData) {
+            throw new \Exception('LKH tidak ditemukan');
+        }
+
+        if ($lkhData->issubmit) {
+            throw new \Exception('LKH sudah disubmit dan tidak dapat diedit');
+        }
+
+        return $lkhData;
+    }
+
+    /**
+     * Update LKH record using new table structure
+     * NEW METHOD: Handle 3 separate detail tables
+     */
+    private function updateLkhRecordNew($request, $lkhno, $lkhData, $currentUser)
+    {
+        $companycode = Session::get('companycode');
+        
+        // Calculate totals from new data structure
+        $totalWorkers = count($request->workers ?? []);
+        $totalPlots = count($request->plots ?? []);
+        $totalMaterials = count($request->materials ?? []);
+        
+        // Calculate total hasil and sisa from plots
+        $totalHasil = collect($request->plots ?? [])->sum('luashasil');
+        $totalSisa = collect($request->plots ?? [])->sum('luassisa');
+        
+        // Calculate total upah from workers
+        $totalUpah = $this->calculateTotalUpahNew($request->workers ?? [], $lkhData);
+
+        // Update header
+        DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->update([
+                'totalworkers' => $totalWorkers,
+                'totalhasil' => $totalHasil,
+                'totalsisa' => $totalSisa,
+                'totalupahall' => $totalUpah,
+                'keterangan' => $request->keterangan,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ]);
+
+        // Update plot details
+        if (!empty($request->plots)) {
+            LkhDetailPlot::where('companycode', $companycode)->where('lkhno', $lkhno)->delete();
+            $plotDetails = $this->buildLkhPlotDetails($request->plots, $lkhno, $companycode);
+            foreach ($plotDetails as $plotDetail) {
+                LkhDetailPlot::create($plotDetail);
+            }
+        }
+
+        // Update worker details
+        if (!empty($request->workers)) {
+            LkhDetailWorker::where('companycode', $companycode)->where('lkhno', $lkhno)->delete();
+            $workerDetails = $this->buildLkhWorkerDetails($request->workers, $lkhno, $lkhData, $companycode);
+            foreach ($workerDetails as $workerDetail) {
+                LkhDetailWorker::create($workerDetail);
+            }
+        }
+
+        // Update material details
+        if (!empty($request->materials)) {
+            LkhDetailMaterial::where('companycode', $companycode)->where('lkhno', $lkhno)->delete();
+            $materialDetails = $this->buildLkhMaterialDetails($request->materials, $lkhno, $companycode, $currentUser->userid);
+            foreach ($materialDetails as $materialDetail) {
+                LkhDetailMaterial::create($materialDetail);
+            }
+        }
+    }
+
+    /**
+     * Calculate total upah for new structure
+     * NEW METHOD
+     */
+    private function calculateTotalUpahNew($workers, $lkhData)
+    {
+        $totalUpah = 0;
+
+        foreach ($workers as $worker) {
+            if ($lkhData->jenistenagakerja == 1) {
+                // Harian: upah harian + premi + overtime
+                $upahHarian = $worker['upahharian'] ?? 0;
+                $premi = $worker['premi'] ?? 0;
+                $upahlembur = $worker['upahlembur'] ?? 0;
+                $totalUpah += $upahHarian + $premi + $upahlembur;
+            } else {
+                // Borongan: upah borongan
+                $upahBorongan = $worker['upahborongan'] ?? 0;
+                $totalUpah += $upahBorongan;
+            }
+        }
+
+        return $totalUpah;
+    }
+
+    /**
+     * Build LKH plot detail records
+     * NEW METHOD
+     */
+    private function buildLkhPlotDetails($plots, $lkhno, $companycode)
+    {
+        $details = [];
+        foreach ($plots as $plot) {
+            $details[] = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'blok' => $plot['blok'],
+                'plot' => $plot['plot'],
+                'luasrkh' => $plot['luasrkh'] ?? 0,
+                'luashasil' => $plot['luashasil'] ?? 0,
+                'luassisa' => $plot['luassisa'] ?? 0,
+                'createdat' => now()
+            ];
+        }
+        return $details;
+    }
+
+    /**
+     * Build LKH worker detail records
+     * NEW METHOD
+     */
+    private function buildLkhWorkerDetails($workers, $lkhno, $lkhData, $companycode)
+    {
+        $details = [];
+        foreach ($workers as $index => $worker) {
+            $detail = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'tenagakerjaid' => $worker['tenagakerjaid'],
+                'tenagakerjaurutan' => $index + 1,
+                'jammasuk' => $worker['jammasuk'] ?? null,
+                'jamselesai' => $worker['jamselesai'] ?? null,
+                'totaljamkerja' => $worker['totaljamkerja'] ?? 0,
+                'overtimehours' => $worker['overtimehours'] ?? 0,
+                'premi' => $worker['premi'] ?? 0,
+                'upahharian' => $worker['upahharian'] ?? 0,
+                'upahperjam' => $worker['upahperjam'] ?? 0,
+                'upahlembur' => $worker['upahlembur'] ?? 0,
+                'upahborongan' => $worker['upahborongan'] ?? 0,
+                'totalupah' => $worker['totalupah'] ?? 0,
+                'keterangan' => $worker['keterangan'] ?? null,
+                'createdat' => now()
+            ];
+
+            $details[] = $detail;
+        }
+
+        return $details;
+    }
+
+    /**
+     * Build LKH material detail records
+     * NEW METHOD
+     */
+    private function buildLkhMaterialDetails($materials, $lkhno, $companycode, $inputby)
+    {
+        $details = [];
+        foreach ($materials as $material) {
+            $details[] = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'itemcode' => $material['itemcode'],
+                'qtyditerima' => $material['qtyditerima'] ?? 0,
+                'qtysisa' => $material['qtysisa'] ?? 0,
+                'qtydigunakan' => ($material['qtyditerima'] ?? 0) - ($material['qtysisa'] ?? 0),
+                'keterangan' => $material['keterangan'] ?? null,
+                'inputby' => $inputby,
+                'createdat' => now()
+            ];
+        }
+        return $details;
+    }
+
+    /**
+     * Execute LKH submission
+     * FIXED: Update status ke SUBMITTED setelah submit
+     */
+    private function executeLkhSubmission($request)
+    {
+        $companycode = Session::get('companycode');
+        $lkhno = $request->lkhno;
+        $currentUser = Auth::user();
+
+        DB::beginTransaction();
+
+        $lkh = DB::table('lkhhdr as h')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select(['h.*', 'a.activitygroup'])
+            ->first();
+
+        if (!$lkh) {
+            return ['success' => false, 'message' => 'LKH tidak ditemukan'];
+        }
+
+        if ($lkh->issubmit) {
+            return ['success' => false, 'message' => 'LKH sudah disubmit sebelumnya'];
+        }
+
+        // FIXED: Validasi status harus DRAFT
+        if ($lkh->status !== 'DRAFT') {
+            return ['success' => false, 'message' => 'LKH harus berstatus DRAFT untuk bisa disubmit'];
+        }
+
+        $approvalSetting = null;
+        if ($lkh->activitygroup) {
+            $approvalSetting = DB::table('approval')
+                ->where('companycode', $companycode)
+                ->where('activitygroup', $lkh->activitygroup)
+                ->first();
+        }
+
+        $updateData = [
+            'issubmit' => 1,
+            'submitby' => $currentUser->userid,
+            'submitat' => now(),
+            'status' => 'SUBMITTED',  // FIXED: Status jadi SUBMITTED setelah submit
+            'updateby' => $currentUser->userid,
+            'updatedat' => now()
+        ];
+
+        if ($approvalSetting) {
+            $updateData = array_merge($updateData, [
+                'jumlahapproval' => $approvalSetting->jumlahapproval,
+                'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
+                'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
+                'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
+            ]);
+        }
+
+        DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
+
+        DB::commit();
+
+        return [
+            'success' => true,
+            'message' => 'LKH berhasil disubmit dan masuk ke proses approval'
+        ];
+    }
+
+    /**
+     * Build pending LKH approvals query
+     */
+    private function buildPendingLkhApprovalsQuery($companycode, $currentUser)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->where('h.issubmit', 1)
+            ->where(function($query) use ($currentUser) {
+                $query->where(function($q) use ($currentUser) {
+                    $q->where('h.approval1idjabatan', $currentUser->idjabatan)->whereNull('h.approval1flag');
+                })->orWhere(function($q) use ($currentUser) {
+                    $q->where('h.approval2idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->whereNull('h.approval2flag');
+                })->orWhere(function($q) use ($currentUser) {
+                    $q->where('h.approval3idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->where('h.approval2flag', '1')->whereNull('h.approval3flag');
+                });
+            })
+            ->select([
+                'h.*',
+                'm.name as mandor_nama',
+                'a.activityname',
+                DB::raw('CASE 
+                    WHEN h.approval1idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag IS NULL THEN 1
+                    WHEN h.approval2idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag IS NULL THEN 2
+                    WHEN h.approval3idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag = "1" AND h.approval3flag IS NULL THEN 3
+                    ELSE 0
+                END as approval_level')
+            ])
+            ->orderBy('h.lkhdate', 'desc');
+    }
+
+    /**
+     * Format pending LKH approvals data
+     * FIXED: Updated to use new table structure
+     */
+    private function formatPendingLkhApprovalsData($pendingLKH, $companycode)
+    {
+        return $pendingLKH->map(function($lkh) use ($companycode) {
+            // Get plots for this LKH
+            $plots = LkhDetailPlot::where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->select('blok', 'plot')
+                ->get()
+                ->map(function($item) {
+                    return $item->blok . '-' . $item->plot;
+                })
+                ->join(', ');
+
+            return [
+                'lkhno' => $lkh->lkhno,
+                'rkhno' => $lkh->rkhno,
+                'lkhdate' => $lkh->lkhdate,
+                'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+                'mandor_nama' => $lkh->mandor_nama,
+                'activityname' => $lkh->activityname ?? 'Unknown Activity',
+                'approval_level' => $lkh->approval_level,
+                'status' => $lkh->status,
+                'total_workers' => $lkh->totalworkers,
+                'total_hasil' => $lkh->totalhasil,
+                'plots' => $plots ?: 'No plots'
+            ];
+        });
+    }
+
+    /**
+     * Get LKH approval detail data
+     */
+    private function getLkhApprovalDetailData($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                     ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('user as u1', 'h.approval1userid', '=', 'u1.userid')
+            ->leftJoin('user as u2', 'h.approval2userid', '=', 'u2.userid')
+            ->leftJoin('user as u3', 'h.approval3userid', '=', 'u3.userid')
+            ->leftJoin('jabatan as j1', 'h.approval1idjabatan', '=', 'j1.idjabatan')
+            ->leftJoin('jabatan as j2', 'h.approval2idjabatan', '=', 'j2.idjabatan')
+            ->leftJoin('jabatan as j3', 'h.approval3idjabatan', '=', 'j3.idjabatan')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandor_nama',
+                'a.activityname',
+                'h.jumlahapproval',
+                'h.approval1idjabatan',
+                'h.approval2idjabatan', 
+                'h.approval3idjabatan',
+                'u1.name as approval1_user_name',
+                'u2.name as approval2_user_name',
+                'u3.name as approval3_user_name',
+                'j1.namajabatan as jabatan1_name',
+                'j2.namajabatan as jabatan2_name',
+                'j3.namajabatan as jabatan3_name'
+            ])
+            ->first();
+    }
+
+    /**
+     * Format LKH approval detail data
+     */
+    private function formatLkhApprovalDetailData($lkh)
+    {
+        $levels = [];
+        
+        for ($i = 1; $i <= 3; $i++) {
+            $jabatanId = $lkh->{"approval{$i}idjabatan"};
+            if (!$jabatanId) continue;
+
+            $flagField = "approval{$i}flag";
+            $dateField = "approval{$i}date";
+            $userField = "approval{$i}_user_name";
+            $jabatanField = "jabatan{$i}_name";
+
+            $flag = $lkh->$flagField;
+            $status = 'waiting';
+            $statusText = 'Waiting';
+
+            if ($flag === '1') {
+                $status = 'approved';
+                $statusText = 'Approved';
+            } elseif ($flag === '0') {
+                $status = 'declined';
+                $statusText = 'Declined';
+            }
+
+            $levels[] = [
+                'level' => $i,
+                'jabatan_name' => $lkh->$jabatanField ?? 'Unknown',
+                'status' => $status,
+                'status_text' => $statusText,
+                'user_name' => $lkh->$userField ?? null,
+                'date_formatted' => $lkh->$dateField ? Carbon::parse($lkh->$dateField)->format('d/m/Y H:i') : null
+            ];
+        }
+
+        return [
+            'lkhno' => $lkh->lkhno,
+            'rkhno' => $lkh->rkhno,
+            'lkhdate' => $lkh->lkhdate,
+            'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+            'mandor_nama' => $lkh->mandor_nama,
+            'activityname' => $lkh->activityname ?? 'Unknown Activity',
+            'jumlah_approval' => $lkh->jumlahapproval ?? 0,
+            'levels' => $levels
+        ];
+    }
+
+    /**
+     * Execute LKH approval process
+     */
+    private function executeLkhApprovalProcess($request)
+    {
+        $companycode = Session::get('companycode');
+        $currentUser = Auth::user();
+        $lkhno = $request->lkhno;
+        $action = $request->action;
+        $level = $request->level;
+
+        if (!$this->validateUserForApproval($currentUser)) {
+            return [
+                'success' => false,
+                'message' => 'User tidak memiliki jabatan yang valid'
+            ];
+        }
+
+        $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
+
+        if (!$lkh) {
+            return ['success' => false, 'message' => 'LKH tidak ditemukan'];
+        }
+
+        $canApprove = $this->validateLkhApprovalAuthority($lkh, $currentUser, $level);
+        if (!$canApprove['success']) {
+            return $canApprove;
+        }
+
+        $approvalValue = $action === 'approve' ? '1' : '0';
+        $approvalField = "approval{$level}flag";
+        $approvalDateField = "approval{$level}date";
+        $approvalUserField = "approval{$level}userid";
+        
+        $updateData = [
+            $approvalField => $approvalValue,
+            $approvalDateField => now(),
+            $approvalUserField => $currentUser->userid,
+            'updateby' => $currentUser->userid,
+            'updatedat' => now()
+        ];
+
+        if ($action === 'approve') {
+            $tempLkh = clone $lkh;
+            $tempLkh->$approvalField = '1';
+            
+            if ($this->isLKHFullyApproved($tempLkh)) {
+                $updateData['status'] = 'APPROVED';
+            }
+        }
+
+        DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
+
+        $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+        return ['success' => true, 'message' => $responseMessage];
+    }
+
+    /**
+     * Validate LKH approval authority
+     */
+    private function validateLkhApprovalAuthority($lkh, $currentUser, $level)
+    {
+        $canApprove = false;
+
+        switch ($level) {
+            case 1:
+                if ($lkh->approval1idjabatan == $currentUser->idjabatan && is_null($lkh->approval1flag)) {
+                    $canApprove = true;
+                }
+                break;
+            case 2:
+                if ($lkh->approval2idjabatan == $currentUser->idjabatan && 
+                    $lkh->approval1flag == '1' && is_null($lkh->approval2flag)) {
+                    $canApprove = true;
+                }
+                break;
+            case 3:
+                if ($lkh->approval3idjabatan == $currentUser->idjabatan && 
+                    $lkh->approval1flag == '1' && $lkh->approval2flag == '1' && is_null($lkh->approval3flag)) {
+                    $canApprove = true;
+                }
+                break;
+        }
+
+        if (!$canApprove) {
+            return [
+                'success' => false,
+                'message' => 'Anda tidak memiliki hak untuk melakukan approval pada level ini'
+            ];
+        }
+
+        return ['success' => true];
+    }
+
     /**
      * Get LKH numbers for specific date
      */
@@ -775,15 +1674,23 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Pengolahan data (Activity II, III, IV) - UPDATED: no blok in header
+     * Get Pengolahan data (Activity II, III, IV) - UPDATED: using lkhdetailplot
      */
     private function getPengolahanData($companycode, $date)
     {
         $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldp.lkhno')
+                     ->where('ldp.companycode', '=', $companycode);
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldw.lkhno')
+                     ->where('ldw.companycode', '=', $companycode)
+                     ->where('ldw.tenagakerjaurutan', '=', 1); // Get first worker as representative
+            })
+            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
             ->where(function($query) {
@@ -794,15 +1701,14 @@ class RencanaKerjaHarianController extends Controller
             ->select([
                 'h.lkhno',
                 'h.activitycode',
-                // REMOVED: 'h.blok',
                 'h.totalworkers',
                 'h.totalluasactual',
                 'h.totalhasil',
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
-                'l.blok', // NOW from lkhlst
-                'l.plot'
+                'ldp.blok', // NOW from lkhdetailplot
+                'ldp.plot'  // NOW from lkhdetailplot
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
@@ -813,19 +1719,27 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Perawatan Manual PC data - UPDATED: blok from lkhlst
+     * Get Perawatan Manual PC data - UPDATED: using lkhdetailplot
      */
     private function getPerawatanManualPCData($companycode, $date)
     {
         $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldp.lkhno')
+                     ->where('ldp.companycode', '=', $companycode);
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldw.lkhno')
+                     ->where('ldw.companycode', '=', $companycode)
+                     ->where('ldw.tenagakerjaurutan', '=', 1);
+            })
+            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
             ->where('h.activitycode', 'like', 'V.%')
-            ->where('l.blok', 'like', '%PC%') // NOW from lkhlst
+            ->where('ldp.blok', 'like', '%PC%') // NOW from lkhdetailplot
             ->select([
                 'h.lkhno',
                 'h.activitycode',
@@ -835,8 +1749,8 @@ class RencanaKerjaHarianController extends Controller
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
-                'l.blok', // NOW from lkhlst
-                'l.plot'
+                'ldp.blok', // NOW from lkhdetailplot
+                'ldp.plot'  // NOW from lkhdetailplot
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
@@ -846,19 +1760,27 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Perawatan Manual RC data - UPDATED: blok from lkhlst
+     * Get Perawatan Manual RC data - UPDATED: using lkhdetailplot
      */
     private function getPerawatanManualRCData($companycode, $date)
     {
         $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhlst as l', 'h.lkhno', '=', 'l.lkhno')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldp.lkhno')
+                     ->where('ldp.companycode', '=', $companycode);
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('tenagakerja as tk', 'l.idtenagakerja', '=', 'tk.tenagakerjaid')
+            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldw.lkhno')
+                     ->where('ldw.companycode', '=', $companycode)
+                     ->where('ldw.tenagakerjaurutan', '=', 1);
+            })
+            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
             ->where('h.activitycode', 'like', 'V.%')
-            ->where('l.blok', 'like', '%RC%') // NOW from lkhlst
+            ->where('ldp.blok', 'like', '%RC%') // NOW from lkhdetailplot
             ->select([
                 'h.lkhno',
                 'h.activitycode',
@@ -868,8 +1790,8 @@ class RencanaKerjaHarianController extends Controller
                 'u.name as mandor_nama',
                 'a.activityname',
                 'tk.nama as operator',
-                'l.blok', // NOW from lkhlst
-                'l.plot'
+                'ldp.blok', // NOW from lkhdetailplot
+                'ldp.plot'  // NOW from lkhdetailplot
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
@@ -2025,190 +2947,15 @@ class RencanaKerjaHarianController extends Controller
         ];
     }
 
-    /**
-     * Build LKH data query - UPDATED: no blok in header
-     */
-    private function buildLkhDataQuery($companycode, $rkhno)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                    ->where('app.companycode', '=', $companycode);
-            })
-            ->where('h.companycode', $companycode)
-            ->where('h.rkhno', $rkhno)
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'a.activityname',
-                // REMOVED: 'h.blok',
-                'h.jenistenagakerja',
-                'h.status',
-                'h.lkhdate',
-                'h.totalworkers',
-                'h.totalhasil',
-                'h.totalsisa',
-                'h.createdat',
-                'h.issubmit',
-                'h.submitby',
-                'h.submitat',
-                'h.jumlahapproval',
-                'h.approval1flag',
-                'h.approval2flag',
-                'h.approval3flag',
-                'app.jumlahapproval as required_approvals'
-            ])
-            ->orderBy('h.lkhno');
-    }
 
-    /**
-     * Format LKH data for response - UPDATED: show plots from lkhlst
-     */
-    private function formatLkhData($lkhList)
-    {
-        return $lkhList->map(function($lkh) {
-            $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
-            $canEdit = !$lkh->issubmit && !$this->isLKHFullyApproved($lkh);
-            $canSubmit = !$lkh->issubmit && in_array($lkh->status, ['COMPLETED', 'DRAFT']) && !$this->isLKHFullyApproved($lkh);
+    
 
-            // Get plots for this LKH from lkhlst
-            $plots = DB::table('lkhlst')
-                ->where('lkhno', $lkh->lkhno)
-                ->select('blok', 'plot')
-                ->get()
-                ->map(function($item) {
-                    return $item->blok . '-' . $item->plot;
-                })
-                ->unique()
-                ->join(', ');
+   
 
-            return [
-                'lkhno' => $lkh->lkhno,
-                'activity' => $lkh->activitycode . ' - ' . ($lkh->activityname ?? 'Unknown Activity'),
-                'plots' => $plots ?: 'No plots assigned', // CHANGED: from single blok to multiple plots
-                'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
-                'status' => $lkh->status ?? 'EMPTY',
-                'approval_status' => $approvalStatus,
-                'issubmit' => (bool) $lkh->issubmit,
-                'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
-                'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
-                'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
-                'can_edit' => $canEdit,
-                'can_submit' => $canSubmit,
-                'view_url' => route('input.rencanakerjaharian.showLKH', $lkh->lkhno),
-                'edit_url' => route('input.rencanakerjaharian.editLKH', $lkh->lkhno)
-            ];
-        });
-    }
+    
+    
 
-    /**
-     * Get LKH generate info
-     */
-    private function getLkhGenerateInfo($companycode, $rkhno, $lkhList)
-    {
-        $canGenerateLkh = false;
-        $generateMessage = '';
-        
-        $rkhData = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
-            
-        if ($rkhData) {
-            if ($this->isRkhFullyApproved($rkhData)) {
-                if ($lkhList->isEmpty()) {
-                    $canGenerateLkh = true;
-                    $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
-                } else {
-                    $generateMessage = 'LKH sudah pernah di-generate';
-                }
-            } else {
-                $generateMessage = 'RKH belum fully approved';
-            }
-        }
-
-        return [
-            'can_generate' => $canGenerateLkh,
-            'message' => $generateMessage
-        ];
-    }
-
-    /**
-     * Calculate LKH approval status
-     */
-    private function calculateLKHApprovalStatus($lkh)
-    {
-        if (!$lkh->issubmit) {
-            return 'Not Yet Submitted';
-        }
-
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return 'No Approval Required';
-        }
-
-        if ($this->isLKHFullyApproved($lkh)) {
-            return 'Approved';
-        }
-
-        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
-            return 'Declined';
-        }
-
-        $completed = 0;
-        if ($lkh->approval1flag === '1') $completed++;
-        if ($lkh->approval2flag === '1') $completed++;
-        if ($lkh->approval3flag === '1') $completed++;
-
-        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
-    }
-
-    /**
-     * Check if LKH is fully approved
-     */
-    private function isLKHFullyApproved($lkh)
-    {
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return true;
-        }
-
-        switch ($lkh->jumlahapproval) {
-            case 1:
-                return $lkh->approval1flag === '1';
-            case 2:
-                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
-            case 3:
-                return $lkh->approval1flag === '1' && 
-                       $lkh->approval2flag === '1' && 
-                       $lkh->approval3flag === '1';
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * Get LKH data for show
-     */
-    private function getLkhDataForShow($companycode, $lkhno)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select([
-                'h.*',
-                'm.name as mandornama',
-                'a.activityname',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3'
-            ])
-            ->first();
-    }
-
+   
     /**
      * Get LKH details for show
      */
@@ -2226,47 +2973,8 @@ class RencanaKerjaHarianController extends Controller
             ->get();
     }
 
-    /**
-     * Get LKH approvals data
-     */
-    private function getLkhApprovalsData($lkhData)
-    {
-        $approvals = new \stdClass();
-        if ($lkhData->jumlahapproval > 0) {
-            $jabatanData = DB::table('jabatan')
-                ->whereIn('idjabatan', array_filter([
-                    $lkhData->idjabatanapproval1,
-                    $lkhData->idjabatanapproval2,
-                    $lkhData->idjabatanapproval3
-                ]))
-                ->pluck('namajabatan', 'idjabatan');
+   
 
-            $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
-            $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
-            $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
-            $approvals->jabatan4name = null;
-        }
-
-        return $approvals;
-    }
-
-    /**
-     * Get LKH data for edit
-     */
-    private function getLkhDataForEdit($companycode, $lkhno)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select([
-                'h.*',
-                'm.name as mandornama',
-                'a.activityname'
-            ])
-            ->first();
-    }
 
     /**
      * Get LKH details for edit
@@ -2285,65 +2993,11 @@ class RencanaKerjaHarianController extends Controller
             ->get();
     }
 
-    /**
-     * Load LKH edit form data
-     */
-    private function loadLkhEditFormData($companycode)
-    {
-        return [
-            'tenagaKerja' => DB::table('tenagakerja')
-                ->where('companycode', $companycode)
-                ->where('isactive', 1)
-                ->select(['tenagakerjaid', 'nama', 'nik', 'jenistenagakerja'])
-                ->orderBy('nama')
-                ->get(),
-            'bloks' => Blok::orderBy('blok')->get(),
-            'masterlist' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
-            'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
-            'bloksData' => Blok::orderBy('blok')->get(),
-            'masterlistData' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
-            'plotsData' => DB::table('plot')->where('companycode', $companycode)->get()
-        ];
-    }
+   
 
-    /**
-     * Validate LKH update request
-     */
-    private function validateLkhUpdateRequest($request)
-    {
-        $request->validate([
-            'keterangan' => 'nullable|string|max:500',
-            'workers' => 'required|array|min:1',
-            'workers.*.tenagakerjaid' => 'required|string',
-            'workers.*.blok' => 'required|string',
-            'workers.*.plot' => 'required|string',
-            'workers.*.luasplot' => 'required|numeric|min:0',
-            'workers.*.hasil' => 'required|numeric|min:0',
-            'workers.*.sisa' => 'required|numeric|min:0',
-        ]);
-    }
+  
 
-    /**
-     * Validate LKH for update
-     */
-    private function validateLkhForUpdate($companycode, $lkhno)
-    {
-        $lkhData = DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->first();
-
-        if (!$lkhData) {
-            throw new \Exception('LKH tidak ditemukan');
-        }
-
-        if ($lkhData->issubmit) {
-            throw new \Exception('LKH sudah disubmit dan tidak dapat diedit');
-        }
-
-        return $lkhData;
-    }
-
+    
     /**
      * Update LKH record
      */
@@ -2449,307 +3103,11 @@ class RencanaKerjaHarianController extends Controller
         return $details;
     }
 
-    /**
-     * Execute LKH submission
-     */
-    private function executeLkhSubmission($request)
-    {
-        $companycode = Session::get('companycode');
-        $lkhno = $request->lkhno;
-        $currentUser = Auth::user();
+   
 
-        DB::beginTransaction();
 
-        $lkh = DB::table('lkhhdr as h')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select(['h.*', 'a.activitygroup'])
-            ->first();
 
-        if (!$lkh) {
-            return ['success' => false, 'message' => 'LKH tidak ditemukan'];
-        }
 
-        if ($lkh->issubmit) {
-            return ['success' => false, 'message' => 'LKH sudah disubmit sebelumnya'];
-        }
-
-        $approvalSetting = null;
-        if ($lkh->activitygroup) {
-            $approvalSetting = DB::table('approval')
-                ->where('companycode', $companycode)
-                ->where('activitygroup', $lkh->activitygroup)
-                ->first();
-        }
-
-        $updateData = [
-            'issubmit' => 1,
-            'submitby' => $currentUser->userid,
-            'submitat' => now(),
-            'status' => 'SUBMITTED',
-            'updateby' => $currentUser->userid,
-            'updatedat' => now()
-        ];
-
-        if ($approvalSetting) {
-            $updateData = array_merge($updateData, [
-                'jumlahapproval' => $approvalSetting->jumlahapproval,
-                'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
-                'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
-                'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
-            ]);
-        }
-
-        DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
-
-        DB::commit();
-
-        return [
-            'success' => true,
-            'message' => 'LKH berhasil disubmit dan masuk ke proses approval'
-        ];
-    }
-
-    /**
-     * Build pending LKH approvals query
-     */
-    private function buildPendingLkhApprovalsQuery($companycode, $currentUser)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->where('h.companycode', $companycode)
-            ->where('h.issubmit', 1)
-            ->where(function($query) use ($currentUser) {
-                $query->where(function($q) use ($currentUser) {
-                    $q->where('h.approval1idjabatan', $currentUser->idjabatan)->whereNull('h.approval1flag');
-                })->orWhere(function($q) use ($currentUser) {
-                    $q->where('h.approval2idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->whereNull('h.approval2flag');
-                })->orWhere(function($q) use ($currentUser) {
-                    $q->where('h.approval3idjabatan', $currentUser->idjabatan)->where('h.approval1flag', '1')->where('h.approval2flag', '1')->whereNull('h.approval3flag');
-                });
-            })
-            ->select([
-                'h.*',
-                'm.name as mandor_nama',
-                'a.activityname',
-                DB::raw('CASE 
-                    WHEN h.approval1idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag IS NULL THEN 1
-                    WHEN h.approval2idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag IS NULL THEN 2
-                    WHEN h.approval3idjabatan = '.$currentUser->idjabatan.' AND h.approval1flag = "1" AND h.approval2flag = "1" AND h.approval3flag IS NULL THEN 3
-                    ELSE 0
-                END as approval_level')
-            ])
-            ->orderBy('h.lkhdate', 'desc');
-    }
-
-    /**
-     * Format pending LKH approvals data
-     */
-    private function formatPendingLkhApprovalsData($pendingLKH)
-    {
-        return $pendingLKH->map(function($lkh) {
-            return [
-                'lkhno' => $lkh->lkhno,
-                'rkhno' => $lkh->rkhno,
-                'lkhdate' => $lkh->lkhdate,
-                'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
-                'mandor_nama' => $lkh->mandor_nama,
-                'activityname' => $lkh->activityname ?? 'Unknown Activity',
-                'approval_level' => $lkh->approval_level,
-                'status' => $lkh->status,
-                'total_workers' => $lkh->totalworkers,
-                'total_hasil' => $lkh->totalhasil,
-                'blok' => $lkh->blok,
-                'plot' => $lkh->plot
-            ];
-        });
-    }
-
-    /**
-     * Get LKH approval detail data
-     */
-    private function getLkhApprovalDetailData($companycode, $lkhno)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u1', 'h.approval1userid', '=', 'u1.userid')
-            ->leftJoin('user as u2', 'h.approval2userid', '=', 'u2.userid')
-            ->leftJoin('user as u3', 'h.approval3userid', '=', 'u3.userid')
-            ->leftJoin('jabatan as j1', 'h.approval1idjabatan', '=', 'j1.idjabatan')
-            ->leftJoin('jabatan as j2', 'h.approval2idjabatan', '=', 'j2.idjabatan')
-            ->leftJoin('jabatan as j3', 'h.approval3idjabatan', '=', 'j3.idjabatan')
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select([
-                'h.*',
-                'm.name as mandor_nama',
-                'a.activityname',
-                'h.jumlahapproval',
-                'h.approval1idjabatan',
-                'h.approval2idjabatan', 
-                'h.approval3idjabatan',
-                'u1.name as approval1_user_name',
-                'u2.name as approval2_user_name',
-                'u3.name as approval3_user_name',
-                'j1.namajabatan as jabatan1_name',
-                'j2.namajabatan as jabatan2_name',
-                'j3.namajabatan as jabatan3_name'
-            ])
-            ->first();
-    }
-
-    /**
-     * Format LKH approval detail data
-     */
-    private function formatLkhApprovalDetailData($lkh)
-    {
-        $levels = [];
-        
-        for ($i = 1; $i <= 3; $i++) {
-            $jabatanId = $lkh->{"approval{$i}idjabatan"};
-            if (!$jabatanId) continue;
-
-            $flagField = "approval{$i}flag";
-            $dateField = "approval{$i}date";
-            $userField = "approval{$i}_user_name";
-            $jabatanField = "jabatan{$i}_name";
-
-            $flag = $lkh->$flagField;
-            $status = 'waiting';
-            $statusText = 'Waiting';
-
-            if ($flag === '1') {
-                $status = 'approved';
-                $statusText = 'Approved';
-            } elseif ($flag === '0') {
-                $status = 'declined';
-                $statusText = 'Declined';
-            }
-
-            $levels[] = [
-                'level' => $i,
-                'jabatan_name' => $lkh->$jabatanField ?? 'Unknown',
-                'status' => $status,
-                'status_text' => $statusText,
-                'user_name' => $lkh->$userField ?? null,
-                'date_formatted' => $lkh->$dateField ? Carbon::parse($lkh->$dateField)->format('d/m/Y H:i') : null
-            ];
-        }
-
-        return [
-            'lkhno' => $lkh->lkhno,
-            'rkhno' => $lkh->rkhno,
-            'lkhdate' => $lkh->lkhdate,
-            'lkhdate_formatted' => Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
-            'mandor_nama' => $lkh->mandor_nama,
-            'activityname' => $lkh->activityname ?? 'Unknown Activity',
-            'blok' => $lkh->blok,
-            'jumlah_approval' => $lkh->jumlahapproval ?? 0,
-            'levels' => $levels
-        ];
-    }
-
-    /**
-     * Execute LKH approval process
-     */
-    private function executeLkhApprovalProcess($request)
-    {
-        $companycode = Session::get('companycode');
-        $currentUser = Auth::user();
-        $lkhno = $request->lkhno;
-        $action = $request->action;
-        $level = $request->level;
-
-        if (!$this->validateUserForApproval($currentUser)) {
-            return [
-                'success' => false,
-                'message' => 'User tidak memiliki jabatan yang valid'
-            ];
-        }
-
-        $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
-
-        if (!$lkh) {
-            return ['success' => false, 'message' => 'LKH tidak ditemukan'];
-        }
-
-        $canApprove = $this->validateLkhApprovalAuthority($lkh, $currentUser, $level);
-        if (!$canApprove['success']) {
-            return $canApprove;
-        }
-
-        $approvalValue = $action === 'approve' ? '1' : '0';
-        $approvalField = "approval{$level}flag";
-        $approvalDateField = "approval{$level}date";
-        $approvalUserField = "approval{$level}userid";
-        
-        $updateData = [
-            $approvalField => $approvalValue,
-            $approvalDateField => now(),
-            $approvalUserField => $currentUser->userid,
-            'updateby' => $currentUser->userid,
-            'updatedat' => now()
-        ];
-
-        if ($action === 'approve') {
-            $tempLkh = clone $lkh;
-            $tempLkh->$approvalField = '1';
-            
-            if ($this->isLKHFullyApproved($tempLkh)) {
-                $updateData['status'] = 'APPROVED';
-            }
-        }
-
-        DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
-
-        $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
-
-        return ['success' => true, 'message' => $responseMessage];
-    }
-
-    /**
-     * Validate LKH approval authority
-     */
-    private function validateLkhApprovalAuthority($lkh, $currentUser, $level)
-    {
-        $canApprove = false;
-
-        switch ($level) {
-            case 1:
-                if ($lkh->approval1idjabatan == $currentUser->idjabatan && is_null($lkh->approval1flag)) {
-                    $canApprove = true;
-                }
-                break;
-            case 2:
-                if ($lkh->approval2idjabatan == $currentUser->idjabatan && 
-                    $lkh->approval1flag == '1' && is_null($lkh->approval2flag)) {
-                    $canApprove = true;
-                }
-                break;
-            case 3:
-                if ($lkh->approval3idjabatan == $currentUser->idjabatan && 
-                    $lkh->approval1flag == '1' && $lkh->approval2flag == '1' && is_null($lkh->approval3flag)) {
-                    $canApprove = true;
-                }
-                break;
-        }
-
-        if (!$canApprove) {
-            return [
-                'success' => false,
-                'message' => 'Anda tidak memiliki hak untuk melakukan approval pada level ini'
-            ];
-        }
-
-        return ['success' => true];
-    }
 
     /**
      * Get company info for DTH
