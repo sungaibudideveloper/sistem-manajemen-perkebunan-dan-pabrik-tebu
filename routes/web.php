@@ -117,9 +117,16 @@ Route::group(['middleware' => 'auth'], function () {
     // LKH Input Results Page  
     Route::get('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'showLKHInput'])
         ->name('mandor.lkh.input');
-    
+    Route::get('/mandor/lkh/{lkhno}/view', [MandorPageController::class, 'showLKHView'])
+        ->name('mandor.lkh.view');
+    Route::get('/mandor/lkh/{lkhno}/edit', [MandorPageController::class, 'showLKHEdit'])
+        ->name('mandor.lkh.edit');
+
     Route::post('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'saveLKHResults'])
         ->name('mandor.lkh.save-results');
+    Route::post('/mandor/lkh/complete-all', [MandorPageController::class, 'completeAllLKH'])
+        ->name('mandor.lkh.complete-all');
+        
     
     /*
     |--------------------------------------------------------------------------
@@ -156,6 +163,8 @@ Route::group(['middleware' => 'auth'], function () {
         // Material Management
         Route::get('/materials/available', [MandorPageController::class, 'getAvailableMaterials'])->name('mandor.materials.available');
         Route::post('/materials/save-returns', [MandorPageController::class, 'saveMaterialReturns'])->name('mandor.materials.save-returns');
+        Route::post('/materials/confirm-pickup', [MandorPageController::class, 'confirmMaterialPickup'])
+        ->name('mandor.materials.confirm-pickup');
         
         // Semi-Offline Data Sync
         Route::post('/sync-offline-data', [MandorPageController::class, 'syncOfflineData'])->name('mandor.sync-offline-data');

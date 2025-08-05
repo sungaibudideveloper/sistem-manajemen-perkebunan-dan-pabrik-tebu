@@ -1,4 +1,4 @@
-// resources/js/pages/lkh-input.tsx (FIXED VERSION)
+// resources/js/pages/lkh-edit.tsx - EDIT MODE FOR DRAFT LKH
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
@@ -18,6 +18,7 @@ interface LKHData {
   rkhno: string;
   lkhdate: string;
   mandor_nama: string;
+  mobile_status: string;
   needs_material?: boolean;
 }
 
@@ -75,8 +76,9 @@ interface SharedProps {
   [key: string]: any;
 }
 
-interface LKHInputProps extends SharedProps {
+interface LKHEditProps extends SharedProps {
   title: string;
+  mode: 'edit';
   lkhData: LKHData;
   assignedWorkers: AssignedWorker[];
   plotData: Array<{blok: string, plot: string, luasarea: number, luashasil: number, luassisa: number}>;
@@ -84,6 +86,8 @@ interface LKHInputProps extends SharedProps {
   routes: {
     lkh_save_results: string;
     lkh_assign: string;
+    lkh_view: string;
+    lkh_edit: string;
     mandor_index: string;
     [key: string]: string;
   };
@@ -94,7 +98,7 @@ interface LKHInputProps extends SharedProps {
   };
 }
 
-const LKHInputPage: React.FC<LKHInputProps> = ({
+const LKHEditPage: React.FC<LKHEditProps> = ({
   app,
   lkhData,
   assignedWorkers,
@@ -121,40 +125,45 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     }
   }, [flash]);
 
-  // Initialize plot inputs from database
+  // Initialize plot inputs from database (pre-populate with existing data)
   useEffect(() => {
     const initialPlots: PlotInput[] = plotData.map(plot => ({
       blok: plot.blok,
       plot: plot.plot,
       luasarea: plot.luasarea,
-      luashasil: plot.luashasil || 0,
-      luassisa: plot.luassisa || plot.luasarea
+      luashasil: plot.luashasil || 0, // Pre-populated from existing data
+      luassisa: plot.luassisa || (plot.luasarea - (plot.luashasil || 0))
     }));
     setPlotInputs(initialPlots);
   }, [plotData]);
 
-  // Initialize worker inputs
+  // Initialize worker inputs (pre-populate with existing data)
   useEffect(() => {
-    const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => ({
-      tenagakerjaid: worker.tenagakerjaid,
-      nama: worker.nama,
-      nik: worker.nik,
-      jammasuk: worker.jammasuk || '07:00',
-      jamselesai: worker.jamselesai || '15:00',
-      totaljamkerja: worker.totaljamkerja || 8,
-      overtimehours: worker.overtimehours || 0,
-      isFullTime: true
-    }));
+    const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => {
+      // Determine if it's full time based on existing data
+      const isFullTime = worker.jammasuk === '07:00' && worker.jamselesai === '15:00';
+      
+      return {
+        tenagakerjaid: worker.tenagakerjaid,
+        nama: worker.nama,
+        nik: worker.nik,
+        jammasuk: worker.jammasuk || '07:00',
+        jamselesai: worker.jamselesai || '15:00',
+        totaljamkerja: worker.totaljamkerja || 8,
+        overtimehours: worker.overtimehours || 0,
+        isFullTime: isFullTime
+      };
+    });
     setWorkerInputs(initialWorkers);
   }, [assignedWorkers]);
 
-  // Initialize material inputs
+  // Initialize material inputs (pre-populate if available)
   useEffect(() => {
     const initialMaterials: MaterialInput[] = materials.map(material => ({
       itemcode: material.itemcode,
       itemname: material.itemname,
       qtyditerima: material.qty,
-      qtysisa: 0,
+      qtysisa: 0, // This would need to be fetched from lkhdetailmaterial if exists
       qtydigunakan: material.qty,
       unit: material.unit
     }));
@@ -303,7 +312,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     
     try {
       router.post(routes.lkh_save_results, {
-        // NEW STRUCTURE: Separate inputs for each table
         worker_inputs: workerInputs.map(worker => ({
           tenagakerjaid: worker.tenagakerjaid,
           jammasuk: worker.jammasuk,
@@ -326,10 +334,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         preserveState: false,
         preserveScroll: false,
         onSuccess: (page: any) => {
-          if (page.props?.flash?.success) {
-            // Navigate back to mandor index
-            router.get(routes.mandor_index);
-          }
+          // Will redirect to view mode via controller
         },
         onError: (errors) => {
           console.error('Save results errors:', errors);
@@ -351,7 +356,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   };
 
   const goBack = () => {
-    router.get(routes.lkh_assign);
+    router.get(routes.lkh_view);
   };
 
   const totals = calculateTotals();
@@ -366,16 +371,17 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
             className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Kembali</span>
+            <span>Kembali ke View</span>
           </button>
           
           <div className="flex items-center gap-4">
             <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
-                Input Hasil Pekerjaan
+                Edit Hasil Pekerjaan
               </h2>
               <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activitycode} - {lkhData.activityname}</p>
+              <p className="text-sm text-orange-600 font-medium">Status: Draft - Dapat diedit</p>
             </div>
           </div>
         </div>
@@ -402,7 +408,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Worker Time Input - Dropdown Style */}
+        {/* Worker Time Input - Same as input page but pre-populated */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -410,7 +416,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
               Waktu Kerja Pekerja ({workerInputs.length} orang)
             </h3>
             <p className="text-sm text-neutral-600 mt-1">
-              Default: Full Time (07:00-15:00). Klik pekerja untuk mengatur waktu custom.
+              Edit waktu kerja untuk setiap pekerja. Klik pekerja untuk mengatur waktu.
             </p>
           </div>
           
@@ -475,7 +481,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                         </label>
                       </div>
                       
-                      {/* Time Inputs - Responsive Grid */}
+                      {/* Time Inputs - Same as input page */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
@@ -627,15 +633,15 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Plot Input Form */}
+        {/* Plot Input Form - Same as input page but pre-populated */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Edit3 className="w-5 h-5 text-blue-600" />
-              Input Hasil per Plot
+              Edit Hasil per Plot
             </h3>
             <p className="text-sm text-neutral-600 mt-1">
-              Input hasil tim untuk setiap plot. Sisa akan otomatis terhitung.
+              Edit hasil tim untuk setiap plot. Sisa akan otomatis terhitung.
             </p>
           </div>
           
@@ -655,6 +661,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                       <div className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600">
                         {plotInput.luasarea.toFixed(2)} Ha
                       </div>
+                      <p className="text-xs text-neutral-500 mt-1">Dari rencana kerja</p>
                     </div>
                     
                     <div>
@@ -684,6 +691,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                       }`}>
                         {plotInput.luassisa.toFixed(2)} Ha
                       </div>
+                      <p className="text-xs text-neutral-500 mt-1">Otomatis terhitung</p>
                     </div>
                   </div>
                 </div>
@@ -692,13 +700,13 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Material Usage */}
+        {/* Material Usage - Same as input page */}
         {materialInputs.length > 0 ? (
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Package className="w-5 h-5 text-orange-600" />
-                Input Sisa Material
+                Edit Sisa Material
               </h3>
             </div>
             <div className="p-6">
@@ -810,11 +818,19 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         </div>
 
         {/* Save Button - Bottom */}
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={goBack}
+            className="flex items-center gap-3 px-8 py-4 bg-neutral-600 text-white rounded-2xl hover:bg-neutral-700 transition-colors text-lg font-medium shadow-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Batal Edit</span>
+          </button>
+
           <button
             onClick={saveResults}
             disabled={isLoading}
-            className="flex items-center gap-3 px-8 py-4 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium shadow-lg"
+            className="flex items-center gap-3 px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium shadow-lg"
           >
             {isLoading ? (
               <>
@@ -824,7 +840,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
             ) : (
               <>
                 <Save className="w-5 h-5" />
-                <span>Simpan Hasil Pekerjaan</span>
+                <span>Simpan Perubahan</span>
               </>
             )}
           </button>
@@ -834,4 +850,4 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   );
 };
 
-export default LKHInputPage;
+export default LKHEditPage;
