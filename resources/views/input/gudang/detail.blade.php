@@ -2,7 +2,7 @@
 
 @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
     <x-slot:title>Penyiapan RKH Herbisida</x-slot:title>
-@elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED')
+@elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
     <x-slot:title>RKH Herbisida Diterima</x-slot:title>
 @else
     <x-slot:title>RKH Herbisida Selesai</x-slot:title>
@@ -15,9 +15,21 @@
             <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded shadow text-sm">
                 <i class="bi bi-clock me-1"></i>Apabila Sudah Diperiksa, Klik Button Penyerahan Di Bawah
             </div>
-        @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED')
+        @elseif(strtoupper($details[0]->flagstatus) == 'DISPATCHED')
+            <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <i class="bi bi-check-circle me-1"></i>Barang Sudah Diserahan Kepada Mandor.
+            </div>
+        @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
             <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
                 <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima. Untuk Retur, Ajukan Dokumen Retur.
+            </div>
+        @elseif(strtoupper($details[0]->flagstatus) == 'RETURNED_BY_MANDOR')
+            <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <i class="bi bi-check-circle me-1"></i>Barang Sudah Diretur.
+            </div>
+        @elseif(strtoupper($details[0]->flagstatus) == 'RETURN_RECEIVED')
+            <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <i class="bi bi-check-circle me-1"></i>Barang Retur Sudah Diterima.
             </div>
         @else
             <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded shadow text-sm">
@@ -105,7 +117,7 @@
                         @endphp
                         <tr class="border-b hover:bg-gray-50">
                             <td class="py-2 px-2">
-                                <select @if(strtoupper($details[0]->flagstatus) == 'RECEIVED') readonly style="pointer-events: none;" @endif
+                                <select @if(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR') readonly style="pointer-events: none;" @endif
                                 name="itemcode[{{ $groupId }}][{{ $loop->iteration }}]" class="item-select w-full border-none bg-yellow-100 text-xs">
                                     @foreach($itemlist as $item) 
                                     @php $currentluas = $luas * $item->dosageperha; @endphp
