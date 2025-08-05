@@ -208,8 +208,8 @@ class GudangController extends Controller
         $exists = usemateriallst::where('rkhno', $request->rkhno);
         
         $first = $details->first();
-        if(strtoupper($first->flagstatus) == 'RECEIVED' || strtoupper($first->flagstatus) == 'COMPLETED' ){
-            return redirect()->back()->with('error', 'Cant Edit! Items Already Received');
+        if(strtoupper($first->flagstatus) != 'ACTIVE' ){
+            return redirect()->back()->with('error', 'Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
         }
 
         $isi = collect();

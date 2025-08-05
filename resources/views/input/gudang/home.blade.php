@@ -67,10 +67,12 @@
             <td class="py-2 px-4 ">{{$u->name}}</td>
             <td class="py-2 px-4">
               <span class="inline-block px-2 py-1 text-xs font-semibold text-white rounded-full
-                                    @if(strtolower($u->flagstatus) == 'submitted') bg-green-700
-                                    @elseif(strtolower($u->flagstatus) == 'received') bg-blue-700
-                                    @elseif(strtolower($u->flagstatus) == 'active') bg-orange-700
-                                    @elseif(strtolower($u->flagstatus) == 'closed') bg-gray-600
+                                    @if(strtolower($u->flagstatus) == 'active') bg-blue-700
+                                    @elseif(strtolower($u->flagstatus) == 'dispatched') bg-yellow-700
+                                    @elseif(strtolower($u->flagstatus) == 'received_by_mandor') bg-green-700
+                                    @elseif(strtolower($u->flagstatus) == 'returned_by_mandor') bg-orange-700
+                                    @elseif(strtolower($u->flagstatus) == 'return_received') bg-green-700
+                                    @elseif(strtolower($u->flagstatus) == 'completed') bg-gray-600
                                     @else bg-gray-500 @endif">
                 {{$u->flagstatus}}
               </span>
