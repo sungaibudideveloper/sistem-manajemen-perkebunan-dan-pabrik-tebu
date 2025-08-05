@@ -6,111 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Login - Sungai Budi Group Sugarcane Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'inter': ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        'primary': {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            200: '#bbf7d0',
-                            300: '#86efac',
-                            400: '#4ade80',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-        }
-        
-        .gradient-bg {
-            background: linear-gradient(135deg, #065f46 0%, #047857 25%, #059669 50%, #10b981 75%, #34d399 100%);
-        }
-        
-        .glass-effect {
-            backdrop-filter: blur(16px);
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .floating-animation {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        .floating-animation:nth-child(2) {
-            animation-delay: -2s;
-        }
-        
-        .floating-animation:nth-child(3) {
-            animation-delay: -4s;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(1deg); }
-            66% { transform: translateY(10px) rotate(-1deg); }
-        }
-        
-        .input-focus {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .input-focus:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.15);
-        }
-        
-        .btn-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .btn-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.3);
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.8s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .slide-in-left {
-            animation: slideInLeft 0.8s ease-out;
-        }
-        
-        @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-40px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .sugar-cane-icon {
-            background: linear-gradient(45deg, #22c55e, #16a34a);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-    </style>
+    
+    <!-- Custom Login CSS -->
+    @vite(['resources/css/login.css'])
 </head>
 
 <body class="h-full bg-gray-50 overflow-hidden">
@@ -139,27 +37,27 @@
                     <!-- Title -->
                     <h1 class="text-3xl font-bold text-white mb-6 leading-tight">
                         Sungai Budi Group<br>
-                        <span class="text-primary-200">Sugarcane Management System</span>
+                        <span class="text-green-200">Sugarcane Management System</span>
                     </h1>
                     
                     <!-- Description -->
-                    <p class="text-xl text-primary-100 mb-8 max-w-md leading-relaxed">
+                    <p class="text-xl text-green-100 mb-8 max-w-md leading-relaxed">
                         Streamline your sugarcane operations with our comprehensive monitoring and management system.
                     </p>
                     
                     <!-- Features -->
                     <div class="space-y-4">
                         <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
-                            <span class="text-primary-100">Real-time field monitoring</span>
+                            <div class="w-2 h-2 bg-green-200 rounded-full"></div>
+                            <span class="text-green-100">Real-time field monitoring</span>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
-                            <span class="text-primary-100">Harvest optimization</span>
+                            <div class="w-2 h-2 bg-green-200 rounded-full"></div>
+                            <span class="text-green-100">Harvest optimization</span>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <div class="w-2 h-2 bg-primary-200 rounded-full"></div>
-                            <span class="text-primary-100">Quality control tracking</span>
+                            <div class="w-2 h-2 bg-green-200 rounded-full"></div>
+                            <span class="text-green-100">Quality control tracking</span>
                         </div>
                     </div>
                 </div>
@@ -171,7 +69,7 @@
             <div class="w-full max-w-md fade-in">
                 <!-- Mobile Logo -->
                 <div class="lg:hidden mb-8 text-center">
-                    <div class="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 3c4.96 0 9 4.04 9 9s-4.04 9-9 9-9-4.04-9-9 4.04-9 9-9zm0 2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                         </svg>
@@ -215,7 +113,7 @@
                                     name="userid" 
                                     value="{{ old('userid') }}"
                                     required 
-                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
+                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
                                     placeholder="Enter your username"
                                 >
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -236,7 +134,7 @@
                                     name="password" 
                                     value="{{ old('password') }}"
                                     required 
-                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
+                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
                                     placeholder="Enter your password"
                                 >
                                 <button 
@@ -255,10 +153,10 @@
                         <!-- Remember Me & Forgot Password -->
                         <div class="flex items-center justify-between">
                             <label class="flex items-center">
-                                <input type="checkbox" class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                                <input type="checkbox" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
                                 <span class="ml-2 text-sm text-gray-600">Remember me</span>
                             </label>
-                            <a href="#" class="text-sm text-primary-600 hover:text-primary-500 transition-colors">
+                            <a href="#" class="text-sm text-green-600 hover:text-green-500 transition-colors">
                                 Forgot password?
                             </a>
                         </div>
@@ -266,7 +164,7 @@
                         <!-- Login Button -->
                         <button 
                             type="submit" 
-                            class="btn-hover w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2"
+                            class="btn-hover w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2"
                         >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>

@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\create.blade.php--}} 
 <x-layout>
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -87,25 +88,26 @@
         </div>
     @endif
 
-  <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
-    <div class="flex justify-between items-start">
-      <!-- KIRI: No RKH + Mandor + Tanggal -->
-      <div class="flex flex-col space-y-6 w-2/3">
-        <!-- No RKH - HIDDEN FROM UI FOR RACE CONDITION SAFETY -->
-        <input type="hidden" name="rkhno" value="{{ $rkhno }}">
+  <!-- HEADER CONTENT -->
+<div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
+  <div class="flex justify-between items-start">
+    <!-- KIRI: No RKH, Mandor, Tanggal, Keterangan -->
+    <div class="flex flex-col w-2/3 space-y-2">
+      <!-- Hidden No RKH -->
+      <input type="hidden" name="rkhno" value="{{ $rkhno }}">
 
       <!-- Mandor & Tanggal -->
-      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-6 max-w-md" x-init="
-    @if(old('mandor_id'))
-        selected = {
-            userid: '{{ old('mandor_id') }}',
-            name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
-        }
-    @endif
-">
+      <div x-data="mandorPicker()" class="grid grid-cols-2 gap-4 max-w-md" x-init="
+        @if(old('mandor_id'))
+            selected = {
+                userid: '{{ old('mandor_id') }}',
+                name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
+            }
+        @endif
+      ">
         <!-- Input Mandor -->
         <div>
-          <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-2">Mandor</label>
+          <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
           <input
             type="text"
             name="mandor"
@@ -114,29 +116,50 @@
             placeholder="Pilih Mandor"
             @click="open = true"
             :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
-            class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-3 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-2 cursor-pointer bg-gray hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <input type="hidden" name="mandor_id" x-model="selected.userid">
         </div>
 
-        <!-- Input Tanggal - LOCKED FROM INDEX -->
+        <!-- Input Tanggal -->
         <div>
-          <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
+          <label for="tanggal" class="block text-sm font-semibold text-gray-700 mb-1">Tanggal</label>
           <input
             type="date"
             name="tanggal"
             id="tanggal"
             value="{{ $selectedDate }}"
             readonly
-            class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-sm font-medium cursor-not-allowed"
+            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 bg-gray-100 text-sm font-medium cursor-not-allowed"
           />
         </div>
-        
+
         @include('input.rencanakerjaharian.modal-mandor')
       </div>
+
+      <!-- Keterangan Dokumen -->
+      <div class="max-w-2xl">
+        <label for="keterangan" class="block text-sm font-semibold text-gray-700 mb-1">
+          Keterangan Dokumen
+          <span class="text-xs text-gray-500 font-normal">(opsional)</span>
+        </label>
+        <input 
+          type="text"
+          name="keterangan"
+          id="keterangan"
+          placeholder="Masukkan keterangan untuk dokumen RKH ini..."
+          value="{{ old('keterangan') }}"
+          maxlength="500"
+          class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        @error('keterangan')
+          <p class="mt-1 text-red-600 text-sm">{{ $message }}</p>
+        @enderror
+      </div>
+
     </div>
 
-    <!-- KANAN: Ringkasan Tenaga Kerja -->
+    <!-- RIGHT HEADER: Absen Tenaga Kerja -->
     <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center">
@@ -165,23 +188,22 @@
     </div>
   </div>
 
-      <!-- Modern Table -->
-      <div class="bg-white mt-12 rounded-xl p-6 border border-gray-300 border-r shadow-md">
+      <!-- Main Table -->
+      <div class="bg-white mt-6 rounded-xl border border-gray-300 border-r shadow-md">
         <div class="overflow-x-auto">
           <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
             <colgroup>
               <col style="width: 32px"><!-- No. -->
               <col style="width: 32px"><!-- Blok -->
               <col style="width: 48px"><!-- Plot -->
-              <col style="width: 208px"><!-- Aktivitas -->
-              <col style="width: 48px"><!-- Luas -->
-              <col style="width: 32px"><!-- L -->
-              <col style="width: 32px"><!-- P -->
-              <col style="width: 32px"><!-- Total -->
-              <col style="width: 55px"><!-- Jenis -->
-              <col style="width: 105px"><!-- Material -->
-              <col style="width: 40px"><!-- Kendaraan -->
-              <col style="width: 150px"><!-- Keterangan -->
+              <col style="width: 150px"><!-- Aktivitas -->
+              <col style="width: 60px"><!-- Luas -->
+              <col style="width: 45px"><!-- L -->
+              <col style="width: 45px"><!-- P -->
+              <col style="width: 50px"><!-- Total -->
+              <col style="width: 70px"><!-- Jenis -->
+              <col style="width: 80px"><!-- Material -->
+              <col style="width: 80px"><!-- Kendaraan -->
             </colgroup>
 
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
@@ -194,7 +216,6 @@
                 <th colspan="4" class="text-center">Tenaga Kerja</th>
                 <th rowspan="2">Material</th>
                 <th rowspan="2">Kendaraan</th>
-                <th rowspan="2">Keterangan</th>
               </tr>
               <tr class="bg-gray-700">
                 <th>L</th>
@@ -346,7 +367,8 @@
                       type="text" 
                       name="rows[{{ $i }}][jenistenagakerja]" 
                       readonly 
-                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
+                       onfocus="this.blur()" 
+                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-sm font-medium cursor-not-allowed"
                       placeholder="-"
                       id="jenistenagakerja-{{ $i }}"
                     >
@@ -363,12 +385,12 @@
                           'border-green-500 bg-green-50': hasMaterial && selectedGroup,
                           'border-green-300 bg-green-25': hasMaterial && !selectedGroup,
                           'border-gray-300': !hasMaterial
-                        }"
-                        class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center"
-                      >
-                        <div x-show="!currentActivityCode" class="text-gray-500 text-xs">-</div>
-                        <div x-show="currentActivityCode && !hasMaterial" class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasMaterial && !selectedGroup" class="text-green-600 text-xs font-medium">
+                          }"
+                          class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center bg-gray-100"
+                        >
+                        <div x-show="!currentActivityCode" x-cloak class="text-gray-500 text-xs">-</div>
+                        <div x-show="currentActivityCode && !hasMaterial" x-cloak class="text-xs font-medium">Tidak</div>
+                        <div x-show="hasMaterial && !selectedGroup" x-cloak class="text-green-600 text-xs font-medium">
                           <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                           </svg>
@@ -386,31 +408,43 @@
                   </td>
 
                   <!-- #Kendaraan -->
-                  <td class="px-1 py-3">
-                    <input 
-                      type="hidden" 
-                      name="rows[{{ $i }}][usingvehicle]" 
-                      x-model.number="selected.usingvehicle"
-                    >
-                    <input 
-                      type="text" 
-                      name="rows[{{ $i }}][kendaraan]" 
-                      readonly 
-                      x-bind:value="
-                      selected.usingvehicle === 1 
-                        ? 'Ya' 
-                        : (selected.usingvehicle === 0 
-                            ? 'Tidak' 
-                            : '-'
-                          )
-                    "
-                      class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-center text-xs font-medium"
-                      id="kendaraan-{{ $i }}"
-                    >
-                  </td>
-
-                  <td class="px-1 py-3">
-                    <input type="text" name="rows[{{ $i }}][keterangan]" value="{{ old('rows.'.$i.'.keterangan') }}" class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <td class="px-1 py-3" x-data="kendaraanPicker({{ $i }})" x-init="init()">
+                    <div class="relative">
+                      <div
+                        @click="checkVehicle()"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': hasVehicle,
+                          'cursor-not-allowed bg-gray-100': !hasVehicle,
+                          'border-green-500 bg-green-50': hasVehicle && selectedOperator,
+                          'border-green-300 bg-green-25': hasVehicle && !selectedOperator,
+                          'border-gray-300': !hasVehicle
+                        }"
+                         class="w-full text-sm border-2 rounded-lg px-3 py-2 text-center transition-colors focus:ring-2 focus:ring-blue-500 min-h-[40px] flex items-center justify-center bg-gray-100"
+                      >
+                        <div x-show="!currentActivityCode" x-cloak class="text-gray-500 text-xs">-</div>
+                        <div x-show="currentActivityCode && !hasVehicle" x-cloak class="text-xs font-medium">Tidak</div>
+                        <div x-show="hasVehicle && !selectedOperator" x-cloak class="text-green-600 text-xs font-medium">
+                          <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          Pilih Operator
+                        </div>
+                        <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-medium text-center">
+                          <!-- Tampilkan info operator -->
+                          <div class="font-semibold" x-text="selectedOperator ? selectedOperator.nokendaraan : ''"></div>
+                          <div class="text-gray-600 text-[10px]" x-text="selectedOperator ? selectedOperator.nama : ''"></div>
+                          
+                          <!-- TAMBAHAN: Tampilkan info helper jika ada -->
+                          <div x-show="useHelper && selectedHelper" x-cloak class="text-purple-600 text-[9px] mt-1">
+                            + Helper: <span x-text="selectedHelper ? selectedHelper.nama : ''"></span>
+                          </div>
+                        </div>
+                      </div>
+                    
+                      <!-- Hidden inputs - Akan dibuat otomatis oleh JavaScript -->
+                    </div>
+                  
+                    @include('input.rencanakerjaharian.modal-kendaraan')
                   </td>
 
                 </tr>
@@ -423,7 +457,7 @@
                 <td id="total-laki" class="px-1 py-3 text-center text-sm font-bold bg-blue-50">0</td>
                 <td id="total-perempuan" class="px-1 py-3 text-center text-sm font-bold bg-red-50">0</td>
                 <td id="total-tenaga" class="px-1 py-3 text-center text-sm font-bold bg-green-50">0</td>
-                <td colspan="4" class="px-1 py-3 bg-gray-100"></td>
+                <td colspan="3" class="px-1 py-3 bg-gray-100"></td>
               </tr>
             </tfoot>
           </table>
@@ -493,9 +527,11 @@
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
+window.operatorsData = @json($operatorsData ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
+window.helpersData = @json($helpersData ?? []);
 
 // ===== ALPINE STORES - SEMUA DI SINI =====
 document.addEventListener('alpine:init', () => {
@@ -770,6 +806,25 @@ function updateLuasFromPlot(plotCode, rowIndex) {
       const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
       if (luasInput) {
         luasInput.value = plotData.luasarea;
+        luasInput.setAttribute('max', plotData.luasarea);
+        luasInput.setAttribute('title', `Maksimal: ${plotData.luasarea} Ha`);
+        
+        // TAMBAH VALIDASI REAL-TIME
+        luasInput.addEventListener('input', function() {
+          const currentValue = parseFloat(this.value);
+          const maxValue = parseFloat(plotData.luasarea);
+          
+          if (currentValue > maxValue) {
+            this.value = maxValue; // Reset ke max value
+            this.style.borderColor = '#ef4444';
+            
+            // Show warning toast (optional)
+            showToast(`Luas maksimal untuk plot ${plotCode}: ${maxValue} Ha`);
+          } else {
+            this.style.borderColor = '';
+          }
+        });
+        
         luasInput.dispatchEvent(new Event('input'));
       }
     }

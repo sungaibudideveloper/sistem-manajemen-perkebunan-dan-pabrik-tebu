@@ -1,5 +1,5 @@
 <?php
-
+// app\Models\RKHLst.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +25,9 @@ class Rkhlst extends Model
         'usingmaterial',
         'herbisidagroupid',
         'usingvehicle',
-        'description',
+        'operatorid',
+        'usinghelper',
+        'helperid',
     ];
 
     protected $casts = [

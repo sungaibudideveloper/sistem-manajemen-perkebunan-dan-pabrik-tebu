@@ -1,24 +1,18 @@
+{{--resources\views\components\header.blade.php--}}
 <header class="bg-green-700 shadow-sm border-b border-gray-200 sticky top-0 z-40">
     <div class="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Desktop toggle button + Mobile menu button + Page title -->
         <div class="flex items-center space-x-4">
-            <!-- Desktop Sidebar Toggle Button -->
+            <!-- Desktop Sidebar Toggle Button - CHANGED: removed hidden lg:flex -->
             <button @click="toggleSidebar()" 
-                    class="hidden lg:flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
+                    class="flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">Toggle sidebar</span>
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
 
-            <!-- Mobile menu button -->
-            <button @click="sidebarOpen = !sidebarOpen" 
-                    class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors">
-                <span class="sr-only">Open sidebar</span>
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
+            <!-- Mobile menu button - REMOVED (no longer needed) -->
 
             <!-- Page Title -->
             <h1 class="text-lg font-semibold text-white truncate">{{ $slot }}</h1>
@@ -43,7 +37,7 @@
         <!-- Right: Notifications + User Profile -->
         <div class="flex items-center space-x-3">
             <!-- Notifications -->
-            <a href="{{ route('notifications.index') }}" 
+            <!-- <a href="{{ route('notifications.index') }}" --> <div
                class="relative p-2 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">View notifications</span>
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,7 +45,7 @@
                           d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                 </svg>
                 <span id="notification-dot" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden animate-pulse"></span>
-            </a>
+                </div>
 
             <!-- User Profile Dropdown -->
             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -69,7 +63,8 @@
                 </button>
 
                 <!-- Dropdown Menu -->
-                <div x-show="open" 
+                <div x-show="open"
+                     x-cloak
                      x-transition:enter="transition ease-out duration-100"
                      x-transition:enter-start="transform opacity-0 scale-95"
                      x-transition:enter-end="transform opacity-100 scale-100"

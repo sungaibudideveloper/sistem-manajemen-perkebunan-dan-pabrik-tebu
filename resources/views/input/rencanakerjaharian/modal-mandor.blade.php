@@ -1,3 +1,4 @@
+{{--resources\views\input\rencanakerjaharian\modal-mandor.blade.php--}}
 <div
   x-show="open"
   x-cloak

@@ -6,14 +6,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="user-id" content="{{ auth()->user()->userid }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
+    <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Preload font awesome untuk prevent icon flash -->
+    <link rel="preload" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}" as="style">
+    <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
+    
+    <!-- Dynamic Manifest Link -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="SB Tebu App">
+    <link rel="apple-touch-icon" href="{{ asset('img/icon-sb-tebu-circle.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    
+    <!-- Critical CSS inline - Load FIRST before anything -->
+    <style>
+        /* Hide everything initially */
+        body { visibility: hidden; opacity: 0; }
+        
+        /* Base layout styles to prevent flash */
+        .layout-container { display: flex; min-height: 100vh; }
+        .sidebar-wrapper {width: 18rem;flex-shrink: 0; transition: width 0.3s ease; }
+        .main-wrapper { flex: 1;margin-left: 0; }
+        
+        /* Minimized state */
+        .sidebar-minimized .sidebar-wrapper { width: 4rem; }
+        
+        /* Show body after state determined */
+        body.ready { visibility: visible; opacity: 1; transition: opacity 0.15s ease; }
+        
+        [x-cloak] { display: none !important; }
+    </style>
+    
+    <!-- Set initial state IMMEDIATELY -->
+    <script>
+        (function() {
+            // Check localStorage first (client priority), then cookie (server fallback)
+            const localState = localStorage.getItem('sidebar-minimized');
+            const cookieState = document.cookie.match(/sidebar_minimized=([^;]+)/);
+            const isMinimized = localState ? localState === 'true' : (cookieState ? cookieState[1] === 'true' : false);
+            
+            // Apply state to HTML element
+            if (isMinimized) {
+                document.documentElement.classList.add('sidebar-minimized');
+            }
+        })();
+    </script>
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
-    <link rel="icon" href="{{ asset('Logo-1.png') }}" type="image/png">
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
     <script src="{{ asset('asset/chartjs-plugin-datalabels@2.0.0.js') }}"></script>
@@ -25,13 +72,14 @@
 </head>
 
 <body class="h-full bg-gray-50">
-    <div class="flex min-h-screen" x-data="mainLayoutData()" x-init="init()">
+    <div class="layout-container" x-data="mainLayoutData()" x-init="init()">
         <!-- Sidebar -->
-        <x-sidebar></x-sidebar>
+        <aside class="sidebar-wrapper" x-cloak>
+            <x-sidebar></x-sidebar>
+        </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 transition-all duration-300"
-             :class="sidebarMinimized ? 'ml-16' : 'ml-72'">
+        <div class="main-wrapper flex flex-col">
             
             <!-- Header -->
             <x-header>{{ $title }}
@@ -64,7 +112,7 @@
             <!-- Main Content -->
             <main class="bg-gray-200 flex-1 overflow-y-auto">
                 {{ $hero ?? null }}
-                <div class="px-4 py-6 sm:px-6 lg:px-8">
+                <div class="px-2 py-3 sm:px-3 lg:px-4">
                     @error('duplicateClosing')
                         <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
                             {{ $message }}
@@ -108,48 +156,122 @@
         </div>
     </div>
 
-    <!-- Global Company Modal - Available on all pages -->
+    <!-- Global Company Modal -->
     @if(isset($company) && $company)
         <x-company-modal :companies="$company" />
     @endif
 
     <script>
-        // Main layout Alpine.js component
+        // Show body after everything loads
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('ready');
+        });
+
+        // Cookie helper functions
+        function setCookie(name, value, days = 365) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : null;
+        }
+
+        // Main layout Alpine component
         function mainLayoutData() {
             return {
                 sidebarOpen: false,
                 sidebarMinimized: false,
                 
                 init() {
-                    // Listen untuk sidebar toggle event
+                    // Get initial state from localStorage or cookie
+                    const localState = localStorage.getItem('sidebar-minimized');
+                    const cookieState = getCookie('sidebar_minimized');
+                    
+                    // localStorage takes priority over cookie
+                    this.sidebarMinimized = localState !== null 
+                        ? localState === 'true' 
+                        : (cookieState === 'true');
+                    
+                    // Apply state to HTML
+                    if (this.sidebarMinimized) {
+                        document.documentElement.classList.add('sidebar-minimized');
+                    } else {
+                        document.documentElement.classList.remove('sidebar-minimized');
+                    }
+                    
+                    // Listen for toggle events
                     window.addEventListener('sidebar-toggle', (e) => {
                         this.sidebarMinimized = e.detail.minimized;
+                        
+                        // Update HTML class
+                        if (this.sidebarMinimized) {
+                            document.documentElement.classList.add('sidebar-minimized');
+                        } else {
+                            document.documentElement.classList.remove('sidebar-minimized');
+                        }
                     });
                     
-                    // Set initial state dari store jika ada
+                    // Sync with Alpine store
                     this.$nextTick(() => {
                         if (Alpine.store('sidebar')) {
-                            this.sidebarMinimized = Alpine.store('sidebar').isMinimized;
+                            Alpine.store('sidebar').isMinimized = this.sidebarMinimized;
                         }
                     });
                 }
             }
         }
 
-        // Global Alpine.js store for app-wide state
+        // Global Alpine store
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
-                isMinimized: JSON.parse(localStorage.getItem('sidebar-minimized') || 'false'),
+                isMinimized: false,
+                
+                init() {
+                    // Initialize from storage
+                    const localState = localStorage.getItem('sidebar-minimized');
+                    const cookieState = getCookie('sidebar_minimized');
+                    this.isMinimized = localState !== null 
+                        ? localState === 'true' 
+                        : (cookieState === 'true');
+                },
                 
                 toggle() {
                     this.isMinimized = !this.isMinimized;
+                    
+                    // Save to both localStorage and cookie
                     localStorage.setItem('sidebar-minimized', this.isMinimized);
-                    // Dispatch event for other components to listen
+                    setCookie('sidebar_minimized', this.isMinimized);
+                    
+                    // Update HTML class
+                    if (this.isMinimized) {
+                        document.documentElement.classList.add('sidebar-minimized');
+                    } else {
+                        document.documentElement.classList.remove('sidebar-minimized');
+                    }
+                    
+                    // Dispatch event
                     window.dispatchEvent(new CustomEvent('sidebar-toggle', {
                         detail: { minimized: this.isMinimized }
                     }));
                 }
             });
+            
+            // Initialize store
+            Alpine.store('sidebar').init();
+
+            // PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('{{ asset('sw.js') }}')
+                        .then(function(registration) {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        }, function(err) {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+            }
         });
     </script>
 

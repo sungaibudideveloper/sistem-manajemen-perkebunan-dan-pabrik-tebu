@@ -3,8 +3,6 @@ use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\GudangController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
-use App\Http\Controllers\Input\KerjaHarian\DistribusiTenagaHarianController;
-use App\Http\Controllers\Input\KerjaHarian\LaporanKerjaHarianController;
 
 
 
@@ -97,34 +95,22 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', [RencanaKerjaHarianController::class, 'getPendingLKHApprovals'])->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', [RencanaKerjaHarianController::class, 'processLKHApproval'])->name('processLKHApproval');
             
+
             // Other utility routes
             Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
             Route::get('/load-absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate');
             Route::post('/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('generateDTH');
+            Route::post('/generate-rekap-lkh', [RencanaKerjaHarianController::class, 'generateRekapLKH'])->name('generateRekapLKH');
             Route::get('/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('dth-report');
+            Route::get('/rekap-lkh-report', [RencanaKerjaHarianController::class, 'showRekapLKHReport'])->name('rekap-lkh-report');
             Route::post('/{rkhno}/generate-lkh', [RencanaKerjaHarianController::class, 'manualGenerateLkh'])->name('manualGenerateLkh');
             Route::get('/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('dth-data');
+            Route::get('/lkh-rekap-data', [RencanaKerjaHarianController::class, 'getLKHRekapData'])->name('lkh-rekap-data');
             Route::get('/{rkhno}/material-usage', [RencanaKerjaHarianController::class, 'getMaterialUsageApi'])->name('getMaterialUsage');
             Route::post('/generate-material-usage', [RencanaKerjaHarianController::class, 'generateMaterialUsage'])->name('generateMaterialUsage');
         });
 });
 
-
-
-
-
-
-
-
-
-Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::get('input/kerjaharian/distribusitenagaharian', [DistribusiTenagaHarianController::class, 'index'])->name('input.kerjaharian.distribusitenagaharian.index');
-});
-
-Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
-    Route::get('input/kerjaharian/laporankerjaharian', [LaporanKerjaHarianController::class, 'index'])->name('input.kerjaharian.laporankerjaharian.index');
-    Route::get('input/kerjaharian/laporankerjaharian/{lkhno}', [LaporanKerjaHarianController::class, 'show'])->name('input.kerjaharian.laporankerjaharian.show');
-});
 
 
 

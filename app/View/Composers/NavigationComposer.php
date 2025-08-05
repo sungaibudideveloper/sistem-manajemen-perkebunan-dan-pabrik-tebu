@@ -111,12 +111,6 @@ class NavigationComposer
                     ->where('companycode', session('companycode'))
                     ->value('updatedat');
                 
-                // Debug: Log untuk troubleshooting
-                \Log::info('Monitoring Period Debug:', [
-                    'companycode' => session('companycode'),
-                    'period_raw' => $period,
-                    'period_formatted' => $period ? Carbon::parse($period)->format('F Y') : null
-                ]);
                 
                 if ($period) {
                     // Format period menjadi lebih readable

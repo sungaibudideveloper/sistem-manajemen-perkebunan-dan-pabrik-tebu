@@ -40,20 +40,15 @@ class CompanyController extends Controller
         $perPage = $request->session()->get('perPage', 10);
 
         if ($isAdmin) {
-            $company = DB::table('company')->where(function ($query) use ($comp) {
-                foreach ($comp as $company) {
-                    $query->orWhereRaw('FIND_IN_SET(?, companycode)', [$company]);
-                }
-            })->distinct()->orderBy('companycode', 'asc')->paginate($perPage);
+            $companies = DB::table('company')->whereIn('companycode',$comp)->paginate($perPage);
         } else {
-            $company = DB::table('company')->where('companycode', '=', session('companycode'))
+            $companies = DB::table('company')->where('companycode', '=', session('companycode'))
                 ->orderBy('companycode', 'asc')->paginate($perPage);
         }
-
-        foreach ($company as $index => $item) {
-            $item->no = ($company->currentPage() - 1) * $company->perPage() + $index + 1;
+        foreach ($companies as $index => $item) {
+            $item->no = ($companies->currentPage() - 1) * $companies->perPage() + $index + 1;
         }
-        return view('master.company.index', compact('company', 'perPage', 'title'));
+        return view('master.company.index', compact('companies', 'perPage', 'title'));
     }
 
     public function handle(Request $request)
