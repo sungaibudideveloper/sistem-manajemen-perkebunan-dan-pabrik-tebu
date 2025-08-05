@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Controllers
 use App\Http\Controllers\GPXController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PivotController;
@@ -14,43 +15,38 @@ use App\Http\Controllers\Auth\UsernameLoginController;
 use App\Http\Controllers\LiveChatController;
 use App\Http\Controllers\React\MandorPageController;
 
-/*
-|--------------------------------------------------------------------------
-| Authentication Routes
-|--------------------------------------------------------------------------
-*/
+// =============================================================================
+// AUTHENTICATION ROUTES
+// =============================================================================
+
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
 
-/*
-|--------------------------------------------------------------------------
-| Protected Routes - Require Authentication
-|--------------------------------------------------------------------------
-*/
+// =============================================================================
+// PROTECTED ROUTES - REQUIRE AUTHENTICATION
+// =============================================================================
+
 Route::group(['middleware' => 'auth'], function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard & Home Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // DASHBOARD & HOME ROUTES
+    // =============================================================================
+    
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::post('/set-session', [HomeController::class, 'setSession'])->name('setSession');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Live Chat Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // LIVE CHAT ROUTES
+    // =============================================================================
+    
     Route::post('/chat/send', [LiveChatController::class, 'send'])->name('chat.send');
     Route::get('/chat/messages', [LiveChatController::class, 'getMessages'])->name('chat.messages');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Notification Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // NOTIFICATION ROUTES
+    // =============================================================================
+    
     Route::get('/notification', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
@@ -70,11 +66,10 @@ Route::group(['middleware' => 'auth'], function () {
         ->name('notifications.destroy')
         ->middleware('permission:Hapus Notifikasi');
 
-    /*
-    |--------------------------------------------------------------------------
-    | GPX File Management Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // GPX FILE MANAGEMENT ROUTES  
+    // =============================================================================
+    
     Route::group(['middleware' => 'permission:Upload GPX File'], function () {
         Route::get('/uploadgpx', function () {
             return view('process.upload.index', ['title' => 'Upload GPX File']);
@@ -89,11 +84,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/export-kml', [GPXController::class, 'export'])->name('export.kml');
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Mandor SPA Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // MANDOR SPA ROUTES
+    // =============================================================================
+    
     Route::get('/mandor/splash', function () {
         return Inertia::render('splash-screen');
     })->name('mandor.splash');
@@ -101,20 +95,17 @@ Route::group(['middleware' => 'auth'], function () {
     // Main SPA entry point
     Route::get('/mandor', [MandorPageController::class, 'index'])->name('mandor.index');
     
-    /*
-    |--------------------------------------------------------------------------
-    | Mandor LKH Assignment & Input Pages
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // MANDOR LKH ASSIGNMENT & INPUT PAGES
+    // =============================================================================
     
-    // LKH Assignment Page
+    // Assignment Page
     Route::get('/mandor/lkh/{lkhno}/assign', [MandorPageController::class, 'showLKHAssign'])
         ->name('mandor.lkh.assign');
-    
     Route::post('/mandor/lkh/{lkhno}/assign', [MandorPageController::class, 'saveLKHAssign'])
         ->name('mandor.lkh.save-assignment');
     
-    // LKH Input Results Page  
+    // Input/View/Edit Pages
     Route::get('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'showLKHInput'])
         ->name('mandor.lkh.input');
     Route::get('/mandor/lkh/{lkhno}/view', [MandorPageController::class, 'showLKHView'])
@@ -122,20 +113,23 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/mandor/lkh/{lkhno}/edit', [MandorPageController::class, 'showLKHEdit'])
         ->name('mandor.lkh.edit');
 
+    // Save Results & Complete All
     Route::post('/mandor/lkh/{lkhno}/input', [MandorPageController::class, 'saveLKHResults'])
         ->name('mandor.lkh.save-results');
     Route::post('/mandor/lkh/complete-all', [MandorPageController::class, 'completeAllLKH'])
         ->name('mandor.lkh.complete-all');
-        
     
-    /*
-    |--------------------------------------------------------------------------
-    | Mandor API Routes
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // MANDOR API ROUTES - ORGANIZED BY FUNCTIONALITY
+    // =============================================================================
+    
     Route::prefix('api/mandor')->group(function () {
         
-        // ===== ATTENDANCE APIs =====
+        // =========================================================================
+        // ATTENDANCE MANAGEMENT APIs
+        // =========================================================================
+        
+        // Legacy attendance routes (for backward compatibility)
         Route::post('/attendance/check-in', [MandorPageController::class, 'checkIn'])->name('mandor.checkin');
         Route::post('/attendance/check-out', [MandorPageController::class, 'checkOut'])->name('mandor.checkout');
         Route::get('/attendance/data', [MandorPageController::class, 'getAttendanceData'])->name('mandor.attendance.data');
@@ -146,60 +140,43 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/attendance/today', [MandorPageController::class, 'getTodayAttendance'])->name('mandor.attendance.today');
         Route::post('/attendance/process-checkin', [MandorPageController::class, 'processCheckIn'])->name('mandor.attendance.process-checkin');
         
-        // ===== FIELD COLLECTION APIs =====
-        
-        // LKH Management
-        Route::get('/lkh/ready', [MandorPageController::class, 'getReadyLKH'])->name('mandor.lkh.ready');
-        Route::get('/lkh/vehicle-info', [MandorPageController::class, 'getVehicleInfo'])->name('mandor.lkh.vehicle-info');
-        Route::post('/lkh/save-work', [MandorPageController::class, 'saveLKHWork'])->name('mandor.lkh.save-work');
-        
-        // NEW LKH Assignment & Results API Routes
-        Route::post('/lkh/save-assignment', [MandorPageController::class, 'saveLKHAssign'])
-            ->name('mandor.api.lkh.save-assignment');
-        
-        Route::post('/lkh/save-results', [MandorPageController::class, 'saveLKHResults'])
-            ->name('mandor.api.lkh.save-results');
-        
-        // Material Management
-        Route::get('/materials/available', [MandorPageController::class, 'getAvailableMaterials'])->name('mandor.materials.available');
-        Route::post('/materials/save-returns', [MandorPageController::class, 'saveMaterialReturns'])->name('mandor.materials.save-returns');
-        Route::post('/materials/confirm-pickup', [MandorPageController::class, 'confirmMaterialPickup'])
-        ->name('mandor.materials.confirm-pickup');
-        
-        // Semi-Offline Data Sync
-        Route::post('/sync-offline-data', [MandorPageController::class, 'syncOfflineData'])->name('mandor.sync-offline-data');
-        
-        // ===== ADDITIONAL UTILITY APIs =====
-        
-        // Get workers yang sudah absen hari ini (untuk assignment di LKH)
+        // Workers present for assignment
         Route::get('/attendance/workers-present', function(Request $request) {
-            $date = $request->input('date', now()->format('Y-m-d'));
             $controller = new MandorPageController();
             return $controller->getTodayAttendance($request);
         })->name('mandor.attendance.workers-present');
         
-        // Get LKH detail untuk edit/update
+        // =========================================================================
+        // LKH MANAGEMENT APIs
+        // =========================================================================
+        
+        // LKH Data Retrieval
+        Route::get('/lkh/ready', [MandorPageController::class, 'getReadyLKH'])->name('mandor.lkh.ready');
+        Route::get('/lkh/vehicle-info', [MandorPageController::class, 'getVehicleInfo'])->name('mandor.lkh.vehicle-info');
+        
+        // LKH Assignment & Results (API versions)
+        Route::post('/lkh/save-assignment', [MandorPageController::class, 'saveLKHAssign'])
+            ->name('mandor.api.lkh.save-assignment');
+        Route::post('/lkh/save-results', [MandorPageController::class, 'saveLKHResults'])
+            ->name('mandor.api.lkh.save-results');
+        
+        // LKH Detail & Status Management
         Route::get('/lkh/{lkhno}/detail', function($lkhno) {
-            // Implementation untuk get LKH detail
             return response()->json([
                 'lkh_detail' => [],
                 'message' => 'LKH detail endpoint - implementation needed'
             ]);
         })->name('mandor.lkh.detail');
         
-        // Get material usage by LKH
         Route::get('/lkh/{lkhno}/materials', function($lkhno) {
-            // Implementation untuk get materials used in specific LKH
             return response()->json([
                 'lkh_materials' => [],
                 'message' => 'LKH materials endpoint - implementation needed'
             ]);
         })->name('mandor.lkh.materials');
         
-        // Update LKH status (DRAFT -> COMPLETED -> SUBMITTED)
         Route::post('/lkh/{lkhno}/update-status', function($lkhno, Request $request) {
-            $status = $request->input('status'); // DRAFT, COMPLETED, SUBMITTED
-            // Implementation untuk update LKH status
+            $status = $request->input('status');
             return response()->json([
                 'success' => true,
                 'message' => "LKH status updated to {$status}",
@@ -207,33 +184,34 @@ Route::group(['middleware' => 'auth'], function () {
             ]);
         })->name('mandor.lkh.update-status');
         
-        // Get daily summary (untuk dashboard)
-        Route::get('/daily-summary', function(Request $request) {
-            $date = $request->input('date', now()->format('Y-m-d'));
-            
-            // Mock response - implement actual logic
-            return response()->json([
-                'date' => $date,
-                'summary' => [
-                    'total_lkh' => 5,
-                    'completed_lkh' => 2,
-                    'pending_lkh' => 3,
-                    'total_workers_assigned' => 15,
-                    'total_area_completed' => 8.5,
-                    'materials_taken' => 3,
-                    'materials_returned' => 1
-                ]
-            ]);
-        })->name('mandor.daily-summary');
+        // =========================================================================
+        // MATERIAL MANAGEMENT APIs
+        // =========================================================================
         
-        // Bulk operations untuk semi-offline
+        Route::get('/materials/available', [MandorPageController::class, 'getAvailableMaterials'])
+            ->name('mandor.materials.available');
+        Route::post('/materials/save-returns', [MandorPageController::class, 'saveMaterialReturns'])
+            ->name('mandor.materials.save-returns');
+        Route::post('/materials/confirm-pickup', [MandorPageController::class, 'confirmMaterialPickup'])
+            ->name('mandor.materials.confirm-pickup');
+        
+        // =========================================================================
+        // DATA SYNCHRONIZATION APIs
+        // =========================================================================
+        
+        Route::post('/sync-offline-data', [MandorPageController::class, 'syncOfflineData'])
+            ->name('mandor.sync-offline-data');
+        
+        // =========================================================================
+        // UTILITY APIs
+        // =========================================================================
+        
+        // Bulk operations for semi-offline functionality
         Route::post('/bulk-save', function(Request $request) {
             $operations = $request->input('operations', []);
             
-            // Process multiple operations in one request
             $results = [];
             foreach ($operations as $operation) {
-                // Process each operation
                 $results[] = [
                     'type' => $operation['type'],
                     'id' => $operation['id'] ?? null,
@@ -250,16 +228,12 @@ Route::group(['middleware' => 'auth'], function () {
         
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Additional Mandor Routes (if needed for specific permissions)
-    |--------------------------------------------------------------------------
-    */
+    // =============================================================================
+    // RESTRICTED MANDOR ROUTES (with permission checks)
+    // =============================================================================
     
-    // Route dengan permission check (jika diperlukan)
     Route::group(['prefix' => 'mandor', 'middleware' => 'check.mandor.permission'], function () {
         
-        // Routes yang memerlukan permission khusus mandor
         Route::get('/restricted-data', function() {
             return response()->json(['message' => 'Restricted mandor data']);
         })->name('mandor.restricted-data');
@@ -267,16 +241,3 @@ Route::group(['middleware' => 'auth'], function () {
     });
 
 });
-
-/*
-|--------------------------------------------------------------------------
-| Custom Middleware Registration (add to Kernel.php)
-|--------------------------------------------------------------------------
-| 
-| Add this to app/Http/Kernel.php in $routeMiddleware array:
-| 'check.mandor.permission' => \App\Http\Middleware\CheckMandorPermission::class,
-|
-| Then create the middleware:
-| php artisan make:middleware CheckMandorPermission
-|
-*/
