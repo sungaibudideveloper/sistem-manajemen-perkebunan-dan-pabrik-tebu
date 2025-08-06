@@ -39,6 +39,14 @@
         body.ready { visibility: visible; opacity: 1; transition: opacity 0.15s ease; }
         
         [x-cloak] { display: none !important; }
+
+        @media print {
+            .sidebar-wrapper, aside, header, .header, nav, footer, .footer, .no-print, .print-hidden { display: none !important; }
+            .main-wrapper { margin-left: 0 !important; width: 100% !important; flex: none !important; }
+            .layout-container { display: block !important; }
+            main { margin: 0 !important; padding: 0 !important; background: white !important; }
+            * { box-shadow: none !important; text-shadow: none !important; }
+        }
     </style>
     
     <!-- Set initial state IMMEDIATELY -->

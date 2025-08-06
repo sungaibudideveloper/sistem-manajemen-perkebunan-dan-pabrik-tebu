@@ -1,390 +1,151 @@
 {{--resources\views\input\rencanakerjaharian\lkh-rekap.blade.php--}}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Rekap LKH - Laporan Kegiatan Harian</title>
-    <style>
-        @page {
-            size: A4 landscape;
-            margin: 15mm 10mm;
-        }
+<x-layout>
+    <x-slot:title>Rekap Laporan Kegiatan Harian (LKH)</x-slot:title>
+    <x-slot:navbar>Input</x-slot:navbar>
+    <x-slot:nav>Rencana Kerja Harian</x-slot:nav>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 11px;
-            line-height: 1.3;
-            color: #333;
-            background: #fff;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 0;
-        }
-
-        /* Header Section */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .header-left {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 6px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            background: #f9fafb;
-            color: #374151;
-            text-decoration: none;
-            font-size: 10px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .btn:hover {
-            background: #f3f4f6;
-            border-color: #9ca3af;
-        }
-
-        .btn-primary {
-            background: #6b7280;
-            color: white;
-            border-color: #6b7280;
-        }
-
-        .btn-primary:hover {
-            background: #4b5563;
-        }
-
-        .header-right {
-            text-align: right;
-            font-size: 10px;
-            color: #6b7280;
-        }
-
-        .header-right .date {
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 4px;
-        }
-
-        /* Title */
-        .main-title {
-            text-align: center;
-            font-size: 16px;
-            font-weight: 700;
-            color: #111827;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .section-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #111827;
-            margin: 20px 0 10px;
-            padding: 4px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .subsection-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: #374151;
-            margin: 15px 0 8px;
-            padding: 3px 6px;
-            background: #f8fafc;
-            border-left: 3px solid #6b7280;
-        }
-
-        /* Grid Layout for Tables */
-        .tables-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .activity-table {
-            flex: 1;
-            min-width: 180px;
-            max-width: calc(20% - 12px); /* 5 tables per row */
-        }
-
-        .activity-title {
-            font-size: 10px;
-            font-weight: 600;
-            color: #4b5563;
-            margin-bottom: 5px;
-            padding: 2px 4px;
-            background: #f1f5f9;
-            border-radius: 3px;
-            text-align: left;
-        }
-
-        /* Compact Table Styles */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            font-size: 9px;
-        }
-
-        th {
-            padding: 4px 3px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 8px;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            background: #f8fafc;
-        }
-
-        td {
-            padding: 4px 3px;
-            text-align: center;
-            border: 1px solid #d1d5db;
-            font-size: 8px;
-        }
-
-        /* Column Alignments */
-        .col-left { text-align: left; }
-        .col-right { text-align: right; }
-        .col-center { text-align: center; }
-
-        /* Total Row */
-        .total-row {
-            background: #f3f4f6;
-            font-weight: 600;
-        }
-
-        .total-row td {
-            border-top: 2px solid #9ca3af;
-        }
-
-        /* Signatures */
-        .signatures {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
-            text-align: center;
-        }
-
-        .signature-box {
-            padding: 15px 8px;
-        }
-
-        .signature-title {
-            font-weight: 600;
-            margin-bottom: 45px;
-            font-size: 10px;
-        }
-
-        .signature-line {
-            border-top: 1px solid #374151;
-            padding-top: 5px;
-            font-size: 9px;
-            color: #6b7280;
-        }
-
-        /* Print Styles */
-        @media print {
-            .header-left {
-                display: none;
-            }
-            
-            body {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-            }
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 20px;
-            color: #6b7280;
-            font-style: italic;
-            font-size: 10px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #6b7280;
-            font-size: 10px;
-        }
-
-        /* Info Box */
-        .info-box {
-            margin-bottom: 15px;
-            font-size: 10px;
-            color: #6b7280;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        /* Alert box for debugging */
-        .debug-info {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            padding: 8px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 9px;
-            display: none; /* Hidden by default, can be toggled for debugging */
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-left">
-                <button class="btn" onclick="history.back()">
-                    Kembali
-                </button>
-                <button class="btn btn-primary" onclick="window.print()">
-                    Cetak
-                </button>
-                <button class="btn" onclick="exportToPDF()">
-                    Export PDF
-                </button>
-                <button class="btn" onclick="exportToExcel()">
-                    Export Excel
-                </button>
-                <button class="btn" onclick="toggleDebugInfo()" style="background: #fbbf24; color: #92400e;">
-                    Debug Info
-                </button>
-            </div>
+    <!-- Print-optimized container -->
+    <div class="print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-2">
+        
+        <!-- Debug button (top right, small) -->
+        <div class="absolute top-2 right-2 z-50 no-print">
+            <button onclick="toggleDebugInfo()" class="bg-yellow-400 text-yellow-900 px-1 py-0.5 rounded text-xs font-medium hover:bg-yellow-500">
+                Debug
+            </button>
         </div>
 
         <!-- Title -->
-        <h1 class="main-title">Rekap Laporan Kegiatan Harian (LKH)</h1>
+        <h1 class="text-xl font-bold text-center text-gray-800 mb-3 uppercase tracking-wider">
+            Rekap Laporan Kegiatan Harian (LKH)
+        </h1>
 
         <!-- Debug Info -->
-        <div id="debug-info" class="debug-info">
+        <div id="debug-info" class="bg-yellow-50 border border-yellow-200 text-yellow-800 p-2 rounded mb-2 text-xs hidden">
             <strong>Debug Information:</strong>
             <div id="debug-content">Loading debug info...</div>
         </div>
 
         <!-- Info Box -->
-        <div class="info-box">
-            <div>
-                <div id="statistics" style="display: flex; gap: 20px; font-size: 9px;">
-                    <span>Total LKH: <strong id="stat-total-lkh">0</strong></span>
-                    <span>Total Hasil: <strong id="stat-total-hasil">0.00</strong> ha</span>
-                    <span>Total Upah: <strong id="stat-total-upah">Rp 0</strong></span>
-                    <span>Total Workers: <strong id="stat-total-workers">0</strong></span>
-                </div>
+        <div class="flex justify-between items-start mb-3 p-2 bg-gray-50 rounded-lg">
+            <div class="text-sm space-y-0.5">
+                <div>Total LKH: <strong id="stat-total-lkh">0</strong></div>
+                <div>Total Hasil: <strong id="stat-total-hasil">0.00</strong> ha</div>
+                <div>Total Workers: <strong id="stat-total-workers">0</strong></div>
             </div>
-            <div style="text-align: right; font-size: 11px; color: #6b7280;">
-                <div class="date" style="font-weight: 600; color: #111827">Tanggal: <span id="report-date"></span></div>
-                <div id="printed-at">Generated: <span id="print-timestamp"></span></div>
-                <div id="divisi-info" style="font-weight: 600; color: #111827">Divisi: <span id="company-info">Loading...</span></div>
+            <div class="text-right text-sm text-gray-600">
+                <div class="font-semibold text-gray-800">Tanggal: <span id="report-date"></span></div>
+                <div>Generated: <span id="print-timestamp"></span></div>
+                <div class="font-semibold text-gray-800">Divisi: <span id="company-info">Loading...</span></div>
             </div>
         </div>
 
-        <!-- Section 1: LKH Pengolahan (Activity II, III, IV) -->
-        <h2 class="section-title">1. LKH Pengolahan (Activity II, III, IV)</h2>
-        <div id="pengolahan-section">
-            <div class="loading">Memuat data pengolahan...</div>
+        <!-- Section 1: LKH Pengolahan -->
+        <div class="mb-3">
+            <h2 class="text-lg font-bold text-gray-800 mb-2 pb-1 border-b border-gray-300">
+                1. LKH Pengolahan (Activity II, III, IV)
+            </h2>
+            <div id="pengolahan-section" class="text-center py-3 text-gray-500">
+                Memuat data pengolahan...
+            </div>
         </div>
 
         <!-- Section 2: LKH Perawatan Manual -->
-        <h2 class="section-title">2. LKH Perawatan Manual (Activity V)</h2>
-        
-        <!-- PC Subsection -->
-        <h3 class="subsection-title">PC (Plant Cane)</h3>
-        <div id="perawatan-manual-pc-section">
-            <div class="loading">Memuat data perawatan manual PC...</div>
-        </div>
+        <div class="mb-3">
+            <h2 class="text-lg font-bold text-gray-800 mb-2 pb-1 border-b border-gray-300">
+                2. LKH Perawatan Manual (Activity V)
+            </h2>
+            
+            <h3 class="text-base font-semibold text-gray-700 mb-1">
+                PC (Plant Cane)
+            </h3>
+            <div id="perawatan-manual-pc-section" class="text-center py-3 text-gray-500 mb-2">
+                Memuat data perawatan manual PC...
+            </div>
 
-        <!-- RC Subsection -->
-        <h3 class="subsection-title">RC (Ratoon Cane)</h3>
-        <div id="perawatan-manual-rc-section">
-            <div class="loading">Memuat data perawatan manual RC...</div>
+            <h3 class="text-base font-semibold text-gray-700 mb-1">
+                RC (Ratoon Cane)
+            </h3>
+            <div id="perawatan-manual-rc-section" class="text-center py-3 text-gray-500">
+                Memuat data perawatan manual RC...
+            </div>
         </div>
 
         <!-- Section 3: LKH Perawatan Mekanis -->
-        <h2 class="section-title">3. LKH Perawatan Mekanis</h2>
-        
-        <!-- PC Subsection -->
-        <h3 class="subsection-title">PC (Plant Cane)</h3>
-        <div id="perawatan-mekanis-pc-section">
-            <div class="empty-state">Fitur perawatan mekanis akan ditambahkan pada update selanjutnya</div>
-        </div>
+        <div class="mb-3">
+            <h2 class="text-lg font-bold text-gray-800 mb-2 pb-1 border-b border-gray-300">
+                3. LKH Perawatan Mekanis
+            </h2>
+            
+            <h3 class="text-base font-semibold text-gray-700 mb-1">
+                PC (Plant Cane)
+            </h3>
+            <div class="text-center py-3 text-gray-400 italic mb-2">
+                Fitur perawatan mekanis akan ditambahkan pada update selanjutnya
+            </div>
 
-        <!-- RC Subsection -->
-        <h3 class="subsection-title">RC (Ratoon Cane)</h3>
-        <div id="perawatan-mekanis-rc-section">
-            <div class="empty-state">Fitur perawatan mekanis akan ditambahkan pada update selanjutnya</div>
+            <h3 class="text-base font-semibold text-gray-700 mb-1">
+                RC (Ratoon Cane)
+            </h3>
+            <div class="text-center py-3 text-gray-400 italic">
+                Fitur perawatan mekanis akan ditambahkan pada update selanjutnya
+            </div>
         </div>
 
         <!-- Signatures -->
-        <div class="signatures">
-            <div class="signature-box">
-                <div class="signature-title">Disetujui</div>
-                <div class="signature-line">Estate Manager</div>
+        <div class="mt-6 grid grid-cols-3 gap-6 text-center print:mt-8">
+            <div class="p-2">
+                <div class="font-semibold mb-8 text-sm">Disetujui</div>
+                <div class="border-t border-gray-400 pt-1 text-xs text-gray-600">Estate Manager</div>
             </div>
-            <div class="signature-box">
-                <div class="signature-title">Diperiksa</div>
-                <div class="signature-line">Asisten Kepala</div>
+            <div class="p-2">
+                <div class="font-semibold mb-8 text-sm">Diperiksa</div>
+                <div class="border-t border-gray-400 pt-1 text-xs text-gray-600">Asisten Kepala</div>
             </div>
-            <div class="signature-box">
-                <div class="signature-title">Disiapkan</div>
-                <div class="signature-line">Asisten Lapangan</div>
+            <div class="p-2">
+                <div class="font-semibold mb-8 text-sm">Disiapkan</div>
+                <div class="border-t border-gray-400 pt-1 text-xs text-gray-600">Asisten Lapangan</div>
             </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-4 flex justify-center space-x-4 no-print">
+            <button 
+                onclick="window.print()"
+                class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+            >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2 2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Print
+            </button>
+            
+            <button 
+                onclick="window.history.back()"
+                class="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors hover:bg-gray-50 flex items-center"
+            >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Kembali
+            </button>
         </div>
     </div>
 
     <script>
-        // Set report date from URL parameter or current date
         const urlParams = new URLSearchParams(window.location.search);
         const reportDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
         
         document.getElementById('report-date').textContent = new Date(reportDate).toLocaleDateString('id-ID', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
 
-        let globalData = null; // Store loaded data for debugging
+        let globalData = null;
 
-        // Load LKH Rekap data - UPDATED to handle new DB structure
         async function loadLKHRekapData() {
             try {
                 const response = await fetch(`{{ route('input.rencanakerjaharian.lkh-rekap-data') }}?date=${reportDate}`);
                 const data = await response.json();
-                
-                globalData = data; // Store for debugging
+                globalData = data;
                 
                 if (data.success) {
                     updateHeaderInfo(data);
@@ -402,41 +163,24 @@
         }
 
         function updateHeaderInfo(data) {
-            // Update print timestamp
             const printTimestamp = document.getElementById('print-timestamp');
-            if (printTimestamp) {
-                printTimestamp.textContent = data.generated_at || new Date().toLocaleString('id-ID');
-            }
+            if (printTimestamp) printTimestamp.textContent = data.generated_at || new Date().toLocaleString('id-ID');
             
-            // Update company info
             const companyInfo = document.getElementById('company-info');
-            if (companyInfo) {
-                if (data.company_info) {
-                    companyInfo.textContent = data.company_info;
-                } else {
-                    companyInfo.textContent = 'N/A';
-                }
-            }
+            if (companyInfo) companyInfo.textContent = data.company_info || 'N/A';
             
-            // Update statistics
             updateStatistics(data);
         }
 
         function updateStatistics(data) {
-            let totalLkh = 0;
-            let totalHasil = 0;
-            let totalWorkers = 0;
-            let totalUpah = 0;
+            let totalLkh = 0, totalHasil = 0, totalWorkers = 0;
 
-            // Calculate from all sections - UPDATED for new structure
             if (data.pengolahan) {
                 Object.values(data.pengolahan).forEach(activities => {
                     if (Array.isArray(activities)) {
                         activities.forEach(item => {
-                            totalLkh++;
-                            totalHasil += parseFloat(item.totalhasil || 0);
+                            totalLkh++; totalHasil += parseFloat(item.totalhasil || 0);
                             totalWorkers += parseInt(item.totalworkers || 0);
-                            totalUpah += parseFloat(item.totalupahall || 0);
                         });
                     }
                 });
@@ -448,10 +192,8 @@
                         Object.values(data.perawatan_manual[type]).forEach(activities => {
                             if (Array.isArray(activities)) {
                                 activities.forEach(item => {
-                                    totalLkh++;
-                                    totalHasil += parseFloat(item.totalhasil || 0);
+                                    totalLkh++; totalHasil += parseFloat(item.totalhasil || 0);
                                     totalWorkers += parseInt(item.totalworkers || 0);
-                                    totalUpah += parseFloat(item.totalupahall || 0);
                                 });
                             }
                         });
@@ -459,28 +201,23 @@
                 });
             }
 
-            // Update DOM
             const lkhEl = document.getElementById('stat-total-lkh');
             const hasilEl = document.getElementById('stat-total-hasil');
             const workersEl = document.getElementById('stat-total-workers');
-            const upahEl = document.getElementById('stat-total-upah');
             
             if (lkhEl) lkhEl.textContent = totalLkh;
             if (hasilEl) hasilEl.textContent = totalHasil.toFixed(2);
             if (workersEl) workersEl.textContent = totalWorkers;
-            if (upahEl) upahEl.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(totalUpah);
         }
 
         function populatePengolahanSection(data) {
             const section = document.getElementById('pengolahan-section');
             section.innerHTML = '';
-
             if (!data || Object.keys(data).length === 0) {
-                section.innerHTML = '<div class="empty-state">Tidak ada data pengolahan untuk tanggal yang dipilih</div>';
+                section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data pengolahan untuk tanggal yang dipilih</div>';
                 return;
             }
-
-            createActivityGrid(section, data, true); // true = show operator column
+            createActivityGrid(section, data);
         }
 
         function populatePerawatanManualSection(data) {
@@ -491,85 +228,71 @@
         function populatePerawatanSubsection(data, sectionId, type) {
             const section = document.getElementById(sectionId);
             section.innerHTML = '';
-
             if (!data || Object.keys(data).length === 0) {
-                section.innerHTML = `<div class="empty-state">Tidak ada data perawatan manual ${type} untuk tanggal yang dipilih</div>`;
+                section.innerHTML = `<div class="text-center py-6 text-gray-400 italic">Tidak ada data perawatan manual ${type} untuk tanggal yang dipilih</div>`;
                 return;
             }
-
-            createActivityGrid(section, data, true); // true = show operator column
+            createActivityGrid(section, data);
         }
 
-        function createActivityGrid(section, data, showOperator = true) {
+        function createActivityGrid(section, data) {
             const tablesGrid = document.createElement('div');
-            tablesGrid.className = 'tables-grid';
+            tablesGrid.className = 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mb-3';
 
             Object.keys(data).forEach(activityCode => {
                 const activities = data[activityCode];
                 if (!Array.isArray(activities) || activities.length === 0) return;
 
-                // Create activity table container
                 const activityTable = document.createElement('div');
-                activityTable.className = 'activity-table';
+                activityTable.className = 'bg-white border border-gray-200 rounded-lg overflow-hidden';
 
-                // Activity title with name
                 const activityTitle = document.createElement('div');
-                activityTitle.className = 'activity-title';
+                activityTitle.className = 'bg-gray-100 px-2 py-1 text-sm font-semibold text-gray-700 border-b';
                 const activityName = activities[0]?.activityname || 'Unknown Activity';
                 activityTitle.textContent = `${activityCode} - ${activityName}`;
                 activityTable.appendChild(activityTitle);
 
-                // Create table
                 const table = document.createElement('table');
-                const headerCols = showOperator ? 
-                    '<th>No.</th><th>Operator/Mandor</th><th>Plot</th><th>Workers</th><th>Luas Hasil</th><th>Upah</th>' :
-                    '<th>No.</th><th>Mandor</th><th>Plot</th><th>Workers</th><th>Luas Hasil</th><th>Upah</th>';
-
+                table.className = 'w-full text-xs';
                 table.innerHTML = `
-                    <thead>
-                        <tr>${headerCols}</tr>
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-1 py-0.5 text-left border-b text-gray-600 w-8">No.</th>
+                            <th class="px-1 py-0.5 text-center border-b text-gray-600">Mandor</th>
+                            <th class="px-1 py-0.5 text-center border-b text-gray-600 w-16">Plot</th>
+                            <th class="px-1 py-0.5 text-right border-b text-gray-600 w-12">Hasil</th>
+                        </tr>
                     </thead>
                     <tbody></tbody>
                 `;
 
                 const tbody = table.querySelector('tbody');
                 let totalHasil = 0;
-                let totalWorkers = 0;
-                let totalUpah = 0;
 
                 activities.forEach((item, index) => {
                     const row = document.createElement('tr');
-                    const hasil = parseFloat(item.totalhasil || 0);
-                    const workers = parseInt(item.totalworkers || 0);
-                    const upah = parseFloat(item.totalupahall || 0);
+                    row.className = 'hover:bg-gray-50';
                     
+                    const hasil = parseFloat(item.totalhasil || 0);
                     totalHasil += hasil;
-                    totalWorkers += workers;
-                    totalUpah += upah;
 
-                    // UPDATED: Get operator/mandor name and plot info from new structure
-                    const operatorName = item.operator || item.mandor_nama || '-';
+                    const mandorName = item.mandor_nama || '-';
                     const plotDisplay = `${item.blok}-${item.plot}` || '-';
 
                     row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td class="col-left">${operatorName}</td>
-                        <td>${plotDisplay}</td>
-                        <td class="col-center">${workers}</td>
-                        <td class="col-right">${hasil.toFixed(2)}</td>
-                        <td class="col-right">${new Intl.NumberFormat('id-ID').format(upah)}</td>
+                        <td class="px-1 py-0.5 border-b text-center">${index + 1}</td>
+                        <td class="px-1 py-0.5 border-b font-medium text-xs">${mandorName}</td>
+                        <td class="px-1 py-0.5 border-b text-center">${plotDisplay}</td>
+                        <td class="px-1 py-0.5 border-b text-right">${hasil.toFixed(2)}</td>
                     `;
                     tbody.appendChild(row);
                 });
 
-                // Add total row
                 const totalRow = document.createElement('tr');
-                totalRow.className = 'total-row';
+                totalRow.className = 'bg-gray-100 font-semibold';
                 totalRow.innerHTML = `
-                    <td colspan="3" class="col-center"><strong>TOTAL</strong></td>
-                    <td class="col-center"><strong>${totalWorkers}</strong></td>
-                    <td class="col-right"><strong>${totalHasil.toFixed(2)}</strong></td>
-                    <td class="col-right"><strong>${new Intl.NumberFormat('id-ID').format(totalUpah)}</strong></td>
+                    <td colspan="3" class="px-1 py-0.5 text-center border-t-2 border-gray-400">TOTAL</td>
+                    <td class="px-1 py-0.5 text-right border-t-2 border-gray-400">${totalHasil.toFixed(2)}</td>
                 `;
                 tbody.appendChild(totalRow);
 
@@ -588,29 +311,21 @@
             
             if (data.error) {
                 debugHtml += `<div><strong>Error:</strong> ${data.error}</div>`;
-                if (data.stack) {
-                    debugHtml += `<div><strong>Stack:</strong> <pre style="font-size: 8px; white-space: pre-wrap;">${data.stack}</pre></div>`;
-                }
+                if (data.stack) debugHtml += `<div><strong>Stack:</strong> <pre class="text-xs whitespace-pre-wrap mt-2">${data.stack}</pre></div>`;
             } else {
                 debugHtml += `<div><strong>Data loaded successfully</strong></div>`;
                 if (data.debug) {
-                    debugHtml += '<div><strong>Counts:</strong></div>';
+                    debugHtml += '<div class="mt-2"><strong>Counts:</strong></div>';
                     Object.keys(data.debug).forEach(key => {
                         debugHtml += `<div>- ${key}: ${data.debug[key]}</div>`;
                     });
                 }
                 
-                if (data.pengolahan) {
-                    debugHtml += `<div><strong>Pengolahan activities:</strong> ${Object.keys(data.pengolahan).join(', ')}</div>`;
-                }
+                if (data.pengolahan) debugHtml += `<div class="mt-2"><strong>Pengolahan activities:</strong> ${Object.keys(data.pengolahan).join(', ')}</div>`;
                 
                 if (data.perawatan_manual) {
-                    if (data.perawatan_manual.pc) {
-                        debugHtml += `<div><strong>PC activities:</strong> ${Object.keys(data.perawatan_manual.pc).join(', ')}</div>`;
-                    }
-                    if (data.perawatan_manual.rc) {
-                        debugHtml += `<div><strong>RC activities:</strong> ${Object.keys(data.perawatan_manual.rc).join(', ')}</div>`;
-                    }
+                    if (data.perawatan_manual.pc) debugHtml += `<div><strong>PC activities:</strong> ${Object.keys(data.perawatan_manual.pc).join(', ')}</div>`;
+                    if (data.perawatan_manual.rc) debugHtml += `<div><strong>RC activities:</strong> ${Object.keys(data.perawatan_manual.rc).join(', ')}</div>`;
                 }
             }
             
@@ -619,48 +334,21 @@
 
         function toggleDebugInfo() {
             const debugDiv = document.getElementById('debug-info');
-            if (debugDiv.style.display === 'none' || !debugDiv.style.display) {
-                debugDiv.style.display = 'block';
-            } else {
-                debugDiv.style.display = 'none';
-            }
+            debugDiv.classList.toggle('hidden');
         }
 
         function showError(message) {
-            const sections = [
-                'pengolahan-section',
-                'perawatan-manual-pc-section', 
-                'perawatan-manual-rc-section'
-            ];
-            
-            sections.forEach(sectionId => {
+            ['pengolahan-section', 'perawatan-manual-pc-section', 'perawatan-manual-rc-section'].forEach(sectionId => {
                 const section = document.getElementById(sectionId);
-                if (section) {
-                    section.innerHTML = `<div class="empty-state">${message}</div>`;
-                }
+                if (section) section.innerHTML = `<div class="text-center py-6 text-red-500">${message}</div>`;
             });
         }
 
-        function exportToPDF() {
-            window.print();
-        }
-
-        function exportToExcel() {
-            alert('Fitur export Excel belum diimplementasikan');
-        }
-
-        // Load data when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadLKHRekapData();
-        });
-
-        // Add keyboard shortcut for debug toggle
+        document.addEventListener('DOMContentLoaded', function() { loadLKHRekapData(); });
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-                e.preventDefault();
-                toggleDebugInfo();
+                e.preventDefault(); toggleDebugInfo();
             }
         });
     </script>
-</body>
-</html>
+</x-layout>

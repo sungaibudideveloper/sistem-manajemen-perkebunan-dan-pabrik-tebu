@@ -1011,32 +1011,70 @@ class RencanaKerjaHarianController extends Controller
             ->get();
     }
 
-    /**
+/**
      * Get LKH material details for show
-     * NEW METHOD: Use lkhdetailmaterial table
+     * UPDATED: Add join to herbisida table to get measure (satuan) and itemname
      */
     private function getLkhMaterialDetailsForShow($companycode, $lkhno)
-{
-    return LkhDetailMaterial::where('companycode', $companycode)
-        ->where('lkhno', $lkhno)
-        // ->with('herbisida') // HAPUS INI
-        ->get()
-        ->map(function($material) {
-            return (object)[
-                'id' => $material->id,
-                'itemcode' => (string)($material->itemcode ?? ''),
-                'qtyditerima' => floatval($material->qtyditerima ?? 0),
-                'qtysisa' => floatval($material->qtysisa ?? 0),
-                'qtydigunakan' => floatval($material->qtydigunakan ?? 0),
-                'keterangan' => (string)($material->keterangan ?? ''),
-                'inputby' => (string)($material->inputby ?? ''),
-                'createdat' => $material->createdat,
-                'updatedat' => $material->updatedat,
-                'herbisida' => $material->herbisida ?? null, // HAPUS INI
-                'itemname' => $material->herbisida->itemname ?? 'Unknown Item' // HAPUS INI
-            ];
-        });
-}
+    {
+        return DB::table('lkhdetailmaterial as ldm')
+            ->leftJoin('herbisida as h', function($join) use ($companycode) {
+                $join->on('ldm.itemcode', '=', 'h.itemcode')
+                     ->where('h.companycode', '=', $companycode);
+            })
+            ->where('ldm.companycode', $companycode)
+            ->where('ldm.lkhno', $lkhno)
+            ->select([
+                'ldm.id',
+                'ldm.itemcode',
+                'ldm.qtyditerima',
+                'ldm.qtysisa', 
+                'ldm.qtydigunakan',
+                'ldm.keterangan',
+                'ldm.inputby',
+                'ldm.createdat',
+                'ldm.updatedat',
+                'h.itemname',
+                'h.measure as satuan'
+            ])
+            ->get()
+            ->map(function($material) {
+                return (object)[
+                    'id' => $material->id,
+                    'itemcode' => (string)($material->itemcode ?? ''),
+                    'itemname' => (string)($material->itemname ?? 'Unknown Item'),
+                    'qtyditerima' => floatval($material->qtyditerima ?? 0),
+                    'qtysisa' => floatval($material->qtysisa ?? 0),
+                    'qtydigunakan' => floatval($material->qtydigunakan ?? 0),
+                    'satuan' => (string)($material->satuan ?? '-'),
+                    'keterangan' => (string)($material->keterangan ?? ''),
+                    'inputby' => (string)($material->inputby ?? ''),
+                    'createdat' => $material->createdat,
+                    'updatedat' => $material->updatedat,
+                ];
+            });
+    }
+
+    /**
+     * Get LKH material details for edit
+     * UPDATED: Add join to herbisida table to get measure (satuan) and itemname
+     */
+    private function getLkhMaterialDetailsForEdit($companycode, $lkhno)
+    {
+        return DB::table('lkhdetailmaterial as ldm')
+            ->leftJoin('herbisida as h', function($join) use ($companycode) {
+                $join->on('ldm.itemcode', '=', 'h.itemcode')
+                     ->where('h.companycode', '=', $companycode);
+            })
+            ->where('ldm.companycode', $companycode)
+            ->where('ldm.lkhno', $lkhno)
+            ->select([
+                'ldm.*',
+                'h.itemname',
+                'h.measure as satuan'
+            ])
+            ->get();
+    }
 
     /**
      * Get LKH approvals data
@@ -1106,17 +1144,6 @@ class RencanaKerjaHarianController extends Controller
             ->get();
     }
 
-    /**
-     * Get LKH material details for edit
-     * NEW METHOD: Use lkhdetailmaterial table
-     */
-    private function getLkhMaterialDetailsForEdit($companycode, $lkhno)
-    {
-        return LkhDetailMaterial::where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->with('herbisida')
-            ->get();
-    }
 
     /**
      * Load LKH edit form data
@@ -1688,131 +1715,112 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get Pengolahan data (Activity II, III, IV) - UPDATED: using lkhdetailplot
-     */
-    private function getPengolahanData($companycode, $date)
-    {
-        $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldp.lkhno')
-                     ->where('ldp.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldw.lkhno')
-                     ->where('ldw.companycode', '=', $companycode)
-                     ->where('ldw.tenagakerjaurutan', '=', 1); // Get first worker as representative
-            })
-            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
-            ->where('h.companycode', $companycode)
-            ->whereDate('h.lkhdate', $date)
-            ->where(function($query) {
-                $query->where('h.activitycode', 'like', 'II.%')
-                    ->orWhere('h.activitycode', 'like', 'III.%')
-                    ->orWhere('h.activitycode', 'like', 'IV.%');
-            })
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'h.totalworkers',
-                'h.totalluasactual',
-                'h.totalhasil',
-                'u.name as mandor_nama',
-                'a.activityname',
-                'tk.nama as operator',
-                'ldp.blok', // NOW from lkhdetailplot
-                'ldp.plot'  // NOW from lkhdetailplot
-            ])
-            ->orderBy('h.activitycode')
-            ->orderBy('h.lkhno')
-            ->get();
-
-        // Group by activity code
-        return $data->groupBy('activitycode')->toArray();
-    }
+ * Get Pengolahan data (Activity II, III, IV) - FIXED: Ambil mandor yang benar
+ * UPDATED: using lkhdetailplot and proper mandor from header
+ */
+private function getPengolahanData($companycode, $date)
+{
+    return DB::table('lkhhdr as h')
+        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+            $join->on('h.lkhno', '=', 'ldp.lkhno')
+                 ->where('ldp.companycode', '=', $companycode);
+        })
+        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
+        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.lkhdate', $date)
+        ->where(function($query) {
+            $query->where('h.activitycode', 'like', 'II.%')
+                ->orWhere('h.activitycode', 'like', 'III.%')
+                ->orWhere('h.activitycode', 'like', 'IV.%');
+        })
+        ->select([
+            'h.lkhno',
+            'h.activitycode',
+            'h.totalworkers',
+            'h.totalhasil',
+            'h.totalupahall', // FIXED: Use totalupahall instead of totalluasactual
+            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
+            'a.activityname',
+            'ldp.blok', // NOW from lkhdetailplot
+            'ldp.plot'  // NOW from lkhdetailplot
+        ])
+        ->orderBy('h.activitycode')
+        ->orderBy('h.lkhno')
+        ->get()
+        ->groupBy('activitycode')
+        ->toArray();
+}
 
     /**
-     * Get Perawatan Manual PC data - UPDATED: using lkhdetailplot
-     */
-    private function getPerawatanManualPCData($companycode, $date)
-    {
-        $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldp.lkhno')
-                     ->where('ldp.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldw.lkhno')
-                     ->where('ldw.companycode', '=', $companycode)
-                     ->where('ldw.tenagakerjaurutan', '=', 1);
-            })
-            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
-            ->where('h.companycode', $companycode)
-            ->whereDate('h.lkhdate', $date)
-            ->where('h.activitycode', 'like', 'V.%')
-            ->where('ldp.blok', 'like', '%PC%') // NOW from lkhdetailplot
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'h.totalworkers',
-                'h.totalluasactual',
-                'h.totalhasil',
-                'u.name as mandor_nama',
-                'a.activityname',
-                'tk.nama as operator',
-                'ldp.blok', // NOW from lkhdetailplot
-                'ldp.plot'  // NOW from lkhdetailplot
-            ])
-            ->orderBy('h.activitycode')
-            ->orderBy('h.lkhno')
-            ->get();
-
-        return $data->groupBy('activitycode')->toArray();
-    }
+ * Get Perawatan Manual PC data - FIXED: Ambil mandor yang benar
+ * UPDATED: using lkhdetailplot and proper mandor from header
+ */
+private function getPerawatanManualPCData($companycode, $date)
+{
+    return DB::table('lkhhdr as h')
+        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+            $join->on('h.lkhno', '=', 'ldp.lkhno')
+                 ->where('ldp.companycode', '=', $companycode);
+        })
+        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
+        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.lkhdate', $date)
+        ->where('h.activitycode', 'like', 'V.%')
+        ->where('ldp.blok', 'like', '%PC%') // NOW from lkhdetailplot
+        ->select([
+            'h.lkhno',
+            'h.activitycode',
+            'h.totalworkers',
+            'h.totalhasil',
+            'h.totalupahall', // FIXED: Use totalupahall
+            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
+            'a.activityname',
+            'ldp.blok', // NOW from lkhdetailplot
+            'ldp.plot'  // NOW from lkhdetailplot
+        ])
+        ->orderBy('h.activitycode')
+        ->orderBy('h.lkhno')
+        ->get()
+        ->groupBy('activitycode')
+        ->toArray();
+}
 
     /**
-     * Get Perawatan Manual RC data - UPDATED: using lkhdetailplot
-     */
-    private function getPerawatanManualRCData($companycode, $date)
-    {
-        $data = DB::table('lkhhdr as h')
-            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldp.lkhno')
-                     ->where('ldp.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('lkhdetailworker as ldw', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldw.lkhno')
-                     ->where('ldw.companycode', '=', $companycode)
-                     ->where('ldw.tenagakerjaurutan', '=', 1);
-            })
-            ->leftJoin('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
-            ->where('h.companycode', $companycode)
-            ->whereDate('h.lkhdate', $date)
-            ->where('h.activitycode', 'like', 'V.%')
-            ->where('ldp.blok', 'like', '%RC%') // NOW from lkhdetailplot
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'h.totalworkers',
-                'h.totalluasactual',
-                'h.totalhasil',
-                'u.name as mandor_nama',
-                'a.activityname',
-                'tk.nama as operator',
-                'ldp.blok', // NOW from lkhdetailplot
-                'ldp.plot'  // NOW from lkhdetailplot
-            ])
-            ->orderBy('h.activitycode')
-            ->orderBy('h.lkhno')
-            ->get();
-
-        return $data->groupBy('activitycode')->toArray();
-    }
+ * Get Perawatan Manual RC data - FIXED: Ambil mandor yang benar  
+ * UPDATED: using lkhdetailplot and proper mandor from header
+ */
+private function getPerawatanManualRCData($companycode, $date)
+{
+    return DB::table('lkhhdr as h')
+        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+            $join->on('h.lkhno', '=', 'ldp.lkhno')
+                 ->where('ldp.companycode', '=', $companycode);
+        })
+        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
+        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.lkhdate', $date)
+        ->where('h.activitycode', 'like', 'V.%')
+        ->where('ldp.blok', 'like', '%RC%') // NOW from lkhdetailplot
+        ->select([
+            'h.lkhno',
+            'h.activitycode',
+            'h.totalworkers', 
+            'h.totalhasil',
+            'h.totalupahall', // FIXED: Use totalupahall
+            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
+            'a.activityname',
+            'ldp.blok', // NOW from lkhdetailplot
+            'ldp.plot'  // NOW from lkhdetailplot
+        ])
+        ->orderBy('h.activitycode')
+        ->orderBy('h.lkhno')
+        ->get()
+        ->groupBy('activitycode')
+        ->toArray();
+}
 
 
     // =====================================

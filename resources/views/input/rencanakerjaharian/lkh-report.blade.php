@@ -4,70 +4,74 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <div class="max-w-full mx-auto bg-white rounded-lg shadow-lg p-8">
-        <!-- Header Section -->
-        <div class="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-xl font-bold text-gray-800 mb-2">
-                        LAPORAN KEGIATAN HARIAN (LKH)
-                        @if($lkhData->jenistenagakerja == 1)
-                            - TENAGA HARIAN
-                        @else
-                            - TENAGA BORONGAN
-                        @endif
-                    </h1>
-                    <div class="space-y-1">
-                        <p class="text-sm text-gray-600">No. LKH: <span class="font-mono font-semibold">{{ $lkhData->lkhno }}</span></p>
-                        <p class="text-sm text-gray-600">No. RKH: <span class="font-mono font-semibold">{{ $lkhData->rkhno }}</span></p>
-                        <p class="text-sm text-gray-600">Tanggal: <span class="font-semibold">{{ \Carbon\Carbon::parse($lkhData->lkhdate)->format('l, d F Y') }}</span></p>
-                        <p class="text-sm text-gray-600">Aktivitas: <span class="font-semibold">{{ $lkhData->activitycode }} - {{ $lkhData->activityname ?? '' }}</span></p>
-                        <p class="text-sm text-gray-600">Mandor: <span class="font-semibold">{{ $lkhData->mandornama ?? $lkhData->mandorid }}</span></p>
+    <!-- Print-optimized container -->
+    <div class="print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-4">
+        <!-- Header and Summary Section - Combined Layout -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="flex gap-4">
+                <!-- Header Section - Takes remaining space -->
+                <div class="flex-1">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h1 class="text-xl font-bold text-gray-800 mb-2">
+                                LAPORAN KEGIATAN HARIAN (LKH)
+                                @if($lkhData->jenistenagakerja == 1)
+                                    - TENAGA HARIAN
+                                @else
+                                    - TENAGA BORONGAN
+                                @endif
+                            </h1>
+                            <div class="space-y-1">
+                                <p class="text-sm text-gray-600">No. LKH: <span class="font-mono font-semibold">{{ $lkhData->lkhno }}</span></p>
+                                <p class="text-sm text-gray-600">No. RKH: <span class="font-mono font-semibold">{{ $lkhData->rkhno }}</span></p>
+                                <p class="text-sm text-gray-600">Tanggal: <span class="font-semibold">{{ \Carbon\Carbon::parse($lkhData->lkhdate)->format('l, d F Y') }}</span></p>
+                                <p class="text-sm text-gray-600">Aktivitas: <span class="font-semibold">{{ $lkhData->activitycode }} - {{ $lkhData->activityname ?? '' }}</span></p>
+                                <p class="text-sm text-gray-600">Mandor: <span class="font-semibold">{{ $lkhData->mandornama ?? $lkhData->mandorid }}</span></p>
+                            </div>
+                        </div>
+                        <div class="text-right ml-4">
+                            @if($lkhData->status == 'COMPLETED')
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">Selesai</span>
+                            @elseif($lkhData->status == 'DRAFT')
+                                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-medium">Draft</span>
+                            @elseif($lkhData->status == 'APPROVED')
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">Approved</span>
+                            @elseif($lkhData->status == 'SUBMITTED')
+                                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Submitted</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
-                <div class="text-right">
-                    @if($lkhData->status == 'COMPLETED')
-                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">Selesai</span>
-                    @elseif($lkhData->status == 'DRAFT')
-                        <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-medium">Draft</span>
-                    @elseif($lkhData->status == 'APPROVED')
-                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">Approved</span>
-                    @elseif($lkhData->status == 'SUBMITTED')
-                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Submitted</span>
-                    @else
-                        <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">{{ $lkhData->status ?? 'EMPTY' }}</span>
-                    @endif
+
+                <!-- Summary Section - Fixed width, positioned at far right -->
+                <div class="w-64 bg-white rounded-lg p-4 border border-gray-300">
+                    <h3 class="text-sm font-bold text-gray-800 mb-3">Ringkasan</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Total Pekerja:</span> 
+                            <span class="font-bold text-gray-900">{{ $lkhData->totalworkers ?? 0 }} orang</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Total Hasil:</span> 
+                            <span class="font-bold text-gray-900">{{ number_format($lkhData->totalhasil ?? 0, 2) }} Ha</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Total Sisa:</span> 
+                            <span class="font-bold text-gray-900">{{ number_format($lkhData->totalsisa ?? 0, 2) }} Ha</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Total Upah:</span> 
+                            <span class="font-bold text-gray-900">Rp {{ number_format($lkhData->totalupahall ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Summary Section -->
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Ringkasan</h3>
-            <div class="grid grid-cols-4 gap-4">
-                <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ $lkhData->totalworkers ?? 0 }}</div>
-                    <div class="text-sm text-gray-600">Total Pekerja</div>
-                </div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalhasil ?? 0, 2) }}</div>
-                    <div class="text-sm text-gray-600">Total Hasil (Ha)</div>
-                </div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalsisa ?? 0, 2) }}</div>
-                    <div class="text-sm text-gray-600">Total Sisa (Ha)</div>
-                </div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">Rp {{ number_format($lkhData->totalupahall ?? 0, 0, ',', '.') }}</div>
-                    <div class="text-sm text-gray-600">Total Upah</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Plot Details Section - UPDATED: Using lkhdetailplot table -->
+        <!-- Plot Details Section - REVISED: Progress column removed -->
         @if($lkhPlotDetails && $lkhPlotDetails->count() > 0)
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg font-bold text-gray-800">Detail Plot</h3>
                 <div class="text-sm text-gray-500">
                     Total Plot: {{ $lkhPlotDetails->count() }}
@@ -84,7 +88,6 @@
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas RKH</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas Hasil</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas Sisa</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Progress</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,22 +97,10 @@
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">{{ $plot->blok }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">{{ $plot->plot }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luasrkh ?? 0, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">{{ number_format($plot->luashasil ?? 0, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luassisa ?? 0, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
-                                @if($plot->luasrkh > 0)
-                                    @php
-                                        $progress = round(($plot->luashasil / $plot->luasrkh) * 100, 1);
-                                    @endphp
-                                    <span class="px-2 py-1 text-xs rounded-full 
-                                        {{ $progress == 100 ? 'bg-green-100 text-green-700' : 
-                                           ($progress >= 80 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') }}">
-                                        {{ $progress }}%
-                                    </span>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">
+                                {{ number_format($plot->luashasil ?? 0, 2) }}
                             </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luassisa ?? 0, 2) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -119,14 +110,6 @@
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luasrkh'), 2) }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luashasil'), 2) }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luassisa'), 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
-                                @php
-                                    $totalRkh = $lkhPlotDetails->sum('luasrkh');
-                                    $totalHasil = $lkhPlotDetails->sum('luashasil');
-                                    $overallProgress = $totalRkh > 0 ? round(($totalHasil / $totalRkh) * 100, 1) : 0;
-                                @endphp
-                                {{ $overallProgress }}%
-                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -134,10 +117,10 @@
         </div>
         @endif
 
-        <!-- Worker Details Section - UPDATED: Using lkhdetailworker table -->
+        <!-- Worker Details Section - REVISED: Jam formatting changed from 8.0h to 8 jam -->
         @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg font-bold text-gray-800">Detail Pekerja</h3>
                 <div class="text-sm text-gray-500">
                     Total Pekerja: {{ $lkhWorkerDetails->count() }}
@@ -185,10 +168,10 @@
                                     {{ $worker->jamselesai ? \Carbon\Carbon::parse($worker->jamselesai)->format('H:i') : '-' }}
                                 </td>
                                 <td class="border border-gray-300 px-2 py-2 text-center text-sm">
-                                    {{ number_format($worker->totaljamkerja ?? 0, 1) }}h
+                                    {{ ($worker->totaljamkerja ?? 0) > 0 ? number_format($worker->totaljamkerja, 0) . ' jam' : '-' }}
                                 </td>
                                 <td class="border border-gray-300 px-2 py-2 text-center text-sm">
-                                    {{ number_format($worker->overtimehours ?? 0, 1) }}h
+                                    {{ ($worker->overtimehours ?? 0) > 0 ? number_format($worker->overtimehours, 0) . ' jam' : '-' }}
                                 </td>
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm">
                                     Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}
@@ -240,10 +223,10 @@
         </div>
         @endif
 
-        <!-- Material Details Section - UPDATED: Using lkhdetailmaterial table -->
+        <!-- Material Details Section - REVISED: Remove Efisiensi column -->
         @if($lkhMaterialDetails && $lkhMaterialDetails->count() > 0)
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg font-bold text-gray-800">Detail Material</h3>
                 <div class="text-sm text-gray-500">
                     Total Items: {{ $lkhMaterialDetails->count() }}
@@ -256,12 +239,11 @@
                         <tr>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-12">No</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Item Code</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-40">Nama Item</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Diterima</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Sisa</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Digunakan</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Efisiensi</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Input By</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Satuan</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -270,6 +252,9 @@
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-sm font-mono font-medium">
                                 {{ $material->itemcode }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm">
+                                {{ $material->itemname ?? 'Unknown Item' }}
                             </td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($material->qtyditerima ?? 0, 3) }}
@@ -281,31 +266,14 @@
                                 {{ number_format($material->qtydigunakan ?? 0, 3) }}
                             </td>
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm">
-                                @if($material->qtyditerima > 0)
-                                    @php
-                                        $efficiency = round(($material->qtydigunakan / $material->qtyditerima) * 100, 1);
-                                    @endphp
-                                    <span class="px-2 py-1 text-xs rounded-full 
-                                        {{ $efficiency >= 90 ? 'bg-green-100 text-green-700' : 
-                                           ($efficiency >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') }}">
-                                        {{ $efficiency }}%
-                                    </span>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
-                                {{ $material->inputby ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
-                                {{ $material->keterangan ?? '-' }}
+                                {{ $material->satuan ?? '-' }}
                             </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
-                            <td colspan="2" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
+                            <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($lkhMaterialDetails->sum('qtyditerima'), 3) }}
                             </td>
@@ -315,15 +283,7 @@
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 3) }}
                             </td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
-                                @php
-                                    $totalDiterima = $lkhMaterialDetails->sum('qtyditerima');
-                                    $totalDigunakan = $lkhMaterialDetails->sum('qtydigunakan');
-                                    $overallEfficiency = $totalDiterima > 0 ? round(($totalDigunakan / $totalDiterima) * 100, 1) : 0;
-                                @endphp
-                                {{ $overallEfficiency }}%
-                            </td>
-                            <td colspan="2" class="border border-gray-300 px-3 py-2"></td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">-</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -333,10 +293,10 @@
 
         <!-- Keterangan Section -->
         @if($lkhData->keterangan)
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <div class="mb-4">
+        <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="mb-3">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Keterangan</label>
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-300">
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-300">
                     <p class="text-sm text-gray-700">{{ $lkhData->keterangan }}</p>
                 </div>
             </div>
@@ -344,9 +304,9 @@
         @endif
 
         <!-- Signature Section -->
-        <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Persetujuan</h3>
-            <div class="grid grid-cols-3 gap-8">
+        <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">Persetujuan</h3>
+            <div class="grid grid-cols-3 gap-6">
                 <div class="text-center">
                     <div class="border-b border-gray-300 h-16 mb-2"></div>
                     <p class="text-sm font-medium">Jabatan 1</p>
@@ -387,7 +347,7 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="mt-8 flex justify-center space-x-4 no-print">
+        <div class="mt-6 flex justify-center space-x-4 no-print">
             @if($lkhData->status != 'APPROVED' && $lkhData->status != 'COMPLETED' && !$lkhData->issubmit)
             <button 
                 onclick="window.location.href='{{ route('input.rencanakerjaharian.editLKH', $lkhData->lkhno) }}'"
@@ -401,7 +361,7 @@
             @endif
             
             <button 
-                onclick="window.print()"
+                onclick="handlePrint()"
                 class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
             >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,4 +401,34 @@
             }
         }
     </style>
+
+    <script>
+        function handlePrint() {
+            // Hide all navigation elements before printing
+            const elementsToHide = [
+                '.sidebar', '.navbar', '.header', '.nav', '.breadcrumb', 
+                '.footer', 'nav', '#sidebar', '#header', '#navbar'
+            ];
+            
+            elementsToHide.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(el => {
+                    el.style.display = 'none';
+                });
+            });
+            
+            // Print
+            window.print();
+            
+            // Restore elements after print (optional)
+            setTimeout(() => {
+                elementsToHide.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        el.style.display = '';
+                    });
+                });
+            }, 1000);
+        }
+    </script>
 </x-layout>
