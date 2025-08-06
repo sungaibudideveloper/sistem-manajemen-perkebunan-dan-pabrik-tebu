@@ -268,19 +268,145 @@
             
             // Initialize store
             Alpine.store('sidebar').init();
+        });
 
-            // PWA Service Worker Registration
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('{{ asset('sw.js') }}')
-                        .then(function(registration) {
-                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                        }, function(err) {
-                            console.log('ServiceWorker registration failed: ', err);
+        // ========== SERVICE WORKER MANAGEMENT ==========
+        
+        // Clear cache on logout
+        document.addEventListener('DOMContentLoaded', function() {
+            // Intercept logout forms
+            const logoutForms = document.querySelectorAll('form[action*="logout"]');
+            logoutForms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    // Clear SW cache before logout
+                    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage({ 
+                            type: 'CLEAR_CACHE' 
                         });
+                    }
+                    // Also clear browser caches
+                    if ('caches' in window) {
+                        caches.keys().then(names => {
+                            names.forEach(name => caches.delete(name));
+                        });
+                    }
                 });
+            });
+            
+            // Handle login success
+            if (window.location.pathname.includes('/dashboard') && 
+                document.referrer && document.referrer.includes('/login')) {
+                // User just logged in, update SW
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.update();
+                    });
+                }
             }
         });
+        
+        // Service Worker Registration with version control
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                // Add timestamp to force update in development
+                const swUrl = '{{ asset("sw.js") }}' + 
+                    @if(config('app.env') === 'local')
+                        '?v=' + Date.now();
+                    @else
+                        '?v=6'; // Production version
+                    @endif
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(function(registration) {
+                        console.log('ServiceWorker registered:', registration.scope);
+                        
+                        // Check for updates periodically
+                        @if(config('app.env') === 'local')
+                        // Development: Check every minute
+                        setInterval(() => {
+                            registration.update();
+                        }, 60 * 1000);
+                        @else
+                        // Production: Check every 30 minutes
+                        setInterval(() => {
+                            registration.update();
+                        }, 30 * 60 * 1000);
+                        @endif
+                        
+                        // Handle updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('New service worker available');
+                                    // Optionally show update notification
+                                    if (confirm('Update tersedia! Refresh halaman?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(function(err) {
+                        console.error('ServiceWorker registration failed:', err);
+                    });
+                
+                // Handle controller change
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+            });
+        }
+        
+        // Helper function to clear all caches (for debugging)
+        window.clearAllCache = function() {
+            console.log('Clearing all caches...');
+            
+            // Clear Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            
+            // Clear Caches
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                });
+            }
+            
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            console.log('All caches cleared. Reloading...');
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 500);
+        };
+        
+        // Debug helper
+        window.swInfo = function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                    console.log('SW Ready:', reg);
+                    console.log('SW Active:', reg.active);
+                    console.log('SW Scope:', reg.scope);
+                });
+                
+                caches.keys().then(names => {
+                    console.log('Active Caches:', names);
+                });
+            }
+        };
     </script>
 
     <x-sprite-svg />
