@@ -42,10 +42,6 @@ class LkhDetailMaterial extends Model
         return $this->belongsTo(Lkhhdr::class, 'lkhno', 'lkhno');
     }
 
-    public function herbisida()
-    {
-        return $this->belongsTo(Herbisida::class, ['companycode', 'itemcode'], ['companycode', 'itemcode']);
-    }
 
     // Scopes
     public function scopeByCompany($query, $companycode)

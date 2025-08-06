@@ -800,7 +800,6 @@ class RencanaKerjaHarianController extends Controller
                 'h.activitycode',
                 'a.activityname',
                 'h.jenistenagakerja',
-                'h.status',
                 'h.lkhdate',
                 'h.totalworkers',
                 'h.totalhasil',
@@ -1017,12 +1016,27 @@ class RencanaKerjaHarianController extends Controller
      * NEW METHOD: Use lkhdetailmaterial table
      */
     private function getLkhMaterialDetailsForShow($companycode, $lkhno)
-    {
-        return LkhDetailMaterial::where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->with('herbisida')
-            ->get();
-    }
+{
+    return LkhDetailMaterial::where('companycode', $companycode)
+        ->where('lkhno', $lkhno)
+        // ->with('herbisida') // HAPUS INI
+        ->get()
+        ->map(function($material) {
+            return (object)[
+                'id' => $material->id,
+                'itemcode' => (string)($material->itemcode ?? ''),
+                'qtyditerima' => floatval($material->qtyditerima ?? 0),
+                'qtysisa' => floatval($material->qtysisa ?? 0),
+                'qtydigunakan' => floatval($material->qtydigunakan ?? 0),
+                'keterangan' => (string)($material->keterangan ?? ''),
+                'inputby' => (string)($material->inputby ?? ''),
+                'createdat' => $material->createdat,
+                'updatedat' => $material->updatedat,
+                'herbisida' => $material->herbisida ?? null, // HAPUS INI
+                'itemname' => $material->herbisida->itemname ?? 'Unknown Item' // HAPUS INI
+            ];
+        });
+}
 
     /**
      * Get LKH approvals data

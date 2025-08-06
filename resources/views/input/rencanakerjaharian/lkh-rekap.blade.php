@@ -248,6 +248,18 @@
             justify-content: space-between;
             align-items: flex-start;
         }
+
+        /* Alert box for debugging */
+        .debug-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 9px;
+            display: none; /* Hidden by default, can be toggled for debugging */
+        }
     </style>
 </head>
 <body>
@@ -267,44 +279,55 @@
                 <button class="btn" onclick="exportToExcel()">
                     Export Excel
                 </button>
+                <button class="btn" onclick="toggleDebugInfo()" style="background: #fbbf24; color: #92400e;">
+                    Debug Info
+                </button>
             </div>
         </div>
 
         <!-- Title -->
         <h1 class="main-title">Rekap Laporan Kegiatan Harian (LKH)</h1>
 
+        <!-- Debug Info -->
+        <div id="debug-info" class="debug-info">
+            <strong>Debug Information:</strong>
+            <div id="debug-content">Loading debug info...</div>
+        </div>
+
         <!-- Info Box -->
         <div class="info-box">
             <div>
                 <div id="statistics" style="display: flex; gap: 20px; font-size: 9px;">
                     <span>Total LKH: <strong id="stat-total-lkh">0</strong></span>
-                    <span>Total Hasil: <strong id="stat-total-hasil">0</strong> ha</span>
+                    <span>Total Hasil: <strong id="stat-total-hasil">0.00</strong> ha</span>
+                    <span>Total Upah: <strong id="stat-total-upah">Rp 0</strong></span>
+                    <span>Total Workers: <strong id="stat-total-workers">0</strong></span>
                 </div>
             </div>
             <div style="text-align: right; font-size: 11px; color: #6b7280;">
                 <div class="date" style="font-weight: 600; color: #111827">Tanggal: <span id="report-date"></span></div>
-                <div id="printed-at">Printed at: <span id="print-timestamp"></span></div>
+                <div id="printed-at">Generated: <span id="print-timestamp"></span></div>
                 <div id="divisi-info" style="font-weight: 600; color: #111827">Divisi: <span id="company-info">Loading...</span></div>
             </div>
         </div>
 
-        <!-- Section 1: LKH Pengolahan -->
-        <h2 class="section-title">1. LKH Pengolahan</h2>
+        <!-- Section 1: LKH Pengolahan (Activity II, III, IV) -->
+        <h2 class="section-title">1. LKH Pengolahan (Activity II, III, IV)</h2>
         <div id="pengolahan-section">
             <div class="loading">Memuat data pengolahan...</div>
         </div>
 
         <!-- Section 2: LKH Perawatan Manual -->
-        <h2 class="section-title">2. LKH Perawatan Manual</h2>
+        <h2 class="section-title">2. LKH Perawatan Manual (Activity V)</h2>
         
         <!-- PC Subsection -->
-        <h3 class="subsection-title">PC (Perawatan Cara)</h3>
+        <h3 class="subsection-title">PC (Plant Cane)</h3>
         <div id="perawatan-manual-pc-section">
             <div class="loading">Memuat data perawatan manual PC...</div>
         </div>
 
         <!-- RC Subsection -->
-        <h3 class="subsection-title">RC (Replanting Care)</h3>
+        <h3 class="subsection-title">RC (Ratoon Cane)</h3>
         <div id="perawatan-manual-rc-section">
             <div class="loading">Memuat data perawatan manual RC...</div>
         </div>
@@ -313,13 +336,13 @@
         <h2 class="section-title">3. LKH Perawatan Mekanis</h2>
         
         <!-- PC Subsection -->
-        <h3 class="subsection-title">PC (Perawatan Cara)</h3>
+        <h3 class="subsection-title">PC (Plant Cane)</h3>
         <div id="perawatan-mekanis-pc-section">
             <div class="empty-state">Fitur perawatan mekanis akan ditambahkan pada update selanjutnya</div>
         </div>
 
         <!-- RC Subsection -->
-        <h3 class="subsection-title">RC (Replanting Care)</h3>
+        <h3 class="subsection-title">RC (Ratoon Cane)</h3>
         <div id="perawatan-mekanis-rc-section">
             <div class="empty-state">Fitur perawatan mekanis akan ditambahkan pada update selanjutnya</div>
         </div>
@@ -353,22 +376,28 @@
             day: 'numeric'
         });
 
-        // Load LKH Rekap data
+        let globalData = null; // Store loaded data for debugging
+
+        // Load LKH Rekap data - UPDATED to handle new DB structure
         async function loadLKHRekapData() {
             try {
                 const response = await fetch(`{{ route('input.rencanakerjaharian.lkh-rekap-data') }}?date=${reportDate}`);
                 const data = await response.json();
                 
+                globalData = data; // Store for debugging
+                
                 if (data.success) {
                     updateHeaderInfo(data);
-                    populatePengolahanSection(data.pengolahan);
-                    populatePerawatanManualSection(data.perawatan_manual);
+                    populatePengolahanSection(data.pengolahan || {});
+                    populatePerawatanManualSection(data.perawatan_manual || {});
+                    updateDebugInfo(data);
                 } else {
                     showError('Gagal memuat data LKH Rekap: ' + data.message);
                 }
             } catch (error) {
                 console.error('Error loading LKH Rekap data:', error);
-                showError('Terjadi kesalahan saat memuat data');
+                showError('Terjadi kesalahan saat memuat data: ' + error.message);
+                updateDebugInfo({error: error.message, stack: error.stack});
             }
         }
 
@@ -396,14 +425,18 @@
         function updateStatistics(data) {
             let totalLkh = 0;
             let totalHasil = 0;
+            let totalWorkers = 0;
+            let totalUpah = 0;
 
-            // Calculate from all sections
+            // Calculate from all sections - UPDATED for new structure
             if (data.pengolahan) {
                 Object.values(data.pengolahan).forEach(activities => {
                     if (Array.isArray(activities)) {
                         activities.forEach(item => {
                             totalLkh++;
                             totalHasil += parseFloat(item.totalhasil || 0);
+                            totalWorkers += parseInt(item.totalworkers || 0);
+                            totalUpah += parseFloat(item.totalupahall || 0);
                         });
                     }
                 });
@@ -417,6 +450,8 @@
                                 activities.forEach(item => {
                                     totalLkh++;
                                     totalHasil += parseFloat(item.totalhasil || 0);
+                                    totalWorkers += parseInt(item.totalworkers || 0);
+                                    totalUpah += parseFloat(item.totalupahall || 0);
                                 });
                             }
                         });
@@ -427,9 +462,13 @@
             // Update DOM
             const lkhEl = document.getElementById('stat-total-lkh');
             const hasilEl = document.getElementById('stat-total-hasil');
+            const workersEl = document.getElementById('stat-total-workers');
+            const upahEl = document.getElementById('stat-total-upah');
             
             if (lkhEl) lkhEl.textContent = totalLkh;
             if (hasilEl) hasilEl.textContent = totalHasil.toFixed(2);
+            if (workersEl) workersEl.textContent = totalWorkers;
+            if (upahEl) upahEl.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(totalUpah);
         }
 
         function populatePengolahanSection(data) {
@@ -441,7 +480,7 @@
                 return;
             }
 
-            createActivityGrid(section, data);
+            createActivityGrid(section, data, true); // true = show operator column
         }
 
         function populatePerawatanManualSection(data) {
@@ -458,10 +497,10 @@
                 return;
             }
 
-            createActivityGrid(section, data, false); // false = no alat column
+            createActivityGrid(section, data, true); // true = show operator column
         }
 
-        function createActivityGrid(section, data, showAlat = true) {
+        function createActivityGrid(section, data, showOperator = true) {
             const tablesGrid = document.createElement('div');
             tablesGrid.className = 'tables-grid';
 
@@ -476,15 +515,15 @@
                 // Activity title with name
                 const activityTitle = document.createElement('div');
                 activityTitle.className = 'activity-title';
-                const activityName = activities[0]?.activityname || '';
+                const activityName = activities[0]?.activityname || 'Unknown Activity';
                 activityTitle.textContent = `${activityCode} - ${activityName}`;
                 activityTable.appendChild(activityTitle);
 
                 // Create table
                 const table = document.createElement('table');
-                const headerCols = showAlat ? 
-                    '<th>No.</th><th>Operator</th><th>Plot</th><th>Luas</th><th>Hasil</th>' :
-                    '<th>No.</th><th>Operator</th><th>Plot</th><th>Luas</th><th>Hasil</th>';
+                const headerCols = showOperator ? 
+                    '<th>No.</th><th>Operator/Mandor</th><th>Plot</th><th>Workers</th><th>Luas Hasil</th><th>Upah</th>' :
+                    '<th>No.</th><th>Mandor</th><th>Plot</th><th>Workers</th><th>Luas Hasil</th><th>Upah</th>';
 
                 table.innerHTML = `
                     <thead>
@@ -495,22 +534,30 @@
 
                 const tbody = table.querySelector('tbody');
                 let totalHasil = 0;
+                let totalWorkers = 0;
+                let totalUpah = 0;
 
                 activities.forEach((item, index) => {
                     const row = document.createElement('tr');
                     const hasil = parseFloat(item.totalhasil || 0);
+                    const workers = parseInt(item.totalworkers || 0);
+                    const upah = parseFloat(item.totalupahall || 0);
+                    
                     totalHasil += hasil;
+                    totalWorkers += workers;
+                    totalUpah += upah;
 
+                    // UPDATED: Get operator/mandor name and plot info from new structure
                     const operatorName = item.operator || item.mandor_nama || '-';
-                    const plotName = item.plot || item.blok;
-                    const luas = parseFloat(item.totalluasactual || 0).toFixed(1);
+                    const plotDisplay = `${item.blok}-${item.plot}` || '-';
 
                     row.innerHTML = `
                         <td>${index + 1}</td>
                         <td class="col-left">${operatorName}</td>
-                        <td>${plotName}</td>
-                        <td class="col-right">${luas}</td>
+                        <td>${plotDisplay}</td>
+                        <td class="col-center">${workers}</td>
                         <td class="col-right">${hasil.toFixed(2)}</td>
+                        <td class="col-right">${new Intl.NumberFormat('id-ID').format(upah)}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -519,8 +566,10 @@
                 const totalRow = document.createElement('tr');
                 totalRow.className = 'total-row';
                 totalRow.innerHTML = `
-                    <td colspan="4" class="col-center"><strong>TOTAL</strong></td>
+                    <td colspan="3" class="col-center"><strong>TOTAL</strong></td>
+                    <td class="col-center"><strong>${totalWorkers}</strong></td>
                     <td class="col-right"><strong>${totalHasil.toFixed(2)}</strong></td>
+                    <td class="col-right"><strong>${new Intl.NumberFormat('id-ID').format(totalUpah)}</strong></td>
                 `;
                 tbody.appendChild(totalRow);
 
@@ -531,10 +580,65 @@
             section.appendChild(tablesGrid);
         }
 
+        function updateDebugInfo(data) {
+            const debugContent = document.getElementById('debug-content');
+            if (!debugContent) return;
+
+            let debugHtml = '';
+            
+            if (data.error) {
+                debugHtml += `<div><strong>Error:</strong> ${data.error}</div>`;
+                if (data.stack) {
+                    debugHtml += `<div><strong>Stack:</strong> <pre style="font-size: 8px; white-space: pre-wrap;">${data.stack}</pre></div>`;
+                }
+            } else {
+                debugHtml += `<div><strong>Data loaded successfully</strong></div>`;
+                if (data.debug) {
+                    debugHtml += '<div><strong>Counts:</strong></div>';
+                    Object.keys(data.debug).forEach(key => {
+                        debugHtml += `<div>- ${key}: ${data.debug[key]}</div>`;
+                    });
+                }
+                
+                if (data.pengolahan) {
+                    debugHtml += `<div><strong>Pengolahan activities:</strong> ${Object.keys(data.pengolahan).join(', ')}</div>`;
+                }
+                
+                if (data.perawatan_manual) {
+                    if (data.perawatan_manual.pc) {
+                        debugHtml += `<div><strong>PC activities:</strong> ${Object.keys(data.perawatan_manual.pc).join(', ')}</div>`;
+                    }
+                    if (data.perawatan_manual.rc) {
+                        debugHtml += `<div><strong>RC activities:</strong> ${Object.keys(data.perawatan_manual.rc).join(', ')}</div>`;
+                    }
+                }
+            }
+            
+            debugContent.innerHTML = debugHtml;
+        }
+
+        function toggleDebugInfo() {
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv.style.display === 'none' || !debugDiv.style.display) {
+                debugDiv.style.display = 'block';
+            } else {
+                debugDiv.style.display = 'none';
+            }
+        }
+
         function showError(message) {
-            document.getElementById('pengolahan-section').innerHTML = `<div class="empty-state">${message}</div>`;
-            document.getElementById('perawatan-manual-pc-section').innerHTML = `<div class="empty-state">${message}</div>`;
-            document.getElementById('perawatan-manual-rc-section').innerHTML = `<div class="empty-state">${message}</div>`;
+            const sections = [
+                'pengolahan-section',
+                'perawatan-manual-pc-section', 
+                'perawatan-manual-rc-section'
+            ];
+            
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.innerHTML = `<div class="empty-state">${message}</div>`;
+                }
+            });
         }
 
         function exportToPDF() {
@@ -548,6 +652,14 @@
         // Load data when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadLKHRekapData();
+        });
+
+        // Add keyboard shortcut for debug toggle
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                toggleDebugInfo();
+            }
         });
     </script>
 </body>

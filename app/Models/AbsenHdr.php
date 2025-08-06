@@ -68,8 +68,7 @@ class AbsenHdr extends Model
     {
         $query = DB::table('absenhdr as h')
             ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->where('h.companycode', $companycode)
-            ->where('h.status', 'A'); // Hanya ambil yang approved
+            ->where('h.companycode', $companycode); // Hanya ambil yang approved
 
         if ($date) {
             $query->whereDate('h.uploaddate', $date);
@@ -93,8 +92,7 @@ class AbsenHdr extends Model
             ->join('tenagakerja as t', 'l.tenagakerjaid', '=', 't.tenagakerjaid')
             ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
             ->leftJoin('jenistenagakerja as jtk', 't.jenistenagakerja', '=', 'jtk.idjenistenagakerja')
-            ->where('h.companycode', $companycode)
-            ->where('h.status', 'A'); // Hanya ambil yang approved
+            ->where('h.companycode', $companycode);
 
         if ($date) {
             $query->whereDate('h.uploaddate', $date);
@@ -111,7 +109,6 @@ class AbsenHdr extends Model
             'h.uploaddate as absentime',
             'l.tenagakerjaid as id',
             'l.absenmasuk',
-            'l.absenpulang',
             'l.keterangan',
             't.nama',
             't.gender',
@@ -128,7 +125,6 @@ class AbsenHdr extends Model
         return DB::table('absenhdr as h')
             ->join('user as m', 'h.mandorid', '=', 'm.userid')
             ->where('h.companycode', $companycode)
-            ->where('h.status', 'A') // Hanya ambil yang approved
             ->whereDate('h.uploaddate', $date)
             ->select('m.userid as id', 'm.name')
             ->distinct()

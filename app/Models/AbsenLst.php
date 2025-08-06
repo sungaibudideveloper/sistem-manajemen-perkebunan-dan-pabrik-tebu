@@ -18,7 +18,6 @@ class AbsenLst extends Model
         'id',
         'tenagakerjaid',
         'absenmasuk',
-        'absenpulang',
         'keterangan',
         'fotoabsen',
         'lokasifotolat',
@@ -37,7 +36,6 @@ class AbsenLst extends Model
 
     protected $casts = [
         'absenmasuk' => 'datetime',
-        'absenpulang' => 'datetime',
         'approval_date' => 'datetime',
         'rejection_date' => 'datetime',
         'last_edited_at' => 'datetime',

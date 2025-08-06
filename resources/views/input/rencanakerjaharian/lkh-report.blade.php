@@ -32,8 +32,10 @@
                         <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-medium">Draft</span>
                     @elseif($lkhData->status == 'APPROVED')
                         <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">Approved</span>
+                    @elseif($lkhData->status == 'SUBMITTED')
+                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Submitted</span>
                     @else
-                        <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">{{ $lkhData->status }}</span>
+                        <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">{{ $lkhData->status ?? 'EMPTY' }}</span>
                     @endif
                 </div>
             </div>
@@ -44,29 +46,32 @@
             <h3 class="text-lg font-bold text-gray-800 mb-4">Ringkasan</h3>
             <div class="grid grid-cols-4 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ $lkhData->totalworkers }}</div>
+                    <div class="text-2xl font-bold text-gray-800">{{ $lkhData->totalworkers ?? 0 }}</div>
                     <div class="text-sm text-gray-600">Total Pekerja</div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalhasil, 2) }}</div>
+                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalhasil ?? 0, 2) }}</div>
                     <div class="text-sm text-gray-600">Total Hasil (Ha)</div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalsisa, 2) }}</div>
+                    <div class="text-2xl font-bold text-gray-800">{{ number_format($lkhData->totalsisa ?? 0, 2) }}</div>
                     <div class="text-sm text-gray-600">Total Sisa (Ha)</div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
-                    <div class="text-2xl font-bold text-gray-800">Rp {{ number_format($lkhData->totalupahall, 0, ',', '.') }}</div>
+                    <div class="text-2xl font-bold text-gray-800">Rp {{ number_format($lkhData->totalupahall ?? 0, 0, ',', '.') }}</div>
                     <div class="text-sm text-gray-600">Total Upah</div>
                 </div>
             </div>
         </div>
 
-        <!-- Plot Details Section -->
-        @if($lkhPlotDetails->count() > 0)
+        <!-- Plot Details Section - UPDATED: Using lkhdetailplot table -->
+        @if($lkhPlotDetails && $lkhPlotDetails->count() > 0)
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Plot</h3>
+                <div class="text-sm text-gray-500">
+                    Total Plot: {{ $lkhPlotDetails->count() }}
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -79,25 +84,49 @@
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas RKH</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas Hasil</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Luas Sisa</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Progress</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($lkhPlotDetails as $index => $plot)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $plot->blok }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $plot->plot }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luasrkh, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luashasil, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luassisa, 2) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">{{ $plot->blok }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">{{ $plot->plot }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luasrkh ?? 0, 2) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">{{ number_format($plot->luashasil ?? 0, 2) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($plot->luassisa ?? 0, 2) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
+                                @if($plot->luasrkh > 0)
+                                    @php
+                                        $progress = round(($plot->luashasil / $plot->luasrkh) * 100, 1);
+                                    @endphp
+                                    <span class="px-2 py-1 text-xs rounded-full 
+                                        {{ $progress == 100 ? 'bg-green-100 text-green-700' : 
+                                           ($progress >= 80 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') }}">
+                                        {{ $progress }}%
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
-                            <td colspan="4" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
+                            <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luasrkh'), 2) }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luashasil'), 2) }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhPlotDetails->sum('luassisa'), 2) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
+                                @php
+                                    $totalRkh = $lkhPlotDetails->sum('luasrkh');
+                                    $totalHasil = $lkhPlotDetails->sum('luashasil');
+                                    $overallProgress = $totalRkh > 0 ? round(($totalHasil / $totalRkh) * 100, 1) : 0;
+                                @endphp
+                                {{ $overallProgress }}%
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -105,11 +134,14 @@
         </div>
         @endif
 
-        <!-- Worker Details Section -->
-        @if($lkhWorkerDetails->count() > 0)
+        <!-- Worker Details Section - UPDATED: Using lkhdetailworker table -->
+        @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Pekerja</h3>
+                <div class="text-sm text-gray-500">
+                    Total Pekerja: {{ $lkhWorkerDetails->count() }}
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -139,34 +171,66 @@
                         @foreach($lkhWorkerDetails as $index => $worker)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm">{{ $worker->tenagakerja->nama ?? 'N/A' }}</td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono">{{ $worker->tenagakerja->nik ?? '-' }}</td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm font-medium">
+                                {{ $worker->tenagakerja->nama ?? $worker->tenagakerjaid ?? 'N/A' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono">
+                                {{ $worker->tenagakerja->nik ?? '-' }}
+                            </td>
                             @if($lkhData->jenistenagakerja == 1)
-                                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">{{ $worker->jammasuk ?? '-' }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">{{ $worker->jamselesai ?? '-' }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-center text-sm">{{ $worker->totaljamkerja ?? 0 }}h</td>
-                                <td class="border border-gray-300 px-2 py-2 text-center text-sm">{{ $worker->overtimehours ?? 0 }}h</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($worker->upahlembur ?? 0, 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}</td>
+                                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
+                                    {{ $worker->jammasuk ? \Carbon\Carbon::parse($worker->jammasuk)->format('H:i') : '-' }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
+                                    {{ $worker->jamselesai ? \Carbon\Carbon::parse($worker->jamselesai)->format('H:i') : '-' }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-center text-sm">
+                                    {{ number_format($worker->totaljamkerja ?? 0, 1) }}h
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-center text-sm">
+                                    {{ number_format($worker->overtimehours ?? 0, 1) }}h
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                    Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                    Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                    Rp {{ number_format($worker->upahlembur ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
+                                    Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
+                                </td>
                             @else
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($worker->upahborongan ?? 0, 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold">Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}</td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                    Rp {{ number_format($worker->upahborongan ?? 0, 0, ',', '.') }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
+                                    Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
+                                </td>
                             @endif
-                            <td class="border border-gray-300 px-2 py-2 text-sm">{{ $worker->keterangan ?? '-' }}</td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm text-gray-600">
+                                {{ $worker->keterangan ?? '-' }}
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
                             @if($lkhData->jenistenagakerja == 1)
-                                <td colspan="9" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}</td>
+                                <td colspan="9" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                    Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}
+                                </td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
+                                    Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
+                                </td>
                             @else
-                                <td colspan="4" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}</td>
+                                <td colspan="4" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
+                                <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
+                                    Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
+                                </td>
                             @endif
                             <td class="border border-gray-300 px-2 py-2"></td>
                         </tr>
@@ -176,11 +240,14 @@
         </div>
         @endif
 
-        <!-- Material Details Section -->
-        @if($lkhMaterialDetails->count() > 0)
+        <!-- Material Details Section - UPDATED: Using lkhdetailmaterial table -->
+        @if($lkhMaterialDetails && $lkhMaterialDetails->count() > 0)
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Material</h3>
+                <div class="text-sm text-gray-500">
+                    Total Items: {{ $lkhMaterialDetails->count() }}
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -192,6 +259,8 @@
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Diterima</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Sisa</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Digunakan</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Efisiensi</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Input By</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
                         </tr>
                     </thead>
@@ -199,21 +268,62 @@
                         @foreach($lkhMaterialDetails as $index => $material)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm">{{ $material->itemcode }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($material->qtyditerima, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($material->qtysisa, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">{{ number_format($material->qtydigunakan, 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm">{{ $material->keterangan ?? '-' }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm font-mono font-medium">
+                                {{ $material->itemcode }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                                {{ number_format($material->qtyditerima ?? 0, 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                                {{ number_format($material->qtysisa ?? 0, 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">
+                                {{ number_format($material->qtydigunakan ?? 0, 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
+                                @if($material->qtyditerima > 0)
+                                    @php
+                                        $efficiency = round(($material->qtydigunakan / $material->qtyditerima) * 100, 1);
+                                    @endphp
+                                    <span class="px-2 py-1 text-xs rounded-full 
+                                        {{ $efficiency >= 90 ? 'bg-green-100 text-green-700' : 
+                                           ($efficiency >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') }}">
+                                        {{ $efficiency }}%
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
+                                {{ $material->inputby ?? '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
+                                {{ $material->keterangan ?? '-' }}
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
                             <td colspan="2" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhMaterialDetails->sum('qtyditerima'), 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhMaterialDetails->sum('qtysisa'), 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 2) }}</td>
-                            <td class="border border-gray-300 px-3 py-2"></td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                                {{ number_format($lkhMaterialDetails->sum('qtyditerima'), 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                                {{ number_format($lkhMaterialDetails->sum('qtysisa'), 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                                {{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 3) }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
+                                @php
+                                    $totalDiterima = $lkhMaterialDetails->sum('qtyditerima');
+                                    $totalDigunakan = $lkhMaterialDetails->sum('qtydigunakan');
+                                    $overallEfficiency = $totalDiterima > 0 ? round(($totalDigunakan / $totalDiterima) * 100, 1) : 0;
+                                @endphp
+                                {{ $overallEfficiency }}%
+                            </td>
+                            <td colspan="2" class="border border-gray-300 px-3 py-2"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -242,7 +352,11 @@
                     <p class="text-sm font-medium">Jabatan 1</p>
                     <p class="text-xs text-gray-600">{{ $approvals->jabatan1name ?? 'Tidak diatur' }}</p>
                     @if($lkhData->approval1flag == '1')
-                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval1date ? \Carbon\Carbon::parse($lkhData->approval1date)->format('d/m/Y') : '' }}</p>
+                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval1date ? \Carbon\Carbon::parse($lkhData->approval1date)->format('d/m/Y H:i') : '' }}</p>
+                    @elseif($lkhData->approval1flag == '0')
+                        <p class="text-xs text-red-600 mt-1">✗ Ditolak: {{ $lkhData->approval1date ? \Carbon\Carbon::parse($lkhData->approval1date)->format('d/m/Y H:i') : '' }}</p>
+                    @else
+                        <p class="text-xs text-gray-500 mt-1">Menunggu persetujuan</p>
                     @endif
                 </div>
                 <div class="text-center">
@@ -250,7 +364,11 @@
                     <p class="text-sm font-medium">Jabatan 2</p>
                     <p class="text-xs text-gray-600">{{ $approvals->jabatan2name ?? 'Tidak diatur' }}</p>
                     @if($lkhData->approval2flag == '1')
-                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval2date ? \Carbon\Carbon::parse($lkhData->approval2date)->format('d/m/Y') : '' }}</p>
+                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval2date ? \Carbon\Carbon::parse($lkhData->approval2date)->format('d/m/Y H:i') : '' }}</p>
+                    @elseif($lkhData->approval2flag == '0')
+                        <p class="text-xs text-red-600 mt-1">✗ Ditolak: {{ $lkhData->approval2date ? \Carbon\Carbon::parse($lkhData->approval2date)->format('d/m/Y H:i') : '' }}</p>
+                    @else
+                        <p class="text-xs text-gray-500 mt-1">Menunggu persetujuan</p>
                     @endif
                 </div>
                 <div class="text-center">
@@ -258,7 +376,11 @@
                     <p class="text-sm font-medium">Jabatan 3</p>
                     <p class="text-xs text-gray-600">{{ $approvals->jabatan3name ?? 'Tidak diatur' }}</p>
                     @if($lkhData->approval3flag == '1')
-                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval3date ? \Carbon\Carbon::parse($lkhData->approval3date)->format('d/m/Y') : '' }}</p>
+                        <p class="text-xs text-green-600 mt-1">✓ Disetujui: {{ $lkhData->approval3date ? \Carbon\Carbon::parse($lkhData->approval3date)->format('d/m/Y H:i') : '' }}</p>
+                    @elseif($lkhData->approval3flag == '0')
+                        <p class="text-xs text-red-600 mt-1">✗ Ditolak: {{ $lkhData->approval3date ? \Carbon\Carbon::parse($lkhData->approval3date)->format('d/m/Y H:i') : '' }}</p>
+                    @else
+                        <p class="text-xs text-gray-500 mt-1">Menunggu persetujuan</p>
                     @endif
                 </div>
             </div>
@@ -266,10 +388,10 @@
 
         <!-- Action Buttons -->
         <div class="mt-8 flex justify-center space-x-4 no-print">
-            @if($lkhData->status != 'APPROVED' && !$lkhData->issubmit)
+            @if($lkhData->status != 'APPROVED' && $lkhData->status != 'COMPLETED' && !$lkhData->issubmit)
             <button 
                 onclick="window.location.href='{{ route('input.rencanakerjaharian.editLKH', $lkhData->lkhno) }}'"
-                class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
             >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
