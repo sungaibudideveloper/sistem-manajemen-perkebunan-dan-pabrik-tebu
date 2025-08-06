@@ -1,10 +1,10 @@
-// resources/js/pages/lkh-view.tsx - READONLY VIEW MODE
+// resources/js/pages/lkh-view.tsx - FIXED VERSION (Clean UI & No Wages)
 
 import React, { useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   ArrowLeft, Users, Edit3, MapPin, 
-  CheckCircle, User, Package, AlertCircle, Clock, Eye
+  CheckCircle, User, Package, AlertCircle
 } from 'lucide-react';
 
 interface LKHData {
@@ -20,6 +20,10 @@ interface LKHData {
   mandor_nama: string;
   mobile_status: string;
   needs_material?: boolean;
+  keterangan?: string;
+  totalhasil?: number;
+  totalsisa?: number;
+  is_completed?: boolean;
 }
 
 interface AssignedWorker {
@@ -45,20 +49,14 @@ interface MaterialInfo {
   itemname: string;
   qty: number;
   unit: string;
+  total_calculated?: number;
 }
 
-interface SharedProps {
-  app: {
-    name: string;
-    url: string;
-    logo_url: string;
-  };
-  [key: string]: any;
-}
-
-interface LKHViewProps extends SharedProps {
+interface LKHViewProps {
   title: string;
-  mode: 'view' | 'edit';
+  mode: 'view' | 'edit' | 'view-readonly';
+  readonly?: boolean;
+  completed?: boolean;
   lkhData: LKHData;
   assignedWorkers: AssignedWorker[];
   plotData: PlotData[];
@@ -69,18 +67,24 @@ interface LKHViewProps extends SharedProps {
     lkh_view: string;
     lkh_edit: string;
     mandor_index: string;
-    [key: string]: string;
   };
   csrf_token: string;
   flash?: {
     success?: string;
     error?: string;
   };
+  app: {
+    name: string;
+    url: string;
+    logo_url: string;
+  };
 }
 
 const LKHViewPage: React.FC<LKHViewProps> = ({
   app,
   mode,
+  readonly = false,
+  completed = false,
   lkhData,
   assignedWorkers,
   plotData = [],
@@ -110,15 +114,22 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
     });
   };
 
+  // Simple navigation using Laravel-generated URLs
   const goBack = () => {
+    console.log('Navigating back to:', routes.mandor_index);
     router.get(routes.mandor_index);
   };
 
   const goToEdit = () => {
+    console.log('Navigating to edit:', routes.lkh_edit);
     router.get(routes.lkh_edit);
   };
 
   const totals = calculateTotals();
+  
+  // Determine if this is a completed/readonly view
+  const isReadonly = readonly || completed || lkhData.mobile_status === 'COMPLETED';
+  const canEdit = !isReadonly && lkhData.mobile_status === 'DRAFT';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
@@ -135,17 +146,40 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
+              {/* FIXED: Logo with better error handling and path */}
+              {app?.logo_url ? (
+                <img 
+                  src={app.logo_url} 
+                  alt={`Logo ${app?.name || 'App'}`} 
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    console.log('Logo failed to load, using fallback');
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    // Show fallback
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              {/* Fallback logo - always present but hidden unless needed */}
+              <div 
+                className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center" 
+                style={{ display: app?.logo_url ? 'none' : 'flex' }}
+              >
+                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'T'}</span>
+              </div>
+              
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
-                  Hasil Pekerjaan
+                  {isReadonly ? 'Hasil Pekerjaan (Selesai)' : 'Hasil Pekerjaan'}
                 </h2>
                 <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activitycode} - {lkhData.activityname}</p>
               </div>
             </div>
 
-            {/* Edit Button - Only show for DRAFT status */}
-            {lkhData.mobile_status === 'DRAFT' && (
+            {/* Edit Button - Only show for DRAFT status and not readonly */}
+            {canEdit && (
               <button
                 onClick={goToEdit}
                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
@@ -161,15 +195,19 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 mb-6">
           <div className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 flex-wrap">
                 <div>
                   <span className="text-sm text-neutral-500">Status:</span>
                   <span className={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${
                     lkhData.mobile_status === 'DRAFT' 
                       ? 'bg-yellow-100 text-yellow-700' 
-                      : 'bg-green-100 text-green-700'
+                      : lkhData.mobile_status === 'COMPLETED'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {lkhData.mobile_status === 'DRAFT' ? 'Draft (Belum Submit)' : 'Selesai'}
+                    {lkhData.mobile_status === 'DRAFT' ? 'Draft (Belum Submit)' : 
+                     lkhData.mobile_status === 'COMPLETED' ? 'Selesai & Submitted' : 
+                     'Status Unknown'}
                   </span>
                 </div>
                 <div>
@@ -189,7 +227,22 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         </div>
 
-        {/* Worker Summary - Read Only */}
+        {/* FIXED: Completion Notice for COMPLETED status - shorter text */}
+        {lkhData.mobile_status === 'COMPLETED' && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <div>
+                <h4 className="font-semibold text-green-900">Data Sudah Diselesaikan</h4>
+                <p className="text-sm text-green-700 mt-1">
+                  LKH ini sudah disubmit ke sistem.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FIXED: Worker Summary - No individual wages */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -206,13 +259,16 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                     <User className="w-5 h-5 text-purple-600" />
                     <div>
                       <h4 className="font-semibold text-purple-900">{worker.nama}</h4>
+                      <p className="text-xs text-neutral-500">{worker.nik}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-neutral-500">Jam Kerja:</span>
-                      <p className="font-medium">{worker.jammasuk} - {worker.jamselesai}</p>
+                      <p className="font-medium">
+                        {worker.jammasuk?.substring(0, 5) || '07:00'} - {worker.jamselesai?.substring(0, 5) || '15:00'}
+                      </p>
                     </div>
                     <div>
                       <span className="text-neutral-500">Total:</span>
@@ -224,6 +280,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                         <p className="font-medium text-orange-600">{worker.overtimehours} jam</p>
                       </div>
                     )}
+                    {/* ❌ REMOVED: totalupah display - hide individual wages */}
                   </div>
                 </div>
               ))}
@@ -231,7 +288,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         </div>
 
-        {/* Plot Results - Read Only */}
+        {/* FIXED: Plot Results - No progress bars */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -245,7 +302,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
               {plotData.map((plot) => (
                 <div key={plot.plot} className="p-4 border border-neutral-200 rounded-xl bg-neutral-50">
                   <h4 className="font-semibold text-lg mb-4 text-blue-900">
-                    Plot {plot.plot}
+                    Plot {plot.plot} - Blok {plot.blok}
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -272,6 +329,8 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                       }`}>{plot.luassisa.toFixed(2)} Ha</p>
                     </div>
                   </div>
+                  
+                  {/* ❌ REMOVED: Progress bar */}
                 </div>
               ))}
             </div>
@@ -292,10 +351,23 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                 {materials.map((material) => (
                   <div key={material.itemcode} className="p-4 border border-neutral-200 rounded-xl bg-neutral-50">
                     <h4 className="font-semibold text-orange-900 mb-2">{material.itemname}</h4>
-                    <p className="text-sm text-neutral-600">Kode: {material.itemcode}</p>
-                    <p className="text-lg font-bold text-orange-800 mt-2">
-                      {material.qty} {material.unit}
-                    </p>
+                    <p className="text-sm text-neutral-600 mb-2">Kode: {material.itemcode}</p>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-neutral-500">Qty Diterima</p>
+                        <p className="text-lg font-bold text-orange-800">
+                          {material.qty} {material.unit}
+                        </p>
+                      </div>
+                      {material.total_calculated && (
+                        <div className="text-right">
+                          <p className="text-sm text-neutral-500">Rencana Pakai</p>
+                          <p className="text-sm font-medium text-blue-600">
+                            {material.total_calculated.toFixed(2)} {material.unit}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -318,7 +390,21 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         )}
 
-        {/* Summary Totals */}
+        {/* Keterangan Section */}
+        {lkhData.keterangan && (
+          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+              <h3 className="font-semibold">Keterangan</h3>
+            </div>
+            <div className="p-6">
+              <div className="bg-neutral-50 p-4 rounded-lg">
+                <p className="text-neutral-700">{lkhData.keterangan}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Totals - No team wages */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -344,25 +430,27 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                 <p className="text-3xl font-bold text-yellow-900">{totals.totalSisa.toFixed(2)} Ha</p>
               </div>
             </div>
+            
+            {/* ❌ REMOVED: Total upah tim - hide team wages */}
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* FIXED: Action Buttons - Simple design with proper contrast */}
         <div className="flex justify-center gap-4">
           <button
             onClick={goBack}
-            className="flex items-center gap-3 px-8 py-4 bg-neutral-600 text-white rounded-2xl hover:bg-neutral-700 transition-colors text-lg font-medium shadow-lg"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
           </button>
 
-          {lkhData.mobile_status === 'DRAFT' && (
+          {canEdit && (
             <button
               onClick={goToEdit}
-              className="flex items-center gap-3 px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-colors text-lg font-medium shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
             >
-              <Edit3 className="w-5 h-5" />
+              <Edit3 className="w-4 h-4" />
               <span>Edit Data</span>
             </button>
           )}

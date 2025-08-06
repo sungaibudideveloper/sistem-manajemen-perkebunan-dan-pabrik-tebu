@@ -1,13 +1,33 @@
-// resources\js\pages\data-collection-mandor.tsx (COMPLETE UPDATED VERSION)
+// resources\js\pages\data-collection-mandor.tsx (FIXED VERSION - Remove Amber Text)
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   FiArrowLeft, FiCalendar, FiUsers, FiTruck, FiClipboard,
-  FiCheck, FiClock, FiMapPin, FiPackage, FiSave,
-  FiWifi, FiWifiOff, FiRefreshCw, FiPlus, FiX,
-  FiUser, FiEdit3, FiCheckCircle, FiLoader, FiExternalLink,
-  FiChevronDown, FiChevronUp, FiAlertTriangle, FiBox, FiEye
+  FiCheck, FiClock, FiMapPin, FiPackage,
+  FiWifi, FiWifiOff, FiRefreshCw, FiCheckCircle, FiLoader, FiExternalLink,
+  FiChevronDown, FiChevronUp, FiAlertTriangle, FiBox, FiEye, FiInfo
 } from 'react-icons/fi';
+
+// Dynamic URL Helper Functions
+const getBaseUrl = (): string => {
+  const origin = window.location.origin;
+  const pathname = window.location.pathname;
+  
+  // Check if we're in development (has /tebu/public) or production
+  if (pathname.includes('/tebu/public')) {
+    return `${origin}/tebu/public`;
+  }
+  
+  // Production or other environments
+  return origin;
+};
+
+const buildMandorUrl = (path: string): string => {
+  const baseUrl = getBaseUrl();
+  // Remove leading slash if exists to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${baseUrl}/${cleanPath}`;
+};
 
 // Types
 interface LKHItem {
@@ -52,7 +72,6 @@ interface FieldCollectionProps {
   routes: {
     lkh_ready: string;
     materials_available: string;
-    materials_save_returns: string;
     material_confirm_pickup: string;
     sync_offline_data: string;
     lkh_assign: string;
@@ -78,7 +97,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
 
   // Material Management States
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [returnInputs, setReturnInputs] = useState<{[key: string]: number}>({});
   const [confirmingPickup, setConfirmingPickup] = useState<string | null>(null);
   const [overallStatus, setOverallStatus] = useState<'ACTIVE' | 'DISPATCHED' | 'RECEIVED_BY_MANDOR' | 'RETURNED_BY_MANDOR' | 'RETURN_RECEIVED' | 'COMPLETED'>('ACTIVE');
 
@@ -226,18 +244,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
     try {
       const offlineData: any = {};
       
-      const pendingMaterialReturns = localStorage.getItem('field_collection_material_returns');
-      if (pendingMaterialReturns) {
-        try {
-          const data = JSON.parse(pendingMaterialReturns);
-          if (!data.synced) {
-            offlineData.material_returns = [data.data];
-          }
-        } catch (e) {
-          console.error('Error parsing offline material returns:', e);
-        }
-      }
-      
       if (Object.keys(offlineData).length > 0) {
         const response = await fetch(routes.sync_offline_data, {
           method: 'POST',
@@ -249,12 +255,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
         });
         
         if (response.ok) {
-          if (pendingMaterialReturns) {
-            const data = JSON.parse(pendingMaterialReturns);
-            data.synced = true;
-            localStorage.setItem('field_collection_material_returns', JSON.stringify(data));
-          }
-          
           console.log('Data synced successfully');
           await loadInitialData();
         }
@@ -267,44 +267,37 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
     }
   };
 
-  // Navigation helper - Updated for new mobile_status logic
+  // UPDATED: Navigation helper with dynamic URLs - FIXED
   const navigateToLKH = (lkh: LKHItem) => {
-    let targetUrl = '';
+    console.log('Navigating to LKH:', lkh.lkhno, 'Status:', lkh.mobile_status);
+    
+    let targetPath = '';
     
     // Determine navigation based on mobile_status
     if (lkh.mobile_status === 'EMPTY') {
       // New LKH - go to assign first
-      if (routes.lkh_assign && routes.lkh_assign.includes('__LKHNO__')) {
-        targetUrl = routes.lkh_assign.replace('__LKHNO__', lkh.lkhno);
-      } else {
-        const baseUrl = window.location.origin + '/tebu/public';
-        targetUrl = `${baseUrl}/mandor/lkh/${lkh.lkhno}/assign`;
-      }
+      targetPath = `mandor/lkh/${lkh.lkhno}/assign`;
     } else if (lkh.mobile_status === 'DRAFT') {
       // Already has input - go to view mode
-      const baseUrl = window.location.origin + '/tebu/public';
-      targetUrl = `${baseUrl}/mandor/lkh/${lkh.lkhno}/view`;
-    } else {
+      targetPath = `mandor/lkh/${lkh.lkhno}/view`;
+    } else if (lkh.mobile_status === 'COMPLETED') {
       // COMPLETED - go to view mode (readonly)
-      const baseUrl = window.location.origin + '/tebu/public';
-      targetUrl = `${baseUrl}/mandor/lkh/${lkh.lkhno}/view`;
+      targetPath = `mandor/lkh/${lkh.lkhno}/view`;
     }
 
-    router.get(targetUrl, {}, {
-      preserveState: false,
-      preserveScroll: false,
-      onError: (errors) => {
-        console.error('Navigation error:', errors);
-        window.location.href = targetUrl;
-      }
-    });
+    // Build full URL using dynamic helper
+    const fullUrl = buildMandorUrl(targetPath);
+    console.log('Target URL:', fullUrl);
+    
+    // Navigate using window.location for reliable cross-page navigation
+    window.location.href = fullUrl;
   };
 
   const goBackToDashboard = () => {
     onSectionChange('dashboard');
   };
 
-  // Complete All LKH Function
+  // Complete All LKH Function - Enhanced with STRICT validation
   const getCompletableCount = () => {
     const total = lkhList.length;
     const ready = lkhList.filter(lkh => lkh.mobile_status === 'DRAFT').length;
@@ -315,22 +308,25 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
   };
 
   const completeAllLKH = async () => {
-    const { ready, total } = getCompletableCount();
+    const { ready, total, empty } = getCompletableCount();
     
+    // STRICT: All LKH must be DRAFT
     if (ready !== total) {
-      alert('Tidak semua LKH sudah dikerjakan. Harap selesaikan semua LKH terlebih dahulu.');
+      alert(`Semua LKH harus diselesaikan terlebih dahulu.\n\nStatus saat ini: ${ready}/${total} LKH sudah diinput.\n\nSilakan selesaikan ${empty} LKH yang belum dikerjakan.`);
       return;
     }
 
-    const confirmed = confirm(`Akan submit ${ready} LKH dan menghitung total material. Setelah submit, data tidak bisa diubah lagi. Lanjutkan?`);
+    const confirmMessage = `Akan submit semua ${ready} LKH dan menghitung total material return.\n\nSetelah submit, data tidak bisa diubah lagi.\n\nLanjutkan?`;
     
-    if (!confirmed) return;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
 
     setIsLoading(true);
     
     try {
       // Call API to complete all LKH
-      const response = await fetch(routes.complete_all_lkh || '/mandor/lkh/complete-all', {
+      const response = await fetch(routes.complete_all_lkh || buildMandorUrl('api/mandor/lkh/complete-all'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -344,14 +340,14 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
       const result = await response.json();
       
       if (result.success) {
-        alert(`Berhasil submit ${ready} LKH! Data sudah masuk ke sistem untuk review admin.`);
+        alert(`✅ Berhasil submit ${ready} LKH!\n\nMaterial return berhasil dihitung dan data sudah masuk sistem untuk review admin.`);
         await loadInitialData(); // Refresh data
       } else {
         throw new Error(result.message || 'Failed to complete LKH');
       }
     } catch (error) {
       console.error('Error completing all LKH:', error);
-      alert('Error saat submit LKH. Silakan coba lagi.');
+      alert('❌ Error saat submit LKH. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -366,13 +362,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
       newExpanded.add(itemcode);
     }
     setExpandedItems(newExpanded);
-  };
-
-  const handleReturnInput = (itemcode: string, value: number) => {
-    setReturnInputs(prev => ({
-      ...prev,
-      [itemcode]: value
-    }));
   };
 
   // Updated status badge with new flow
@@ -403,14 +392,14 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 text-sm font-medium rounded-full">
             <FiPackage className="w-4 h-4" />
-            Retur Mandor
+            Sedang Diproses Return
           </span>
         );
       case 'RETURN_RECEIVED':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
             <FiCheck className="w-4 h-4" />
-            Retur Diterima
+            Return Diterima
           </span>
         );
       case 'COMPLETED':
@@ -430,7 +419,7 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
     }
   };
 
-  // FIXED: Updated confirm pickup function for new API response
+  // Confirm pickup function
   const confirmPickup = async (itemcode?: string) => {
     setConfirmingPickup(itemcode || 'ALL');
     
@@ -462,50 +451,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
     }
     
     setConfirmingPickup(null);
-  };
-
-  // FIXED: Updated save returns function for new API response
-  const saveReturns = async () => {
-    const returnsToSave = Object.entries(returnInputs).filter(([_, qty]) => qty > 0);
-    
-    if (returnsToSave.length === 0) {
-      alert('Tidak ada data retur untuk disimpan');
-      return;
-    }
-
-    const confirmMessage = `Akan menyimpan retur untuk ${returnsToSave.length} item. Lanjutkan?`;
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch(routes.materials_save_returns, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrf_token,
-        },
-        body: JSON.stringify({ material_returns: Object.fromEntries(returnsToSave) }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        alert(result.message);
-        setReturnInputs({});
-        await loadMaterialsData(); // Refresh data
-      } else {
-        alert(result.message || 'Error menyimpan data retur');
-      }
-    } catch (error) {
-      console.error('Error saving returns:', error);
-      alert('Error menyimpan data retur');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // Render Plot Cards Component - Compact Version
@@ -567,65 +512,65 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
               })}</span>
             </div>
 
-            {/* Action Row - Sync & Complete All */}
+            {/* Action Row - Sync & Complete All - UPDATED */}
             <div className="flex items-center gap-4 flex-wrap">
-              {/* Network Status Indicator */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-                isOnline 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-red-100 text-red-700'
-              }`}>
-                {isOnline ? (
-                  <>
-                    <FiWifi className="w-4 h-4" />
-                    <span>Online</span>
-                  </>
-                ) : (
-                  <>
-                    <FiWifiOff className="w-4 h-4" />
-                    <span>Offline</span>
-                  </>
-                )}
-              </div>
-
-              {isOnline && (
-                <button
-                  onClick={syncPendingData}
-                  disabled={isSyncing}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
-                >
-                  <FiRefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>{isSyncing ? 'Syncing...' : 'Sync Data'}</span>
-                </button>
-              )}
-
-              {/* Complete All Button - Always visible, disabled when not ready */}
-              <button
-                onClick={completeAllLKH}
-                disabled={isLoading || getCompletableCount().ready === 0 || getCompletableCount().ready !== getCompletableCount().total}
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                {isLoading ? (
-                  <>
-                    <FiLoader className="w-4 h-4 animate-spin" />
-                    <span>Memproses...</span>
-                  </>
-                ) : (
-                  <>
-                    <FiCheckCircle className="w-4 h-4" />
-                    <span>Complete All Data</span>
-                  </>
-                )}
-              </button>
-
-              {/* Progress Info */}
+              {/* Complete All Button - Enhanced with COMPLETED status */}
               {lkhList.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-neutral-600 bg-neutral-100 px-3 py-2 rounded-lg">
-                  <FiClipboard className="w-4 h-4" />
-                  <span>
-                    {getCompletableCount().ready}/{getCompletableCount().total} LKH Sudah Diinput
-                  </span>
-                </div>
+                (() => {
+                  const { ready, total, completed } = getCompletableCount();
+                  const allCompleted = completed === total && total > 0;
+                  
+                  if (allCompleted) {
+                    // All LKH completed - show disabled success button
+                    return (
+                      <div className="flex items-center gap-4">
+                        <button
+                          disabled
+                          className="flex items-center gap-2 px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"
+                        >
+                          <FiCheckCircle className="w-4 h-4" />
+                          <span>Sudah Selesai</span>
+                        </button>
+                        
+                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-100 px-3 py-2 rounded-lg">
+                          <FiCheckCircle className="w-4 h-4" />
+                          <span>Semua data sudah disubmit ke sistem</span>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // Still in progress - show normal flow
+                    return (
+                      <>
+                        <button
+                          onClick={completeAllLKH}
+                          disabled={isLoading || ready !== total}
+                          className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        >
+                          {isLoading ? (
+                            <>
+                              <FiLoader className="w-4 h-4 animate-spin" />
+                              <span>Memproses...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiCheckCircle className="w-4 h-4" />
+                              <span>Complete All Data</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* FIXED: Progress Info without amber text */}
+                        <div className="flex items-center gap-2 text-sm text-neutral-600 bg-neutral-100 px-3 py-2 rounded-lg">
+                          <FiClipboard className="w-4 h-4" />
+                          <span>
+                            {ready}/{total} LKH Sudah Diinput
+                          </span>
+                        </div>
+                      </>
+                    );
+                  }
+                })()
               )}
             </div>
           </div>
@@ -677,18 +622,36 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                             </h4>
                             <p className="text-sm text-neutral-600 font-medium mt-1">{lkh.activitycode} - {lkh.activityname}</p>
                           </div>
-                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            lkh.mobile_status === 'EMPTY' && lkh.status === 'READY' ? 'bg-yellow-100 text-yellow-700' :
-                            lkh.mobile_status === 'EMPTY' && lkh.status === 'WAITING_MATERIAL' ? 'bg-yellow-100 text-yellow-700' :
-                            lkh.mobile_status === 'DRAFT' ? 'bg-green-100 text-green-700' :
-                            lkh.mobile_status === 'COMPLETED' ? 'bg-gray-100 text-gray-700' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>
-                            {lkh.mobile_status === 'EMPTY' && lkh.status === 'READY' ? 'Menunggu Dikerjakan' :
-                             lkh.mobile_status === 'EMPTY' && lkh.status === 'WAITING_MATERIAL' ? 'Menunggu Material' :
-                             lkh.mobile_status === 'DRAFT' ? 'Sudah Diinput' :
-                             lkh.mobile_status === 'COMPLETED' ? 'Selesai' :
-                             'Sedang Dikerjakan'}
+                          <div className="flex items-center gap-2">
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              lkh.mobile_status === 'EMPTY' && lkh.status === 'READY' ? 'bg-yellow-100 text-yellow-700' :
+                              lkh.mobile_status === 'EMPTY' && lkh.status === 'WAITING_MATERIAL' ? 'bg-red-100 text-red-700' :
+                              lkh.mobile_status === 'DRAFT' ? 'bg-green-100 text-green-700' :
+                              lkh.mobile_status === 'COMPLETED' ? 'bg-gray-100 text-gray-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {lkh.mobile_status === 'EMPTY' && lkh.status === 'READY' ? 'Siap Dikerjakan' :
+                               lkh.mobile_status === 'EMPTY' && lkh.status === 'WAITING_MATERIAL' ? 'Menunggu Material' :
+                               lkh.mobile_status === 'DRAFT' ? 'Sudah Diinput' :
+                               lkh.mobile_status === 'COMPLETED' ? 'Selesai' :
+                               'Sedang Dikerjakan'}
+                            </div>
+                            
+                            {/* UPDATED: View Button for COMPLETED LKH with dynamic URL */}
+                            {lkh.mobile_status === 'COMPLETED' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const viewUrl = buildMandorUrl(`mandor/lkh/${lkh.lkhno}/view`);
+                                  console.log('Opening view URL:', viewUrl);
+                                  window.location.href = viewUrl;
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                              >
+                                <FiEye className="w-3 h-3" />
+                                View
+                              </button>
+                            )}
                           </div>
                         </div>
                         
@@ -756,7 +719,7 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
               </div>
             </div>
 
-            {/* Material Card with Updated Status Flow */}
+            {/* Material Card - READ ONLY VERSION */}
             <div className="bg-white rounded-2xl shadow-xl border border-neutral-200">
               {/* Header */}
               <div className="border-b bg-green-50 rounded-t-2xl p-6">
@@ -765,10 +728,10 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                     <FiPackage className="w-6 h-6 text-green-600" />
                     <div>
                       <h3 className="text-xl font-semibold text-neutral-900">
-                        Material & Retur
+                        Status Material
                       </h3>
                       <p className="text-sm text-neutral-600">
-                        Status Material Hari Ini
+                        Monitoring Material Hari Ini
                       </p>
                     </div>
                   </div>
@@ -791,32 +754,11 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                         Konfirmasi Terima
                       </button>
                     )}
-                    
-                    {/* Return Input Button - Only show when RECEIVED_BY_MANDOR */}
-                    {overallStatus === 'RECEIVED_BY_MANDOR' && (
-                      <button
-                        onClick={saveReturns}
-                        disabled={isLoading || Object.values(returnInputs).every(v => v === 0)}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isLoading ? (
-                          <>
-                            <FiLoader className="w-4 h-4 animate-spin" />
-                            <span>Menyimpan...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FiSave className="w-4 h-4" />
-                            <span>Input Retur</span>
-                          </>
-                        )}
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
               
-              {/* Material Items */}
+              {/* Material Items - READ ONLY */}
               <div className="p-6">
                 {materialList.length === 0 ? (
                   <div className="text-center py-8 text-neutral-500">
@@ -848,16 +790,16 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                             <div className="flex items-center gap-4">
                               <div className="grid grid-cols-3 gap-6 text-center">
                                 <div>
-                                  <p className="text-xs text-neutral-500">Qty</p>
+                                  <p className="text-xs text-neutral-500">Qty Diterima</p>
                                   <p className="font-semibold">{material.total_qty} {material.unit}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-neutral-500">Retur</p>
-                                  <p className="font-semibold text-orange-600">{material.total_qtyretur || 0} {material.unit}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-neutral-500">Terpakai</p>
                                   <p className="font-semibold text-green-600">{material.total_qtydigunakan || 0} {material.unit}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-neutral-500">Sisa/Retur</p>
+                                  <p className="font-semibold text-orange-600">{material.total_qtyretur || 0} {material.unit}</p>
                                 </div>
                               </div>
                               
@@ -870,34 +812,6 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                               </div>
                             </div>
                           </div>
-
-                          {/* Return Input - Only show for RECEIVED_BY_MANDOR status */}
-                          {material.status === 'RECEIVED_BY_MANDOR' && (
-                            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                              <label className="block text-sm font-medium text-orange-800 mb-2">
-                                Input Retur Material
-                              </label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={material.total_qty}
-                                  step="0.01"
-                                  value={returnInputs[material.itemcode] || ''}
-                                  onChange={(e) => handleReturnInput(material.itemcode, parseFloat(e.target.value) || 0)}
-                                  className="flex-1 px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                  placeholder="0.00"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className="text-sm font-medium text-orange-700">
-                                  {material.unit}
-                                </span>
-                              </div>
-                              <p className="text-xs text-orange-600 mt-1">
-                                Maksimal: {material.total_qty} {material.unit}
-                              </p>
-                            </div>
-                          )}
                         </div>
 
                         {/* Plot Breakdown - Compact */}
@@ -905,7 +819,7 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                           <div className="p-3 border-t bg-white">
                             <h5 className="font-medium text-neutral-900 mb-2 flex items-center gap-1 text-sm">
                               <FiMapPin className="w-3 h-3 text-blue-600" />
-                              Detail Per Plot
+                              Detail Per Plot (Rencana)
                             </h5>
                             
                             {renderPlotCards(material.plot_breakdown)}

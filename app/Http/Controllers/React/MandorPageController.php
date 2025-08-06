@@ -276,7 +276,7 @@ class MandorPageController extends Controller
     // =============================================================================
 
     /**
-     * Get ready LKH list with mobile_status included
+     * Get ready LKH list with mobile_status included - FIXED VERSION
      */
     public function getReadyLKH(Request $request)
     {
@@ -290,7 +290,6 @@ class MandorPageController extends Controller
             
             $lkhRecords = DB::table('lkhhdr as lkh')
                 ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                ->leftJoin('usematerialhdr as umh', 'lkh.rkhno', '=', 'umh.rkhno')
                 ->where('lkh.companycode', $user->companycode)
                 ->where('lkh.mandorid', $user->userid)
                 ->whereDate('lkh.lkhdate', $date)
@@ -298,8 +297,7 @@ class MandorPageController extends Controller
                 ->select([
                     'lkh.lkhno', 'lkh.activitycode', 'act.activityname', 'act.description as activity_description',
                     'lkh.totalluasactual', 'lkh.jenistenagakerja', 'lkh.status as lkh_status',
-                    'lkh.totalworkers as estimated_workers', 'lkh.rkhno', 'lkh.mobile_status',
-                    'umh.flagstatus as material_status'
+                    'lkh.totalworkers as estimated_workers', 'lkh.rkhno', 'lkh.mobile_status'
                 ])
                 ->get();
             
@@ -321,10 +319,23 @@ class MandorPageController extends Controller
                     ->where('rls.usingmaterial', 1)
                     ->exists();
                 
-                // Materials ready when mandor has confirmed receipt
+                // Materials ready check - FIXED LOGIC
                 $materialsReady = true;
                 if ($needsMaterial) {
-                    $materialsReady = ($lkhRecord->material_status === 'RECEIVED_BY_MANDOR');
+                    // Get ALL material statuses for this RKH
+                    $materialStatuses = DB::table('usematerialhdr')
+                        ->where('companycode', $user->companycode)
+                        ->where('rkhno', $lkhRecord->rkhno)
+                        ->pluck('flagstatus');
+                    
+                    // Define ready statuses
+                    $readyStatuses = ['RECEIVED_BY_MANDOR', 'RETURNED_BY_MANDOR', 'RETURN_RECEIVED', 'COMPLETED'];
+                    
+                    // Materials are ready if we have materials and ALL are in ready status
+                    $materialsReady = $materialStatuses->isNotEmpty() && 
+                        $materialStatuses->every(function($status) use ($readyStatuses) {
+                            return in_array($status, $readyStatuses);
+                        });
                 }
                 
                 // Determine work status
@@ -366,7 +377,8 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Complete All LKH - Update all DRAFT to COMPLETED
+     * Complete All LKH - Enhanced version with material aggregation
+     * STRICT: All LKH must be DRAFT before completing
      */
     public function completeAllLKH(Request $request)
     {
@@ -383,45 +395,136 @@ class MandorPageController extends Controller
             DB::beginTransaction();
             
             try {
-                // Get all DRAFT LKH for this mandor and date
-                $draftLKH = DB::table('lkhhdr')
+                // Get all LKH for this mandor and date
+                $allLKH = DB::table('lkhhdr')
                     ->where('companycode', $user->companycode)
                     ->where('mandorid', $user->userid)
                     ->whereDate('lkhdate', $date)
-                    ->where('mobile_status', 'DRAFT')
-                    ->pluck('lkhno');
+                    ->select(['lkhno', 'mobile_status', 'rkhno'])
+                    ->get();
                 
-                if ($draftLKH->isEmpty()) {
+                if ($allLKH->isEmpty()) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Tidak ada LKH dengan status DRAFT untuk diselesaikan'
+                        'message' => 'Tidak ada LKH yang ditemukan untuk tanggal ini'
                     ]);
                 }
                 
-                // Update all DRAFT LKH to COMPLETED
-                $updatedCount = DB::table('lkhhdr')
-                    ->where('companycode', $user->companycode)
-                    ->where('mandorid', $user->userid)
-                    ->whereDate('lkhdate', $date)
-                    ->where('mobile_status', 'DRAFT')
-                    ->update([
-                        'mobile_status' => 'COMPLETED',
-                        'issubmit' => 1,
-                        'submitby' => $user->name,
-                        'submitat' => now(),
-                        'updateby' => $user->name,
-                        'mobileupdatedat' => now()
-                    ]);
+                // STRICT CHECK: All must be DRAFT
+                $draftLKH = $allLKH->where('mobile_status', 'DRAFT');
+                $emptyLKH = $allLKH->where('mobile_status', 'EMPTY');
                 
-                // Calculate and update total material usage
-                $this->calculateTotalMaterialUsage($user->companycode, $user->userid, $date);
+                if ($draftLKH->count() !== $allLKH->count()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Semua LKH harus diselesaikan terlebih dahulu. " .
+                                    "Status: {$draftLKH->count()}/{$allLKH->count()} LKH sudah diinput. " .
+                                    "Silakan selesaikan {$emptyLKH->count()} LKH yang belum dikerjakan."
+                    ]);
+                }
+                
+                // Process each DRAFT LKH
+                $processedLKH = [];
+                $materialAggregation = [];
+                
+                foreach ($draftLKH as $lkh) {
+                    // Update LKH status to COMPLETED
+                    DB::table('lkhhdr')
+                        ->where('lkhno', $lkh->lkhno)
+                        ->where('companycode', $user->companycode)
+                        ->update([
+                            'mobile_status' => 'COMPLETED',
+                            'issubmit' => 1,
+                            'submitby' => $user->name,
+                            'submitat' => now(),
+                            'updateby' => $user->name,
+                            'mobileupdatedat' => now()
+                        ]);
+                    
+                    // Get material usage from lkhdetailmaterial
+                    $materialUsage = DB::table('lkhdetailmaterial')
+                        ->where('companycode', $user->companycode)
+                        ->where('lkhno', $lkh->lkhno)
+                        ->select(['itemcode', 'qtyditerima', 'qtysisa', 'qtydigunakan'])
+                        ->get();
+                    
+                    // Aggregate material usage per itemcode
+                    foreach ($materialUsage as $material) {
+                        $key = $material->itemcode;
+                        
+                        if (!isset($materialAggregation[$key])) {
+                            $materialAggregation[$key] = [
+                                'total_diterima' => 0,
+                                'total_sisa' => 0,
+                                'total_digunakan' => 0,
+                                'lkh_details' => []
+                            ];
+                        }
+                        
+                        $materialAggregation[$key]['total_diterima'] += (float) $material->qtyditerima;
+                        $materialAggregation[$key]['total_sisa'] += (float) $material->qtysisa;
+                        $materialAggregation[$key]['total_digunakan'] += (float) $material->qtydigunakan;
+                        
+                        $materialAggregation[$key]['lkh_details'][] = [
+                            'lkhno' => $lkh->lkhno,
+                            'qtyditerima' => (float) $material->qtyditerima,
+                            'qtysisa' => (float) $material->qtysisa,
+                            'qtydigunakan' => (float) $material->qtydigunakan
+                        ];
+                    }
+                    
+                    $processedLKH[] = $lkh->lkhno;
+                }
+                
+                // Update usemateriallst with aggregated data
+                $materialUpdates = [];
+                foreach ($materialAggregation as $itemcode => $aggregatedData) {
+                    // Update all usemateriallst records for this itemcode and date
+                    $updatedRecords = DB::table('usemateriallst as uml')
+                        ->join('lkhhdr as lkh', 'uml.lkhno', '=', 'lkh.lkhno')
+                        ->where('uml.companycode', $user->companycode)
+                        ->where('uml.itemcode', $itemcode)
+                        ->where('lkh.mandorid', $user->userid)
+                        ->whereDate('lkh.lkhdate', $date)
+                        ->update([
+                            'uml.qtydigunakan' => $aggregatedData['total_digunakan'],
+                            'uml.qtyretur' => $aggregatedData['total_sisa'],
+                            'uml.returby' => $user->name,
+                            'uml.tglretur' => now()
+                        ]);
+                    
+                    $materialUpdates[] = [
+                        'itemcode' => $itemcode,
+                        'total_used' => $aggregatedData['total_digunakan'],
+                        'total_returned' => $aggregatedData['total_sisa'],
+                        'records_updated' => $updatedRecords
+                    ];
+                }
+                
+                // Update usematerialhdr status to RETURNED_BY_MANDOR
+                $rkhNumbers = $allLKH->pluck('rkhno')->unique();
+                $updatedHeaders = DB::table('usematerialhdr')
+                    ->where('companycode', $user->companycode)
+                    ->whereIn('rkhno', $rkhNumbers)
+                    ->where('flagstatus', 'RECEIVED_BY_MANDOR')
+                    ->update([
+                        'flagstatus' => 'RETURNED_BY_MANDOR',
+                        'updateby' => $user->name,
+                        'updatedat' => now()
+                    ]);
                 
                 DB::commit();
                 
                 return response()->json([
                     'success' => true,
-                    'message' => "Berhasil menyelesaikan {$updatedCount} LKH",
-                    'completed_lkh' => $draftLKH->toArray()
+                    'message' => "Berhasil menyelesaikan {$draftLKH->count()} LKH dan menghitung material return",
+                    'data' => [
+                        'completed_lkh' => $processedLKH,
+                        'material_updates' => $materialUpdates,
+                        'header_updates' => $updatedHeaders,
+                        'total_lkh' => $allLKH->count(),
+                        'completed_count' => $draftLKH->count()
+                    ]
                 ]);
                 
             } catch (\Exception $e) {
@@ -432,12 +535,14 @@ class MandorPageController extends Controller
         } catch (\Exception $e) {
             Log::error('Error in completeAllLKH', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->user()->userid ?? 'unknown',
+                'date' => $request->input('date')
             ]);
             
             return response()->json([
                 'success' => false,
-                'error' => 'Internal server error: ' . $e->getMessage()
+                'error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -447,7 +552,7 @@ class MandorPageController extends Controller
     // =============================================================================
 
     /**
-     * Show LKH Assignment Page
+     * Show LKH Assignment Page - FIXED: Logo path
      */
     public function showLKHAssign($lkhno)
     {
@@ -468,12 +573,17 @@ class MandorPageController extends Controller
                 ->select([
                     'lkh.lkhno', 'lkh.activitycode', 'act.activityname', 'act.description as activity_description',
                     'lkh.jenistenagakerja', 'lkh.totalworkers as estimated_workers', 'lkh.rkhno',
-                    'lkh.lkhdate', 'u.name as mandor_nama'
+                    'lkh.lkhdate', 'lkh.mobile_status', 'u.name as mandor_nama'
                 ])
                 ->first();
             
             if (!$lkhData) {
                 return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
+            }
+            
+            // Check if LKH is already completed
+            if ($lkhData->mobile_status === 'COMPLETED') {
+                return redirect()->route('mandor.lkh.view', $lkhno)->with('info', 'LKH sudah selesai, dialihkan ke mode view');
             }
             
             // Get plot data
@@ -508,7 +618,8 @@ class MandorPageController extends Controller
                     'estimated_workers' => (int) $lkhData->estimated_workers,
                     'rkhno' => $lkhData->rkhno,
                     'lkhdate' => $lkhData->lkhdate,
-                    'mandor_nama' => $lkhData->mandor_nama
+                    'mandor_nama' => $lkhData->mandor_nama,
+                    'mobile_status' => $lkhData->mobile_status
                 ],
                 'vehicleInfo' => $vehicleInfo,
                 'availableWorkers' => $availableWorkers,
@@ -516,9 +627,16 @@ class MandorPageController extends Controller
                 'routes' => [
                     'lkh_save_assignment' => route('mandor.lkh.save-assignment', $lkhno),
                     'lkh_input' => route('mandor.lkh.input', $lkhno),
+                    'lkh_view' => route('mandor.lkh.view', $lkhno),
                     'mandor_index' => route('mandor.index'),
                 ],
                 'csrf_token' => csrf_token(),
+                'app' => [
+                    'name' => config('app.name', 'Laravel'),
+                    'url' => config('app.url', 'http://localhost'),
+                    // ✅ FIXED: Logo path sesuai dengan struktur file actual
+                    'logo_url' => asset('img/logo-tebu.png'), // Changed from 'images/logo.png' to 'img/logo-tebu.png'
+                ],
             ]);
             
         } catch (\Exception $e) {
@@ -533,7 +651,7 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Show LKH Input Page
+     * Show LKH Input Page - Updated to handle dynamic URLs and status
      */
     public function showLKHInput($lkhno)
     {
@@ -551,14 +669,22 @@ class MandorPageController extends Controller
                 ->where('mandorid', $user->userid)
                 ->value('mobile_status');
             
+            if (!$lkhStatus) {
+                return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
+            }
+            
+            // UPDATED: Handle different statuses
             if ($lkhStatus === 'DRAFT') {
-                return redirect()->route('mandor.lkh.view', $lkhno);
+                // Already has input - redirect to view mode instead
+                return redirect()->route('mandor.lkh.view', $lkhno)->with('info', 'LKH sudah diinput, dialihkan ke mode view');
             }
             
             if ($lkhStatus === 'COMPLETED') {
-                return redirect()->route('mandor.index')->with('error', 'LKH sudah selesai dan tidak bisa diubah');
+                // Completed - redirect to readonly view
+                return redirect()->route('mandor.lkh.view', $lkhno)->with('info', 'LKH sudah selesai, dialihkan ke mode readonly');
             }
             
+            // Status is EMPTY - proceed with input mode
             return $this->renderLKHForm($lkhno, 'input');
             
         } catch (\Exception $e) {
@@ -585,21 +711,26 @@ class MandorPageController extends Controller
             $user = auth()->user();
             
             // Check if LKH exists and belongs to this mandor
-            $lkhStatus = DB::table('lkhhdr')
+            $lkhData = DB::table('lkhhdr')
                 ->where('lkhno', $lkhno)
                 ->where('companycode', $user->companycode)
                 ->where('mandorid', $user->userid)
-                ->value('mobile_status');
+                ->select(['mobile_status', 'status', 'keterangan'])
+                ->first();
             
-            if (!$lkhStatus) {
+            if (!$lkhData) {
                 return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
             }
             
-            if ($lkhStatus !== 'DRAFT') {
-                return redirect()->route('mandor.index')->with('error', 'LKH tidak dalam status draft');
+            // UPDATED: Allow view for DRAFT, COMPLETED status
+            if (!in_array($lkhData->mobile_status, ['DRAFT', 'COMPLETED'])) {
+                return redirect()->route('mandor.index')->with('error', 'LKH tidak tersedia untuk dilihat');
             }
             
-            return $this->renderLKHForm($lkhno, 'view');
+            // UPDATED: Determine mode based on mobile_status
+            $mode = $lkhData->mobile_status === 'COMPLETED' ? 'view-readonly' : 'view';
+            
+            return $this->renderLKHForm($lkhno, $mode);
             
         } catch (\Exception $e) {
             Log::error('Error in showLKHView', [
@@ -613,7 +744,7 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Show LKH Edit Page
+     * Show LKH Edit Page - Updated to handle dynamic URLs and proper status validation
      */
     public function showLKHEdit($lkhno)
     {
@@ -625,18 +756,24 @@ class MandorPageController extends Controller
             $user = auth()->user();
             
             // Check if LKH exists and is editable
-            $lkhStatus = DB::table('lkhhdr')
+            $lkhData = DB::table('lkhhdr')
                 ->where('lkhno', $lkhno)
                 ->where('companycode', $user->companycode)
                 ->where('mandorid', $user->userid)
-                ->value('mobile_status');
+                ->select(['mobile_status', 'status'])
+                ->first();
             
-            if (!$lkhStatus) {
+            if (!$lkhData) {
                 return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
             }
             
-            if ($lkhStatus !== 'DRAFT') {
-                return redirect()->route('mandor.lkh.view', $lkhno)->with('error', 'LKH tidak bisa diedit karena sudah selesai');
+            // UPDATED: Only allow edit for DRAFT status
+            if ($lkhData->mobile_status !== 'DRAFT') {
+                if ($lkhData->mobile_status === 'COMPLETED') {
+                    return redirect()->route('mandor.lkh.view', $lkhno)->with('error', 'LKH sudah selesai dan tidak bisa diedit');
+                } else {
+                    return redirect()->route('mandor.lkh.view', $lkhno)->with('error', 'LKH tidak dalam status yang bisa diedit');
+                }
             }
             
             return $this->renderLKHForm($lkhno, 'edit');
@@ -704,7 +841,7 @@ class MandorPageController extends Controller
                         'tenagakerjaid' => $worker['tenagakerjaid'],
                         'tenagakerjaurutan' => $index + 1,
                         'jammasuk' => '07:00:00',
-                        'jamselesai' => '16:00:00',
+                        'jamselesai' => '15:00:00',
                         'totaljamkerja' => 8.0,
                         'overtimehours' => 0,
                         'premi' => 0, 'upahharian' => 0, 'upahperjam' => 0,
@@ -747,7 +884,7 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Save LKH Results with mobile_status and redirect to view
+     * Save LKH Results with mobile_status and redirect to view - FIXED KETERANGAN
      */
     public function saveLKHResults(Request $request, $lkhno = null)
     {
@@ -778,7 +915,7 @@ class MandorPageController extends Controller
             $workerInputs = $request->input('worker_inputs', []);
             $plotInputs = $request->input('plot_inputs', []);
             $materialInputs = $request->input('material_inputs', []);
-            $keterangan = $request->input('keterangan');
+            $keterangan = $request->input('keterangan'); // Get keterangan from request
             
             DB::beginTransaction();
             
@@ -861,6 +998,7 @@ class MandorPageController extends Controller
                 // Calculate totals and update header
                 $totals = $this->calculateLKHTotals($lkhno, $user->companycode);
                 
+                // FIXED: Update header dengan keterangan
                 DB::table('lkhhdr')
                     ->where('lkhno', $lkhno)
                     ->where('companycode', $user->companycode)
@@ -870,7 +1008,7 @@ class MandorPageController extends Controller
                         'totalsisa' => $totals['totalsisa'],
                         'totalupahall' => $totals['totalupah'],
                         'mobile_status' => 'DRAFT',
-                        'keterangan' => $keterangan,
+                        'keterangan' => $keterangan,  // FIXED: Add this line!
                         'updateby' => $user->name,
                         'mobileupdatedat' => now()
                     ]);
@@ -903,7 +1041,7 @@ class MandorPageController extends Controller
     // =============================================================================
 
     /**
-     * Get available materials for mandor
+     * Get available materials for mandor - FIXED to show live usage data
      */
     public function getAvailableMaterials(Request $request)
     {
@@ -919,11 +1057,11 @@ class MandorPageController extends Controller
             $materials = DB::table('usemateriallst as uml')
                 ->join('usematerialhdr as umh', function($join) {
                     $join->on('uml.companycode', '=', 'umh.companycode')
-                         ->on('uml.rkhno', '=', 'umh.rkhno');
+                        ->on('uml.rkhno', '=', 'umh.rkhno');
                 })
                 ->join('lkhhdr as lkh', function($join) {
                     $join->on('uml.companycode', '=', 'lkh.companycode')
-                         ->on('uml.lkhno', '=', 'lkh.lkhno');
+                        ->on('uml.lkhno', '=', 'lkh.lkhno');
                 })
                 ->where('uml.companycode', $user->companycode)
                 ->where('lkh.mandorid', $user->userid)
@@ -954,20 +1092,34 @@ class MandorPageController extends Controller
                         'lkh_details' => [],
                         'plot_breakdown' => [],
                         'herbisidagroupid' => $material->herbisidagroupid,
-                        'dosageperha' => $material->dosageperha
+                        'dosageperha' => $material->dosageperha,
+                        'rkhno' => $material->rkhno
                     ];
                 }
                 
                 $groupedMaterials[$key]['total_qty'] += (float) $material->qty;
-                $groupedMaterials[$key]['total_qtyretur'] += (float) ($material->qtyretur ?? 0);
-                $groupedMaterials[$key]['total_qtydigunakan'] += (float) ($material->qtydigunakan ?? 0);
+                
+                // FIXED: Get live usage data from lkhdetailmaterial if available
+                $liveUsage = $this->getLiveUsageData($user->companycode, $material->lkhno, $material->itemcode);
+                
+                if ($liveUsage) {
+                    // Use live data from lkhdetailmaterial
+                    $groupedMaterials[$key]['total_qtyretur'] += (float) $liveUsage->qtysisa;
+                    $groupedMaterials[$key]['total_qtydigunakan'] += (float) $liveUsage->qtydigunakan;
+                } else {
+                    // Fallback to usemateriallst data (for completed LKH)
+                    $groupedMaterials[$key]['total_qtyretur'] += (float) ($material->qtyretur ?? 0);
+                    $groupedMaterials[$key]['total_qtydigunakan'] += (float) ($material->qtydigunakan ?? 0);
+                }
                 
                 $groupedMaterials[$key]['lkh_details'][] = [
                     'lkhno' => $material->lkhno,
-                    'qty' => (float) $material->qty
+                    'qty' => (float) $material->qty,
+                    'live_usage' => $liveUsage ? [
+                        'qtysisa' => (float) $liveUsage->qtysisa,
+                        'qtydigunakan' => (float) $liveUsage->qtydigunakan
+                    ] : null
                 ];
-                
-                $groupedMaterials[$key]['rkhno'] = $material->rkhno;
             }
             
             // Get plot breakdown for each material
@@ -996,6 +1148,19 @@ class MandorPageController extends Controller
             
             return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Get live usage data from lkhdetailmaterial
+     */
+    private function getLiveUsageData($companyCode, $lkhno, $itemcode)
+    {
+        return DB::table('lkhdetailmaterial')
+            ->where('companycode', $companyCode)
+            ->where('lkhno', $lkhno)
+            ->where('itemcode', $itemcode)
+            ->select(['qtyditerima', 'qtysisa', 'qtydigunakan'])
+            ->first();
     }
 
     /**
@@ -1411,7 +1576,7 @@ class MandorPageController extends Controller
     // =============================================================================
 
     /**
-     * Shared LKH form renderer
+     * Shared LKH form renderer - FIXED: Logo path & clean data
      */
     private function renderLKHForm($lkhno, $mode = 'input')
     {
@@ -1426,7 +1591,9 @@ class MandorPageController extends Controller
             ->where('lkh.lkhno', $lkhno)
             ->select([
                 'lkh.lkhno', 'lkh.activitycode', 'act.activityname', 'act.description as activity_description',
-                'lkh.jenistenagakerja', 'lkh.rkhno', 'lkh.lkhdate', 'lkh.mobile_status', 'u.name as mandor_nama'
+                'lkh.jenistenagakerja', 'lkh.rkhno', 'lkh.lkhdate', 'lkh.mobile_status', 
+                'lkh.keterangan', 'lkh.totalhasil', 'lkh.totalsisa', 'lkh.totalupahall',
+                'u.name as mandor_nama'
             ])
             ->first();
         
@@ -1434,7 +1601,7 @@ class MandorPageController extends Controller
             throw new \Exception('LKH tidak ditemukan');
         }
         
-        // Get assigned workers
+        // Get assigned workers - FIXED: Remove totalupah to hide individual wages
         $assignedWorkers = DB::table('lkhdetailworker as ldw')
             ->join('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
             ->where('ldw.lkhno', $lkhno)
@@ -1442,6 +1609,7 @@ class MandorPageController extends Controller
             ->select([
                 'tk.tenagakerjaid', 'tk.nama', 'tk.nik', 'ldw.jammasuk', 'ldw.jamselesai',
                 'ldw.totaljamkerja', 'ldw.overtimehours'
+                // ❌ REMOVED: 'ldw.totalupah' - hide individual wages
             ])
             ->orderBy('ldw.tenagakerjaurutan')
             ->get()
@@ -1490,22 +1658,21 @@ class MandorPageController extends Controller
         // Calculate total luas plan
         $totalLuasPlan = array_sum(array_column($plotData, 'luasarea'));
         
-        // Determine page component and routes based on mode
-        $pageComponent = $mode === 'view' ? 'lkh-view' : 'lkh-input';
-        $pageTitle = $mode === 'view' ? 'Lihat Hasil - ' . $lkhno : 
-                    ($mode === 'edit' ? 'Edit Hasil - ' . $lkhno : 'Input Hasil - ' . $lkhno);
+        // Determine page component and readonly flag based on mode
+        $pageComponent = $mode === 'input' ? 'lkh-input' : 'lkh-view';
+        $isReadonly = in_array($mode, ['view', 'view-readonly']);
+        $isCompleted = $lkhData->mobile_status === 'COMPLETED';
         
-        $routes = [
-            'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
-            'lkh_assign' => route('mandor.lkh.assign', $lkhno),
-            'lkh_view' => route('mandor.lkh.view', $lkhno),
-            'lkh_edit' => route('mandor.lkh.edit', $lkhno),
-            'mandor_index' => route('mandor.index'),
-        ];
+        $pageTitle = $isReadonly ? 'Lihat Hasil - ' . $lkhno : 'Input Hasil - ' . $lkhno;
+        if ($isCompleted) {
+            $pageTitle = 'Hasil Selesai - ' . $lkhno;
+        }
         
         return Inertia::render($pageComponent, [
             'title' => $pageTitle,
             'mode' => $mode,
+            'readonly' => $isReadonly,
+            'completed' => $isCompleted,
             'lkhData' => [
                 'lkhno' => $lkhData->lkhno,
                 'activitycode' => $lkhData->activitycode,  
@@ -1513,18 +1680,35 @@ class MandorPageController extends Controller
                 'blok' => $plotData[0]['blok'] ?? 'N/A',
                 'plot' => array_column($plotData, 'plot'),
                 'totalluasplan' => $totalLuasPlan,
+                'totalhasil' => (float) ($lkhData->totalhasil ?? 0),
+                'totalsisa' => (float) ($lkhData->totalsisa ?? 0),
+                // ❌ REMOVED: 'totalupah' - hide team wages
                 'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
                 'rkhno' => $lkhData->rkhno,
                 'lkhdate' => $lkhData->lkhdate,
                 'mandor_nama' => $lkhData->mandor_nama,
                 'mobile_status' => $lkhData->mobile_status,
+                'keterangan' => $lkhData->keterangan,
+                'is_completed' => $isCompleted,
                 'needs_material' => count($materials) > 0
             ],
             'assignedWorkers' => $assignedWorkers,
             'plotData' => $plotData,
             'materials' => $materials,
-            'routes' => $routes,
+            'routes' => [
+                'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
+                'lkh_assign' => route('mandor.lkh.assign', $lkhno),
+                'lkh_view' => route('mandor.lkh.view', $lkhno),
+                'lkh_edit' => route('mandor.lkh.edit', $lkhno),
+                'mandor_index' => route('mandor.index'),
+            ],
             'csrf_token' => csrf_token(),
+            'app' => [
+                'name' => config('app.name', 'Laravel'),
+                'url' => config('app.url', 'http://localhost'),
+                // ✅ FIXED: Logo path sesuai dengan struktur file actual
+                'logo_url' => asset('img/logo-tebu.png'), // Changed from 'images/logo.png' to 'img/logo-tebu.png'
+            ],
         ]);
     }
 
@@ -1596,33 +1780,33 @@ class MandorPageController extends Controller
     private function getMaterialPlotBreakdown($rkhno, $itemcode, $companyCode, $herbisidagroupid, $dosageperha)
     {
         try {
-            // Get plot details from lkhdetailplot table
-            $lkhnos = DB::table('usemateriallst')
-                ->where('companycode', $companyCode)
-                ->where('rkhno', $rkhno)
-                ->where('itemcode', $itemcode)
-                ->pluck('lkhno')
-                ->unique();
-            
+            // Get all material records with their LKH and plot details
+            $materialData = DB::table('usemateriallst as uml')
+                ->join('lkhhdr as lkh', 'uml.lkhno', '=', 'lkh.lkhno')
+                ->join('lkhdetailplot as ldp', 'lkh.lkhno', '=', 'ldp.lkhno')
+                ->where('uml.companycode', $companyCode)
+                ->where('uml.rkhno', $rkhno)
+                ->where('uml.itemcode', $itemcode)
+                ->select([
+                    'uml.lkhno', 'uml.qty', 'uml.unit', 'uml.herbisidagroupid', 
+                    'uml.dosageperha', 'ldp.plot', 'ldp.blok', 'ldp.luasrkh'
+                ])
+                ->get();
+
             $breakdown = [];
             
-            foreach ($lkhnos as $lkhno) {
-                $plotDetails = DB::table('lkhdetailplot')
-                    ->where('companycode', $companyCode)
-                    ->where('lkhno', $lkhno)
-                    ->select(['blok', 'plot', 'luasrkh'])
-                    ->get();
+            foreach ($materialData as $record) {
+                // Use the actual dosage from the record
+                $usage = $record->luasrkh * $record->dosageperha;
                 
-                foreach ($plotDetails as $plot) {
-                    $usage = $plot->luasrkh * $dosageperha;
-                    $breakdown[] = [
-                        'plot' => $plot->plot,
-                        'blok' => $plot->blok,
-                        'luasarea' => (float) $plot->luasrkh,
-                        'usage' => $usage,
-                        'usage_formatted' => number_format($usage, 2) . ' kg'
-                    ];
-                }
+                $breakdown[] = [
+                    'plot' => $record->plot,
+                    'blok' => $record->blok,
+                    'luasarea' => (float) $record->luasrkh,
+                    'usage' => $usage,
+                    // Use the correct unit from the material record
+                    'usage_formatted' => number_format($usage, 3) . ' ' . $record->unit
+                ];
             }
             
             return $breakdown;

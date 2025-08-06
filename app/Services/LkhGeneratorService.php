@@ -178,7 +178,7 @@ class LkhGeneratorService
             'totalovertimehours' => 0.00,
             'status' => 'EMPTY',
             'issubmit' => 0,
-            'keterangan' => "Auto-generated from RKH {$rkh->rkhno} - Plots: {$plotList} - Planned workers: {$totalWorkersPlanned}",
+            'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',
             'createdat' => now(),
         ], $approvalData);

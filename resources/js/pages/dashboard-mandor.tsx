@@ -1,29 +1,20 @@
 import React from 'react';
 import {
-  FiUser, FiTrendingUp, FiActivity, FiDatabase, FiArrowRight
+  FiArrowRight, FiUsers
 } from 'react-icons/fi';
 import {
-  HiOutlineCollection, HiOutlineFingerPrint
+  HiOutlineClipboardCheck
 } from 'react-icons/hi';
 
-interface Stats {
-  total_workers: number;
-  productivity: string;
-  active_areas: number;
-  monitoring: string;
-}
-
 interface DashboardMandorProps {
-  stats: Stats;
   onSectionChange: (section: string) => void;
 }
 
 const DashboardMandor: React.FC<DashboardMandorProps> = ({ 
-  stats, 
   onSectionChange 
 }) => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-neutral-50 to-white px-6 py-16">
         <div className="absolute inset-0 opacity-5">
@@ -47,7 +38,7 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
           </div>
 
           {/* Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-16 pb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-16 pb-24">
             {/* Attendance Card */}
             <div
               onClick={() => onSectionChange('absensi')}
@@ -69,7 +60,7 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
                 <div className="relative h-full flex flex-col justify-between p-8">
                   <div>
                     <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
-                      <HiOutlineFingerPrint className="w-8 h-8 text-white" />
+                      <FiUsers className="w-8 h-8 text-neutral" />
                     </div>
                     <h3 className="text-2xl font-bold text-neutral mb-2">
                       Sistem Absensi
@@ -108,7 +99,7 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
                 <div className="relative h-full flex flex-col justify-between p-8">
                   <div>
                     <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
-                      <HiOutlineCollection className="w-8 h-8 text-white" />
+                      <HiOutlineClipboardCheck className="w-8 h-8 text-neutral" />
                     </div>
                     <h3 className="text-2xl font-bold text-neutral mb-2">
                       Koleksi Data Lapangan
@@ -125,25 +116,6 @@ const DashboardMandor: React.FC<DashboardMandorProps> = ({
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Stats Section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-32">
-            {[
-              { value: stats.total_workers.toString(), label: 'Pekerja', icon: FiUser },
-              { value: stats.productivity, label: 'Produktivitas', icon: FiTrendingUp },
-              { value: stats.active_areas.toString(), label: 'Area Aktif', icon: FiDatabase },
-              { value: stats.monitoring, label: 'Monitoring', icon: FiActivity },
-            ].map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white border border-neutral-200 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-300"
-              >
-                <stat.icon className="w-6 h-6 text-neutral-400 mx-auto mb-3" />
-                <p className="text-3xl font-bold text-neutral-800">{stat.value}</p>
-                <p className="text-sm text-neutral-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>

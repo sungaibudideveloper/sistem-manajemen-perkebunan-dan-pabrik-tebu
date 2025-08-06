@@ -14,46 +14,6 @@ interface User {
   email: string;
 }
 
-interface Stats {
-  total_workers: number;
-  productivity: string;
-  active_areas: number;
-  monitoring: string;
-}
-
-interface AttendanceSummary {
-  name: string;
-  time: string;
-  status: string;
-  status_color: string;
-  id: number;
-  initials: string;
-}
-
-interface AttendanceStats {
-  today_total: number;
-  present: number;
-  late: number;
-  absent: number;
-  percentage_present: number;
-}
-
-interface FieldActivity {
-  type: string;
-  location: string;
-  time: string;
-  status: string;
-  icon: string;
-}
-
-interface CollectionStat {
-  title: string;
-  desc: string;
-  stats: string;
-  icon: string;
-  gradient: string;
-}
-
 interface Routes {
   logout: string;
   home: string;
@@ -62,6 +22,18 @@ interface Routes {
   workers: string;
   attendance_today: string;
   process_checkin: string;
+  // Field Collection routes
+  lkh_ready: string;
+  materials_available: string;
+  lkh_vehicle_info: string;
+  lkh_assign: string;
+  // Material management routes
+  materials_save_returns: string;
+  material_confirm_pickup: string;
+  // Complete all LKH route
+  complete_all_lkh: string;
+  // Sync routes
+  sync_offline_data: string;
 }
 
 interface MandorIndexProps extends PageProps {
@@ -69,20 +41,12 @@ interface MandorIndexProps extends PageProps {
   user: User;
   routes: Routes;
   csrf_token: string;
-  initialData: {
-    stats: Stats;
-    attendance_summary: AttendanceSummary[];
-    attendance_stats: AttendanceStats;
-    field_activities: FieldActivity[];
-    collection_stats: CollectionStat[];
-  };
 }
 
 const MandorIndex: React.FC<MandorIndexProps> = ({ 
   user, 
   routes, 
-  csrf_token,
-  initialData 
+  csrf_token 
 }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
 
@@ -100,7 +64,6 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
     >
       {activeSection === 'dashboard' && (
         <DashboardMandor 
-          stats={initialData.stats}
           onSectionChange={handleSectionChange}
         />
       )}
@@ -117,9 +80,7 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
       )}
       {activeSection === 'data-collection' && (
         <DataCollectionMandor 
-          field_activities={initialData.field_activities}
-          collection_stats={initialData.collection_stats}
-          routes={routes} // Kirim seluruh routes object
+          routes={routes}
           csrf_token={csrf_token}
           onSectionChange={handleSectionChange}
         />

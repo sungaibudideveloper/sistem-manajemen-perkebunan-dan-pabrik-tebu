@@ -1,11 +1,31 @@
-// resources/js/pages/lkh-input.tsx (FIXED VERSION)
-
+// resources/js/pages/lkh-input.tsx (FIXED VERSION - Logo & Dynamic URLs)
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   ArrowLeft, Users, Save, Loader, MapPin, 
   CheckCircle, Edit3, User, Package, AlertCircle, Clock, ChevronDown, ChevronUp, Plus, Minus
 } from 'lucide-react';
+
+// Dynamic URL Helper Functions
+const getBaseUrl = (): string => {
+  const origin = window.location.origin;
+  const pathname = window.location.pathname;
+  
+  // Check if we're in development (has /tebu/public) or production
+  if (pathname.includes('/tebu/public')) {
+    return `${origin}/tebu/public`;
+  }
+  
+  // Production or other environments
+  return origin;
+};
+
+const buildMandorUrl = (path: string): string => {
+  const baseUrl = getBaseUrl();
+  // Remove leading slash if exists to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${baseUrl}/${cleanPath}`;
+};
 
 interface LKHData {
   lkhno: string;
@@ -66,16 +86,7 @@ interface MaterialInfo {
   unit: string;
 }
 
-interface SharedProps {
-  app: {
-    name: string;
-    url: string;
-    logo_url: string;
-  };
-  [key: string]: any;
-}
-
-interface LKHInputProps extends SharedProps {
+interface LKHInputProps {
   title: string;
   lkhData: LKHData;
   assignedWorkers: AssignedWorker[];
@@ -91,6 +102,12 @@ interface LKHInputProps extends SharedProps {
   flash?: {
     success?: string;
     error?: string;
+  };
+  // FIXED: Add app prop structure
+  app: {
+    name: string;
+    url: string;
+    logo_url: string;
   };
 }
 
@@ -110,6 +127,35 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [keterangan, setKeterangan] = useState('');
   const [expandedWorkers, setExpandedWorkers] = useState<Set<string>>(new Set());
+
+  // Helper function untuk strip detik dari format time database
+  const stripSeconds = (timeString: string): string => {
+    if (!timeString) return '07:00';
+    // Handle both "HH:MM:SS" and "HH:MM" formats
+    if (timeString.includes(':')) {
+      return timeString.substring(0, 5); // "07:00:00" → "07:00" or "07:00" → "07:00"
+    }
+    return timeString;
+  };
+
+  // Helper function untuk hitung jam kerja dari format HH:MM
+  const calculateWorkHours = (jamMasuk: string, jamSelesai: string): number => {
+    try {
+      const start = new Date(`2025-01-01T${jamMasuk}:00`);
+      const end = new Date(`2025-01-01T${jamSelesai}:00`);
+      
+      // Handle overnight work
+      if (end.getTime() <= start.getTime()) {
+        end.setDate(end.getDate() + 1);
+      }
+      
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return Math.max(0, diffHours);
+    } catch (error) {
+      console.error('Error calculating work hours:', error);
+      return 8; // Default fallback
+    }
+  };
 
   // Handle flash messages
   useEffect(() => {
@@ -133,18 +179,30 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     setPlotInputs(initialPlots);
   }, [plotData]);
 
-  // Initialize worker inputs
+  // Initialize worker inputs - FIXED dengan strip seconds dan proper isFullTime detection
   useEffect(() => {
-    const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => ({
-      tenagakerjaid: worker.tenagakerjaid,
-      nama: worker.nama,
-      nik: worker.nik,
-      jammasuk: worker.jammasuk || '07:00',
-      jamselesai: worker.jamselesai || '15:00',
-      totaljamkerja: worker.totaljamkerja || 8,
-      overtimehours: worker.overtimehours || 0,
-      isFullTime: true
-    }));
+    const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => {
+      // Strip detik untuk display yang bersih
+      const jamMasuk = stripSeconds(worker.jammasuk || '07:00:00');
+      const jamSelesai = stripSeconds(worker.jamselesai || '15:00:00');
+      
+      // Calculate jam kerja dari format yang sudah di-strip
+      const totalJamKerja = calculateWorkHours(jamMasuk, jamSelesai);
+      
+      // Fix isFullTime detection - compare stripped values
+      const isFullTime = jamMasuk === '07:00' && jamSelesai === '15:00';
+      
+      return {
+        tenagakerjaid: worker.tenagakerjaid,
+        nama: worker.nama,
+        nik: worker.nik,
+        jammasuk: jamMasuk,        // Display format: "07:00" 
+        jamselesai: jamSelesai,    // Display format: "15:00"
+        totaljamkerja: totalJamKerja,
+        overtimehours: worker.overtimehours || 0,
+        isFullTime: isFullTime     // Fixed detection
+      };
+    });
     setWorkerInputs(initialWorkers);
   }, [assignedWorkers]);
 
@@ -185,18 +243,15 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         worker.isFullTime = value;
         if (value) {
           worker.jammasuk = '07:00';
-          worker.jamselesai = '15:00';
+          worker.jamselesai = '15:00'; // FIXED: 15:00 instead of 16:00
           worker.totaljamkerja = 8;
           worker.overtimehours = 0;
         }
       } else if (field === 'jammasuk' || field === 'jamselesai') {
         worker[field] = value;
-        // Recalculate total jam kerja
+        // Recalculate total jam kerja dengan helper function
         if (worker.jammasuk && worker.jamselesai) {
-          const start = new Date(`2025-01-01T${worker.jammasuk}:00`);
-          const end = new Date(`2025-01-01T${worker.jamselesai}:00`);
-          const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          worker.totaljamkerja = Math.max(0, diffHours);
+          worker.totaljamkerja = calculateWorkHours(worker.jammasuk, worker.jamselesai);
         }
       } else {
         (worker as any)[field] = value;
@@ -222,15 +277,13 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         newHours = Math.max(0, hours - 1);
       }
       
+      // Format konsisten: HH:MM (tanpa detik)
       const newTime = `${newHours.toString().padStart(2, '0')}:00`;
       worker[field] = newTime;
       
       // Recalculate total jam kerja
       if (worker.jammasuk && worker.jamselesai) {
-        const start = new Date(`2025-01-01T${worker.jammasuk}:00`);
-        const end = new Date(`2025-01-01T${worker.jamselesai}:00`);
-        const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        worker.totaljamkerja = Math.max(0, diffHours);
+        worker.totaljamkerja = calculateWorkHours(worker.jammasuk, worker.jamselesai);
       }
       
       updated[index] = worker;
@@ -306,8 +359,8 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         // NEW STRUCTURE: Separate inputs for each table
         worker_inputs: workerInputs.map(worker => ({
           tenagakerjaid: worker.tenagakerjaid,
-          jammasuk: worker.jammasuk,
-          jamselesai: worker.jamselesai,
+          jammasuk: worker.jammasuk + ':00',     // Add seconds for database: "07:00" → "07:00:00"
+          jamselesai: worker.jamselesai + ':00', // Add seconds for database: "15:00" → "15:00:00"
           overtimehours: worker.overtimehours
         })),
         plot_inputs: plotInputs.map(plot => ({
@@ -328,7 +381,8 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         onSuccess: (page: any) => {
           if (page.props?.flash?.success) {
             // Navigate back to mandor index
-            router.get(routes.mandor_index);
+            const mandorIndexUrl = buildMandorUrl('mandor');
+            window.location.href = mandorIndexUrl;
           }
         },
         onError: (errors) => {
@@ -351,7 +405,8 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   };
 
   const goBack = () => {
-    router.get(routes.lkh_assign);
+    const assignUrl = buildMandorUrl(`mandor/lkh/${lkhData.lkhno}/assign`);
+    window.location.href = assignUrl;
   };
 
   const totals = calculateTotals();
@@ -370,7 +425,23 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </button>
           
           <div className="flex items-center gap-4">
-            <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
+            {/* FIXED: Logo with proper fallback */}
+            {app?.logo_url ? (
+              <img 
+                src={app.logo_url} 
+                alt={`Logo ${app?.name || 'App'}`} 
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  console.log('Logo failed to load:', app.logo_url);
+                  // Hide image on error
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'A'}</span>
+              </div>
+            )}
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
                 Input Hasil Pekerjaan
@@ -402,7 +473,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Worker Time Input - Dropdown Style */}
+        {/* Worker Time Input - FIXED Display Format */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -475,7 +546,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                         </label>
                       </div>
                       
-                      {/* Time Inputs - Responsive Grid */}
+                      {/* Time Inputs - Clean HH:MM Format */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">

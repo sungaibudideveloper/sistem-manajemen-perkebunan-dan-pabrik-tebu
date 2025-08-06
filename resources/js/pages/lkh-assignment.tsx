@@ -1,12 +1,10 @@
-// ===============================================
-// FILE: resources/js/pages/lkh-assignment.tsx
-// ===============================================
+// resources/js/pages/lkh-assignment.tsx - FIXED VERSION (Logo Path & Clean UI)
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   ArrowLeft, Users, Truck, Save, Check, Loader, 
-  MapPin, Calendar, ExternalLink, CheckCircle, Info
+  MapPin, ExternalLink, CheckCircle, Info
 } from 'lucide-react';
 
 interface LKHData {
@@ -38,16 +36,7 @@ interface WorkerAssignment {
   assigned: boolean;
 }
 
-interface SharedProps {
-  app: {
-    name: string;
-    url: string;
-    logo_url: string;
-  };
-  [key: string]: any;
-}
-
-interface LKHAssignmentProps extends SharedProps {
+interface LKHAssignmentProps {
   title: string;
   lkhData: LKHData;
   vehicleInfo?: VehicleInfo;
@@ -56,8 +45,8 @@ interface LKHAssignmentProps extends SharedProps {
   routes: {
     lkh_save_assignment: string;
     lkh_input: string;
+    lkh_view: string;
     mandor_index: string;
-    [key: string]: string;
   };
   csrf_token: string;
   flash?: {
@@ -65,6 +54,11 @@ interface LKHAssignmentProps extends SharedProps {
     error?: string;
   };
   success?: boolean;
+  app: {
+    name: string;
+    url: string;
+    logo_url: string;
+  };
 }
 
 const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
@@ -187,18 +181,15 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
     }
   };
 
+  // Simple navigation using Laravel-generated URLs
   const navigateToInput = () => {
-    router.get(routes.lkh_input, {}, {
-      preserveState: false,
-      preserveScroll: false
-    });
+    console.log('Navigating to input:', routes.lkh_input);
+    router.get(routes.lkh_input);
   };
 
   const goBack = () => {
-    router.get(routes.mandor_index, {}, {
-      preserveState: false,
-      preserveScroll: false
-    });
+    console.log('Navigating back to:', routes.mandor_index);
+    router.get(routes.mandor_index);
   };
 
   // Filter out workers that are already assigned in database
@@ -221,7 +212,30 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
+              {/* FIXED: Logo with better error handling and fallback */}
+              {app?.logo_url ? (
+                <img 
+                  src={app.logo_url} 
+                  alt={`Logo ${app?.name || 'App'}`} 
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    console.log('Logo failed to load, using fallback');
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    // Show fallback
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              {/* Fallback logo - always present but hidden unless needed */}
+              <div 
+                className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center" 
+                style={{ display: app?.logo_url ? 'none' : 'flex' }}
+              >
+                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'T'}</span>
+              </div>
+              
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
                   Assignment Pekerja
@@ -256,22 +270,21 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           </div>
         )}
 
-        {/* Input Hasil Button when no existing assignments */}
-        {existingAssignments.length === 0 && assignedWorkers.length > 0 && (
+        {/* Input Hasil Button when no existing assignments but workers assigned */}
+        {existingAssignments.length === 0 && assignedWorkers.length > 0 && isSaved && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-green-700">
                 <CheckCircle className="w-5 h-5" />
                 <span className="font-medium">
-                  {assignedWorkers.length} pekerja telah dipilih untuk assignment
+                  {assignedWorkers.length} pekerja telah disimpan untuk assignment
                 </span>
               </div>
               
               {/* Input Hasil Button */}
               <button
                 onClick={navigateToInput}
-                disabled={assignedWorkers.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 <span>Input Hasil</span>
@@ -447,12 +460,12 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons - Moved to bottom */}
-        <div className="flex items-center justify-center gap-6">
+        {/* FIXED: Action Buttons - Simple design with proper contrast */}
+        <div className="flex items-center justify-center gap-4">
           <button
             onClick={saveAssignments}
             disabled={isLoading || assignedWorkers.length === 0}
-            className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {isLoading ? (
               <>
