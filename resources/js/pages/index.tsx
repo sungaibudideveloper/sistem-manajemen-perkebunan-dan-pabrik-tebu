@@ -1,5 +1,4 @@
-// resources\js\pages\index.tsx - FIXED VERSION
-
+// resources/js/pages/index.tsx - FIXED VERSION
 import React, { useState } from 'react';
 import { PageProps } from '@inertiajs/core';
 import LayoutMandor from '../components/layout-mandor';
@@ -12,20 +11,22 @@ interface User {
   id: number;
   name: string;
   email: string;
-  userid: string; 
+  userid: string;
   companycode: string;
-  company_name: string; 
+  company_name: string;
 }
 
-// FIXED: Routes interface with index signature
+// FIXED: Routes interface with index signature - ADD missing routes
 interface Routes {
   logout: string;
   home: string;
   mandor_index: string;
-  // API routes untuk absensi
+  // API routes untuk absensi - ADDED missing routes
   workers: string;
   attendance_today: string;
   process_checkin: string;
+  update_photo: string;
+  rejected_attendance: string;
   // Field Collection routes
   lkh_ready: string;
   materials_available: string;
@@ -49,10 +50,10 @@ interface MandorIndexProps extends PageProps {
   csrf_token: string;
 }
 
-const MandorIndex: React.FC<MandorIndexProps> = ({ 
-  user, 
-  routes, 
-  csrf_token 
+const MandorIndex: React.FC<MandorIndexProps> = ({
+  user,
+  routes,
+  csrf_token
 }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
 
@@ -71,23 +72,27 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
       onSectionChange={handleSectionChange}
     >
       {activeSection === 'dashboard' && (
-        <DashboardMandor 
+        <DashboardMandor
           onSectionChange={handleSectionChange}
         />
       )}
+
       {activeSection === 'absensi' && (
-        <AbsenMandor 
+        <AbsenMandor
           routes={{
             workers: routes.workers,
             attendance_today: routes.attendance_today,
-            process_checkin: routes.process_checkin
+            process_checkin: routes.process_checkin,
+            update_photo: routes.update_photo,
+            rejected_attendance: routes.rejected_attendance
           }}
           csrf_token={csrf_token}
           onSectionChange={handleSectionChange}
         />
       )}
+
       {activeSection === 'data-collection' && (
-        <DataCollectionMandor 
+        <DataCollectionMandor
           routes={routes}
           csrf_token={csrf_token}
           onSectionChange={handleSectionChange}

@@ -127,21 +127,21 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     Route::prefix('api/mandor')->group(function () {
         
         // =========================================================================
-        // ATTENDANCE MANAGEMENT APIs
+        // ATTENDANCE MANAGEMENT APIs - UPDATED for individual approval
         // =========================================================================
-        
-        // Legacy attendance routes (for backward compatibility)
-        Route::post('/attendance/check-in', [MandorPageController::class, 'checkIn'])->name('mandor.checkin');
-        Route::post('/attendance/check-out', [MandorPageController::class, 'checkOut'])->name('mandor.checkout');
-        Route::get('/attendance/data', [MandorPageController::class, 'getAttendanceData'])->name('mandor.attendance.data');
-        Route::get('/field-activities', [MandorPageController::class, 'getFieldActivities'])->name('mandor.field.activities');
         
         // Enhanced attendance routes
         Route::get('/workers', [MandorPageController::class, 'getWorkersList'])->name('mandor.workers');
         Route::get('/attendance/today', [MandorPageController::class, 'getTodayAttendance'])->name('mandor.attendance.today');
         Route::post('/attendance/process-checkin', [MandorPageController::class, 'processCheckIn'])->name('mandor.attendance.process-checkin');
         
-        // Workers present for assignment
+        // NEW: Update photo for rejected attendance
+        Route::post('/attendance/update-photo', [MandorPageController::class, 'updateAttendancePhoto'])->name('mandor.attendance.update-photo');
+        
+        // NEW: Get rejected attendance for mandor
+        Route::get('/attendance/rejected', [MandorPageController::class, 'getRejectedAttendance'])->name('mandor.attendance.rejected');
+        
+        // Workers present for assignment - UPDATED to only include approved
         Route::get('/attendance/workers-present', function(Request $request) {
             $controller = new MandorPageController();
             return $controller->getTodayAttendance($request);
@@ -242,33 +242,33 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     });
 
     // =============================================================================
-    // APPROVER ROUTES - untuk idjabatan = 10 (Absen Approver)
+    // APPROVER ROUTES - UPDATED for individual approval flow
     // =============================================================================
     
     // Main approver dashboard
     Route::get('/approver', [ApproverPageController::class, 'index'])
         ->name('approver.index');
     
-    // Approval API routes
+    // Approval API routes - UPDATED for individual approval
     Route::prefix('api/approver')->group(function () {
         
-        // Get pending attendance for approval
+        // Get pending attendance for approval - UPDATED to support mandor filtering
         Route::get('/attendance/pending', [ApproverPageController::class, 'getPendingAttendance'])
             ->name('approver.attendance.pending');
         
-        // Get detailed attendance data
-        Route::get('/attendance/detail/{absenno}', [ApproverPageController::class, 'getAttendanceDetail'])
-            ->name('approver.attendance.detail');
+        // Get mandor list with pending counts
+        Route::get('/mandors/pending', [ApproverPageController::class, 'getMandorListWithPending'])
+            ->name('approver.mandors.pending');
         
-        // Approve attendance
+        // Approve individual attendance records - UPDATED for batch processing
         Route::post('/attendance/approve', [ApproverPageController::class, 'approveAttendance'])
             ->name('approver.attendance.approve');
         
-        // Reject attendance
+        // Reject individual attendance records - UPDATED for batch processing
         Route::post('/attendance/reject', [ApproverPageController::class, 'rejectAttendance'])
             ->name('approver.attendance.reject');
         
-        // Get attendance history
+        // Get attendance history - individual records
         Route::get('/attendance/history', [ApproverPageController::class, 'getAttendanceHistory'])
             ->name('approver.attendance.history');
     });
@@ -284,3 +284,11 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 //    - idjabatan = 10 (Approver) → redirect ke '/approver'
 //    - lainnya → tetap di '/home'
 // 3. Proteksi: mandor tidak bisa akses '/approver', begitu sebaliknya
+
+// =============================================================================
+// INDIVIDUAL APPROVAL FLOW CHANGES:
+// =============================================================================
+// 1. Mandor absen individual pekerja → status PENDING di absenlst
+// 2. Approver dapat filter by mandor → approve/reject individual records
+// 3. Mandor dapat edit foto untuk record yang REJECTED → reset ke PENDING
+// 4. LKH assignment hanya tampilkan pekerja dengan approval_status = 'APPROVED'

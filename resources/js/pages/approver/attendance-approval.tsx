@@ -1,69 +1,49 @@
-// resources/js/pages/approver/attendance-approval.tsx
+// resources/js/pages/approver/attendance-approval.tsx - UPDATED for Individual Approval
 
 import React, { useState, useEffect } from 'react';
 import {
-  FiArrowLeft, FiClock, FiCheck, FiX, FiEye, FiCalendar, FiUser, FiCamera, FiMapPin, FiRefreshCw
+  FiArrowLeft, FiClock, FiCheck, FiX, FiEye, FiCalendar, FiUser, FiCamera, FiMapPin, 
+  FiRefreshCw, FiCheckCircle, FiXCircle, FiUsers, FiFilter, FiAlertTriangle
 } from 'react-icons/fi';
 import { LoadingCard, LoadingInline, LoadingOverlay } from '../../components/loading-spinner';
 
-interface PendingAttendance {
-  absenno: string;
+interface MandorInfo {
   mandorid: string;
   mandor_nama: string;
-  totalpekerja: number;
-  status: string;
-  uploaddate: string;
-  updateBy: string;
-  upload_time: string;
-  upload_date_formatted: string;
-  worker_count: number;
-  has_photos: boolean;
-  has_location: boolean;
+  pending_count: number;
 }
 
-interface WorkerDetail {
-  id: number;
+interface PendingWorker {
+  absenno: string;
+  absen_id: number;
   tenagakerjaid: string;
-  nama: string;
-  nik: string;
-  gender: string;
+  pekerja_nama: string;
+  pekerja_nik: string;
+  pekerja_gender: string;
   jenistenagakerja: string;
   absenmasuk: string;
   absen_time: string;
-  keterangan: string;
+  absen_date_formatted: string;
   has_photo: boolean;
-  fotoabsen?: string;
   has_location: boolean;
+  fotoabsen?: string;
   lokasifotolat?: number;
   lokasifotolng?: number;
-  createdat: string;
+  keterangan: string;
+  approval_status: string;
 }
 
-interface AttendanceDetail {
-  header: {
-    absenno: string;
-    mandorid: string;
-    mandor_nama: string;
-    totalpekerja: number;
-    status: string;
-    uploaddate: string;
-    upload_date_formatted: string;
-    updateBy: string;
-  };
-  workers: WorkerDetail[];
-  summary: {
-    total_workers: number;
-    with_photos: number;
-    with_location: number;
-    earliest_checkin: string;
-    latest_checkin: string;
-  };
+interface PendingByMandor {
+  mandorid: string;
+  mandor_nama: string;
+  pending_count: number;
+  workers: PendingWorker[];
 }
 
 interface AttendanceApprovalProps {
   routes: {
     pending_attendance: string;
-    attendance_detail: string;
+    mandors_pending: string;
     approve_attendance: string;
     reject_attendance: string;
   };
@@ -76,34 +56,47 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
   csrf_token,
   onSectionChange 
 }) => {
-  const [pendingRecords, setPendingRecords] = useState<PendingAttendance[]>([]);
+  const [pendingByMandor, setPendingByMandor] = useState<PendingByMandor[]>([]);
+  const [mandorList, setMandorList] = useState<MandorInfo[]>([]);
+  const [selectedMandor, setSelectedMandor] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Detail modal states
-  const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
-  const [attendanceDetail, setAttendanceDetail] = useState<AttendanceDetail | null>(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  // Selection states
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   
   // Photo viewer
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   
   // Approval modal states
-  const [showApprovalModal, setShowApprovalModal] = useState<{ type: 'approve' | 'reject'; absenno: string } | null>(null);
+  const [showApprovalModal, setShowApprovalModal] = useState<{ 
+    type: 'approve' | 'reject'; 
+    items: PendingWorker[] 
+  } | null>(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     loadPendingAttendance();
-  }, [selectedDate]);
+  }, [selectedDate, selectedMandor]);
 
   const loadPendingAttendance = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${routes.pending_attendance}?date=${selectedDate}`);
+      const params = new URLSearchParams({
+        date: selectedDate,
+        ...(selectedMandor && { mandor_id: selectedMandor })
+      });
+      
+      const response = await fetch(`${routes.pending_attendance}?${params}`);
       const data = await response.json();
-      setPendingRecords(data.pending_attendance || []);
+      
+      setPendingByMandor(data.pending_by_mandor || []);
+      setMandorList(data.mandor_list || []);
+      
+      // Clear selections when data changes
+      setSelectedItems(new Set());
     } catch (error) {
       console.error('Error loading pending attendance:', error);
     } finally {
@@ -111,45 +104,91 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
     }
   };
 
-  const loadAttendanceDetail = async (absenno: string) => {
-    setIsDetailLoading(true);
-    try {
-      const url = routes.attendance_detail.replace('__ABSENNO__', absenno);
-      const response = await fetch(url);
-      const data = await response.json();
-      setAttendanceDetail(data);
-    } catch (error) {
-      console.error('Error loading attendance detail:', error);
-    } finally {
-      setIsDetailLoading(false);
+  const getAllWorkers = (): PendingWorker[] => {
+    return pendingByMandor.flatMap(mandor => mandor.workers);
+  };
+
+  const getSelectedWorkers = (): PendingWorker[] => {
+    const allWorkers = getAllWorkers();
+    return allWorkers.filter(worker => 
+      selectedItems.has(`${worker.absenno}-${worker.absen_id}`)
+    );
+  };
+
+  const handleItemSelection = (worker: PendingWorker, checked: boolean) => {
+    const key = `${worker.absenno}-${worker.absen_id}`;
+    const newSelected = new Set(selectedItems);
+    
+    if (checked) {
+      newSelected.add(key);
+    } else {
+      newSelected.delete(key);
+    }
+    
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allKeys = getAllWorkers().map(worker => `${worker.absenno}-${worker.absen_id}`);
+      setSelectedItems(new Set(allKeys));
+    } else {
+      setSelectedItems(new Set());
     }
   };
 
-  const handleViewDetail = (absenno: string) => {
-    setSelectedRecord(absenno);
-    loadAttendanceDetail(absenno);
+  const handleMandorSelectAll = (mandorId: string, checked: boolean) => {
+    const mandorData = pendingByMandor.find(m => m.mandorid === mandorId);
+    if (!mandorData) return;
+
+    const newSelected = new Set(selectedItems);
+    mandorData.workers.forEach(worker => {
+      const key = `${worker.absenno}-${worker.absen_id}`;
+      if (checked) {
+        newSelected.add(key);
+      } else {
+        newSelected.delete(key);
+      }
+    });
+
+    setSelectedItems(newSelected);
   };
 
-  const handleCloseDetail = () => {
-    setSelectedRecord(null);
-    setAttendanceDetail(null);
+  const handleBulkAction = (type: 'approve' | 'reject') => {
+    const selectedWorkers = getSelectedWorkers();
+    if (selectedWorkers.length === 0) {
+      alert('Pilih minimal satu item untuk di' + (type === 'approve' ? 'approve' : 'reject'));
+      return;
+    }
+
+    setShowApprovalModal({ type, items: selectedWorkers });
   };
 
-  const handleApproval = async (type: 'approve' | 'reject') => {
+  const handleSubmitApproval = async () => {
     if (!showApprovalModal) return;
+    
+    const { type, items } = showApprovalModal;
+    
+    // Validation
+    if (type === 'reject' && !rejectionReason.trim()) {
+      alert('Alasan penolakan harus diisi');
+      return;
+    }
     
     setIsProcessing(true);
     try {
       const url = type === 'approve' ? routes.approve_attendance : routes.reject_attendance;
-      const body = type === 'approve' 
-        ? { 
-            absenno: showApprovalModal.absenno,
-            approval_notes: approvalNotes 
-          }
-        : { 
-            absenno: showApprovalModal.absenno,
-            rejection_reason: rejectionReason 
-          };
+      const payload = {
+        items: items.map(item => ({
+          absenno: item.absenno,
+          absen_id: item.absen_id,
+          tenagakerjaid: item.tenagakerjaid
+        })),
+        ...(type === 'approve' 
+          ? { approval_notes: approvalNotes } 
+          : { rejection_reason: rejectionReason }
+        )
+      };
 
       const response = await fetch(url, {
         method: 'POST',
@@ -157,7 +196,7 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrf_token
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -166,11 +205,11 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
         alert(result.message);
         // Refresh data
         await loadPendingAttendance();
-        // Close modals
+        // Close modal and reset
         setShowApprovalModal(null);
-        setSelectedRecord(null);
         setApprovalNotes('');
         setRejectionReason('');
+        setSelectedItems(new Set());
       } else {
         alert(result.error || result.message);
       }
@@ -191,6 +230,10 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
     });
   };
 
+  const allWorkers = getAllWorkers();
+  const selectedWorkers = getSelectedWorkers();
+  const totalPending = allWorkers.length;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -206,220 +249,233 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
           
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-black mb-2">Pending Approval</h1>
-              <p className="text-gray-600">Daftar absensi yang menunggu persetujuan</p>
+              <h1 className="text-3xl font-bold text-black mb-2">Approval Absensi</h1>
+              <p className="text-gray-600">Approve atau reject absensi pekerja secara individual</p>
             </div>
             <button
               onClick={loadPendingAttendance}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              <FiRefreshCw className="w-4 h-4" />
+              <FiRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="text-sm">Refresh</span>
             </button>
           </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <FiFilter className="w-5 h-5 text-gray-500" />
+            <h3 className="font-medium text-gray-900">Filter</h3>
+          </div>
           
-          {/* Date Filter */}
-          <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <FiCalendar className="w-5 h-5 text-gray-500" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <span className="text-sm text-gray-600">
-                  {formatDate(selectedDate)}
-                </span>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-orange-600">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Date Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FiCalendar className="w-4 h-4 inline mr-1" />
+                Tanggal
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Mandor Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FiUser className="w-4 h-4 inline mr-1" />
+                Mandor
+              </label>
+              <select
+                value={selectedMandor}
+                onChange={(e) => setSelectedMandor(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Semua Mandor</option>
+                {mandorList.map((mandor) => (
+                  <option key={mandor.mandorid} value={mandor.mandorid}>
+                    {mandor.mandor_nama} ({mandor.pending_count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-end">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 w-full">
+                <div className="text-sm text-orange-600 mb-1">Total Pending</div>
+                <div className="text-2xl font-bold text-orange-800">
                   {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                    <div className="animate-pulse bg-orange-200 h-8 w-12 rounded"></div>
                   ) : (
-                    pendingRecords.length
+                    totalPending
                   )}
                 </div>
-                <div className="text-sm text-gray-500">Pending</div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Bulk Actions */}
+        {selectedItems.size > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FiCheckCircle className="w-5 h-5 text-blue-600" />
+                <span className="text-blue-800 font-medium">
+                  {selectedItems.size} item terpilih
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleBulkAction('approve')}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <FiCheck className="w-4 h-4" />
+                  <span className="text-sm">Approve Selected</span>
+                </button>
+                <button
+                  onClick={() => handleBulkAction('reject')}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <FiX className="w-4 h-4" />
+                  <span className="text-sm">Reject Selected</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pending Records */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="border-b border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <FiClock className="w-5 h-5 text-orange-500" />
-              <h2 className="text-xl font-semibold text-black">
-                Menunggu Approval {isLoading ? '' : `(${pendingRecords.length})`}
-              </h2>
-              {isLoading && <LoadingInline color="orange" />}
-            </div>
-          </div>
-          
-          <div className="max-h-96 overflow-y-auto">
-            {isLoading ? (
-              <LoadingCard text="Memuat data pending approval..." />
-            ) : pendingRecords.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {pendingRecords.map((record) => (
-                  <div key={record.absenno} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-black">{record.absenno}</h3>
-                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                            {record.status}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-6 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <FiUser className="w-4 h-4" />
-                            <span>{record.mandor_nama}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FiClock className="w-4 h-4" />
-                            <span>{record.upload_time}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium">{record.totalpekerja}</span> pekerja
-                          </div>
-                          {record.has_photos && (
-                            <div className="flex items-center gap-1 text-green-600">
-                              <FiCamera className="w-4 h-4" />
-                              <span className="text-xs">Foto</span>
-                            </div>
-                          )}
-                          {record.has_location && (
-                            <div className="flex items-center gap-1 text-blue-600">
-                              <FiMapPin className="w-4 h-4" />
-                              <span className="text-xs">Lokasi</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewDetail(record.absenno)}
-                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          <FiEye className="w-4 h-4" />
-                          <span className="text-sm">Detail</span>
-                        </button>
-                        <button
-                          onClick={() => setShowApprovalModal({ type: 'approve', absenno: record.absenno })}
-                          className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <FiCheck className="w-4 h-4" />
-                          <span className="text-sm">Approve</span>
-                        </button>
-                        <button
-                          onClick={() => setShowApprovalModal({ type: 'reject', absenno: record.absenno })}
-                          className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <FiX className="w-4 h-4" />
-                          <span className="text-sm">Reject</span>
-                        </button>
+        <div className="space-y-6">
+          {isLoading ? (
+            <LoadingCard text="Memuat data pending approval..." />
+          ) : pendingByMandor.length > 0 ? (
+            pendingByMandor.map((mandorData) => (
+              <div key={mandorData.mandorid} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                {/* Mandor Header */}
+                <div className="border-b border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={mandorData.workers.every(worker => 
+                          selectedItems.has(`${worker.absenno}-${worker.absen_id}`)
+                        )}
+                        onChange={(e) => handleMandorSelectAll(mandorData.mandorid, e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <FiUser className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <h3 className="font-semibold text-black">{mandorData.mandor_nama}</h3>
+                        <p className="text-sm text-gray-500">
+                          {mandorData.pending_count} pekerja menunggu approval
+                        </p>
                       </div>
                     </div>
+                    <span className="px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full">
+                      {mandorData.pending_count} Pending
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center">
-                <FiCheck className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <p className="text-gray-500">Tidak ada absensi yang menunggu approval</p>
-                <p className="text-xs text-gray-400 mt-1">untuk {formatDate(selectedDate)}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Detail Modal */}
-        {selectedRecord && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden w-full mx-4">
-              <div className="border-b border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold">Detail Absensi - {selectedRecord}</h3>
-                  <button
-                    onClick={handleCloseDetail}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <FiX className="w-5 h-5" />
-                  </button>
                 </div>
-              </div>
-              
-              <div className="p-6 max-h-96 overflow-y-auto">
-                {isDetailLoading ? (
-                  <LoadingCard text="Memuat detail absensi..." />
-                ) : attendanceDetail ? (
-                  <div className="space-y-6">
-                    {/* Header Info */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm text-gray-500">Mandor:</span>
-                          <p className="font-medium">{attendanceDetail.header.mandor_nama}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-500">Total Pekerja:</span>
-                          <p className="font-medium">{attendanceDetail.header.totalpekerja}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-500">Upload:</span>
-                          <p className="font-medium">{attendanceDetail.header.upload_date_formatted}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-500">Status:</span>
-                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                            {attendanceDetail.header.status}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Workers List */}
-                    <div>
-                      <h4 className="font-medium mb-4">Daftar Pekerja ({attendanceDetail.workers.length})</h4>
-                      <div className="space-y-3">
-                        {attendanceDetail.workers.map((worker) => (
-                          <div key={worker.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                            <div className="flex-1">
-                              <h5 className="font-medium">{worker.nama}</h5>
-                              <p className="text-sm text-gray-500">{worker.nik} • {worker.jenistenagakerja}</p>
-                              <p className="text-xs text-gray-400">Absen: {worker.absen_time}</p>
+                {/* Workers List */}
+                <div className="divide-y divide-gray-100">
+                  {mandorData.workers.map((worker) => {
+                    const isSelected = selectedItems.has(`${worker.absenno}-${worker.absen_id}`);
+                    
+                    return (
+                      <div
+                        key={`${worker.absenno}-${worker.absen_id}`}
+                        className={`p-4 transition-colors ${
+                          isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => handleItemSelection(worker, e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-black">{worker.pekerja_nama}</h4>
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                                {worker.approval_status}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <span>{worker.pekerja_nik}</span>
+                              <span>{worker.pekerja_gender}</span>
+                              <span>{worker.jenistenagakerja}</span>
+                              <div className="flex items-center gap-1">
+                                <FiClock className="w-3 h-3" />
+                                <span>{worker.absen_time}</span>
+                              </div>
                               {worker.has_photo && (
-                                <button
-                                  onClick={() => setViewingPhoto(worker.fotoabsen!)}
-                                  className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                                >
-                                  <FiCamera className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <FiCamera className="w-3 h-3" />
+                                  <span>Foto</span>
+                                </div>
                               )}
                               {worker.has_location && (
-                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                                  <FiMapPin className="w-4 h-4" />
+                                <div className="flex items-center gap-1 text-blue-600">
+                                  <FiMapPin className="w-3 h-3" />
+                                  <span>Lokasi</span>
                                 </div>
                               )}
                             </div>
                           </div>
-                        ))}
+                          
+                          <div className="flex items-center gap-2">
+                            {worker.has_photo && (
+                              <button
+                                onClick={() => setViewingPhoto(worker.fotoabsen!)}
+                                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                              >
+                                <FiEye className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-500">Gagal memuat detail</p>
-                )}
+                    );
+                  })}
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <FiCheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada pending approval</h3>
+              <p className="text-gray-500">
+                Semua absensi untuk {formatDate(selectedDate)} sudah diproses
+                {selectedMandor && ` untuk mandor yang dipilih`}
+              </p>
             </div>
+          )}
+        </div>
+
+        {/* Select All Checkbox - Fixed Position */}
+        {totalPending > 0 && (
+          <div className="fixed bottom-6 right-6 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedItems.size === totalPending}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium">Pilih Semua ({totalPending})</span>
+            </label>
           </div>
         )}
 
@@ -428,12 +484,31 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white rounded-lg max-w-md w-full mx-4 p-6">
               <div className="mb-4">
-                <h3 className="text-xl font-semibold">
-                  {showApprovalModal.type === 'approve' ? 'Approve Absensi' : 'Reject Absensi'}
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  {showApprovalModal.type === 'approve' ? (
+                    <>
+                      <FiCheckCircle className="w-6 h-6 text-green-600" />
+                      Approve Absensi
+                    </>
+                  ) : (
+                    <>
+                      <FiXCircle className="w-6 h-6 text-red-600" />
+                      Reject Absensi
+                    </>
+                  )}
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {showApprovalModal.absenno}
+                <p className="text-sm text-gray-500 mt-2">
+                  {showApprovalModal.items.length} item akan di{showApprovalModal.type === 'approve' ? 'approve' : 'reject'}
                 </p>
+              </div>
+
+              {/* Items Preview */}
+              <div className="mb-4 max-h-32 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                {showApprovalModal.items.map((item, index) => (
+                  <div key={`${item.absenno}-${item.absen_id}`} className="text-sm text-gray-600">
+                    {index + 1}. {item.pekerja_nama} ({item.absen_time})
+                  </div>
+                ))}
               </div>
 
               {showApprovalModal.type === 'approve' ? (
@@ -473,7 +548,7 @@ const AttendanceApproval: React.FC<AttendanceApprovalProps> = ({
                   Batal
                 </button>
                 <button
-                  onClick={() => handleApproval(showApprovalModal.type)}
+                  onClick={handleSubmitApproval}
                   disabled={showApprovalModal.type === 'reject' && !rejectionReason.trim()}
                   className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
                     showApprovalModal.type === 'approve'

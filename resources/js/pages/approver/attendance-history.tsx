@@ -1,4 +1,4 @@
-// resources/js/pages/approver/attendance-history.tsx
+// resources/js/pages/approver/attendance-history.tsx - FIXED
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -8,22 +8,29 @@ import { LoadingCard, LoadingInline } from '../../components/loading-spinner';
 
 interface HistoryRecord {
   absenno: string;
+  absen_id: number;
+  tenagakerjaid: string;
+  pekerja_nama: string;
+  pekerja_nik: string;
   mandorid: string;
   mandor_nama: string;
-  totalpekerja: number;
-  status: string;
+  absenmasuk: string;
+  absen_time: string;
+  absen_date_formatted: string;
+  approval_status: string;
   status_label: string;
-  uploaddate: string;
-  upload_date_formatted: string;
   processed_date: string;
   processed_date_formatted: string;
-  updateBy: string;
+  approved_by: string;
+  rejection_reason?: string;
+  is_edited: boolean;
+  edit_count: number;
 }
 
+// FIXED: Remove attendance_detail from props
 interface AttendanceHistoryProps {
   routes: {
     attendance_history: string;
-    attendance_detail: string;
   };
   csrf_token: string;
   onSectionChange: (section: string) => void;
@@ -37,11 +44,12 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, APPROVED, REJECTED
+  const [mandorFilter, setMandorFilter] = useState(''); // Filter by mandor
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadHistoryData();
-  }, [selectedDate, statusFilter]);
+  }, [selectedDate, statusFilter, mandorFilter]);
 
   const loadHistoryData = async () => {
     setIsLoading(true);
@@ -49,6 +57,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
       const params = new URLSearchParams();
       if (selectedDate) params.append('date', selectedDate);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
+      if (mandorFilter) params.append('mandor_id', mandorFilter);
       
       const response = await fetch(`${routes.attendance_history}?${params.toString()}`);
       const data = await response.json();
@@ -69,10 +78,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
     });
   };
 
-  const handleViewDetail = (absenno: string) => {
-    const url = routes.attendance_detail.replace('__ABSENNO__', absenno);
-    window.open(url, '_blank');
-  };
+  // REMOVED: handleViewDetail function since attendance_detail route doesn't exist
 
   const getStatusBadge = (status: string) => {
     if (status === 'APPROVED') {
@@ -95,9 +101,14 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
 
   const summary = {
     total: historyRecords.length,
-    approved: historyRecords.filter(r => r.status === 'APPROVED').length,
-    rejected: historyRecords.filter(r => r.status === 'REJECTED').length,
+    approved: historyRecords.filter(r => r.approval_status === 'APPROVED').length,
+    rejected: historyRecords.filter(r => r.approval_status === 'REJECTED').length,
   };
+
+  // Get unique mandors for filter
+  const uniqueMandors = Array.from(
+    new Set(historyRecords.map(r => JSON.stringify({ id: r.mandorid, name: r.mandor_nama })))
+  ).map(str => JSON.parse(str));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,13 +126,14 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-black mb-2">Riwayat Approval</h1>
-              <p className="text-gray-600">Histori approval dan reject absensi</p>
+              <p className="text-gray-600">Histori approval dan reject absensi individual</p>
             </div>
             <button
               onClick={loadHistoryData}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              <FiRefreshCw className="w-4 h-4" />
+              <FiRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="text-sm">Refresh</span>
             </button>
           </div>
@@ -152,6 +164,22 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
                   <option value="ALL">Semua Status</option>
                   <option value="APPROVED">Disetujui</option>
                   <option value="REJECTED">Ditolak</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <FiUser className="w-4 h-4 text-gray-500" />
+                <select
+                  value={mandorFilter}
+                  onChange={(e) => setMandorFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Semua Mandor</option>
+                  {uniqueMandors.map((mandor) => (
+                    <option key={mandor.id} value={mandor.id}>
+                      {mandor.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -192,62 +220,62 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
             ) : historyRecords.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {historyRecords.map((record) => (
-                  <div key={`${record.absenno}-${record.processed_date}`} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
+                  <div key={`${record.absenno}-${record.absen_id}`} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-black">{record.absenno}</h3>
-                          {getStatusBadge(record.status)}
+                          <h3 className="font-semibold text-black">{record.pekerja_nama}</h3>
+                          {getStatusBadge(record.approval_status)}
+                          {record.is_edited && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                              Edited {record.edit_count}x
+                            </span>
+                          )}
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-2">
                             <FiUser className="w-4 h-4" />
-                            <span>{record.mandor_nama}</span>
+                            <span>Mandor: {record.mandor_nama}</span>
                           </div>
                           <div>
-                            <span className="font-medium">{record.totalpekerja}</span> pekerja
+                            <span>NIK: {record.pekerja_nik}</span>
                           </div>
                           <div>
-                            Upload: {record.upload_date_formatted}
+                            <span>Absen: {record.absen_time}</span>
                           </div>
                           <div className="md:col-span-2">
                             Diproses: {record.processed_date_formatted}
                           </div>
                           <div>
-                            {record.status === 'APPROVED' ? 'Approved' : 'Rejected'} by: {record.updateBy?.split(' - ')[0]}
+                            {record.approval_status === 'APPROVED' ? 'Approved' : 'Rejected'} by: {record.approved_by?.split(' - ')[0]}
                           </div>
                         </div>
                         
                         {/* Rejection reason if available */}
-                        {record.status === 'REJECTED' && record.updateBy?.includes('REJECT:') && (
-                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                        {record.approval_status === 'REJECTED' && record.rejection_reason && (
+                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                             <span className="text-xs text-red-600 font-medium">Alasan Penolakan:</span>
                             <p className="text-sm text-red-700 mt-1">
-                              {record.updateBy.split('REJECT:')[1]?.trim()}
+                              {record.rejection_reason}
                             </p>
                           </div>
                         )}
                         
                         {/* Approval notes if available */}
-                        {record.status === 'APPROVED' && record.updateBy?.includes(' - ') && !record.updateBy?.includes('REJECT:') && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                        {record.approval_status === 'APPROVED' && record.approved_by?.includes(' - ') && !record.approved_by?.includes('REJECT:') && (
+                          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                             <span className="text-xs text-green-600 font-medium">Catatan:</span>
                             <p className="text-sm text-green-700 mt-1">
-                              {record.updateBy.split(' - ')[1]?.trim()}
+                              {record.approved_by.split(' - ')[1]?.trim()}
                             </p>
                           </div>
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewDetail(record.absenno)}
-                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          <FiEye className="w-4 h-4" />
-                          <span className="text-sm">Detail</span>
-                        </button>
+                      {/* REMOVED: Detail button since route doesn't exist */}
+                      <div className="text-xs text-gray-400">
+                        ID: {record.absenno}-{record.absen_id}
                       </div>
                     </div>
                   </div>
@@ -260,6 +288,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({
                 <p className="text-xs text-gray-400 mt-1">
                   untuk {formatDate(selectedDate)} 
                   {statusFilter !== 'ALL' && ` dengan status ${statusFilter}`}
+                  {mandorFilter && ` untuk mandor terpilih`}
                 </p>
               </div>
             )}

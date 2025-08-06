@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
-  FiArrowLeft, FiRefreshCw, FiCamera, FiUsers, FiCheck, FiCalendar, FiEye, FiX
+  FiArrowLeft, FiRefreshCw, FiCamera, FiUsers, FiCheck, FiCalendar, FiEye, FiX,
+  FiEdit3, FiClock, FiXCircle, FiCheckCircle, FiAlertTriangle
 } from 'react-icons/fi';
 import Camera from '../components/camera';
 import { LoadingCard, LoadingInline, LoadingOverlay } from '../components/loading-spinner';
@@ -15,11 +16,20 @@ interface Worker {
 }
 
 interface AttendanceRecord {
+  absenno: string;
+  absen_id: number;
   tenagakerjaid: string;
   absenmasuk: string;
-  foto_base64: string;
-  lokasi_lat: number | null;
-  lokasi_lng: number | null;
+  fotoabsen: string;
+  lokasifotolat: number | null;
+  lokasifotolng: number | null;
+  approval_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approval_date: string | null;
+  approved_by: string | null;
+  rejection_reason: string | null;
+  rejection_date: string | null;
+  is_edited: boolean;
+  edit_count: number;
   tenaga_kerja: {
     nama: string;
     nik: string;
@@ -33,6 +43,8 @@ interface AbsenMandorProps {
     workers: string;
     attendance_today: string;
     process_checkin: string;
+    update_photo: string;
+    rejected_attendance: string;
   };
   csrf_token: string;
   onSectionChange: (section: string) => void;
@@ -46,11 +58,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [editingAttendance, setEditingAttendance] = useState<AttendanceRecord | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   
   // Loading states
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(true);
@@ -95,47 +109,125 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
     return workers.filter(worker => !attendedWorkerIds.includes(worker.tenagakerjaid));
   };
 
+  const getFilteredAttendance = () => {
+    switch (activeTab) {
+      case 'pending':
+        return todayAttendance.filter(att => att.approval_status === 'PENDING');
+      case 'approved':
+        return todayAttendance.filter(att => att.approval_status === 'APPROVED');
+      case 'rejected':
+        return todayAttendance.filter(att => att.approval_status === 'REJECTED');
+      default:
+        return todayAttendance;
+    }
+  };
+
   const handleWorkerSelect = (worker: Worker) => {
     setSelectedWorker(worker);
+    setEditingAttendance(null);
+    setIsCameraOpen(true);
+  };
+
+  const handleEditPhoto = (attendance: AttendanceRecord) => {
+    setEditingAttendance(attendance);
+    setSelectedWorker(null);
     setIsCameraOpen(true);
   };
 
   const handlePhotoCapture = async (photoDataUrl: string) => {
-    if (!selectedWorker) return;
+    if (!selectedWorker && !editingAttendance) return;
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(routes.process_checkin, {
+      let url: string;
+      let payload: any;
+
+      if (editingAttendance) {
+        // Update existing photo
+        url = routes.update_photo;
+        payload = {
+          absenno: editingAttendance.absenno,
+          absen_id: editingAttendance.absen_id,
+          tenagakerjaid: editingAttendance.tenagakerjaid,
+          photo: photoDataUrl
+        };
+      } else if (selectedWorker) {
+        // New attendance
+        url = routes.process_checkin;
+        payload = {
+          tenagakerjaid: selectedWorker.tenagakerjaid,
+          photo: photoDataUrl
+        };
+      } else {
+        // Should never reach here, but safety check
+        throw new Error('No worker or editing attendance selected');
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrf_token
         },
-        body: JSON.stringify({
-          tenagakerjaid: selectedWorker.tenagakerjaid,
-          photo: photoDataUrl
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // AUTO REFRESH data setelah berhasil absen
+        // AUTO REFRESH data setelah berhasil absen/update
         await Promise.all([
           loadWorkersData(),
           loadAttendanceData()
         ]);
         
-        alert(`Absen berhasil untuk ${selectedWorker.nama}`);
+        const workerName = editingAttendance 
+          ? editingAttendance.tenaga_kerja.nama 
+          : selectedWorker?.nama;
+        
+        const message = editingAttendance 
+          ? `Foto berhasil diupdate untuk ${workerName} (status direset ke PENDING)`
+          : `Absen berhasil untuk ${workerName}`;
+        
+        alert(message);
       } else {
-        alert(result.error || 'Gagal menyimpan absen');
+        alert(result.error || result.message || 'Gagal menyimpan');
       }
     } catch (error) {
       console.error('Error submitting attendance:', error);
-      alert('Terjadi kesalahan saat menyimpan absen');
+      alert('Terjadi kesalahan saat menyimpan');
     } finally {
       setIsSubmitting(false);
       setSelectedWorker(null);
+      setEditingAttendance(null);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+            <FiClock className="w-3 h-3" />
+            Pending
+          </span>
+        );
+      case 'APPROVED':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+            <FiCheckCircle className="w-3 h-3" />
+            Approved
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+            <FiXCircle className="w-3 h-3" />
+            Rejected
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -163,9 +255,21 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
     }
   };
 
-  // Loading Spinner Component - REMOVED, using separate component now
+  const getTabCount = (tab: string) => {
+    switch (tab) {
+      case 'pending':
+        return todayAttendance.filter(att => att.approval_status === 'PENDING').length;
+      case 'approved':
+        return todayAttendance.filter(att => att.approval_status === 'APPROVED').length;
+      case 'rejected':
+        return todayAttendance.filter(att => att.approval_status === 'REJECTED').length;
+      default:
+        return todayAttendance.length;
+    }
+  };
 
   const availableWorkers = getAvailableWorkers();
+  const filteredAttendance = getFilteredAttendance();
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
 
   return (
@@ -184,7 +288,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-black mb-2">Sistem Absensi</h1>
-              <p className="text-gray-600">Pencatatan kehadiran pekerja dengan foto</p>
+              <p className="text-gray-600">Pencatatan kehadiran pekerja dengan foto dan approval individual</p>
             </div>
           </div>
           
@@ -287,7 +391,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
               </div>
               
               {/* Date Filter */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-4">
                 <FiCalendar className="w-4 h-4 text-gray-500" />
                 <input
                   type="date"
@@ -299,39 +403,109 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                   {formatDate(attendanceDate)}
                 </span>
               </div>
+
+              {/* Status Tabs */}
+              <div className="flex gap-2">
+                {[
+                  { key: 'all', label: 'Semua', icon: FiUsers },
+                  { key: 'pending', label: 'Pending', icon: FiClock },
+                  { key: 'approved', label: 'Approved', icon: FiCheckCircle },
+                  { key: 'rejected', label: 'Rejected', icon: FiXCircle },
+                ].map(tab => {
+                  const Icon = tab.icon;
+                  const count = getTabCount(tab.key);
+                  const isActive = activeTab === tab.key;
+                  
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key as any)}
+                      className={`flex items-center gap-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+                        isActive 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Icon className="w-3 h-3" />
+                      <span>{tab.label}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                        isActive ? 'bg-white bg-opacity-20' : 'bg-gray-200'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             
             <div className="max-h-96 overflow-y-auto">
               {isLoadingAttendance ? (
                 <LoadingCard text="Memuat data absensi..." />
-              ) : todayAttendance.length > 0 ? (
+              ) : filteredAttendance.length > 0 ? (
                 <div className="divide-y divide-gray-100">
-                  {todayAttendance.map((record) => (
+                  {filteredAttendance.map((record) => (
                     <div
-                      key={record.tenagakerjaid}
+                      key={`${record.tenagakerjaid}-${record.absenmasuk}`}
                       className="flex items-center justify-between p-4"
                     >
                       <div className="flex-1">
-                        <div className="font-medium text-black">{record.tenaga_kerja.nama}</div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="font-medium text-black">{record.tenaga_kerja.nama}</div>
+                          {getStatusBadge(record.approval_status)}
+                          {record.is_edited && (
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                              Edited {record.edit_count}x
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-500">
                           {record.tenaga_kerja.nik} • {formatTime(record.absenmasuk)}
                         </div>
+                        {record.rejection_reason && (
+                          <div className="text-xs text-red-600 mt-1">
+                            <FiAlertTriangle className="w-3 h-3 inline mr-1" />
+                            {record.rejection_reason}
+                          </div>
+                        )}
                       </div>
                       
-                      <button
-                        onClick={() => setViewingPhoto(record.foto_base64)}
-                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <FiEye className="w-4 h-4" />
-                        <span className="text-sm">Lihat Foto</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setViewingPhoto(record.fotoabsen)}
+                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <FiEye className="w-4 h-4" />
+                          <span className="text-sm">Lihat</span>
+                        </button>
+                        
+                        {/* Edit button - only for REJECTED or PENDING and today */}
+                        {(record.approval_status === 'REJECTED' || record.approval_status === 'PENDING') && isToday && (
+                          <button
+                            onClick={() => handleEditPhoto(record)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                              record.approval_status === 'REJECTED'
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            }`}
+                          >
+                            <FiEdit3 className="w-4 h-4" />
+                            <span className="text-sm">Edit</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="p-8 text-center">
                   <FiUsers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Belum ada yang absen</p>
+                  <p className="text-gray-500">
+                    {activeTab === 'all' 
+                      ? 'Belum ada yang absen'
+                      : `Tidak ada absensi dengan status ${activeTab.toUpperCase()}`
+                    }
+                  </p>
                   <p className="text-xs text-gray-400 mt-1">untuk {formatDate(attendanceDate)}</p>
                 </div>
               )}
@@ -345,9 +519,14 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           onClose={() => {
             setIsCameraOpen(false);
             setSelectedWorker(null);
+            setEditingAttendance(null);
           }}
           onCapture={handlePhotoCapture}
-          workerName={selectedWorker?.nama}
+          workerName={
+            editingAttendance 
+              ? `${editingAttendance.tenaga_kerja.nama} (Edit)`
+              : selectedWorker?.nama
+          }
         />
 
         {/* Photo Viewer Modal */}

@@ -1,5 +1,4 @@
-// resources/js/components/layout-approver.tsx - UPDATED to use generic components
-
+// resources/js/components/layout-approver.tsx - FIXED to remove attendance_detail dependency
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header'; // Generic Header
@@ -23,15 +22,17 @@ interface SharedProps {
   [key: string]: any;
 }
 
+// FIXED: Remove attendance_detail from ExtendedRoutes
 interface ExtendedRoutes {
   logout: string;
   home: string;
   approver_index: string;
   pending_attendance: string;
-  attendance_detail: string;
+  // REMOVED: attendance_detail: string;
   approve_attendance: string;
   reject_attendance: string;
   attendance_history: string;
+  mandors_pending: string; // Added this route that's actually used
   [key: string]: string; // This allows any additional route
 }
 
@@ -55,7 +56,7 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+ 
   // Get csrf_token from shared props as fallback
   const { csrf_token: pageCsrfToken } = usePage<SharedProps>().props;
   const csrf_token = propsCsrfToken || pageCsrfToken;
@@ -116,7 +117,7 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
         subtitle="Sistem Approval"
         roleLabel="Absen Approver"
       />
-      
+     
       <Header
         onMenuClick={() => setSidebarOpen(true)}
         user={user}
@@ -127,7 +128,7 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
         title="SB Tebu Apps"
         subtitle="Sistem Approval Absensi"
       />
-      
+     
       <main>
         {children}
       </main>

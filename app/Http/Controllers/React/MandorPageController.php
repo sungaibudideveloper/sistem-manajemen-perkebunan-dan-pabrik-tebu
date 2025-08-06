@@ -29,8 +29,8 @@ class MandorPageController extends Controller
     // MAIN DASHBOARD & ENTRY POINTS
     // =============================================================================
 
-    /**
-     * Main SPA Dashboard entry point
+   /**
+     * Main SPA Dashboard entry point - FIXED: Include all required routes
      */
     public function index(Request $request)
     {
@@ -51,10 +51,12 @@ class MandorPageController extends Controller
                 'home' => route('home'),
                 'mandor_index' => route('mandor.index'),
                 
-                // Attendance routes
+                // Attendance routes - FIXED: Add missing routes
                 'workers' => route('mandor.workers'),
                 'attendance_today' => route('mandor.attendance.today'),  
                 'process_checkin' => route('mandor.attendance.process-checkin'),
+                'update_photo' => route('mandor.attendance.update-photo'), // ADDED
+                'rejected_attendance' => route('mandor.attendance.rejected'), // ADDED
                 
                 // Field Collection routes
                 'lkh_ready' => route('mandor.lkh.ready'),
@@ -111,54 +113,64 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Get attendance for specific date
-     */
-    public function getTodayAttendance(Request $request)
-    {
-        try {
-            $date = $request->input('date', now()->format('Y-m-d'));
-            
-            if (!auth()->check()) {
-                return response()->json(['error' => 'User not authenticated'], 401);
-            }
-            
-            $user = auth()->user();
-            
-            $attendance = AbsenLst::getAttendanceByMandorAndDate($user->companycode, $user->userid, $date)
-                ->map(function($record) {
-                    return [
-                        'tenagakerjaid' => $record->tenagakerjaid,
-                        'absenmasuk' => $record->absenmasuk,
-                        'foto_base64' => $record->fotoabsen,
-                        'lokasi_lat' => $record->lokasifotolat,
-                        'lokasi_lng' => $record->lokasifotolng,
-                        'tenaga_kerja' => [
-                            'nama' => $record->nama,
-                            'nik' => $record->nik,
-                            'gender' => $record->gender,
-                            'jenistenagakerja' => $record->jenistenagakerja
-                        ]
-                    ];
-                });
-            
-            return response()->json([
-                'attendance' => $attendance->toArray(),
-                'date' => $date,
-                'date_formatted' => Carbon::parse($date)->format('d F Y')
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error in getTodayAttendance', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+ * Get attendance for specific date - FIXED to return approval status data
+ */
+public function getTodayAttendance(Request $request)
+{
+    try {
+        $date = $request->input('date', now()->format('Y-m-d'));
+        
+        if (!auth()->check()) {
+            return response()->json(['error' => 'User not authenticated'], 401);
         }
+        
+        $user = auth()->user();
+        
+        // Use the new method that includes approval status
+        $attendance = AbsenLst::getAttendanceByMandorAndDate($user->companycode, $user->userid, $date)
+            ->map(function($record) {
+                return [
+                    'absenno' => $record->absenno ?? 'N/A',
+                    'absen_id' => $record->id ?? 0,
+                    'tenagakerjaid' => $record->tenagakerjaid,
+                    'absenmasuk' => $record->absenmasuk,
+                    'fotoabsen' => $record->fotoabsen,
+                    'lokasifotolat' => $record->lokasifotolat,
+                    'lokasifotolng' => $record->lokasifotolng,
+                    'approval_status' => $record->approval_status ?? 'PENDING',
+                    'approval_date' => $record->approval_date,
+                    'approved_by' => $record->approved_by,
+                    'rejection_reason' => $record->rejection_reason,
+                    'rejection_date' => $record->rejection_date,
+                    'is_edited' => $record->is_edited ?? false,
+                    'edit_count' => $record->edit_count ?? 0,
+                    'tenaga_kerja' => [
+                        'nama' => $record->nama,
+                        'nik' => $record->nik,
+                        'gender' => $record->gender,
+                        'jenistenagakerja' => $record->jenistenagakerja
+                    ]
+                ];
+            });
+        
+        return response()->json([
+            'attendance' => $attendance->toArray(),
+            'date' => $date,
+            'date_formatted' => Carbon::parse($date)->format('d F Y')
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in getTodayAttendance', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
     }
+}
 
     /**
-     * Process check-in with photo
+     * Process check-in with photo - UPDATED for individual approval flow
      */
     public function processCheckIn(Request $request)
     {
@@ -210,7 +222,7 @@ class MandorPageController extends Controller
                         'companycode' => $user->companycode,
                         'mandorid' => $user->userid,
                         'totalpekerja' => 1,
-                        'status' => 'PENDING', // CHANGED: dari 'P' menjadi 'PENDING'
+                        'status' => 'ACTIVE', // Changed from PENDING - no longer needed for approval
                         'uploaddate' => now(),
                         'updateBy' => $user->name
                     ]);
@@ -231,7 +243,7 @@ class MandorPageController extends Controller
                     $absenHdr->refresh();
                 }
                 
-                // Create AbsenLst record
+                // Create AbsenLst record with PENDING approval status
                 DB::table('absenlst')->insert([
                     'absenno' => $absenHdr->absenno,
                     'id' => $nextId,
@@ -241,6 +253,7 @@ class MandorPageController extends Controller
                     'fotoabsen' => $request->photo,
                     'lokasifotolat' => $request->latitude,
                     'lokasifotolng' => $request->longitude,
+                    'approval_status' => 'PENDING', // Default status
                     'createdat' => now(),
                     'updatedat' => now()
                 ]);
@@ -249,12 +262,14 @@ class MandorPageController extends Controller
                 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Absen berhasil dicatat dengan foto',
+                    'message' => 'Absen berhasil dicatat dengan foto (menunggu approval)',
                     'data' => [
                         'absenno' => $absenHdr->absenno,
+                        'absen_id' => $nextId,
                         'tenagakerjaid' => $request->tenagakerjaid,
                         'worker_name' => $worker->nama,
                         'time' => now()->format('H:i'),
+                        'approval_status' => 'PENDING',
                         'total_today' => $absenHdr->totalpekerja,
                     ]
                 ]);
@@ -273,6 +288,97 @@ class MandorPageController extends Controller
             return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
         }
     }
+
+/**
+ * Update attendance photo - Edit functionality
+ */
+public function updateAttendancePhoto(Request $request)
+{
+    try {
+        $request->validate([
+            'absenno' => 'required|string',
+            'absen_id' => 'required|integer',
+            'tenagakerjaid' => 'required|string',
+            'photo' => 'required|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+        
+        if (!auth()->check()) {
+            return response()->json(['error' => 'User not authenticated'], 401);
+        }
+        
+        $user = auth()->user();
+        
+        // Verify the attendance record belongs to this mandor
+        $attendanceRecord = DB::table('absenlst as al')
+            ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+            ->where('al.absenno', $request->absenno)
+            ->where('al.id', $request->absen_id)
+            ->where('al.tenagakerjaid', $request->tenagakerjaid)
+            ->where('ah.mandorid', $user->userid)
+            ->where('ah.companycode', $user->companycode)
+            ->select(['al.approval_status', 'al.absenno', 'al.id'])
+            ->first();
+        
+        if (!$attendanceRecord) {
+            return response()->json(['error' => 'Record absensi tidak ditemukan atau tidak berhak diakses'], 404);
+        }
+        
+        // Check if already approved - don't allow edit if approved
+        if ($attendanceRecord->approval_status === 'APPROVED') {
+            return response()->json(['error' => 'Tidak dapat mengedit foto yang sudah diapprove'], 400);
+        }
+        
+        DB::beginTransaction();
+        
+        try {
+            // Update photo and reset approval status
+            $updated = AbsenLst::updatePhotoAndResetApproval(
+                $request->absenno,
+                $request->absen_id,
+                $request->photo,
+                $request->latitude,
+                $request->longitude
+            );
+            
+            if (!$updated) {
+                return response()->json(['error' => 'Gagal mengupdate foto'], 500);
+            }
+            
+            // Get worker name for response
+            $worker = TenagaKerja::where('tenagakerjaid', $request->tenagakerjaid)->first();
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto absensi berhasil diupdate (status direset ke PENDING)',
+                'data' => [
+                    'absenno' => $request->absenno,
+                    'absen_id' => $request->absen_id,
+                    'tenagakerjaid' => $request->tenagakerjaid,
+                    'worker_name' => $worker->nama ?? 'Unknown',
+                    'approval_status' => 'PENDING',
+                    'updated_at' => now()->format('Y-m-d H:i:s'),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
+        
+    } catch (\Exception $e) {
+        \Log::error('Error in updateAttendancePhoto', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'request_data' => $request->all()
+        ]);
+        
+        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+    }
+}
 
     // =============================================================================
     // LKH MANAGEMENT - DATA RETRIEVAL
@@ -1569,6 +1675,58 @@ class MandorPageController extends Controller
         ]);
     }
 
+    /**
+ * Get rejected attendance for mandor - NEW method
+ */
+public function getRejectedAttendance(Request $request)
+{
+    try {
+        if (!auth()->check()) {
+            return response()->json(['error' => 'User not authenticated'], 401);
+        }
+        
+        $user = auth()->user();
+        $date = $request->input('date', now()->format('Y-m-d'));
+        
+        $rejectedRecords = AbsenLst::getRejectedAttendanceByMandor($user->companycode, $user->userid, $date);
+        
+        $formattedRecords = $rejectedRecords->map(function($record) {
+            return [
+                'absenno' => $record->absenno,
+                'absen_id' => $record->absen_id,
+                'tenagakerjaid' => $record->tenagakerjaid,
+                'pekerja_nama' => $record->pekerja_nama,
+                'pekerja_nik' => $record->pekerja_nik,
+                'absenmasuk' => $record->absenmasuk,
+                'absen_time' => Carbon::parse($record->absenmasuk)->format('H:i'),
+                'absen_date_formatted' => Carbon::parse($record->absenmasuk)->format('d M Y'),
+                'fotoabsen' => $record->fotoabsen,
+                'rejection_reason' => $record->rejection_reason,
+                'rejection_date' => $record->rejection_date,
+                'rejection_date_formatted' => $record->rejection_date ? Carbon::parse($record->rejection_date)->format('d M Y, H:i') : null,
+                'is_edited' => $record->is_edited,
+                'edit_count' => $record->edit_count,
+                'can_edit' => true // Always allow edit for rejected items
+            ];
+        });
+        
+        return response()->json([
+            'rejected_attendance' => $formattedRecords->toArray(),
+            'date' => $date,
+            'date_formatted' => Carbon::parse($date)->format('d F Y'),
+            'total_rejected' => $formattedRecords->count()
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in getRejectedAttendance', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+    }
+}
+
     public function getFieldActivities()
     {  
         return response()->json(['field_activities' => []]);
@@ -2036,17 +2194,20 @@ class MandorPageController extends Controller
     }
 
     /**
-     * Get available workers for assignment
+     * Get available workers for assignment - UPDATED to only include APPROVED attendance
      */
     private function getAvailableWorkersForAssignment($companyCode, $mandorUserId, $date)
     {
-        $attendance = AbsenLst::getAttendanceByMandorAndDate($companyCode, $mandorUserId, $date);
+        // Only get workers with APPROVED attendance
+        $approvedAttendance = AbsenLst::getApprovedAttendanceByMandorAndDate($companyCode, $mandorUserId, $date);
         
-        return $attendance->map(function($record) {
+        return $approvedAttendance->map(function($record) {
             return [
                 'tenagakerjaid' => $record->tenagakerjaid,
                 'nama' => $record->nama,
                 'nik' => $record->nik,
+                'gender' => $record->gender,
+                'jenistenagakerja' => $record->jenistenagakerja,
                 'assigned' => false
             ];
         })->toArray();
