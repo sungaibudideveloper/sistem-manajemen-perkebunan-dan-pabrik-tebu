@@ -1,11 +1,11 @@
-// resources/js/components/layout-mandor.tsx - UPDATED to use generic components
+// resources/js/components/layout-approver.tsx - UPDATED to use generic components
 
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header'; // Generic Header
 import Sidebar from './sidebar'; // Generic Sidebar
 import {
-  FiGrid, FiCheckCircle, FiClipboard
+  FiHome, FiCheck, FiClock
 } from 'react-icons/fi';
 
 // User interface
@@ -26,14 +26,16 @@ interface SharedProps {
 interface ExtendedRoutes {
   logout: string;
   home: string;
-  mandor_index: string;
-  workers: string;
-  attendance_today: string;
-  process_checkin: string;
+  approver_index: string;
+  pending_attendance: string;
+  attendance_detail: string;
+  approve_attendance: string;
+  reject_attendance: string;
+  attendance_history: string;
   [key: string]: string; // This allows any additional route
 }
 
-interface LayoutMandorProps {
+interface LayoutApproverProps {
   user: User;
   routes: ExtendedRoutes;
   csrf_token?: string;
@@ -42,7 +44,7 @@ interface LayoutMandorProps {
   children: React.ReactNode;
 }
 
-const LayoutMandor: React.FC<LayoutMandorProps> = ({
+const LayoutApprover: React.FC<LayoutApproverProps> = ({
   user,
   routes,
   csrf_token: propsCsrfToken,
@@ -77,25 +79,25 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
     };
   }, []);
 
-  // Define menu items specific to Mandor
-  const mandorMenuItems = [
+  // Define menu items specific to Approver
+  const approverMenuItems = [
     {
       id: 'dashboard',
-      icon: FiGrid,
-      label: 'Beranda',
-      description: 'Ringkasan aktivitas'
+      icon: FiHome,
+      label: 'Dashboard',
+      description: 'Ringkasan sistem approval'
     },
     {
-      id: 'absensi',
-      icon: FiCheckCircle,
-      label: 'Absensi',
-      description: 'Pencatatan kehadiran'
+      id: 'approval',
+      icon: FiClock,
+      label: 'Pending Approval',
+      description: 'Absensi menunggu persetujuan'
     },
     {
-      id: 'data-collection',
-      icon: FiClipboard,
-      label: 'Koleksi Data',
-      description: 'Input hasil kerja'
+      id: 'history',
+      icon: FiCheck,
+      label: 'Riwayat Approval',
+      description: 'Riwayat approval & reject'
     }
   ];
 
@@ -109,10 +111,10 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         user={user}
         csrf_token={csrf_token}
         routes={routes}
-        menuItems={mandorMenuItems}
+        menuItems={approverMenuItems}
         title="SB TEBU APPS"
-        subtitle="Sistem Koleksi Data Lapangan"
-        roleLabel="Mandor"
+        subtitle="Sistem Approval"
+        roleLabel="Absen Approver"
       />
       
       <Header
@@ -123,7 +125,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         csrf_token={csrf_token}
         routes={routes}
         title="SB Tebu Apps"
-        subtitle="Sistem Koleksi Data Lapangan"
+        subtitle="Sistem Approval Absensi"
       />
       
       <main>
@@ -133,4 +135,4 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
   );
 };
 
-export default LayoutMandor;
+export default LayoutApprover;

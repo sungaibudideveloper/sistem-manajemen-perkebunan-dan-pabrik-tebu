@@ -1,4 +1,5 @@
-// resources\js\components\header.tsx
+// resources/js/components/header.tsx - GENERIC VERSION
+
 import React, { useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { router } from '@inertiajs/react';
@@ -11,9 +12,9 @@ interface User {
   id: number;
   name: string;
   email: string;
-  userid: string; // Mandor code like M002
+  userid: string;
   companycode: string;
-  company_name: string; // From JOIN with company table
+  company_name: string;
 }
 
 interface SharedProps {
@@ -25,22 +26,20 @@ interface SharedProps {
   [key: string]: any;
 }
 
-interface ExtendedRoutes {
-  logout: string;
-  home: string;
-  mandor_index: string;
-  workers: string;
-  attendance_today: string;
-  process_checkin: string;
-}
-
 interface HeaderProps {
   onMenuClick: () => void;
   user: User;
   isOnline: boolean;
   currentTime: Date;
   csrf_token: string;
-  routes: ExtendedRoutes;
+  routes: {
+    logout: string;
+    [key: string]: string; // This allows any additional route
+  };
+  // NEW: Optional customization
+  title?: string;
+  subtitle?: string;
+  theme?: 'mandor' | 'approver' | 'default';
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -49,7 +48,10 @@ const Header: React.FC<HeaderProps> = ({
   isOnline, 
   currentTime,
   csrf_token,
-  routes 
+  routes,
+  title = "SB Tebu Apps",
+  subtitle = "Sistem Koleksi Data Lapangan",
+  theme = "default"
 }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { app } = usePage<SharedProps>().props;
@@ -82,12 +84,19 @@ const Header: React.FC<HeaderProps> = ({
     return name ? name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'UN';
   };
 
+  // Simple colors - SAMA UNTUK SEMUA
+  const themeColors = {
+    avatarBg: 'bg-blue-600',
+    gradientFrom: 'from-neutral-400',
+    gradientTo: 'to-neutral-600'
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-neutral-200">
       <div className="relative">
         <animated.div 
           style={scrollProgress}
-          className="absolute top-0 left-0 h-0.5 bg-gradient-to-r from-neutral-400 to-neutral-600"
+          className={`absolute top-0 left-0 h-0.5 bg-gradient-to-r ${themeColors.gradientFrom} ${themeColors.gradientTo}`}
         />
         
         <div className="flex items-center justify-between h-16 px-6">
@@ -104,8 +113,8 @@ const Header: React.FC<HeaderProps> = ({
                 <img src={app.logo_url} alt="Logo Tebu" className="w-8 h-8 object-contain" />
               </div>
               <div>
-                <h1 className="text-sm font-medium">SB Tebu Apps</h1>
-                <p className="text-xs text-neutral-500">Sistem Koleksi Data Lapangan</p>
+                <h1 className="text-sm font-medium">{title}</h1>
+                <p className="text-xs text-neutral-500">{subtitle}</p>
               </div>
             </div>
           </div>
@@ -135,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
 
-            {/* FIXED: User Info with Full Name */}
+            {/* User Info */}
             <div className="flex items-center gap-3">
               {/* User Info - Show full name on desktop */}
               <div className="text-right">
@@ -147,8 +156,8 @@ const Header: React.FC<HeaderProps> = ({
                 </p>
               </div>
               
-              {/* Avatar */}
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {/* Avatar with theme color */}
+              <div className={`w-8 h-8 ${themeColors.avatarBg} rounded-full flex items-center justify-center text-white text-sm font-medium`}>
                 {getUserInitials(user?.name || '')}
               </div>
               

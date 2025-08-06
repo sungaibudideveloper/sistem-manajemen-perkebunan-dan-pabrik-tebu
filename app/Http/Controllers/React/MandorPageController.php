@@ -210,7 +210,7 @@ class MandorPageController extends Controller
                         'companycode' => $user->companycode,
                         'mandorid' => $user->userid,
                         'totalpekerja' => 1,
-                        'status' => 'P',
+                        'status' => 'PENDING', // CHANGED: dari 'P' menjadi 'PENDING'
                         'uploaddate' => now(),
                         'updateBy' => $user->name
                     ]);

@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
 use App\Http\Controllers\LiveChatController;
 use App\Http\Controllers\React\MandorPageController;
+use App\Http\Controllers\React\ApproverPageController;
 
 // =============================================================================
 // AUTHENTICATION ROUTES
@@ -24,10 +25,10 @@ Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.po
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
 
 // =============================================================================
-// PROTECTED ROUTES - REQUIRE AUTHENTICATION
+// PROTECTED ROUTES - REQUIRE AUTHENTICATION + ROLE-BASED REDIRECT
 // =============================================================================
 
-Route::group(['middleware' => 'auth'], function () {
+Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 
     // =============================================================================
     // DASHBOARD & HOME ROUTES
@@ -240,4 +241,46 @@ Route::group(['middleware' => 'auth'], function () {
         
     });
 
+    // =============================================================================
+    // APPROVER ROUTES - untuk idjabatan = 10 (Absen Approver)
+    // =============================================================================
+    
+    // Main approver dashboard
+    Route::get('/approver', [ApproverPageController::class, 'index'])
+        ->name('approver.index');
+    
+    // Approval API routes
+    Route::prefix('api/approver')->group(function () {
+        
+        // Get pending attendance for approval
+        Route::get('/attendance/pending', [ApproverPageController::class, 'getPendingAttendance'])
+            ->name('approver.attendance.pending');
+        
+        // Get detailed attendance data
+        Route::get('/attendance/detail/{absenno}', [ApproverPageController::class, 'getAttendanceDetail'])
+            ->name('approver.attendance.detail');
+        
+        // Approve attendance
+        Route::post('/attendance/approve', [ApproverPageController::class, 'approveAttendance'])
+            ->name('approver.attendance.approve');
+        
+        // Reject attendance
+        Route::post('/attendance/reject', [ApproverPageController::class, 'rejectAttendance'])
+            ->name('approver.attendance.reject');
+        
+        // Get attendance history
+        Route::get('/attendance/history', [ApproverPageController::class, 'getAttendanceHistory'])
+            ->name('approver.attendance.history');
+    });
+
 });
+
+// =============================================================================
+// CARA KERJA ROLE-BASED REDIRECT:
+// =============================================================================
+// 1. User login → redirect ke '/home' atau '/' (default Laravel)
+// 2. Middleware 'mandor.access' otomatis redirect berdasarkan idjabatan:
+//    - idjabatan = 5 (Mandor) → redirect ke '/mandor' 
+//    - idjabatan = 10 (Approver) → redirect ke '/approver'
+//    - lainnya → tetap di '/home'
+// 3. Proteksi: mandor tidak bisa akses '/approver', begitu sebaliknya
