@@ -500,24 +500,6 @@ body {
     box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.15);
 }
 
-/* ===== DARK MODE SUPPORT ===== */
-@media (prefers-color-scheme: dark) {
-    .auto-dark {
-        background: #1f2937;
-        color: #f9fafb;
-    }
-    
-    .auto-dark .card {
-        background: #374151;
-        border-color: #4b5563;
-    }
-    
-    .auto-dark .form-input {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-}
 
     .loading-spinner {
         border: 3px solid #f3f3f3;

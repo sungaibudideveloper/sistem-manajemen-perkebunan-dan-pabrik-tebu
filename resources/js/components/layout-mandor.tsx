@@ -1,13 +1,18 @@
 // resources\js\components\layout-mandor.tsx
+
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header';
 import Sidebar from './sidebar';
 
+// FIXED: Complete User interface - SAME as index.tsx and Header/Sidebar
 interface User {
   id: number;
   name: string;
   email: string;
+  userid: string;
+  companycode: string;
+  company_name: string;
 }
 
 interface SharedProps {
@@ -52,6 +57,8 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
   // Use props csrf_token first, fallback to page csrf_token
   const csrf_token = propsCsrfToken || pageCsrfToken;
 
+  // Removed console.log to fix spam
+
   useEffect(() => {
     // Online/Offline detection
     const handleOnline = () => setIsOnline(true);
@@ -85,11 +92,13 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
     <div className="min-h-screen bg-white">
       <Backdrop />
       
+      {/* FIXED: Added missing user prop to Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         activeSection={activeSection}
         onSectionChange={onSectionChange}
+        user={user}
         csrf_token={csrf_token}
         routes={routes}
       />

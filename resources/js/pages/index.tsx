@@ -1,4 +1,4 @@
-// resources\js\pages\index.tsx
+// resources\js\pages\index.tsx - FIXED VERSION
 
 import React, { useState } from 'react';
 import { PageProps } from '@inertiajs/core';
@@ -7,13 +7,17 @@ import DashboardMandor from './dashboard-mandor';
 import AbsenMandor from './absen-mandor';
 import DataCollectionMandor from './data-collection-mandor';
 
-// TypeScript Interfaces
+// FIXED: Complete User interface
 interface User {
   id: number;
   name: string;
   email: string;
+  userid: string; 
+  companycode: string;
+  company_name: string; 
 }
 
+// FIXED: Routes interface with index signature
 interface Routes {
   logout: string;
   home: string;
@@ -34,6 +38,8 @@ interface Routes {
   complete_all_lkh: string;
   // Sync routes
   sync_offline_data: string;
+  // Index signature for additional routes
+  [key: string]: string;
 }
 
 interface MandorIndexProps extends PageProps {
@@ -53,6 +59,8 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
   };
+
+  // Removed console.log to fix spam
 
   return (
     <LayoutMandor

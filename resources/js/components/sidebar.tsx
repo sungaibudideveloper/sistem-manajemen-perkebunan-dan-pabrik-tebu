@@ -1,10 +1,20 @@
+// resources\js\components\sidebar.tsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { router } from '@inertiajs/react';
 import {
-  FiGrid, FiCheckCircle, FiClipboard, FiArrowRight, FiLogOut
+  FiGrid, FiCheckCircle, FiClipboard, FiArrowRight, FiLogOut, FiHome
 } from 'react-icons/fi';
 import { usePage } from '@inertiajs/react';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  userid: string; // Mandor code like M002
+  companycode: string;
+  company_name: string; // From JOIN with company table
+}
 
 interface SharedProps {
   app: {
@@ -19,7 +29,6 @@ interface ExtendedRoutes {
   logout: string;
   home: string;
   mandor_index: string;
-  // API routes untuk absensi
   workers: string;
   attendance_today: string;
   process_checkin: string;
@@ -30,6 +39,7 @@ interface SidebarProps {
   onClose: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  user: User;
   csrf_token: string;
   routes: ExtendedRoutes;
 }
@@ -39,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose, 
   activeSection, 
   onSectionChange,
+  user,
   csrf_token,
   routes 
 }) => {
@@ -50,7 +61,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     setIsLoggingOut(true);
     
-    // POST dengan CSRF token
     router.post(routes.logout, {
       _token: csrf_token
     }, {
@@ -68,11 +78,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     onSectionChange(sectionId); // Handle internal SPA navigation
   };
 
+  // Generate user initials from name
+  const getUserInitials = (name: string): string => {
+    return name ? name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'UN';
+  };
+
   return (
     <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-black transform transition-transform duration-300 ${
       isOpen ? 'translate-x-0' : '-translate-x-full'
     }`}>
       <div className="h-full flex flex-col">
+        {/* Header */}
         <div className="p-6 border-b border-neutral-800">
           <div className="text-white flex items-center gap-3">
             <div className="p-2 rounded-lg">
@@ -82,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
         
+        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
           {[
             { id: 'dashboard', icon: FiGrid, label: 'Beranda' },
@@ -108,7 +125,26 @@ const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </nav>
 
+        {/* FIXED: Mandor Info Section */}
         <div className="p-4 border-t border-neutral-800">
+          <div className="bg-white-900 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black text-sm font-medium">
+                {getUserInitials(user?.name || '')}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">
+                  {user?.userid} - {user?.name}
+                </p>
+                <div className="flex items-center gap-1 text-white text-xs mt-1">
+                  <FiHome className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{user?.company_name || user?.companycode}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Logout Button */}
           <motion.button
             onClick={handleLogout}
             disabled={isLoggingOut}

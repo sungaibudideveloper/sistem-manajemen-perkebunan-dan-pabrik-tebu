@@ -41,6 +41,9 @@ class MandorPageController extends Controller
             'user' => [
                 'id' => $user->userid,
                 'name' => $user->name,
+                'userid' => $user->userid,
+                'companycode' => $user->companycode,
+                'company_name' => $user->company->name ?? null,
             ],
             'csrf_token' => csrf_token(),
             'routes' => [

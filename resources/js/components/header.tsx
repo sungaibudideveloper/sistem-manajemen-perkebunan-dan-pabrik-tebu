@@ -1,3 +1,4 @@
+// resources\js\components\header.tsx
 import React, { useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { router } from '@inertiajs/react';
@@ -10,6 +11,9 @@ interface User {
   id: number;
   name: string;
   email: string;
+  userid: string; // Mandor code like M002
+  companycode: string;
+  company_name: string; // From JOIN with company table
 }
 
 interface SharedProps {
@@ -25,7 +29,6 @@ interface ExtendedRoutes {
   logout: string;
   home: string;
   mandor_index: string;
-  // API routes untuk absensi
   workers: string;
   attendance_today: string;
   process_checkin: string;
@@ -62,7 +65,6 @@ const Header: React.FC<HeaderProps> = ({
     
     setIsLoggingOut(true);
     
-    // POST dengan CSRF token
     router.post(routes.logout, {
       _token: csrf_token
     }, {
@@ -73,6 +75,11 @@ const Header: React.FC<HeaderProps> = ({
         setIsLoggingOut(false);
       }
     });
+  };
+
+  // Generate user initials from name
+  const getUserInitials = (name: string): string => {
+    return name ? name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'UN';
   };
 
   return (
@@ -128,12 +135,24 @@ const Header: React.FC<HeaderProps> = ({
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
 
-            {/* User & Logout */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-neutral-200 rounded-full flex items-center justify-center text-neutral-700 text-sm font-medium">
-                {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'UN'}
+            {/* FIXED: User Info with Full Name */}
+            <div className="flex items-center gap-3">
+              {/* User Info - Show full name on desktop */}
+              <div className="text-right">
+                <p className="text-sm font-semibold text-neutral-900">
+                  {user?.userid} - {user?.name}
+                </p>
+                <p className="text-xs text-neutral-500">
+                  {user?.company_name || user?.companycode}
+                </p>
               </div>
               
+              {/* Avatar */}
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {getUserInitials(user?.name || '')}
+              </div>
+              
+              {/* Logout Button */}
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}

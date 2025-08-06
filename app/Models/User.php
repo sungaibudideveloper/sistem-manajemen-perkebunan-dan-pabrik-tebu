@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->hasOne(UserCompany::class, 'userid', 'userid');
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
+    }
+
     public static function getMandorByCompany($companyCode)
     {
         return self::select(['userid', 'name', 'companycode', 'idjabatan'])
