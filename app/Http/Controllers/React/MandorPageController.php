@@ -1662,8 +1662,8 @@ class MandorPageController extends Controller
         $totalLuasPlan = array_sum(array_column($plotData, 'luasarea'));
         
         // Determine page component and readonly flag based on mode
-        $pageComponent = $mode === 'input' ? 'lkh-input' : 'lkh-view';
-        $isReadonly = in_array($mode, ['view', 'view-readonly']);
+        $pageComponent = in_array($mode, ['input', 'edit']) ? 'lkh-input' : 'lkh-view';
+        $isReadonly = ($mode === 'view-readonly') || ($lkhData->mobile_status === 'COMPLETED');
         $isCompleted = $lkhData->mobile_status === 'COMPLETED';
         
         $pageTitle = $isReadonly ? 'Lihat Hasil - ' . $lkhno : 'Input Hasil - ' . $lkhno;
@@ -1685,7 +1685,6 @@ class MandorPageController extends Controller
                 'totalluasplan' => $totalLuasPlan,
                 'totalhasil' => (float) ($lkhData->totalhasil ?? 0),
                 'totalsisa' => (float) ($lkhData->totalsisa ?? 0),
-                // ❌ REMOVED: 'totalupah' - hide team wages
                 'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
                 'rkhno' => $lkhData->rkhno,
                 'lkhdate' => $lkhData->lkhdate,
