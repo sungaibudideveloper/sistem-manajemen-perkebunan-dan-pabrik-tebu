@@ -1,4 +1,4 @@
-// resources/js/pages/lkh-assignment.tsx - FIXED VERSION (Logo Path & Clean UI)
+// resources/js/pages/lkh-assignment.tsx - UPDATED: Multiple Vehicles Support
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
@@ -21,13 +21,32 @@ interface LKHData {
   mandor_nama: string;
 }
 
-interface VehicleInfo {
+// UPDATED: Support both single and multiple vehicles
+interface SingleVehicle {
   nokendaraan: string;
   jenis: string;
   hourmeter: number;
   operator_nama: string;
   operator_nik?: string;
+  is_multiple: false;
+  plots: string[];
 }
+
+interface MultipleVehicles {
+  is_multiple: true;
+  vehicle_count: number;
+  vehicles: Array<{
+    nokendaraan: string;
+    jenis: string;
+    hourmeter: number;
+    operator_nama: string;
+    operator_nik?: string;
+    plots: string[];
+    total_luasarea: number;
+  }>;
+}
+
+type VehicleInfo = SingleVehicle | MultipleVehicles | null;
 
 interface WorkerAssignment {
   tenagakerjaid: string;
@@ -197,6 +216,91 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
     !existingAssignments.includes(w.tenagakerjaid)
   );
 
+  // UPDATED: Render vehicle info based on type
+  const renderVehicleInfo = () => {
+    if (!vehicleInfo) {
+      return (
+        <div className="text-center py-8">
+          <Truck className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+          <p className="text-neutral-500">Tidak ada kendaraan untuk aktivitas ini</p>
+        </div>
+      );
+    }
+
+    // Single vehicle
+    if (!vehicleInfo.is_multiple) {
+      return (
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm font-medium text-neutral-500">No. Kendaraan</label>
+            <p className="text-lg font-semibold">{vehicleInfo.nokendaraan}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-neutral-500">Jenis</label>
+            <p className="text-lg font-semibold">{vehicleInfo.jenis}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-neutral-500">Hour Meter</label>
+            <p className="text-lg font-semibold">{vehicleInfo.hourmeter} Jam</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-neutral-500">Operator</label>
+            <p className="text-lg font-semibold">{vehicleInfo.operator_nama}</p>
+          </div>
+          {vehicleInfo.plots && vehicleInfo.plots.length > 0 && (
+            <div className="col-span-2">
+              <label className="text-sm font-medium text-neutral-500">Plot</label>
+              <p className="text-lg font-semibold">{vehicleInfo.plots.join(', ')}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Multiple vehicles
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-neutral-600">
+            {vehicleInfo.vehicle_count} kendaraan diperlukan untuk aktivitas ini
+          </p>
+        </div>
+        
+        {vehicleInfo.vehicles.map((vehicle, index) => (
+          <div key={vehicle.nokendaraan} className="bg-neutral-50 rounded-lg p-4 border">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-neutral-900">
+                Kendaraan {index + 1}: {vehicle.nokendaraan}
+              </h4>
+              <span className="text-sm text-neutral-500">
+                {vehicle.total_luasarea.toFixed(2)} Ha
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-neutral-500">Jenis:</span>
+                <span className="ml-2 font-medium">{vehicle.jenis}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500">Hour Meter:</span>
+                <span className="ml-2 font-medium">{vehicle.hourmeter} Jam</span>
+              </div>
+              <div>
+                <span className="text-neutral-500">Operator:</span>
+                <span className="ml-2 font-medium">{vehicle.operator_nama}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500">Plot:</span>
+                <span className="ml-2 font-medium">{vehicle.plots.join(', ')}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -212,7 +316,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* FIXED: Logo with better error handling and fallback */}
+              {/* Logo with better error handling and fallback */}
               {app?.logo_url ? (
                 <img 
                   src={app.logo_url} 
@@ -328,40 +432,21 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
             </div>
           </div>
 
-          {/* Vehicle Info (if applicable) */}
+          {/* UPDATED: Vehicle Info Card with multiple vehicles support */}
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Truck className="w-5 h-5 text-orange-600" />
                 Informasi Kendaraan
+                {vehicleInfo?.is_multiple && (
+                  <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
+                    {vehicleInfo.vehicle_count} unit
+                  </span>
+                )}
               </h3>
             </div>
             <div className="p-6">
-              {vehicleInfo ? (
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-sm font-medium text-neutral-500">No. Kendaraan</label>
-                    <p className="text-lg font-semibold">{vehicleInfo.nokendaraan}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-neutral-500">Jenis</label>
-                    <p className="text-lg font-semibold">{vehicleInfo.jenis}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-neutral-500">Hour Meter</label>
-                    <p className="text-lg font-semibold">{vehicleInfo.hourmeter} Jam</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-neutral-500">Operator</label>
-                    <p className="text-lg font-semibold">{vehicleInfo.operator_nama}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Truck className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-                  <p className="text-neutral-500">Tidak ada kendaraan untuk aktivitas ini</p>
-                </div>
-              )}
+              {renderVehicleInfo()}
             </div>
           </div>
         </div>
@@ -460,7 +545,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
           </div>
         </div>
 
-        {/* FIXED: Action Buttons - Simple design with proper contrast */}
+        {/* Action Buttons */}
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={saveAssignments}

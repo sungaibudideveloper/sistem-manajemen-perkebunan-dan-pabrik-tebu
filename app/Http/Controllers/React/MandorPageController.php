@@ -807,49 +807,178 @@ public function updateAttendancePhoto(Request $request)
     }
 
     /**
-     * Show LKH View Page
-     */
-    public function showLKHView($lkhno)
-    {
-        try {
-            if (!auth()->check()) {
-                return redirect()->route('login');
-            }
-            
-            $user = auth()->user();
-            
-            // Check if LKH exists and belongs to this mandor
-            $lkhData = DB::table('lkhhdr')
-                ->where('lkhno', $lkhno)
-                ->where('companycode', $user->companycode)
-                ->where('mandorid', $user->userid)
-                ->select(['mobile_status', 'status', 'keterangan'])
-                ->first();
-            
-            if (!$lkhData) {
-                return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
-            }
-            
-            // UPDATED: Allow view for DRAFT, COMPLETED status
-            if (!in_array($lkhData->mobile_status, ['DRAFT', 'COMPLETED'])) {
-                return redirect()->route('mandor.index')->with('error', 'LKH tidak tersedia untuk dilihat');
-            }
-            
-            // UPDATED: Determine mode based on mobile_status
-            $mode = $lkhData->mobile_status === 'COMPLETED' ? 'view-readonly' : 'view';
-            
-            return $this->renderLKHForm($lkhno, $mode);
-            
-        } catch (\Exception $e) {
-            Log::error('Error in showLKHView', [
-                'message' => $e->getMessage(),
-                'lkhno' => $lkhno,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return redirect()->route('mandor.index')->with('error', 'Terjadi kesalahan saat membuka halaman view');
+ * Show LKH View Page - UPDATED: With Vehicle BBM Data
+ */
+public function showLKHView($lkhno)
+{
+    try {
+        if (!auth()->check()) {
+            return redirect()->route('login');
         }
+        
+        $user = auth()->user();
+        
+        // Check if LKH exists and belongs to this mandor
+        $lkhData = DB::table('lkhhdr')
+            ->where('lkhno', $lkhno)
+            ->where('companycode', $user->companycode)
+            ->where('mandorid', $user->userid)
+            ->select(['mobile_status', 'status', 'keterangan'])
+            ->first();
+        
+        if (!$lkhData) {
+            return redirect()->route('mandor.index')->with('error', 'LKH tidak ditemukan');
+        }
+        
+        // Allow view for DRAFT, COMPLETED status
+        if (!in_array($lkhData->mobile_status, ['DRAFT', 'COMPLETED'])) {
+            return redirect()->route('mandor.index')->with('error', 'LKH tidak tersedia untuk dilihat');
+        }
+        
+        // Determine mode based on mobile_status
+        $mode = $lkhData->mobile_status === 'COMPLETED' ? 'view-readonly' : 'view';
+        
+        // Get vehicle BBM data from kendaraanbbm table
+        $vehicleBBMData = $this->getVehicleBBMData($lkhno, $user->companycode);
+        
+        // Render the form with additional vehicleBBMData
+        return $this->renderLKHForm($lkhno, $mode, $vehicleBBMData);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in showLKHView', [
+            'message' => $e->getMessage(),
+            'lkhno' => $lkhno,
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return redirect()->route('mandor.index')->with('error', 'Terjadi kesalahan saat membuka halaman view');
     }
+}
+
+/**
+ * Get Vehicle BBM data from kendaraanbbm table
+ */
+private function getVehicleBBMData($lkhno, $companyCode)
+{
+    try {
+        $bbmData = DB::table('kendaraanbbm as kb')
+            ->join('kendaraan as k', function($join) use ($companyCode) {
+                $join->on('kb.nokendaraan', '=', 'k.nokendaraan')
+                     ->where('k.companycode', '=', $companyCode)
+                     ->where('k.isactive', '=', 1);
+            })
+            ->leftJoin('tenagakerja as tk', function($join) use ($companyCode) {
+                $join->on('kb.operatorid', '=', 'tk.tenagakerjaid')
+                     ->where('tk.companycode', '=', $companyCode)
+                     ->where('tk.isactive', '=', 1);
+            })
+            ->where('kb.companycode', $companyCode)
+            ->where('kb.lkhno', $lkhno)
+            ->select([
+                'kb.nokendaraan',
+                'k.jenis',
+                'tk.nama as operator_nama',
+                'kb.plot',
+                'kb.jammulai',
+                'kb.jamselesai',
+                'kb.hourmeterstart',
+                'kb.hourmeterend', 
+                'kb.solar',
+                'kb.createdat',
+                'kb.adminupdatedat'
+            ])
+            ->orderBy('kb.nokendaraan')
+            ->orderBy('kb.plot')
+            ->get();
+        
+        if ($bbmData->isEmpty()) {
+            return [];
+        }
+        
+        // Group by vehicle and calculate work duration
+        $groupedData = [];
+        
+        foreach ($bbmData as $record) {
+            $key = $record->nokendaraan;
+            
+            // Calculate work duration
+            $workDuration = $this->calculateWorkDuration($record->jammulai, $record->jamselesai);
+            
+            if (!isset($groupedData[$key])) {
+                $groupedData[$key] = [
+                    'nokendaraan' => $record->nokendaraan,
+                    'jenis' => $record->jenis,
+                    'operator_nama' => $record->operator_nama ?: 'Operator tidak ditemukan',
+                    'plots' => [],
+                    'jammulai' => $record->jammulai,
+                    'jamselesai' => $record->jamselesai,
+                    'work_duration' => $workDuration,
+                    'solar' => $record->solar,
+                    'hourmeterstart' => $record->hourmeterstart,
+                    'hourmeterend' => $record->hourmeterend,
+                    'is_completed' => !is_null($record->solar) && !is_null($record->hourmeterstart) && !is_null($record->hourmeterend),
+                    'created_at' => $record->createdat,
+                    'admin_updated_at' => $record->adminupdatedat
+                ];
+            }
+            
+            // Add plot to this vehicle
+            $groupedData[$key]['plots'][] = $record->plot;
+            
+            // Use the earliest jam mulai and latest jam selesai if multiple plots
+            if ($record->jammulai < $groupedData[$key]['jammulai']) {
+                $groupedData[$key]['jammulai'] = $record->jammulai;
+            }
+            if ($record->jamselesai > $groupedData[$key]['jamselesai']) {
+                $groupedData[$key]['jamselesai'] = $record->jamselesai;
+                // Recalculate work duration with updated times
+                $groupedData[$key]['work_duration'] = $this->calculateWorkDuration(
+                    $groupedData[$key]['jammulai'], 
+                    $groupedData[$key]['jamselesai']
+                );
+            }
+        }
+        
+        return array_values($groupedData);
+        
+    } catch (\Exception $e) {
+        Log::error('Error in getVehicleBBMData', [
+            'lkhno' => $lkhno,
+            'companyCode' => $companyCode,
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return [];
+    }
+}
+
+/**
+ * Calculate work duration from time strings
+ */
+private function calculateWorkDuration($jamMulai, $jamSelesai)
+{
+    try {
+        $start = \Carbon\Carbon::createFromFormat('H:i:s', $jamMulai);
+        $end = \Carbon\Carbon::createFromFormat('H:i:s', $jamSelesai);
+        
+        // Handle overnight work
+        if ($end->lt($start)) {
+            $end->addDay();
+        }
+        
+        return $start->diffInHours($end, true); // true for float result
+        
+    } catch (\Exception $e) {
+        Log::warning('Error calculating work duration', [
+            'jamMulai' => $jamMulai,
+            'jamSelesai' => $jamSelesai,
+            'error' => $e->getMessage()
+        ]);
+        
+        return 8.0; // Default 8 hours
+    }
+}
 
     /**
      * Show LKH Edit Page - Updated to handle dynamic URLs and proper status validation
@@ -992,7 +1121,7 @@ public function updateAttendancePhoto(Request $request)
     }
 
     /**
-     * Save LKH Results with mobile_status and redirect to view - FIXED KETERANGAN
+     * Save LKH Results with Vehicle BBM data - UPDATED
      */
     public function saveLKHResults(Request $request, $lkhno = null)
     {
@@ -1012,6 +1141,11 @@ public function updateAttendancePhoto(Request $request)
                 'material_inputs' => 'nullable|array',
                 'material_inputs.*.itemcode' => 'required_with:material_inputs|string',
                 'material_inputs.*.qtysisa' => 'required_with:material_inputs|numeric|min:0',
+                'vehicle_inputs' => 'nullable|array', // NEW: Vehicle time inputs
+                'vehicle_inputs.*.nokendaraan' => 'required_with:vehicle_inputs|string',
+                'vehicle_inputs.*.plot' => 'required_with:vehicle_inputs|string',
+                'vehicle_inputs.*.jammulai' => 'required_with:vehicle_inputs|string',
+                'vehicle_inputs.*.jamselesai' => 'required_with:vehicle_inputs|string',
                 'keterangan' => 'nullable|string|max:500'
             ]);
             
@@ -1023,7 +1157,8 @@ public function updateAttendancePhoto(Request $request)
             $workerInputs = $request->input('worker_inputs', []);
             $plotInputs = $request->input('plot_inputs', []);
             $materialInputs = $request->input('material_inputs', []);
-            $keterangan = $request->input('keterangan'); // Get keterangan from request
+            $vehicleInputs = $request->input('vehicle_inputs', []); // NEW
+            $keterangan = $request->input('keterangan');
             
             DB::beginTransaction();
             
@@ -1103,10 +1238,45 @@ public function updateAttendancePhoto(Request $request)
                     }
                 }
                 
+                // NEW: Insert vehicle BBM data
+                foreach ($vehicleInputs as $vehicleInput) {
+                    // Get operator ID from kendaraan table
+                    $operatorId = DB::table('kendaraan')
+                        ->where('companycode', $user->companycode)
+                        ->where('nokendaraan', $vehicleInput['nokendaraan'])
+                        ->where('isactive', 1)
+                        ->value('idtenagakerja');
+                    
+                    // Clear existing vehicle data for this LKH and vehicle/plot combination
+                    DB::table('kendaraanbbm')
+                        ->where('companycode', $user->companycode)
+                        ->where('lkhno', $lkhno)
+                        ->where('nokendaraan', $vehicleInput['nokendaraan'])
+                        ->where('plot', $vehicleInput['plot'])
+                        ->delete();
+                    
+                    // Insert new vehicle BBM record
+                    DB::table('kendaraanbbm')->insert([
+                        'companycode' => $user->companycode,
+                        'lkhno' => $lkhno,
+                        'plot' => $vehicleInput['plot'],
+                        'nokendaraan' => $vehicleInput['nokendaraan'],
+                        'mandorid' => $user->userid,
+                        'operatorid' => $operatorId,
+                        'jammulai' => $vehicleInput['jammulai'],
+                        'jamselesai' => $vehicleInput['jamselesai'],
+                        'hourmeterstart' => null,     // Will be filled by admin kendaraan
+                        'hourmeterend' => null,       // Will be filled by admin kendaraan
+                        'solar' => null,              // Will be filled by admin kendaraan
+                        'inputby' => $user->name,
+                        'createdat' => now()
+                    ]);
+                }
+                
                 // Calculate totals and update header
                 $totals = $this->calculateLKHTotals($lkhno, $user->companycode);
                 
-                // FIXED: Update header dengan keterangan
+                // Update header with keterangan
                 DB::table('lkhhdr')
                     ->where('lkhno', $lkhno)
                     ->where('companycode', $user->companycode)
@@ -1116,7 +1286,7 @@ public function updateAttendancePhoto(Request $request)
                         'totalsisa' => $totals['totalsisa'],
                         'totalupahall' => $totals['totalupah'],
                         'mobile_status' => 'DRAFT',
-                        'keterangan' => $keterangan,  // FIXED: Add this line!
+                        'keterangan' => $keterangan,
                         'updateby' => $user->name,
                         'mobileupdatedat' => now()
                     ]);
@@ -1125,7 +1295,10 @@ public function updateAttendancePhoto(Request $request)
                 
                 return redirect()->route('mandor.lkh.view', $lkhno)->with([
                     'success' => true,
-                    'flash' => ['success' => 'Data LKH berhasil disimpan sebagai draft!']
+                    'flash' => [
+                        'success' => 'Data LKH berhasil disimpan sebagai draft!' . 
+                                    (count($vehicleInputs) > 0 ? ' Data kendaraan juga tersimpan.' : '')
+                    ]
                 ]);
                 
             } catch (\Exception $e) {
@@ -1736,140 +1909,150 @@ public function getRejectedAttendance(Request $request)
     // =============================================================================
 
     /**
-     * Shared LKH form renderer - FIXED: Logo path & clean data
-     */
-    private function renderLKHForm($lkhno, $mode = 'input')
-    {
-        $user = auth()->user();
-        
-        // Get LKH data with proper activity join
-        $lkhData = DB::table('lkhhdr as lkh')
-            ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-            ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
-            ->where('lkh.companycode', $user->companycode)
-            ->where('lkh.mandorid', $user->userid)
-            ->where('lkh.lkhno', $lkhno)
-            ->select([
-                'lkh.lkhno', 'lkh.activitycode', 'act.activityname', 'act.description as activity_description',
-                'lkh.jenistenagakerja', 'lkh.rkhno', 'lkh.lkhdate', 'lkh.mobile_status', 
-                'lkh.keterangan', 'lkh.totalhasil', 'lkh.totalsisa', 'lkh.totalupahall',
-                'u.name as mandor_nama'
-            ])
-            ->first();
-        
-        if (!$lkhData) {
-            throw new \Exception('LKH tidak ditemukan');
-        }
-        
-        // Get assigned workers - FIXED: Remove totalupah to hide individual wages
-        $assignedWorkers = DB::table('lkhdetailworker as ldw')
-            ->join('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
-            ->where('ldw.lkhno', $lkhno)
-            ->where('ldw.companycode', $user->companycode)
-            ->select([
-                'tk.tenagakerjaid', 'tk.nama', 'tk.nik', 'ldw.jammasuk', 'ldw.jamselesai',
-                'ldw.totaljamkerja', 'ldw.overtimehours'
-                // ❌ REMOVED: 'ldw.totalupah' - hide individual wages
-            ])
-            ->orderBy('ldw.tenagakerjaurutan')
-            ->get()
-            ->map(function($worker) {
-                return [
-                    'tenagakerjaid' => $worker->tenagakerjaid,
-                    'nama' => $worker->nama,
-                    'nik' => $worker->nik,
-                    'jammasuk' => $worker->jammasuk,
-                    'jamselesai' => $worker->jamselesai,
-                    'totaljamkerja' => (float) $worker->totaljamkerja,
-                    'overtimehours' => (float) $worker->overtimehours,
-                    'assigned' => true
-                ];
-            })
-            ->toArray();
-        
-        if (empty($assignedWorkers)) {
-            return redirect()->route('mandor.lkh.assign', $lkhno)->with('error', 'Silakan assign pekerja terlebih dahulu');
-        }
-        
-        // Get plot data
-        $plotData = DB::table('lkhdetailplot')
-            ->where('companycode', $user->companycode)
-            ->where('lkhno', $lkhno)
-            ->select(['blok', 'plot', 'luasrkh', 'luashasil', 'luassisa'])
-            ->get()
-            ->map(function($plot) {
-                return [
-                    'blok' => $plot->blok,
-                    'plot' => $plot->plot,
-                    'luasarea' => (float) $plot->luasrkh,
-                    'luashasil' => (float) ($plot->luashasil ?? 0),
-                    'luassisa' => (float) ($plot->luassisa ?? 0)
-                ];
-            })
-            ->toArray();
-        
-        if (empty($plotData)) {
-            return redirect()->route('mandor.lkh.assign', $lkhno)->with('error', 'Data plot tidak ditemukan untuk LKH ini');
-        }
-        
-        // Get materials info for this LKH
-        $materials = $this->getMaterialsForLKH($lkhno, $user->companycode);
-        
-        // Calculate total luas plan
-        $totalLuasPlan = array_sum(array_column($plotData, 'luasarea'));
-        
-        // Determine page component and readonly flag based on mode
-        $pageComponent = in_array($mode, ['input', 'edit']) ? 'lkh-input' : 'lkh-view';
-        $isReadonly = ($mode === 'view-readonly') || ($lkhData->mobile_status === 'COMPLETED');
-        $isCompleted = $lkhData->mobile_status === 'COMPLETED';
-        
-        $pageTitle = $isReadonly ? 'Lihat Hasil - ' . $lkhno : 'Input Hasil - ' . $lkhno;
-        if ($isCompleted) {
-            $pageTitle = 'Hasil Selesai - ' . $lkhno;
-        }
-        
-        return Inertia::render($pageComponent, [
-            'title' => $pageTitle,
-            'mode' => $mode,
-            'readonly' => $isReadonly,
-            'completed' => $isCompleted,
-            'lkhData' => [
-                'lkhno' => $lkhData->lkhno,
-                'activitycode' => $lkhData->activitycode,  
-                'activityname' => $lkhData->activityname,
-                'blok' => $plotData[0]['blok'] ?? 'N/A',
-                'plot' => array_column($plotData, 'plot'),
-                'totalluasplan' => $totalLuasPlan,
-                'totalhasil' => (float) ($lkhData->totalhasil ?? 0),
-                'totalsisa' => (float) ($lkhData->totalsisa ?? 0),
-                'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
-                'rkhno' => $lkhData->rkhno,
-                'lkhdate' => $lkhData->lkhdate,
-                'mandor_nama' => $lkhData->mandor_nama,
-                'mobile_status' => $lkhData->mobile_status,
-                'keterangan' => $lkhData->keterangan,
-                'is_completed' => $isCompleted,
-                'needs_material' => count($materials) > 0
-            ],
-            'assignedWorkers' => $assignedWorkers,
-            'plotData' => $plotData,
-            'materials' => $materials,
-            'routes' => [
-                'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
-                'lkh_assign' => route('mandor.lkh.assign', $lkhno),
-                'lkh_view' => route('mandor.lkh.view', $lkhno),
-                'lkh_edit' => route('mandor.lkh.edit', $lkhno),
-                'mandor_index' => route('mandor.index'),
-            ],
-            'csrf_token' => csrf_token(),
-            'app' => [
-                'name' => config('app.name', 'Laravel'),
-                'url' => config('app.url', 'http://localhost'),
-                // ✅ FIXED: Logo path sesuai dengan struktur file actual
-                'logo_url' => asset('img/logo-tebu.png'), // Changed from 'images/logo.png' to 'img/logo-tebu.png'
-            ],
-        ]);
+ * Shared LKH form renderer - UPDATED: With vehicleBBMData parameter
+ */
+private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
+{
+    $user = auth()->user();
+    
+    // Get LKH data with proper activity join
+    $lkhData = DB::table('lkhhdr as lkh')
+        ->join('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
+        ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
+        ->where('lkh.companycode', $user->companycode)
+        ->where('lkh.mandorid', $user->userid)
+        ->where('lkh.lkhno', $lkhno)
+        ->select([
+            'lkh.lkhno', 'lkh.activitycode', 'act.activityname', 'act.description as activity_description',
+            'lkh.jenistenagakerja', 'lkh.rkhno', 'lkh.lkhdate', 'lkh.mobile_status', 
+            'lkh.keterangan', 'lkh.totalhasil', 'lkh.totalsisa', 'lkh.totalupahall',
+            'u.name as mandor_nama'
+        ])
+        ->first();
+    
+    if (!$lkhData) {
+        throw new \Exception('LKH tidak ditemukan');
     }
+    
+    // Get assigned workers - Remove totalupah to hide individual wages
+    $assignedWorkers = DB::table('lkhdetailworker as ldw')
+        ->join('tenagakerja as tk', 'ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
+        ->where('ldw.lkhno', $lkhno)
+        ->where('ldw.companycode', $user->companycode)
+        ->select([
+            'tk.tenagakerjaid', 'tk.nama', 'tk.nik', 'ldw.jammasuk', 'ldw.jamselesai',
+            'ldw.totaljamkerja', 'ldw.overtimehours'
+        ])
+        ->orderBy('ldw.tenagakerjaurutan')
+        ->get()
+        ->map(function($worker) {
+            return [
+                'tenagakerjaid' => $worker->tenagakerjaid,
+                'nama' => $worker->nama,
+                'nik' => $worker->nik,
+                'jammasuk' => $worker->jammasuk,
+                'jamselesai' => $worker->jamselesai,
+                'totaljamkerja' => (float) $worker->totaljamkerja,
+                'overtimehours' => (float) $worker->overtimehours,
+                'assigned' => true
+            ];
+        })
+        ->toArray();
+    
+    if (empty($assignedWorkers)) {
+        return redirect()->route('mandor.lkh.assign', $lkhno)->with('error', 'Silakan assign pekerja terlebih dahulu');
+    }
+    
+    // Get plot data
+    $plotData = DB::table('lkhdetailplot')
+        ->where('companycode', $user->companycode)
+        ->where('lkhno', $lkhno)
+        ->select(['blok', 'plot', 'luasrkh', 'luashasil', 'luassisa'])
+        ->get()
+        ->map(function($plot) {
+            return [
+                'blok' => $plot->blok,
+                'plot' => $plot->plot,
+                'luasarea' => (float) $plot->luasrkh,
+                'luashasil' => (float) ($plot->luashasil ?? 0),
+                'luassisa' => (float) ($plot->luassisa ?? 0)
+            ];
+        })
+        ->toArray();
+    
+    if (empty($plotData)) {
+        return redirect()->route('mandor.lkh.assign', $lkhno)->with('error', 'Data plot tidak ditemukan untuk LKH ini');
+    }
+    
+    // Get materials info for this LKH
+    $materials = $this->getMaterialsForLKH($lkhno, $user->companycode);
+    
+    // Get vehicle info 
+    $vehicleInfo = $this->getVehicleInfoForLKH($lkhno);
+    
+    // Calculate total luas plan
+    $totalLuasPlan = array_sum(array_column($plotData, 'luasarea'));
+    
+    // Determine page component and readonly flag based on mode
+    $pageComponent = in_array($mode, ['input', 'edit']) ? 'lkh-input' : 'lkh-view';
+    $isReadonly = ($mode === 'view-readonly') || ($lkhData->mobile_status === 'COMPLETED');
+    $isCompleted = $lkhData->mobile_status === 'COMPLETED';
+    
+    $pageTitle = $isReadonly ? 'Lihat Hasil - ' . $lkhno : 'Input Hasil - ' . $lkhno;
+    if ($isCompleted) {
+        $pageTitle = 'Hasil Selesai - ' . $lkhno;
+    }
+    
+    // UPDATED: Build props array with conditional vehicleBBMData
+    $props = [
+        'title' => $pageTitle,
+        'mode' => $mode,
+        'readonly' => $isReadonly,
+        'completed' => $isCompleted,
+        'lkhData' => [
+            'lkhno' => $lkhData->lkhno,
+            'activitycode' => $lkhData->activitycode,  
+            'activityname' => $lkhData->activityname,
+            'blok' => $plotData[0]['blok'] ?? 'N/A',
+            'plot' => array_column($plotData, 'plot'),
+            'totalluasplan' => $totalLuasPlan,
+            'totalhasil' => (float) ($lkhData->totalhasil ?? 0),
+            'totalsisa' => (float) ($lkhData->totalsisa ?? 0),
+            'jenistenagakerja' => $this->getJenisTenagaKerjaName($lkhData->jenistenagakerja),
+            'rkhno' => $lkhData->rkhno,
+            'lkhdate' => $lkhData->lkhdate,
+            'mandor_nama' => $lkhData->mandor_nama,
+            'mobile_status' => $lkhData->mobile_status,
+            'keterangan' => $lkhData->keterangan,
+            'is_completed' => $isCompleted,
+            'needs_material' => count($materials) > 0
+        ],
+        'assignedWorkers' => $assignedWorkers,
+        'plotData' => $plotData,
+        'materials' => $materials,
+        'vehicleInfo' => $vehicleInfo,
+        'routes' => [
+            'lkh_save_results' => route('mandor.lkh.save-results', $lkhno),
+            'lkh_assign' => route('mandor.lkh.assign', $lkhno),
+            'lkh_view' => route('mandor.lkh.view', $lkhno),
+            'lkh_edit' => route('mandor.lkh.edit', $lkhno),
+            'mandor_index' => route('mandor.index'),
+        ],
+        'csrf_token' => csrf_token(),
+        'app' => [
+            'name' => config('app.name', 'Laravel'),
+            'url' => config('app.url', 'http://localhost'),
+            'logo_url' => asset('img/logo-tebu.png'),
+        ],
+    ];
+    
+    // Add vehicleBBMData only for view pages
+    if (in_array($mode, ['view', 'view-readonly']) && !empty($vehicleBBMData)) {
+        $props['vehicleBBMData'] = $vehicleBBMData;
+    }
+    
+    return Inertia::render($pageComponent, $props);
+}
 
     /**
      * Get materials for LKH with calculated breakdown per plot
@@ -2158,38 +2341,90 @@ public function getRejectedAttendance(Request $request)
     }
 
     /**
-     * Get vehicle info for specific LKH
+     * Get vehicle info for specific LKH - FIXED: Support multiple vehicles
      */
     private function getVehicleInfoForLKH($lkhno)
     {
-        $vehicleInfo = DB::table('lkhhdr as lkh')
-            ->join('rkhlst as rls', function($join) {
-                $join->on('lkh.rkhno', '=', 'rls.rkhno')
-                     ->on('lkh.activitycode', '=', 'rls.activitycode');
-            })
-            ->leftJoin('kendaraan as k', function($join) {
-                $join->on('rls.operatorid', '=', 'k.idtenagakerja')
-                     ->where('k.isactive', '=', 1);
-            })
-            ->leftJoin('tenagakerja as tk', function($join) {
-                $join->on('k.idtenagakerja', '=', 'tk.tenagakerjaid')
-                     ->where('tk.isactive', '=', 1);
-            })
-            ->where('lkh.lkhno', $lkhno)
-            ->where('rls.usingvehicle', 1)
-            ->select([
-                'k.nokendaraan', 'k.jenis', 'k.hourmeter',
-                'tk.nama as operator_nama', 'tk.nik as operator_nik'
-            ])
-            ->first();
-        
-        return $vehicleInfo ? [
-            'nokendaraan' => $vehicleInfo->nokendaraan,
-            'jenis' => $vehicleInfo->jenis,
-            'hourmeter' => (float) $vehicleInfo->hourmeter,
-            'operator_nama' => $vehicleInfo->operator_nama,
-            'operator_nik' => $vehicleInfo->operator_nik
-        ] : null;
+        try {
+            // Get all vehicles associated with this LKH through RKHLST
+            $vehicleInfo = DB::table('lkhhdr as lkh')
+                ->join('rkhlst as rls', function($join) {
+                    $join->on('lkh.rkhno', '=', 'rls.rkhno')
+                        ->on('lkh.activitycode', '=', 'rls.activitycode');
+                })
+                ->leftJoin('kendaraan as k', function($join) {
+                    $join->on('rls.operatorid', '=', 'k.idtenagakerja')
+                        ->where('k.isactive', '=', 1);
+                })
+                ->leftJoin('tenagakerja as tk', function($join) {
+                    $join->on('k.idtenagakerja', '=', 'tk.tenagakerjaid')
+                        ->where('tk.isactive', '=', 1);
+                })
+                ->where('lkh.lkhno', $lkhno)
+                ->where('rls.usingvehicle', 1)
+                ->whereNotNull('k.nokendaraan') // Ensure vehicle exists
+                ->select([
+                    'k.nokendaraan', 'k.jenis', 'k.hourmeter',
+                    'tk.nama as operator_nama', 'tk.nik as operator_nik',
+                    'rls.plot', 'rls.luasarea' // Include plot info for context
+                ])
+                ->orderBy('k.nokendaraan')
+                ->get();
+
+            if ($vehicleInfo->isEmpty()) {
+                return null;
+            }
+
+            // If only one vehicle, return single object for backward compatibility
+            if ($vehicleInfo->count() === 1) {
+                $vehicle = $vehicleInfo->first();
+                return [
+                    'nokendaraan' => $vehicle->nokendaraan,
+                    'jenis' => $vehicle->jenis,
+                    'hourmeter' => (float) $vehicle->hourmeter,
+                    'operator_nama' => $vehicle->operator_nama,
+                    'operator_nik' => $vehicle->operator_nik,
+                    'is_multiple' => false,
+                    'plots' => [$vehicle->plot]
+                ];
+            }
+
+            // Multiple vehicles - group by vehicle and include plot details
+            $groupedVehicles = [];
+            foreach ($vehicleInfo as $vehicle) {
+                $key = $vehicle->nokendaraan;
+                
+                if (!isset($groupedVehicles[$key])) {
+                    $groupedVehicles[$key] = [
+                        'nokendaraan' => $vehicle->nokendaraan,
+                        'jenis' => $vehicle->jenis,
+                        'hourmeter' => (float) $vehicle->hourmeter,
+                        'operator_nama' => $vehicle->operator_nama,
+                        'operator_nik' => $vehicle->operator_nik,
+                        'plots' => [],
+                        'total_luasarea' => 0
+                    ];
+                }
+                
+                $groupedVehicles[$key]['plots'][] = $vehicle->plot;
+                $groupedVehicles[$key]['total_luasarea'] += (float) $vehicle->luasarea;
+            }
+
+            return [
+                'is_multiple' => true,
+                'vehicle_count' => count($groupedVehicles),
+                'vehicles' => array_values($groupedVehicles)
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error in getVehicleInfoForLKH', [
+                'lkhno' => $lkhno,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return null;
+        }
     }
 
     /**

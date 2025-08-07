@@ -1,10 +1,10 @@
-// resources/js/pages/lkh-edit.tsx - EDIT MODE FOR DRAFT LKH
+// resources/js/pages/lkh-edit.tsx - UPDATED: With Vehicle Time Input
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   ArrowLeft, Users, Save, Loader, MapPin, 
-  CheckCircle, Edit3, User, Package, AlertCircle, Clock, ChevronDown, ChevronUp, Plus, Minus
+  CheckCircle, Edit3, User, Package, AlertCircle, Clock, ChevronDown, ChevronUp, Plus, Minus, Truck
 } from 'lucide-react';
 
 interface LKHData {
@@ -67,6 +67,44 @@ interface MaterialInfo {
   unit: string;
 }
 
+// NEW: Vehicle input interface
+interface VehicleInput {
+  nokendaraan: string;
+  jenis: string;
+  operator_nama: string;
+  plots: string[];
+  jammulai: string;
+  jamselesai: string;
+  total_luasarea: number;
+}
+
+// UPDATED: Support both single and multiple vehicles
+interface SingleVehicle {
+  nokendaraan: string;
+  jenis: string;
+  hourmeter: number;
+  operator_nama: string;
+  operator_nik?: string;
+  is_multiple: false;
+  plots: string[];
+}
+
+interface MultipleVehicles {
+  is_multiple: true;
+  vehicle_count: number;
+  vehicles: Array<{
+    nokendaraan: string;
+    jenis: string;
+    hourmeter: number;
+    operator_nama: string;
+    operator_nik?: string;
+    plots: string[];
+    total_luasarea: number;
+  }>;
+}
+
+type VehicleInfo = SingleVehicle | MultipleVehicles | null;
+
 interface SharedProps {
   app: {
     name: string;
@@ -83,6 +121,7 @@ interface LKHEditProps extends SharedProps {
   assignedWorkers: AssignedWorker[];
   plotData: Array<{blok: string, plot: string, luasarea: number, luashasil: number, luassisa: number}>;
   materials?: MaterialInfo[];
+  vehicleInfo?: VehicleInfo; // NEW: Vehicle info prop
   routes: {
     lkh_save_results: string;
     lkh_assign: string;
@@ -104,6 +143,7 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
   assignedWorkers,
   plotData = [],
   materials = [],
+  vehicleInfo, // NEW
   routes,
   csrf_token,
   flash
@@ -111,9 +151,40 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
   const [plotInputs, setPlotInputs] = useState<PlotInput[]>([]);
   const [workerInputs, setWorkerInputs] = useState<WorkerInput[]>([]);
   const [materialInputs, setMaterialInputs] = useState<MaterialInput[]>([]);
+  const [vehicleInputs, setVehicleInputs] = useState<VehicleInput[]>([]); // NEW
   const [isLoading, setIsLoading] = useState(false);
   const [keterangan, setKeterangan] = useState('');
   const [expandedWorkers, setExpandedWorkers] = useState<Set<string>>(new Set());
+  const [expandedVehicles, setExpandedVehicles] = useState<Set<string>>(new Set()); // NEW
+
+  // Helper function untuk strip detik dari format time database
+  const stripSeconds = (timeString: string): string => {
+    if (!timeString) return '07:00';
+    // Handle both "HH:MM:SS" and "HH:MM" formats
+    if (timeString.includes(':')) {
+      return timeString.substring(0, 5); // "07:00:00" → "07:00" or "07:00" → "07:00"
+    }
+    return timeString;
+  };
+
+  // Helper function untuk hitung jam kerja dari format HH:MM
+  const calculateWorkHours = (jamMasuk: string, jamSelesai: string): number => {
+    try {
+      const start = new Date(`2025-01-01T${jamMasuk}:00`);
+      const end = new Date(`2025-01-01T${jamSelesai}:00`);
+      
+      // Handle overnight work
+      if (end.getTime() <= start.getTime()) {
+        end.setDate(end.getDate() + 1);
+      }
+      
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return Math.max(0, diffHours);
+    } catch (error) {
+      console.error('Error calculating work hours:', error);
+      return 8; // Default fallback
+    }
+  };
 
   // Handle flash messages
   useEffect(() => {
@@ -140,16 +211,19 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
   // Initialize worker inputs (pre-populate with existing data)
   useEffect(() => {
     const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => {
-      // Determine if it's full time based on existing data
-      const isFullTime = worker.jammasuk === '07:00' && worker.jamselesai === '15:00';
+      const jamMasuk = stripSeconds(worker.jammasuk || '07:00:00');
+      const jamSelesai = stripSeconds(worker.jamselesai || '15:00:00');
+      
+      const totalJamKerja = calculateWorkHours(jamMasuk, jamSelesai);
+      const isFullTime = jamMasuk === '07:00' && jamSelesai === '15:00';
       
       return {
         tenagakerjaid: worker.tenagakerjaid,
         nama: worker.nama,
         nik: worker.nik,
-        jammasuk: worker.jammasuk || '07:00',
-        jamselesai: worker.jamselesai || '15:00',
-        totaljamkerja: worker.totaljamkerja || 8,
+        jammasuk: jamMasuk,
+        jamselesai: jamSelesai,
+        totaljamkerja: totalJamKerja,
         overtimehours: worker.overtimehours || 0,
         isFullTime: isFullTime
       };
@@ -169,6 +243,42 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
     }));
     setMaterialInputs(initialMaterials);
   }, [materials]);
+
+  // NEW: Initialize vehicle inputs - Get from existing kendaraanbbm data or default
+  useEffect(() => {
+    if (!vehicleInfo) {
+      setVehicleInputs([]);
+      return;
+    }
+
+    let initialVehicles: VehicleInput[] = [];
+
+    if (vehicleInfo.is_multiple) {
+      // Multiple vehicles
+      initialVehicles = vehicleInfo.vehicles.map(vehicle => ({
+        nokendaraan: vehicle.nokendaraan,
+        jenis: vehicle.jenis,
+        operator_nama: vehicle.operator_nama,
+        plots: vehicle.plots,
+        jammulai: '07:00', // TODO: Get from existing kendaraanbbm data
+        jamselesai: '15:00', // TODO: Get from existing kendaraanbbm data
+        total_luasarea: vehicle.total_luasarea
+      }));
+    } else {
+      // Single vehicle
+      initialVehicles = [{
+        nokendaraan: vehicleInfo.nokendaraan,
+        jenis: vehicleInfo.jenis,
+        operator_nama: vehicleInfo.operator_nama,
+        plots: vehicleInfo.plots,
+        jammulai: '07:00', // TODO: Get from existing kendaraanbbm data
+        jamselesai: '15:00', // TODO: Get from existing kendaraanbbm data
+        total_luasarea: 0
+      }];
+    }
+
+    setVehicleInputs(initialVehicles);
+  }, [vehicleInfo]);
 
   const updatePlotInput = (index: number, field: 'luashasil', value: number) => {
     setPlotInputs(prev => {
@@ -200,12 +310,8 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
         }
       } else if (field === 'jammasuk' || field === 'jamselesai') {
         worker[field] = value;
-        // Recalculate total jam kerja
         if (worker.jammasuk && worker.jamselesai) {
-          const start = new Date(`2025-01-01T${worker.jammasuk}:00`);
-          const end = new Date(`2025-01-01T${worker.jamselesai}:00`);
-          const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          worker.totaljamkerja = Math.max(0, diffHours);
+          worker.totaljamkerja = calculateWorkHours(worker.jammasuk, worker.jamselesai);
         }
       } else {
         (worker as any)[field] = value;
@@ -234,12 +340,8 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
       const newTime = `${newHours.toString().padStart(2, '0')}:00`;
       worker[field] = newTime;
       
-      // Recalculate total jam kerja
       if (worker.jammasuk && worker.jamselesai) {
-        const start = new Date(`2025-01-01T${worker.jammasuk}:00`);
-        const end = new Date(`2025-01-01T${worker.jamselesai}:00`);
-        const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        worker.totaljamkerja = Math.max(0, diffHours);
+        worker.totaljamkerja = calculateWorkHours(worker.jammasuk, worker.jamselesai);
       }
       
       updated[index] = worker;
@@ -261,6 +363,40 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
       updated[index] = worker;
       return updated;
     });
+  };
+
+  // NEW: Vehicle time adjustment functions
+  const adjustVehicleTime = (index: number, field: 'jammulai' | 'jamselesai', direction: 'up' | 'down') => {
+    setVehicleInputs(prev => {
+      const updated = [...prev];
+      const vehicle = { ...updated[index] };
+      
+      const currentTime = vehicle[field];
+      const [hours] = currentTime.split(':').map(Number);
+      
+      let newHours = hours;
+      if (direction === 'up') {
+        newHours = Math.min(23, hours + 1);
+      } else {
+        newHours = Math.max(0, hours - 1);
+      }
+      
+      const newTime = `${newHours.toString().padStart(2, '0')}:00`;
+      vehicle[field] = newTime;
+      
+      updated[index] = vehicle;
+      return updated;
+    });
+  };
+
+  const toggleVehicleExpanded = (nokendaraan: string) => {
+    const newExpanded = new Set(expandedVehicles);
+    if (newExpanded.has(nokendaraan)) {
+      newExpanded.delete(nokendaraan);
+    } else {
+      newExpanded.add(nokendaraan);
+    }
+    setExpandedVehicles(newExpanded);
   };
 
   const updateMaterialInput = (index: number, field: 'qtysisa', value: number) => {
@@ -311,11 +447,21 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
     setIsLoading(true);
     
     try {
+      // NEW: Prepare vehicle data for submission
+      const vehicleSubmissionData = vehicleInputs.flatMap(vehicle => 
+        vehicle.plots.map(plot => ({
+          nokendaraan: vehicle.nokendaraan,
+          plot: plot,
+          jammulai: vehicle.jammulai + ':00',
+          jamselesai: vehicle.jamselesai + ':00'
+        }))
+      );
+
       router.post(routes.lkh_save_results, {
         worker_inputs: workerInputs.map(worker => ({
           tenagakerjaid: worker.tenagakerjaid,
-          jammasuk: worker.jammasuk,
-          jamselesai: worker.jamselesai,
+          jammasuk: worker.jammasuk + ':00',
+          jamselesai: worker.jamselesai + ':00',
           overtimehours: worker.overtimehours
         })),
         plot_inputs: plotInputs.map(plot => ({
@@ -328,6 +474,7 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
           qtysisa: material.qtysisa,
           keterangan: null
         })),
+        vehicle_inputs: vehicleSubmissionData, // NEW: Send vehicle time data
         keterangan: keterangan,
         _token: csrf_token
       }, {
@@ -375,7 +522,20 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
           </button>
           
           <div className="flex items-center gap-4">
-            <img src={app.logo_url} alt={`Logo ${app.name}`} className="w-10 h-10 object-contain" />
+            {app?.logo_url ? (
+              <img 
+                src={app.logo_url} 
+                alt={`Logo ${app?.name || 'App'}`} 
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'A'}</span>
+              </div>
+            )}
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
                 Edit Hasil Pekerjaan
@@ -408,12 +568,131 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
           </div>
         </div>
 
+        {/* NEW: Vehicle Time Input Section */}
+        {vehicleInputs.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Truck className="w-5 h-5 text-orange-600" />
+                Edit Waktu Kerja Kendaraan ({vehicleInputs.length} unit)
+              </h3>
+              <p className="text-sm text-neutral-600 mt-1">
+                Edit jam mulai dan selesai untuk setiap kendaraan.
+              </p>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-3">
+                {vehicleInputs.map((vehicle, index) => (
+                  <div key={vehicle.nokendaraan} className="border border-neutral-200 rounded-xl overflow-hidden">
+                    {/* Vehicle Header */}
+                    <div 
+                      className="p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors"
+                      onClick={() => toggleVehicleExpanded(vehicle.nokendaraan)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Truck className="w-5 h-5 text-orange-600" />
+                          <div>
+                            <h4 className="font-semibold text-orange-900">{vehicle.nokendaraan}</h4>
+                            <p className="text-sm text-orange-700">{vehicle.jenis} - {vehicle.operator_nama}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <p className="text-sm text-orange-600 font-medium">
+                              {vehicle.jammulai} - {vehicle.jamselesai}
+                            </p>
+                            <p className="text-xs text-orange-500">
+                              Plot: {vehicle.plots.join(', ')}
+                            </p>
+                          </div>
+                          
+                          {expandedVehicles.has(vehicle.nokendaraan) ? (
+                            <ChevronUp className="w-5 h-5 text-neutral-500" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-neutral-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vehicle Time Details */}
+                    {expandedVehicles.has(vehicle.nokendaraan) && (
+                      <div className="p-4 border-t bg-white">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-neutral-700 mb-1">
+                              Jam Mulai
+                            </label>
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => adjustVehicleTime(index, 'jammulai', 'down')}
+                                className="p-1 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <input
+                                type="text"
+                                value={vehicle.jammulai}
+                                readOnly
+                                className="w-full px-2 py-2 text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adjustVehicleTime(index, 'jammulai', 'up')}
+                                className="p-1 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-medium text-neutral-700 mb-1">
+                              Jam Selesai
+                            </label>
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => adjustVehicleTime(index, 'jamselesai', 'down')}
+                                className="p-1 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <input
+                                type="text"
+                                value={vehicle.jamselesai}
+                                readOnly
+                                className="w-full px-2 py-2 text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adjustVehicleTime(index, 'jamselesai', 'up')}
+                                className="p-1 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Worker Time Input - Same as input page but pre-populated */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Clock className="w-5 h-5 text-purple-600" />
-              Waktu Kerja Pekerja ({workerInputs.length} orang)
+              Edit Waktu Kerja Pekerja ({workerInputs.length} orang)
             </h3>
             <p className="text-sm text-neutral-600 mt-1">
               Edit waktu kerja untuk setiap pekerja. Klik pekerja untuk mengatur waktu.
