@@ -42,8 +42,7 @@ class ApproverPageController extends Controller
                 'logout' => route('logout'),
                 'home' => route('home'),
                 'approver_index' => route('approver.index'),
-                
-                // Approval routes - REMOVED attendance_detail route that was causing error
+                'dashboard_stats' => route('approver.dashboard.stats'),
                 'pending_attendance' => route('approver.attendance.pending'),
                 'approve_attendance' => route('approver.attendance.approve'),
                 'reject_attendance' => route('approver.attendance.reject'),
@@ -52,6 +51,126 @@ class ApproverPageController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get dashboard statistics for approver
+     * Returns real-time data for dashboard stats
+     */
+    public function getDashboardStats(Request $request)
+    {
+        try {
+            \Log::info('getDashboardStats called'); // Debug log
+            
+            if (!auth()->check()) {
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
+            
+            $user = auth()->user();
+            $companyCode = $user->companycode;
+            $today = Carbon::today()->format('Y-m-d');
+            
+            \Log::info('Dashboard Stats Debug', [
+                'user_id' => $user->userid,
+                'company_code' => $companyCode,
+                'today' => $today
+            ]);
+            
+            // FIXED: Use raw queries to avoid model dependencies
+            // Base query for attendance today
+            $baseQuery = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->where('ah.companycode', $companyCode)
+                ->whereDate('ah.uploaddate', $today);
+            
+            // 1. Pending Count - STATUS = 'PENDING'
+            $pendingCount = (clone $baseQuery)
+                ->where('al.approval_status', 'PENDING')
+                ->count();
+            
+            // 2. Approved Today - STATUS = 'APPROVED' and approved today
+            $approvedToday = (clone $baseQuery)
+                ->where('al.approval_status', 'APPROVED')
+                ->whereDate('al.approval_date', $today)
+                ->count();
+            
+            // 3. Rejected Today - STATUS = 'REJECTED' and rejected today  
+            $rejectedToday = (clone $baseQuery)
+                ->where('al.approval_status', 'REJECTED')
+                ->whereDate('al.rejection_date', $today)
+                ->count();
+            
+            // 4. Total Workers Today - All attendance records for today (any status)
+            $totalWorkersToday = (clone $baseQuery)->count();
+            
+            // 5. Mandor Count - Unique mandors who have attendance today
+            $mandorCount = DB::table('absenhdr as ah')
+                ->where('ah.companycode', $companyCode)
+                ->whereDate('ah.uploaddate', $today)
+                ->distinct()
+                ->count('ah.mandorid');
+            
+            // Additional stats for better insight
+            $additionalStats = [
+                'approval_rate' => $totalWorkersToday > 0 ? round(($approvedToday / $totalWorkersToday) * 100, 1) : 0,
+                'rejection_rate' => $totalWorkersToday > 0 ? round(($rejectedToday / $totalWorkersToday) * 100, 1) : 0,
+                'pending_rate' => $totalWorkersToday > 0 ? round(($pendingCount / $totalWorkersToday) * 100, 1) : 0,
+            ];
+            
+            // Get mandor list with their stats for additional context - SIMPLIFIED
+            $mandorStats = DB::table('absenhdr as ah')
+                ->join('user as u', 'ah.mandorid', '=', 'u.userid')
+                ->leftJoin('absenlst as al', 'ah.absenno', '=', 'al.absenno')
+                ->where('ah.companycode', $companyCode)
+                ->whereDate('ah.uploaddate', $today)
+                ->select([
+                    'ah.mandorid',
+                    'u.name as mandor_name',
+                    'ah.totalpekerja',
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'PENDING' THEN 1 END) as pending_count"),
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'APPROVED' THEN 1 END) as approved_count"),
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'REJECTED' THEN 1 END) as rejected_count")
+                ])
+                ->groupBy(['ah.mandorid', 'u.name', 'ah.totalpekerja'])
+                ->get();
+            
+            \Log::info('Dashboard Stats Results', [
+                'pending_count' => $pendingCount,
+                'approved_today' => $approvedToday,
+                'rejected_today' => $rejectedToday,
+                'total_workers_today' => $totalWorkersToday,
+                'mandor_count' => $mandorCount
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'date' => $today,
+                'date_formatted' => Carbon::parse($today)->format('d F Y'),
+                'stats' => [
+                    'pending_count' => (int) $pendingCount,
+                    'approved_today' => (int) $approvedToday,
+                    'rejected_today' => (int) $rejectedToday,
+                    'total_workers_today' => (int) $totalWorkersToday,
+                    'mandor_count' => (int) $mandorCount
+                ],
+                'additional_stats' => $additionalStats,
+                'mandor_breakdown' => $mandorStats,
+                'generated_at' => now()->format('Y-m-d H:i:s')
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error in getDashboardStats', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->user()->userid ?? 'unknown'
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Internal server error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     // =============================================================================
     // ATTENDANCE APPROVAL MANAGEMENT

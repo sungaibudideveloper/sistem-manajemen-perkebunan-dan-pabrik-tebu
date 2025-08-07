@@ -806,6 +806,7 @@ class RencanaKerjaHarianController extends Controller
                 'h.totalsisa',
                 'h.totalupahall',
                 'h.createdat',
+                'h.status',
                 'h.issubmit',
                 'h.submitby',
                 'h.submitat',

@@ -242,12 +242,16 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     });
 
     // =============================================================================
-    // APPROVER ROUTES - UPDATED for individual approval flow
+    // APPROVER ROUTES - UPDATED for individual approval flow + DASHBOARD STATS
     // =============================================================================
     
     // Main approver dashboard
     Route::get('/approver', [ApproverPageController::class, 'index'])
         ->name('approver.index');
+    
+    // ✅ NEW: Dashboard Stats Route - ADDED
+    Route::get('/approver/dashboard/stats', [ApproverPageController::class, 'getDashboardStats'])
+        ->name('approver.dashboard.stats');
     
     // Approval API routes - UPDATED for individual approval
     Route::prefix('api/approver')->group(function () {
@@ -292,3 +296,12 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 // 2. Approver dapat filter by mandor → approve/reject individual records
 // 3. Mandor dapat edit foto untuk record yang REJECTED → reset ke PENDING
 // 4. LKH assignment hanya tampilkan pekerja dengan approval_status = 'APPROVED'
+
+// =============================================================================
+// DASHBOARD STATS FUNCTIONALITY:
+// =============================================================================
+// ✅ Route: /approver/dashboard/stats
+// ✅ Returns: Real-time stats dari database
+// ✅ Data: pending_count, approved_today, rejected_today, total_workers_today, mandor_count
+// ✅ Additional: approval_rate, rejection_rate, mandor_breakdown
+// ✅ Auto-refresh: Setiap 30 detik di frontend

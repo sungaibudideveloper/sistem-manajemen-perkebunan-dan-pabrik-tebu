@@ -222,7 +222,6 @@ public function getTodayAttendance(Request $request)
                         'companycode' => $user->companycode,
                         'mandorid' => $user->userid,
                         'totalpekerja' => 1,
-                        'status' => 'ACTIVE', // Changed from PENDING - no longer needed for approval
                         'uploaddate' => now(),
                         'updateBy' => $user->name
                     ]);

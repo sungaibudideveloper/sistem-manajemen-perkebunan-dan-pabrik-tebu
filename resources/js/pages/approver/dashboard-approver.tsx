@@ -1,8 +1,8 @@
-// resources/js/pages/approver/dashboard-approver.tsx
+// resources/js/pages/approver/dashboard-approver.tsx - Original UI with Real API
 
 import React, { useState, useEffect } from 'react';
 import {
-  FiClock, FiCheck, FiX, FiUsers, FiRefreshCw, FiTrendingUp, FiArrowRight
+  FiClock, FiCheck, FiX, FiUsers, FiRefreshCw, FiTrendingUp, FiArrowRight, FiAlertCircle
 } from 'react-icons/fi';
 
 interface DashboardStats {
@@ -13,9 +13,18 @@ interface DashboardStats {
   mandor_count: number;
 }
 
+interface ApiResponse {
+  success: boolean;
+  date: string;
+  date_formatted: string;
+  stats: DashboardStats;
+  generated_at: string;
+}
+
 interface DashboardApproverProps {
   onSectionChange: (section: string) => void;
   routes: {
+    dashboard_stats: string;
     [key: string]: string;
   };
   csrf_token: string;
@@ -34,6 +43,8 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
     mandor_count: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
@@ -46,21 +57,40 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
 
   const loadDashboardData = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      // Mock data untuk sekarang - nanti bisa diganti dengan API calls
-      setTimeout(() => {
-        setStats({
-          pending_count: 3,
-          approved_today: 8,
-          rejected_today: 1,
-          total_workers_today: 45,
-          mandor_count: 4
-        });
-        setIsLoading(false);
-      }, 800);
+      const response = await fetch(routes.dashboard_stats, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrf_token,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: ApiResponse = await response.json();
+      
+      if (data.success) {
+        setStats(data.stats);
+        setLastUpdated(new Date().toLocaleTimeString('id-ID', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }));
+      } else {
+        throw new Error('API returned unsuccessful response');
+      }
       
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      
+      // Keep old data on error, don't reset to zeros
+    } finally {
       setIsLoading(false);
     }
   };
@@ -83,17 +113,31 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
             <div>
               <h1 className="text-3xl font-bold text-black mb-2">Dashboard</h1>
               <p className="text-neutral-600">{formatDate(currentDate)}</p>
+              {lastUpdated && (
+                <p className="text-sm text-neutral-500 mt-1">
+                  Terakhir diperbarui: {lastUpdated}
+                </p>
+              )}
             </div>
-            <button
-              onClick={loadDashboardData}
-              className="flex items-center gap-2 px-4 py-2 text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
-            >
-              <FiRefreshCw className="w-4 h-4" />
-              <span className="text-sm">Refresh</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {error && (
+                <div className="flex items-center gap-2 px-3 py-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                  <FiAlertCircle className="w-4 h-4" />
+                  <span className="text-sm">Error loading data</span>
+                </div>
+              )}
+              <button
+                onClick={loadDashboardData}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FiRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="text-sm">Refresh</span>
+              </button>
+            </div>
           </div>
 
-          {/* Today's Summary - Minimal List */}
+          {/* Today's Summary - Original Style */}
           <div className="bg-neutral-50 rounded-lg border border-neutral-200 p-6 mb-8">
             <h3 className="text-lg font-semibold text-black mb-4">Ringkasan Hari Ini</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -180,7 +224,7 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
           </div>
         </div>
 
-        {/* Feature Cards - EXACT SAME as Mandor */}
+        {/* Feature Cards - EXACT SAME as Original */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-16 pb-24">
           {/* Pending Approval Card */}
           <div
