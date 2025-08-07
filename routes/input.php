@@ -1,15 +1,17 @@
 <?php
+
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\GudangController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
+use App\Http\Controllers\Input\KendaraanController;
+use App\Http\Controllers\Input\GudangBbmController;
 
-
-
-
-
+// =====================================
+// AGRONOMI ROUTES
+// =====================================
 Route::group(['middleware' => ['auth', 'permission:Agronomi']], function () {
-
     Route::get('input/agronomi', [AgronomiController::class, 'index'])->name('input.agronomi.index');
     Route::post('input/agronomi', [AgronomiController::class, 'handle'])->name('input.agronomi.handle');
     Route::get('input/agronomi/show/{nosample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'show'])
@@ -17,12 +19,14 @@ Route::group(['middleware' => ['auth', 'permission:Agronomi']], function () {
     Route::post('input/agronomi/get-field', [AgronomiController::class, 'getFieldByMapping'])->name('input.agronomi.getFieldByMapping');
     Route::get('input/agronomi/check-data', [AgronomiController::class, 'checkData'])->name('input.agronomi.check-data');
 });
+
 Route::get('input/agronomi/excel', [AgronomiController::class, 'excel'])
     ->name('input.agronomi.exportExcel')->middleware('permission:Excel Agronomi');
 Route::get('input/agronomi/create', [AgronomiController::class, 'create'])
     ->name('input.agronomi.create')->middleware('permission:Create Agronomi');
 Route::delete('input/agronomi/{nosample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'destroy'])
     ->name('input.agronomi.destroy')->middleware('permission:Hapus Agronomi');
+
 Route::group(['middleware' => ['auth', 'permission:Edit Agronomi']], function () {
     Route::put('input/agronomi/{nosample}/{companycode}/{tanggaltanam}', [AgronomiController::class, 'update'])
         ->name('input.agronomi.update');
@@ -30,8 +34,10 @@ Route::group(['middleware' => ['auth', 'permission:Edit Agronomi']], function ()
         ->name('input.agronomi.edit');
 });
 
+// =====================================
+// HPT ROUTES
+// =====================================
 Route::group(['middleware' => ['auth', 'permission:HPT']], function () {
-
     Route::get('input/hpt', [HPTController::class, 'index'])->name('input.hpt.index');
     Route::post('input/hpt', [HPTController::class, 'handle'])->name('input.hpt.handle');
     Route::get('input/hpt/show/{nosample}/{companycode}/{tanggaltanam}', [HPTController::class, 'show'])
@@ -39,25 +45,24 @@ Route::group(['middleware' => ['auth', 'permission:HPT']], function () {
     Route::post('input/hpt/get-field', [HPTController::class, 'getFieldByMapping'])->name('input.hpt.getFieldByMapping');
     Route::get('input/hpt/check-data', [HPTController::class, 'checkData'])->name('input.hpt.check-data');
 });
+
 Route::get('input/hpt/excel', [HPTController::class, 'excel'])
     ->name('input.hpt.exportExcel')->middleware('permission:Excel HPT');
 Route::get('input/hpt/create', [HPTController::class, 'create'])
     ->name('input.hpt.create')->middleware('permission:Create HPT');
 Route::delete('input/hpt/{nosample}/{companycode}/{tanggaltanam}', [HPTController::class, 'destroy'])
     ->name('input.hpt.destroy')->middleware('permission:Hapus HPT');
-Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 
+Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
     Route::put('input/hpt/{nosample}/{companycode}/{tanggaltanam}', [HPTController::class, 'update'])
         ->name('input.hpt.update');
     Route::get('input/hpt/{nosample}/{companycode}/{tanggaltanam}/edit', [HPTController::class, 'edit'])
         ->name('input.hpt.edit');
 });
 
-
-
-
-
-
+// =====================================
+// RENCANA KERJA HARIAN ROUTES
+// =====================================
 Route::middleware('auth')->group(function () {
     // RKH Routes Group
     Route::prefix('input/kerjaharian/rencanakerjaharian')
@@ -95,7 +100,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', [RencanaKerjaHarianController::class, 'getPendingLKHApprovals'])->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', [RencanaKerjaHarianController::class, 'processLKHApproval'])->name('processLKHApproval');
             
-
             // Other utility routes
             Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
             Route::get('/load-absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate');
@@ -111,16 +115,35 @@ Route::middleware('auth')->group(function () {
         });
 });
 
-
-
-
-
-//Gudang
-//Route::group(['middleware' => ['auth', 'permission:Gudang']], function () {
+// =====================================
+// GUDANG ROUTES (EXISTING)
+// =====================================
+Route::middleware('auth')->group(function () {
     Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.index');
-    // Route::get('input/gudang', [GudangController::class, 'index'])->name('input.gudang.index');
-    
     Route::get('input/gudang/detail', [GudangController::class, 'detail'])->name('input.gudang.detail');
     Route::post('input/gudang/submit', [GudangController::class, 'submit'])->name('input.gudang.submit');
     Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur');
-//});
+});
+
+// =====================================
+// KENDARAAN BBM SYSTEM ROUTES (NEW)
+// =====================================
+Route::middleware('auth')->prefix('input')->group(function () {
+    
+    // Admin Kendaraan Routes
+    Route::prefix('kendaraan')->name('input.kendaraan.')->group(function () {
+        Route::get('/', [KendaraanController::class, 'index'])->name('index');
+        Route::post('/store', [KendaraanController::class, 'store'])->name('store');
+        Route::put('/update', [KendaraanController::class, 'update'])->name('update');
+        Route::post('/{lkhno}/mark-printed', [KendaraanController::class, 'markPrinted'])->name('mark-printed');
+        Route::get('/{lkhno}/print', [KendaraanController::class, 'print'])->name('print');
+
+    });
+    
+    // Admin BBM Routes (tetap sama)
+    Route::prefix('gudang')->name('input.gudang.')->group(function () {
+        Route::get('/bbm', [GudangBbmController::class, 'index'])->name('bbm.index');
+        Route::get('/bbm/{lkhno}/print', [GudangBbmController::class, 'print'])->name('bbm.print');
+        Route::post('/bbm/{lkhno}/mark-printed', [GudangBbmController::class, 'markPrinted'])->name('bbm.mark-printed');
+    });
+});
