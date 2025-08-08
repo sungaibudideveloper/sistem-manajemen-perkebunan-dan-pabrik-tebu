@@ -1,10 +1,10 @@
-// resources/js/pages/lkh-view.tsx - FIXED VERSION (Clean UI & No Wages)
+// resources/js/pages/lkh-view.tsx - UPDATED: With Vehicle Summary Display
 
 import React, { useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
   ArrowLeft, Users, Edit3, MapPin, 
-  CheckCircle, User, Package, AlertCircle
+  CheckCircle, User, Package, AlertCircle, Truck, Clock
 } from 'lucide-react';
 
 interface LKHData {
@@ -52,6 +52,48 @@ interface MaterialInfo {
   total_calculated?: number;
 }
 
+// NEW: Vehicle interface for view display
+interface VehicleBBMData {
+  nokendaraan: string;
+  jenis: string;
+  operator_nama: string;
+  plots: string[];
+  jammulai: string;
+  jamselesai: string;
+  work_duration: number;
+  solar?: number;
+  hourmeterstart?: number;
+  hourmeterend?: number;
+  is_completed: boolean;
+}
+
+// UPDATED: Support both single and multiple vehicles for view
+interface SingleVehicle {
+  nokendaraan: string;
+  jenis: string;
+  hourmeter: number;
+  operator_nama: string;
+  operator_nik?: string;
+  is_multiple: false;
+  plots: string[];
+}
+
+interface MultipleVehicles {
+  is_multiple: true;
+  vehicle_count: number;
+  vehicles: Array<{
+    nokendaraan: string;
+    jenis: string;
+    hourmeter: number;
+    operator_nama: string;
+    operator_nik?: string;
+    plots: string[];
+    total_luasarea: number;
+  }>;
+}
+
+type VehicleInfo = SingleVehicle | MultipleVehicles | null;
+
 interface LKHViewProps {
   title: string;
   mode: 'view' | 'edit' | 'view-readonly';
@@ -61,6 +103,8 @@ interface LKHViewProps {
   assignedWorkers: AssignedWorker[];
   plotData: PlotData[];
   materials?: MaterialInfo[];
+  vehicleInfo?: VehicleInfo; // NEW: Vehicle info for display
+  vehicleBBMData?: VehicleBBMData[]; // NEW: Actual BBM data from kendaraanbbm table
   routes: {
     lkh_save_results: string;
     lkh_assign: string;
@@ -89,6 +133,8 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
   assignedWorkers,
   plotData = [],
   materials = [],
+  vehicleInfo,
+  vehicleBBMData = [], // NEW
   routes,
   flash
 }) => {
@@ -125,6 +171,136 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
     router.get(routes.lkh_edit);
   };
 
+  // NEW: Render vehicle summary
+  const renderVehicleSummary = () => {
+    // If we have actual BBM data, show that
+    if (vehicleBBMData.length > 0) {
+      return (
+        <div className="space-y-4">
+          {vehicleBBMData.map((vehicle) => (
+            <div key={vehicle.nokendaraan} className="p-4 border border-neutral-200 rounded-xl bg-orange-50">
+              <div className="flex items-center gap-3 mb-3">
+                <Truck className="w-5 h-5 text-orange-600" />
+                <div>
+                  <h4 className="font-semibold text-orange-900">{vehicle.nokendaraan}</h4>
+                  <p className="text-xs text-neutral-500">{vehicle.jenis} - {vehicle.operator_nama}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <span className="text-neutral-500">Waktu Kerja:</span>
+                  <p className="font-medium">
+                    {vehicle.jammulai.substring(0, 5)} - {vehicle.jamselesai.substring(0, 5)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-neutral-500">Durasi:</span>
+                  <p className="font-medium">{Math.floor(vehicle.work_duration)} jam</p>
+                </div>
+                <div>
+                  <span className="text-neutral-500">Plot:</span>
+                  <p className="font-medium">{vehicle.plots.join(', ')}</p>
+                </div>
+                {vehicle.is_completed && (
+                  <div>
+                    <span className="text-neutral-500">Solar:</span>
+                    <p className="font-medium text-green-600">
+                      {vehicle.solar ? `${vehicle.solar} L` : 'Belum diinput'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Hour Meter Info - Only show if completed */}
+              {vehicle.is_completed && vehicle.hourmeterstart && vehicle.hourmeterend && (
+                <div className="mt-3 pt-3 border-t border-orange-200">
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <span className="text-neutral-500">HM Awal:</span>
+                      <p className="font-medium">{vehicle.hourmeterstart}</p>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500">HM Akhir:</span>
+                      <p className="font-medium">{vehicle.hourmeterend}</p>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500">Selisih HM:</span>
+                      <p className="font-medium">{(vehicle.hourmeterend - vehicle.hourmeterstart).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Fallback: Show vehicle info if available but no BBM data yet
+    if (vehicleInfo) {
+      if (vehicleInfo.is_multiple) {
+        return (
+          <div className="space-y-4">
+            {vehicleInfo.vehicles.map((vehicle) => (
+              <div key={vehicle.nokendaraan} className="p-4 border border-neutral-200 rounded-xl bg-neutral-50">
+                <div className="flex items-center gap-3 mb-3">
+                  <Truck className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <h4 className="font-semibold text-orange-900">{vehicle.nokendaraan}</h4>
+                    <p className="text-xs text-neutral-500">{vehicle.jenis} - {vehicle.operator_nama}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-neutral-500">Plot:</span>
+                    <p className="font-medium">{vehicle.plots.join(', ')}</p>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500">Status:</span>
+                    <p className="text-orange-600 font-medium">Belum input waktu kerja</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      } else {
+        return (
+          <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50">
+            <div className="flex items-center gap-3 mb-3">
+              <Truck className="w-5 h-5 text-orange-600" />
+              <div>
+                <h4 className="font-semibold text-orange-900">{vehicleInfo.nokendaraan}</h4>
+                <p className="text-xs text-neutral-500">{vehicleInfo.jenis} - {vehicleInfo.operator_nama}</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-neutral-500">Plot:</span>
+                <p className="font-medium">{vehicleInfo.plots.join(', ')}</p>
+              </div>
+              <div>
+                <span className="text-neutral-500">Status:</span>
+                <p className="text-orange-600 font-medium">Belum input waktu kerja</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // No vehicle info at all
+    return (
+      <div className="text-center py-8">
+        <Truck className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+        <p className="text-neutral-500">Tidak ada kendaraan untuk aktivitas ini</p>
+      </div>
+    );
+  };
+
   const totals = calculateTotals();
   
   // Determine if this is a completed/readonly view
@@ -146,7 +322,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* FIXED: Logo with better error handling and path */}
+              {/* Logo with better error handling and path */}
               {app?.logo_url ? (
                 <img 
                   src={app.logo_url} 
@@ -227,7 +403,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         </div>
 
-        {/* FIXED: Completion Notice for COMPLETED status - shorter text */}
+        {/* Completion Notice for COMPLETED status */}
         {lkhData.mobile_status === 'COMPLETED' && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
             <div className="flex items-center gap-3">
@@ -242,7 +418,28 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         )}
 
-        {/* FIXED: Worker Summary - No individual wages */}
+        {/* NEW: Vehicle Summary Section */}
+        {(vehicleBBMData.length > 0 || vehicleInfo) && (
+          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Truck className="w-5 h-5 text-orange-600" />
+                Kendaraan & Waktu Kerja
+                {vehicleBBMData.length > 0 && (
+                  <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
+                    {vehicleBBMData.length} unit
+                  </span>
+                )}
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              {renderVehicleSummary()}
+            </div>
+          </div>
+        )}
+
+        {/* Worker Summary */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -280,7 +477,6 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                         <p className="font-medium text-orange-600">{worker.overtimehours} jam</p>
                       </div>
                     )}
-                    {/* ❌ REMOVED: totalupah display - hide individual wages */}
                   </div>
                 </div>
               ))}
@@ -288,7 +484,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         </div>
 
-        {/* FIXED: Plot Results - No progress bars */}
+        {/* Plot Results */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -329,8 +525,6 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                       }`}>{plot.luassisa.toFixed(2)} Ha</p>
                     </div>
                   </div>
-                  
-                  {/* ❌ REMOVED: Progress bar */}
                 </div>
               ))}
             </div>
@@ -404,7 +598,7 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
           </div>
         )}
 
-        {/* Summary Totals - No team wages */}
+        {/* Summary Totals */}
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
           <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
             <h3 className="font-semibold flex items-center gap-2">
@@ -430,12 +624,10 @@ const LKHViewPage: React.FC<LKHViewProps> = ({
                 <p className="text-3xl font-bold text-yellow-900">{totals.totalSisa.toFixed(2)} Ha</p>
               </div>
             </div>
-            
-            {/* ❌ REMOVED: Total upah tim - hide team wages */}
           </div>
         </div>
 
-        {/* FIXED: Action Buttons - Simple design with proper contrast */}
+        {/* Action Buttons */}
         <div className="flex justify-center gap-4">
           <button
             onClick={goBack}

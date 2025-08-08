@@ -70,6 +70,12 @@ class RencanaKerjaHarianController extends Controller
         $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
         $rkhData = $query->paginate($perPage);
 
+        // ✅ NEW: Add progress status untuk setiap RKH
+        $rkhData->getCollection()->transform(function ($rkh) use ($companycode) {
+            $rkh->lkh_progress_status = $this->getRkhProgressStatus($rkh->rkhno, $companycode);
+            return $rkh;
+        });
+
         // Get attendance data for modal
         $absenData = $this->getAttendanceData($companycode, $filterDate);
 
@@ -301,6 +307,19 @@ class RencanaKerjaHarianController extends Controller
 
         try {
             $companycode = Session::get('companycode');
+            $rkhno = $request->rkhno;
+            
+            // ✅ NEW: Validate LKH completion before allowing status update
+            if ($request->status === 'Completed') { // ✅ CHANGED: Done -> Completed
+                $progressStatus = $this->getRkhProgressStatus($rkhno, $companycode);
+                
+                if (!$progressStatus['can_complete']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Tidak dapat menandai RKH sebagai Completed. ' . $progressStatus['progress'] . '. Semua LKH harus diapprove terlebih dahulu.'
+                    ], 400);
+                }
+            }
             
             $updated = DB::table('rkhhdr')
                 ->where('companycode', $companycode)
@@ -312,7 +331,10 @@ class RencanaKerjaHarianController extends Controller
                 ]);
 
             if ($updated) {
-                return response()->json(['success' => true, 'message' => 'Status RKH berhasil diupdate']);
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'Status RKH berhasil diupdate menjadi ' . $request->status
+                ]);
             } else {
                 return response()->json(['success' => false, 'message' => 'RKH tidak ditemukan'], 404);
             }
@@ -323,6 +345,42 @@ class RencanaKerjaHarianController extends Controller
                 'success' => false,
                 'message' => 'Gagal mengupdate status: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function getRkhProgressStatus($rkhno, $companycode) 
+    {
+        $lkhData = DB::table('lkhhdr')
+            ->where('rkhno', $rkhno)
+            ->where('companycode', $companycode)
+            ->get();
+        
+        if ($lkhData->isEmpty()) {
+            return [
+                'status' => 'no_lkh',
+                'progress' => 'No LKH Created',
+                'can_complete' => false,
+                'color' => 'gray'
+            ];
+        }
+        
+        $totalLkh = $lkhData->count();
+        $completedLkh = $lkhData->where('status', 'APPROVED')->count();
+        
+        if ($completedLkh === $totalLkh) {
+            return [
+                'status' => 'complete',
+                'progress' => 'All Complete',
+                'can_complete' => true,
+                'color' => 'green'
+            ];
+        } else {
+            return [
+                'status' => 'in_progress', 
+                'progress' => "LKH In Progress ({$completedLkh}/{$totalLkh})",
+                'can_complete' => false,
+                'color' => 'yellow'
+            ];
         }
     }
 
@@ -2023,7 +2081,7 @@ private function getPerawatanManualRCData($companycode, $date)
             ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
             ->leftJoin('approval as app', function($join) use ($companycode) {
                 $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
+                    ->where('app.companycode', '=', $companycode);
             })
             ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
             ->where('r.companycode', $companycode)
@@ -2044,13 +2102,13 @@ private function getPerawatanManualRCData($companycode, $date)
                     WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting"
                     WHEN r.approval3flag = "0" THEN "Declined"
                     WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
-                         (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
-                         (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
+                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
+                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
                     ELSE "Waiting"
                 END as approval_status'),
                 DB::raw('CASE 
-                    WHEN r.status = "Done" THEN "Done"
-                    ELSE "On Progress"
+                    WHEN r.status = "Completed" THEN "Completed"
+                    ELSE "In Progress"
                 END as current_status')
             ]);
     }
@@ -2125,11 +2183,11 @@ private function getPerawatanManualRCData($companycode, $date)
      */
     private function applyStatusFilter($query, $filterStatus)
     {
-        if ($filterStatus == 'Done') {
-            $query->where('r.status', 'Done');
-        } else {
+        if ($filterStatus == 'Completed') {
+            $query->where('r.status', 'Completed');
+        } elseif ($filterStatus == 'In Progress') {
             $query->where(function($q) {
-                $q->where('r.status', '!=', 'Done')->orWhereNull('r.status');
+                $q->where('r.status', '!=', 'Completed')->orWhereNull('r.status');
             });
         }
 

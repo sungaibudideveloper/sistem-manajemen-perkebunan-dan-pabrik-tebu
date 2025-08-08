@@ -21,6 +21,8 @@
             'export-kml' => 'export.kml.view',
             'export-kml-file' => 'export.kml.view',
             'kerja-harian' => 'input.rencanakerjaharian.index',
+            'kendaraan-workshop' => 'input.kendaraan.index',
+            'gudang-bbm' => 'input.gudang.bbm.index',
         ];
         
         if (isset($specialRoutes[$submenuSlug])) {
