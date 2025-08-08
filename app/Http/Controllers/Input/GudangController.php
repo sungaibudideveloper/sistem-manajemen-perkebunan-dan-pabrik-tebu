@@ -101,9 +101,9 @@ class GudangController extends Controller
         )
         ->get();
             
-        $details = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
-        
-        $groupIds = $details->pluck('herbisidagroupid')->unique();
+        $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno,1));
+
+        $groupIds = $details->pluck('herbisidagroupid')->unique(); 
         $lst = usemateriallst::where('rkhno', $request->rkhno)->get();
         //$joinlst = $usemateriallst->joinlst($request->rkhno);
 
@@ -114,7 +114,7 @@ class GudangController extends Controller
             'title'         => 'Gudang',
             'details'       => $details,
             'dosage'        => $dosage,
-            'lst'       => $lst,
+            'lst'           => $lst,
             'itemlist'      => $itemlist
         ]);
     }
@@ -237,7 +237,7 @@ class GudangController extends Controller
         DB::transaction(function() use ($request, $first, $groupedDetails, $herbisidaitem, $isi, $exists, $details) {
         $isidetail = $exists->get();
         usemateriallst::where('rkhno', $first->rkhno)->delete();
-        $insertData = [];
+        $insertData = []; 
 
         foreach($groupedDetails as $groupId => $items){ 
             foreach ($request->itemcode[$groupId] as $index => $itemcode) { 
