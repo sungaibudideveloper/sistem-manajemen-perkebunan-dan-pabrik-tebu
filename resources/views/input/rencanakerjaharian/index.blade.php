@@ -47,8 +47,8 @@
                     <select name="filter_status" onchange="document.getElementById('filterForm').submit()"
                             class="text-xs border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All Status</option>
-                        <option value="Done" {{ $filterStatus == 'Done' ? 'selected' : '' }}>Done</option>
-                        <option value="On Progress" {{ $filterStatus == 'On Progress' ? 'selected' : '' }}>On Progress</option>
+                        <option value="Completed" {{ $filterStatus == 'Completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="In Progress" {{ $filterStatus == 'In Progress' ? 'selected' : '' }}>In Progress</option>
                     </select>
 
                     <input type="date" name="filter_date" value="{{ $filterDate }}" onchange="document.getElementById('filterForm').submit()"
@@ -128,18 +128,46 @@
                             @endif
                         </td>
 
+                        {{-- UPDATED LKH BUTTON WITH PROGRESS STATUS --}}
                         <td class="border px-2 py-1 text-center">
                             <button @click="showLKHModal = true; selectedRkhno = '{{ $rkh->rkhno }}'; loadLKHData('{{ $rkh->rkhno }}')"
-                                    class="text-white bg-gray-600 hover:bg-gray-700 px-2 py-0.5 rounded text-xs">LKH</button>
+                                    class="px-2 py-0.5 text-xs font-semibold rounded transition-colors
+                                           @if($rkh->lkh_progress_status['color'] === 'green')
+                                               bg-green-100 text-green-700 hover:bg-green-200
+                                           @elseif($rkh->lkh_progress_status['color'] === 'yellow')
+                                               bg-yellow-100 text-yellow-700 hover:bg-yellow-200
+                                           @else
+                                               bg-gray-100 text-gray-700 hover:bg-gray-200
+                                           @endif">
+                                @if($rkh->lkh_progress_status['color'] === 'green')
+                                    LKH
+                                @else
+                                    {{ $rkh->lkh_progress_status['progress'] }}
+                                @endif
+                            </button>
                         </td>
 
+                        {{-- UPDATED STATUS BUTTON WITH LKH COMPLETION CHECK --}}
                         <td class="border px-2 py-1 text-center">
-                            @if($rkh->current_status == 'Done')
-                                <span class="px-2 py-1 text-xs font-semibold">Done</span>
+                            @if($rkh->current_status == 'Completed')
+                                <span class="px-2 py-0.5 text-xs font-semibold text-green-800 bg-green-100 rounded">Completed</span>
                             @else
                                 <button onclick="updateStatus('{{ $rkh->rkhno }}')"
-                                        class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 text-xs rounded font-semibold">
-                                    On Progress
+                                        @if(!$rkh->lkh_progress_status['can_complete']) disabled @endif
+                                        class="px-2 py-0.5 text-xs rounded font-semibold transition-colors
+                                               @if($rkh->lkh_progress_status['can_complete'])
+                                                   bg-yellow-100 hover:bg-yellow-200 text-yellow-800 cursor-pointer
+                                               @else
+                                                   bg-gray-200 text-gray-500 cursor-not-allowed
+                                               @endif"
+                                        @if(!$rkh->lkh_progress_status['can_complete'])
+                                            title="Semua LKH harus selesai terlebih dahulu"
+                                        @endif>
+                                    @if($rkh->lkh_progress_status['can_complete'])
+                                        In Progress
+                                    @else
+                                        In Progress
+                                    @endif
                                 </button>
                             @endif
                         </td>
@@ -205,8 +233,16 @@ function toggleDateFilter() {
     dateInput.disabled = checkbox.checked;
 }
 
+// UPDATED: Enhanced validation for LKH completion check
 function updateStatus(rkhno) {
-    if (!confirm('Apakah anda yakin ingin menandai RKH ini sebagai selesai?')) return;
+    // Check if button is disabled (additional client-side validation)
+    const button = event.target.closest('button');
+    if (button.disabled || button.classList.contains('cursor-not-allowed')) {
+        alert('Semua LKH harus diselesaikan dan diapprove terlebih dahulu sebelum RKH dapat ditandai sebagai Completed');
+        return;
+    }
+
+    if (!confirm('Apakah anda yakin ingin menandai RKH ini sebagai Completed? Pastikan semua LKH sudah approved.')) return;
 
     fetch('{{ route("input.rencanakerjaharian.updateStatus") }}', {
         method: 'POST',
@@ -214,7 +250,7 @@ function updateStatus(rkhno) {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        body: JSON.stringify({ rkhno: rkhno, status: 'Done' })
+        body: JSON.stringify({ rkhno: rkhno, status: 'Completed' }) // CHANGED: Done -> Completed
     })
     .then(response => response.json())
     .then(data => {

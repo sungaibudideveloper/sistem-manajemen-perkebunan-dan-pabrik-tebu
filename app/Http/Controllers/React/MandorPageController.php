@@ -542,9 +542,7 @@ public function updateAttendancePhoto(Request $request)
                         ->where('companycode', $user->companycode)
                         ->update([
                             'mobile_status' => 'COMPLETED',
-                            'issubmit' => 1,
-                            'submitby' => $user->name,
-                            'submitat' => now(),
+                            'status' => 'DRAFT',
                             'updateby' => $user->name,
                             'mobileupdatedat' => now()
                         ]);
