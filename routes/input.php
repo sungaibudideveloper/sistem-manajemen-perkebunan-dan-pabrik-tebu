@@ -137,13 +137,12 @@ Route::middleware('auth')->prefix('input')->group(function () {
         Route::put('/update', [KendaraanController::class, 'update'])->name('update');
         Route::post('/{lkhno}/mark-printed', [KendaraanController::class, 'markPrinted'])->name('mark-printed');
         Route::get('/{lkhno}/print', [KendaraanController::class, 'print'])->name('print');
-
     });
     
-    // Admin BBM Routes (tetap sama)
+    // Admin BBM Routes - UPDATE INI
     Route::prefix('gudang')->name('input.gudang.')->group(function () {
         Route::get('/bbm', [GudangBbmController::class, 'index'])->name('bbm.index');
-        Route::get('/bbm/{lkhno}/print', [GudangBbmController::class, 'print'])->name('bbm.print');
-        Route::post('/bbm/{lkhno}/mark-printed', [GudangBbmController::class, 'markPrinted'])->name('bbm.mark-printed');
+        Route::get('/bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('bbm.show');
+        Route::post('/bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('bbm.confirm');
     });
 });

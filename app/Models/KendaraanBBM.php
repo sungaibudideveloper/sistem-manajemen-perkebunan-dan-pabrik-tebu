@@ -33,7 +33,15 @@ class KendaraanBBM extends Model
         'inputby',
         'createdat',
         'adminupdateby',
-        'adminupdatedat'
+        'adminupdatedat',
+        // TAMBAHAN BARU untuk fitur print & gudang
+        'printedby',
+        'printedat', 
+        'ordernumber',
+        'status',
+        'gudangconfirm',
+        'gudangconfirmedby',
+        'gudangconfirmedat'
     ];
 
     protected $casts = [
@@ -41,7 +49,10 @@ class KendaraanBBM extends Model
         'hourmeterend' => 'decimal:2',
         'solar' => 'decimal:3',
         'createdat' => 'datetime',
-        'adminupdatedat' => 'datetime'
+        'adminupdatedat' => 'datetime',
+        'printedat' => 'datetime',        // TAMBAHAN BARU
+        'gudangconfirmedat' => 'datetime', // TAMBAHAN BARU
+        'gudangconfirm' => 'boolean'       // TAMBAHAN BARU
     ];
 
     // =============================================================================
@@ -116,21 +127,58 @@ class KendaraanBBM extends Model
      */
     public function scopePendingSolarInput($query)
     {
-        return $query->whereNull('solar');
+        return $query->whereNull('solar')
+                    ->whereNull('status'); // Status masih null
     }
 
     /**
-     * Scope completed solar input (ready for BBM admin)
+     * Scope completed solar input (sudah input, ready for print)
      */
-    public function scopeCompletedSolarInput($query)
+    public function scopeReadyForPrint($query)
     {
         return $query->whereNotNull('solar')
                     ->whereNotNull('hourmeterstart')
-                    ->whereNotNull('hourmeterend');
+                    ->whereNotNull('hourmeterend')
+                    ->where('status', 'INPUTTED');
+    }
+
+    /**
+     * Scope printed orders (ready for gudang BBM confirmation)
+     */
+    public function scopeReadyForGudangConfirm($query)
+    {
+        return $query->where('status', 'PRINTED')
+                    ->where('gudangconfirm', 0)
+                    ->whereNotNull('ordernumber');
+    }
+
+    /**
+     * Scope confirmed by gudang
+     */
+    public function scopeConfirmedByGudang($query)
+    {
+        return $query->where('status', 'PRINTED')
+                    ->where('gudangconfirm', 1);
+    }
+
+    /**
+     * Scope by order number
+     */
+    public function scopeByOrderNumber($query, $orderNumber)
+    {
+        return $query->where('ordernumber', $orderNumber);
+    }
+
+    /**
+     * Scope by status
+     */
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
     }
 
     // =============================================================================
-    // STATIC METHODS FOR ADMIN OPERATIONS
+    // STATIC METHODS FOR ADMIN OPERATIONS (UPDATED)
     // =============================================================================
 
     /**
@@ -140,23 +188,22 @@ class KendaraanBBM extends Model
     {
         return static::byCompany($companyCode)
             ->byDateRange($date, $date)
-            ->pendingSolarInput()
-            ->with(['lkhHeader', 'kendaraan', 'mandor', 'operator'])
+            ->with(['lkhHeader.activity', 'kendaraan', 'mandor', 'operator'])
+            ->orderBy('createdat', 'desc')
             ->orderBy('nokendaraan')
-            ->orderBy('lkhno')
             ->get();
     }
 
     /**
-     * Get BBM data for Admin BBM (completed solar input)
+     * Get BBM data for Admin BBM (printed orders ready for confirmation)
      */
     public static function getForAdminBBM($companyCode, $startDate, $endDate)
     {
         return static::byCompany($companyCode)
             ->byDateRange($startDate, $endDate)
-            ->completedSolarInput()
-            ->with(['lkhHeader', 'kendaraan', 'mandor', 'operator'])
-            ->orderBy('createdat', 'desc')
+            ->readyForGudangConfirm()
+            ->with(['lkhHeader.activity', 'kendaraan', 'mandor', 'operator'])
+            ->orderBy('printedat', 'desc')
             ->get();
     }
 
@@ -173,13 +220,50 @@ class KendaraanBBM extends Model
                 'hourmeterstart' => $solarData['hourmeterstart'],
                 'hourmeterend' => $solarData['hourmeterend'], 
                 'solar' => $solarData['solar'],
+                'status' => 'INPUTTED',
+                'adminupdateby' => $adminUser,
+                'adminupdatedat' => now()
+            ]);
+    }
+
+    /**
+     * Mark as printed and generate order number
+     */
+    public static function markAsPrinted($companyCode, $lkhno, $orderNumber, $adminUser)
+    {
+        return static::where('companycode', $companyCode)
+            ->where('lkhno', $lkhno)
+            ->where('status', 'INPUTTED')
+            ->update([
+                'status' => 'PRINTED',
+                'ordernumber' => $orderNumber,
+                'printedby' => $adminUser,
+                'printedat' => now(),
+                'adminupdateby' => $adminUser,
+                'adminupdatedat' => now()
+            ]);
+    }
+
+    /**
+     * Confirm by gudang BBM
+     */
+    public static function confirmByGudang($companyCode, $orderNumber, $adminUser)
+    {
+        return static::where('companycode', $companyCode)
+            ->where('ordernumber', $orderNumber)
+            ->where('status', 'PRINTED')
+            ->where('gudangconfirm', 0)
+            ->update([
+                'gudangconfirm' => 1,
+                'gudangconfirmedby' => $adminUser,
+                'gudangconfirmedat' => now(),
                 'adminupdateby' => $adminUser,
                 'adminupdatedat' => now()
             ]);
     }
 
     // =============================================================================
-    // HELPER METHODS
+    // HELPER METHODS (UPDATED)
     // =============================================================================
 
     /**
@@ -224,6 +308,30 @@ class KendaraanBBM extends Model
     }
 
     /**
+     * Check if ready for print
+     */
+    public function getIsReadyForPrintAttribute()
+    {
+        return $this->is_completed && $this->status === 'INPUTTED';
+    }
+
+    /**
+     * Check if already printed
+     */
+    public function getIsPrintedAttribute()
+    {
+        return $this->status === 'PRINTED' && !is_null($this->ordernumber);
+    }
+
+    /**
+     * Check if confirmed by gudang
+     */
+    public function getIsConfirmedAttribute()
+    {
+        return $this->is_printed && $this->gudangconfirm;
+    }
+
+    /**
      * Get formatted work time
      */
     public function getWorkTimeFormattedAttribute()
@@ -231,8 +339,26 @@ class KendaraanBBM extends Model
         return substr($this->jammulai, 0, 5) . ' - ' . substr($this->jamselesai, 0, 5);
     }
 
+    /**
+     * Get status badge
+     */
+    public function getStatusBadgeAttribute()
+    {
+        switch ($this->status) {
+            case 'INPUTTED':
+                return ['text' => 'Sudah Input', 'class' => 'bg-green-100 text-green-700'];
+            case 'PRINTED':
+                if ($this->gudangconfirm) {
+                    return ['text' => 'Confirmed', 'class' => 'bg-blue-100 text-blue-700'];
+                }
+                return ['text' => 'Printed', 'class' => 'bg-gray-100 text-gray-700'];
+            default:
+                return ['text' => 'Belum Input', 'class' => 'bg-yellow-100 text-yellow-700'];
+        }
+    }
+
     // =============================================================================
-    // OVERRIDES FOR COMPOSITE PRIMARY KEY
+    // OVERRIDES FOR COMPOSITE PRIMARY KEY (TIDAK BERUBAH)
     // =============================================================================
 
     /**
