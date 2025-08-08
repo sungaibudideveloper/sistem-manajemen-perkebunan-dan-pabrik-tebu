@@ -1,5 +1,5 @@
-// public/sw.js - FINAL PRODUCTION READY VERSION
-const CACHE_VERSION = 'v6'; // Increment this on every deployment
+// public/sw.js - FIXED VERSION
+const CACHE_VERSION = 'v7'; // Increment this on every deployment
 const CACHE_NAME = `sb-tebu-${CACHE_VERSION}`;
 const STATIC_CACHE = `sb-tebu-static-${CACHE_VERSION}`;
 
@@ -81,16 +81,21 @@ function shouldNeverCache(url, method) {
             return true;
         }
         
-        // In development, don't cache HTML
+        // CRITICAL FIX: In development, NEVER cache /build/ assets
         if (isDev()) {
-            if (!pathname.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$/)) {
-                logSW('Dev: Skip non-asset:', url);
+            if (pathname.includes('/build/')) {
+                logSW('Dev: Skip build asset (bypass SW):', url);
+                return true;
+            }
+            // Also skip any JS files in development
+            if (pathname.endsWith('.js') && !pathname.includes('/asset/')) {
+                logSW('Dev: Skip JS file:', url);
                 return true;
             }
         }
         
-        // Skip URLs with dynamic parameters
-        if (urlObj.search && !urlObj.pathname.endsWith('.css') && !urlObj.pathname.endsWith('.js')) {
+        // Skip URLs with dynamic parameters (except CSS/JS with version hashes)
+        if (urlObj.search && !pathname.match(/\.(css|js)$/)) {
             return true;
         }
         
@@ -104,7 +109,9 @@ function shouldNeverCache(url, method) {
             /\/build\/manifest\.json$/,
             /\/@vite\//,
             /\/__vite_ping/,
-            /\/hot$/
+            /\/hot$/,
+            /\/build\/.*\.js$/, // CRITICAL: Skip all build JS files
+            /\/build\/.*\.css$/ // Also skip build CSS files in case of issues
         ];
         
         return skipPatterns.some(pattern => pattern.test(pathname));
@@ -121,22 +128,22 @@ function isStaticAsset(url) {
         const urlObj = new URL(url);
         const pathname = urlObj.pathname;
         
-        // Static file extensions
+        // NEVER treat /build/ assets as static in development
+        if (isDev() && pathname.includes('/build/')) {
+            return false;
+        }
+        
+        // Static file extensions (but not build assets)
         const staticPatterns = [
             /\.(png|jpg|jpeg|gif|svg|ico|webp)$/,
             /\.(woff|woff2|ttf|eot|otf)$/,
-            /\/asset\/.+\.(css|js)$/,
+            /\/asset\/.+\.(css|js)$/, // Only /asset/ CSS/JS, not /build/
             /\/img\//,
             /\/fonts\//,
             /manifest\.json$/,
             /favicon\.ico$/,
             /offline\.html$/
         ];
-        
-        // Don't cache build assets in dev
-        if (isDev() && pathname.includes('/build/')) {
-            return false;
-        }
         
         return staticPatterns.some(pattern => pattern.test(pathname));
         
@@ -165,6 +172,8 @@ self.addEventListener('install', event => {
     logSW('Installing service worker...');
     
     if (isDev()) {
+        // In development, skip waiting immediately and don't cache anything
+        logSW('Development mode: skipping cache installation');
         self.skipWaiting();
         return;
     }
@@ -209,7 +218,7 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch event - Conservative approach
+// Fetch event - MORE Conservative approach for development
 self.addEventListener('fetch', event => {
     const { request } = event;
     const url = request.url;
@@ -219,6 +228,12 @@ self.addEventListener('fetch', event => {
     // Skip non-HTTP
     if (!url.startsWith('http')) {
         return;
+    }
+    
+    // CRITICAL: In development, bypass SW for build assets entirely
+    if (isDev() && url.includes('/build/')) {
+        logSW('Dev: Bypassing SW completely for build asset:', url);
+        return; // Let browser handle normally
     }
     
     // Auth requests - NEVER cache
@@ -235,30 +250,29 @@ self.addEventListener('fetch', event => {
     
     // Skip dynamic content
     if (shouldNeverCache(url, method)) {
+        // Don't even intercept, let browser handle
+        if (isDev()) {
+            logSW('Dev: Not intercepting:', url);
+            return;
+        }
         event.respondWith(fetchWithTimeout(request));
         return;
     }
     
-    // Development - minimal caching
+    // Development - VERY minimal caching, mostly bypass
     if (isDev()) {
-        if (isStaticAsset(url)) {
+        // Only cache very specific static assets
+        if (isStaticAsset(url) && !url.includes('/build/')) {
             event.respondWith(
-                caches.match(request).then(cached => {
-                    const networkFetch = fetchWithTimeout(request, 5000)
-                        .then(response => {
-                            if (response && response.ok) {
-                                const clone = response.clone();
-                                caches.open(STATIC_CACHE).then(cache => {
-                                    cache.put(request, clone);
-                                });
-                            }
-                            return response;
-                        });
-                    
-                    return cached || networkFetch;
-                })
+                fetchWithTimeout(request)
+                    .catch(() => caches.match(request))
+                    .catch(() => {
+                        logSW('Dev: Failed to fetch static asset:', url, 'warn');
+                        throw new Error('Network failed');
+                    })
             );
         } else {
+            // For everything else in dev, just fetch normally
             event.respondWith(
                 fetchWithTimeout(request).catch(() => {
                     if (destination === 'document') {
