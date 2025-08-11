@@ -62,6 +62,31 @@ public function selectuse($companycode, $rkhno = 0, $type = 0)
             $query->where('a.companycode', $companycode);
         });
 }
+
+
+public function selectusematerial($companycode, $rkhno = 0)
+{
+    return \DB::select(
+    "
+    SELECT a.rkhno, a.blok, a.plot, a.luasarea, b.flagstatus, u.nouse, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
+    c.itemname, d.itemcode, d.dosageperha, d.dosageunit, (d.dosageperha * a.luasarea) AS qty_siapkan
+    FROM rkhlst AS a
+    JOIN usematerialhdr AS b ON b.rkhno = a.rkhno
+    JOIN herbisidagroup AS e ON e.herbisidagroupid = a.herbisidagroupid
+    JOIN herbisidadosage AS d ON d.companycode = a.companycode AND d.herbisidagroupid = a.herbisidagroupid
+    JOIN usemateriallst AS u ON u.rkhno = b.rkhno AND u.itemcode = d.itemcode AND u.companycode = b.companycode
+    JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
+    WHERE a.rkhno = ? AND a.companycode = ? AND a.usingmaterial = 1
+    ORDER BY a.blok, a.plot, d.itemcode;
+    ",
+    [$rkhno,$companycode]
+    );
+}
+
+
+
+
+
     
 
 
