@@ -148,7 +148,7 @@ class MaterialUsageGeneratorService
     
     /**
      * Process individual LKH to generate material usage items
-     * FIXED: Better error handling and column name consistency
+     * FIXED: Handle multiple herbisida groups dalam 1 LKH dan merge intersect items
      * 
      * @param object $lkh
      * @param string $companycode
@@ -160,16 +160,15 @@ class MaterialUsageGeneratorService
     {
         // Find matching RKH details for this LKH activity
         $matchingRkhDetails = $rkhDetails->where('activitycode', $lkh->activitycode)
-                                       ->where('jenistenagakerja', $lkh->jenistenagakerja);
+                                    ->where('jenistenagakerja', $lkh->jenistenagakerja);
         
         if ($matchingRkhDetails->isEmpty()) {
             return 0;
         }
         
         // Get plot details for this LKH untuk calculate total luas
-        // FIXED: Use consistent company filtering
         $lkhPlots = DB::table('lkhdetailplot')
-            ->where('companycode', $companycode)  // ADDED: company filter
+            ->where('companycode', $companycode)
             ->where('lkhno', $lkh->lkhno)
             ->get();
             
@@ -177,7 +176,6 @@ class MaterialUsageGeneratorService
             throw new \Exception("Plot details tidak ditemukan untuk LKH: {$lkh->lkhno}");
         }
         
-        // FIXED: Use correct column name (luasrkh instead of luasplot)
         $totalLuasLkh = $lkhPlots->sum('luasrkh');
         
         if ($totalLuasLkh <= 0) {
@@ -188,97 +186,107 @@ class MaterialUsageGeneratorService
             return 0;
         }
         
-        // Get herbisida group ID from first matching RKH detail
-        $firstRkhDetail = $matchingRkhDetails->first();
+        // FIXED: Collect semua unique herbisidagroupid dari matching RKH details
+        $uniqueHerbisidaGroupIds = $matchingRkhDetails
+            ->where('herbisidagroupid', '!=', null)
+            ->pluck('herbisidagroupid')
+            ->unique()
+            ->values();
         
-        if (!$firstRkhDetail->herbisidagroupid) {
+        if ($uniqueHerbisidaGroupIds->isEmpty()) {
             return 0;
         }
         
-        // Get herbisida dosage data for this activity and group
-        $herbisidaDosages = DB::table('herbisidadosage as hd')
-            ->join('herbisidagroup as hg', function($join) {
-                $join->on('hd.herbisidagroupid', '=', 'hg.herbisidagroupid');
-                // REMOVED: company join because herbisidagroup has no companycode
-            })
-            ->join('herbisida as h', function($join) use ($companycode) {
-                $join->on('hd.companycode', '=', 'h.companycode')
-                     ->on('hd.itemcode', '=', 'h.itemcode');
-            })
-            ->where('hd.companycode', $companycode)
-            ->where('hd.herbisidagroupid', $firstRkhDetail->herbisidagroupid)
-            ->where('hg.activitycode', $lkh->activitycode)
-            ->select([
-                'hd.itemcode',
-                'hd.dosageperha',
-                'hd.dosageunit',
-                'h.itemname',
-                'h.measure',
-                'hd.herbisidagroupid'
-            ])
-            ->get();
-            
-        if ($herbisidaDosages->isEmpty()) {
-            // Check if herbisidagroup exists
-            $groupExists = DB::table('herbisidagroup')
-                ->where('companycode', $companycode)
-                ->where('herbisidagroupid', $firstRkhDetail->herbisidagroupid)
-                ->where('activitycode', $lkh->activitycode)
-                ->exists();
+        // FIXED: Container untuk merge intersect items (gunakan array biasa untuk easy modification)
+        $mergedItems = [];
+        
+        // FIXED: Process setiap herbisida group
+        foreach ($uniqueHerbisidaGroupIds as $herbisidaGroupId) {
+            // Get herbisida dosage data for this group
+            $herbisidaDosages = DB::table('herbisidadosage as hd')
+                ->join('herbisidagroup as hg', function($join) {
+                    $join->on('hd.herbisidagroupid', '=', 'hg.herbisidagroupid');
+                })
+                ->join('herbisida as h', function($join) use ($companycode) {
+                    $join->on('hd.companycode', '=', 'h.companycode')
+                        ->on('hd.itemcode', '=', 'h.itemcode');
+                })
+                ->where('hd.companycode', $companycode)
+                ->where('hd.herbisidagroupid', $herbisidaGroupId)
+                ->where('hg.activitycode', $lkh->activitycode)
+                ->select([
+                    'hd.itemcode',
+                    'hd.dosageperha',
+                    'hd.dosageunit',
+                    'h.itemname',
+                    'h.measure',
+                    'hd.herbisidagroupid'
+                ])
+                ->get();
                 
-            if (!$groupExists) {
-                Log::warning("Herbisida group not found", [
-                    'company' => $companycode,
-                    'herbisidagroupid' => $firstRkhDetail->herbisidagroupid,
-                    'activitycode' => $lkh->activitycode
-                ]);
-            }
-            
-            // Check if dosage exists
-            $dosageExists = DB::table('herbisidadosage')
-                ->where('companycode', $companycode)
-                ->where('herbisidagroupid', $firstRkhDetail->herbisidagroupid)
-                ->exists();
-                
-            if (!$dosageExists) {
+            if ($herbisidaDosages->isEmpty()) {
                 Log::warning("Herbisida dosage not found", [
                     'company' => $companycode,
-                    'herbisidagroupid' => $firstRkhDetail->herbisidagroupid
+                    'herbisidagroupid' => $herbisidaGroupId,
+                    'activitycode' => $lkh->activitycode
                 ]);
+                continue;
             }
             
-            throw new \Exception("Data tidak ditemukan di herbisidadosage untuk activitycode: {$lkh->activitycode}, herbisidagroupid: {$firstRkhDetail->herbisidagroupid}");
+            // FIXED: Merge items dari group ini ke array utama
+            foreach ($herbisidaDosages as $dosage) {
+                $qtyForThisGroup = $totalLuasLkh * $dosage->dosageperha;
+                
+                // Check if item already exists in merged array
+                if (isset($mergedItems[$dosage->itemcode])) {
+                    // FIXED: Sum qty if item intersect/duplicate
+                    $oldQty = $mergedItems[$dosage->itemcode]['qty'];
+                    $mergedItems[$dosage->itemcode]['qty'] += $qtyForThisGroup;
+                    
+                    Log::info("Merged intersect item", [
+                        'itemcode' => $dosage->itemcode,
+                        'old_qty' => $oldQty,
+                        'added_qty' => $qtyForThisGroup,
+                        'new_total_qty' => $mergedItems[$dosage->itemcode]['qty']
+                    ]);
+                } else {
+                    // FIXED: Add new unique item
+                    $mergedItems[$dosage->itemcode] = [
+                        'companycode' => $companycode,
+                        'rkhno' => $rkhno,
+                        'lkhno' => $lkh->lkhno,
+                        'itemcode' => $dosage->itemcode,
+                        'qty' => $qtyForThisGroup,
+                        'qtyretur' => 0,
+                        'unit' => $dosage->dosageunit ?: $dosage->measure,
+                        'nouse' => null,
+                        'noretur' => null,
+                        'itemname' => $dosage->itemname,
+                        'herbisidagroupid' => $dosage->herbisidagroupid,
+                        'dosageperha' => $dosage->dosageperha,
+                        'returby' => null,
+                        'tglretur' => null,
+                        'tglterimaretur' => null,
+                        'terimareturby' => null,
+                        'qtydigunakan' => null
+                    ];
+                }
+            }
         }
         
+        // FIXED: Insert semua merged items ke database
         $itemsInserted = 0;
-        
-        foreach ($herbisidaDosages as $dosage) {
-            // Calculate quantity: total luas LKH * dosageperha
-            $qty = $totalLuasLkh * $dosage->dosageperha;
-            
-            // Insert to usemateriallst with LKH tracking
-            DB::table('usemateriallst')->insert([
-                'companycode' => $companycode,
-                'rkhno' => $rkhno,
-                'lkhno' => $lkh->lkhno,
-                'itemcode' => $dosage->itemcode,
-                'qty' => $qty,
-                'qtyretur' => 0,
-                'unit' => $dosage->dosageunit ?: $dosage->measure,
-                'nouse' => null,
-                'noretur' => null,
-                'itemname' => $dosage->itemname,
-                'herbisidagroupid' => $dosage->herbisidagroupid,
-                'dosageperha' => $dosage->dosageperha,
-                'returby' => null,
-                'tglretur' => null,
-                'tglterimaretur' => null,
-                'terimareturby' => null,
-                'qtydigunakan' => null
-            ]);
-            
+        foreach ($mergedItems as $item) {
+            DB::table('usemateriallst')->insert($item);
             $itemsInserted++;
         }
+        
+        Log::info("LKH Material Usage processed", [
+            'lkhno' => $lkh->lkhno,
+            'herbisida_groups_processed' => $uniqueHerbisidaGroupIds->count(),
+            'total_items_inserted' => $itemsInserted,
+            'herbisida_group_ids' => $uniqueHerbisidaGroupIds->toArray()
+        ]);
         
         return $itemsInserted;
     }

@@ -2806,7 +2806,8 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Execute approval process
+     * Execute approval process with proper transaction handling
+     * FIXED: Wrap entire approval + post-actions in single transaction
      */
     private function executeApprovalProcess($request)
     {
@@ -2823,48 +2824,74 @@ private function getPerawatanManualRCData($companycode, $date)
             ];
         }
 
-        $rkh = DB::table('rkhhdr as r')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                    ->where('app.companycode', '=', $companycode);
-            })
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select(['r.*', 'app.jumlahapproval', 'app.idjabatanapproval1', 'app.idjabatanapproval2', 'app.idjabatanapproval3'])
-            ->first();
+        try {
+            // FIXED: Start transaction untuk entire approval process
+            DB::beginTransaction();
 
-        if (!$rkh) {
-            return ['success' => false, 'message' => 'RKH tidak ditemukan'];
+            $rkh = DB::table('rkhhdr as r')
+                ->leftJoin('approval as app', function($join) use ($companycode) {
+                    $join->on('r.activitygroup', '=', 'app.activitygroup')
+                        ->where('app.companycode', '=', $companycode);
+                })
+                ->where('r.companycode', $companycode)
+                ->where('r.rkhno', $rkhno)
+                ->select(['r.*', 'app.jumlahapproval', 'app.idjabatanapproval1', 'app.idjabatanapproval2', 'app.idjabatanapproval3'])
+                ->first();
+
+            if (!$rkh) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'RKH tidak ditemukan'];
+            }
+
+            // Validate approval authority
+            $validationResult = $this->validateApprovalAuthority($rkh, $currentUser, $level);
+            if (!$validationResult['success']) {
+                DB::rollBack();
+                return $validationResult;
+            }
+
+            // Process approval
+            $approvalValue = $action === 'approve' ? '1' : '0';
+            $approvalField = "approval{$level}flag";
+            $approvalDateField = "approval{$level}date";
+            $approvalUserField = "approval{$level}userid";
+            
+            DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update([
+                $approvalField => $approvalValue,
+                $approvalDateField => now(),
+                $approvalUserField => $currentUser->userid,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ]);
+
+            $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            // FIXED: Handle post-approval actions within same transaction
+            if ($action === 'approve') {
+                $responseMessage = $this->handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode);
+            }
+
+            // FIXED: Commit only if everything successful
+            DB::commit();
+
+            return ['success' => true, 'message' => $responseMessage];
+
+        } catch (\Exception $e) {
+            // FIXED: Rollback on any error
+            DB::rollBack();
+            
+            Log::error("Approval process failed for RKH {$rkhno}: " . $e->getMessage(), [
+                'user' => $currentUser->userid,
+                'action' => $action,
+                'level' => $level,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Proses approval gagal: ' . $e->getMessage()
+            ];
         }
-
-        // Validate approval authority
-        $validationResult = $this->validateApprovalAuthority($rkh, $currentUser, $level);
-        if (!$validationResult['success']) {
-            return $validationResult;
-        }
-
-        // Process approval
-        $approvalValue = $action === 'approve' ? '1' : '0';
-        $approvalField = "approval{$level}flag";
-        $approvalDateField = "approval{$level}date";
-        $approvalUserField = "approval{$level}userid";
-        
-        DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update([
-            $approvalField => $approvalValue,
-            $approvalDateField => now(),
-            $approvalUserField => $currentUser->userid,
-            'updateby' => $currentUser->userid,
-            'updatedat' => now()
-        ]);
-
-        $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
-
-        // Handle post-approval actions
-        if ($action === 'approve') {
-            $responseMessage = $this->handlePostApprovalActions($rkhno, $responseMessage);
-        }
-
-        return ['success' => true, 'message' => $responseMessage];
     }
 
     /**
@@ -2895,50 +2922,62 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Handle post-approval actions (LKH and Material generation)
+     * Handle post-approval actions within existing transaction
+     * FIXED: Tidak create transaction baru, pakai yang sudah ada
+     * FIXED: Throw exception jika ada yang gagal untuk trigger rollback
      */
-    private function handlePostApprovalActions($rkhno, $responseMessage)
+    private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
     {
-        $companycode = Session::get('companycode');
+        // Get updated RKH data
         $updatedRkh = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
 
-        if ($this->isRkhFullyApproved($updatedRkh)) {
-            // Generate LKH
-            try {
-                $lkhGenerator = new LkhGeneratorService();
-                $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
-                
-                if ($lkhResult['success']) {
-                    $responseMessage .= '. LKH telah di-generate otomatis (' . $lkhResult['total_lkh'] . ' LKH)';
-                } else {
-                    $responseMessage .= '. WARNING: Gagal auto-generate LKH - ' . $lkhResult['message'];
-                }
-            } catch (\Exception $e) {
-                \Log::error("Exception during LKH auto-generation for RKH {$rkhno}: " . $e->getMessage());
-                $responseMessage .= '. WARNING: Error saat auto-generate LKH';
-            }
-            
-            // Generate Material Usage
-            try {
-                $materialUsageGenerator = new MaterialUsageGeneratorService();
-                $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
-                
-                if ($materialResult['success']) {
-                    if ($materialResult['total_items'] > 0) {
-                        $responseMessage .= '. Material usage berhasil di-generate (' . $materialResult['total_items'] . ' items)';
-                    } else {
-                        $responseMessage .= '. Info: Tidak ada material yang perlu di-generate';
-                    }
-                } else {
-                    $responseMessage .= '. WARNING: Gagal generate material usage - ' . $materialResult['message'];
-                }
-            } catch (\Exception $e) {
-                \Log::error("Exception during Material Usage generation for RKH {$rkhno}: " . $e->getMessage());
-                $responseMessage .= '. WARNING: Error saat generate material usage';
-            }
+        if (!$this->isRkhFullyApproved($updatedRkh)) {
+            // Belum fully approved, tidak perlu auto-generate
+            return $responseMessage;
         }
 
-        return $responseMessage;
+        try {
+            // FIXED: Generate LKH dengan error handling
+            $lkhGenerator = new LkhGeneratorService();
+            $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
+            
+            if (!$lkhResult['success']) {
+                throw new \Exception('LKH generation failed: ' . $lkhResult['message']);
+            }
+            
+            $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
+            
+            // FIXED: Generate Material Usage dengan error handling
+            $materialUsageGenerator = new MaterialUsageGeneratorService();
+            $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+            
+            if (!$materialResult['success']) {
+                throw new \Exception('Material usage generation failed: ' . $materialResult['message']);
+            }
+            
+            if ($materialResult['total_items'] > 0) {
+                $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items created)';
+            } else {
+                $responseMessage .= '. No material usage required for this RKH';
+            }
+            
+            Log::info("Post-approval auto-generation completed successfully for RKH {$rkhno}", [
+                'lkh_generated' => $lkhResult['total_lkh'],
+                'material_items' => $materialResult['total_items']
+            ]);
+            
+            return $responseMessage;
+
+        } catch (\Exception $e) {
+            Log::error("Post-approval auto-generation failed for RKH {$rkhno}: " . $e->getMessage(), [
+                'lkh_result' => $lkhResult ?? 'not_attempted',
+                'material_result' => $materialResult ?? 'not_attempted',
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // FIXED: Re-throw exception to trigger transaction rollback
+            throw new \Exception('Auto-generation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+        }
     }
 
     /**
