@@ -831,7 +831,7 @@ function updateLuasFromPlot(plotCode, rowIndex) {
   }
 }
 
-// ===== ABSEN SUMMARY FUNCTION =====
+// ===== ABSEN SUMMARY FUNCTION - UPDATED =====
 function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
   if (!selectedMandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
@@ -848,8 +848,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
   }
 
+  // ✅ UPDATED: Filter berdasarkan mandorid (bukan mandor_id)
   const filteredAbsen = window.absenData.filter(absen => 
-    absen.mandorid === selectedMandorId
+    absen.mandorid === selectedMandorId // Field yang benar dari database baru
   );
 
   let lakiCount = 0;

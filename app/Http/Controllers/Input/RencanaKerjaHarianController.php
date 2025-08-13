@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 // Models
 use App\Models\User;
@@ -2049,24 +2050,55 @@ private function getPerawatanManualRCData($companycode, $date)
     // =====================================
 
     /**
-     * Load attendance by date
-     */
-    public function loadAbsenByDate(Request $request)
-    {
-        $date = $request->query('date', date('Y-m-d'));
-        $mandorId = $request->query('mandor_id');
-        $companycode = Session::get('companycode');
-        
-        $absenModel = new AbsenHdr;
-        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($date), $mandorId);
-        $mandorList = $absenModel->getMandorList($companycode, Carbon::parse($date));
+ * Load attendance by date - FIXED
+ */
+public function loadAbsenByDate(Request $request)
+{
+    $date = $request->query('date', date('Y-m-d'));
+    $mandorId = $request->query('mandor_id');
+    $companycode = Session::get('companycode');
+    
+    // Query data absen yang sudah APPROVED saja
+    $absenData = DB::table('absenhdr as h')
+        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+        ->join('tenagakerja as t', function($join) use ($companycode) {
+            $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
+                 ->where('t.companycode', '=', $companycode)
+                 ->where('t.isactive', '=', 1);
+        })
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', $date)
+        ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+        ->when($mandorId, function($query) use ($mandorId) {
+            return $query->where('h.mandorid', $mandorId);
+        })
+        ->select([
+            'h.absenno',
+            'h.mandorid', 
+            'l.tenagakerjaid',
+            't.nama',
+            't.nik',
+            't.gender',
+            't.jenistenagakerja',
+            'l.approval_status'
+        ])
+        ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $absenData,
-            'mandor_list' => $mandorList
-        ]);
-    }
+    // Get mandor list
+    $mandorList = DB::table('absenhdr as h')
+        ->join('user as u', 'h.mandorid', '=', 'u.userid')
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', $date)
+        ->select('h.mandorid', 'u.name as mandor_name')
+        ->distinct()
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $absenData,
+        'mandor_list' => $mandorList
+    ]);
+}
 
     // =====================================
     // PRIVATE HELPER METHODS
@@ -2195,16 +2227,30 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Get attendance data for forms
-     */
-    private function getAttendanceData($companycode, $date)
-    {
-        $absenModel = new AbsenHdr;
-        return $absenModel->getDataAbsenFull(
-            $companycode,
-            Carbon::parse($date ?? Carbon::today())
-        );
-    }
+ * Get attendance data for forms - FIXED
+ */
+private function getAttendanceData($companycode, $date)
+{
+    return DB::table('absenhdr as h')
+        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+        ->join('tenagakerja as t', function($join) use ($companycode) {
+            $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
+                 ->where('t.companycode', '=', $companycode)
+                 ->where('t.isactive', '=', 1);
+        })
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', Carbon::parse($date ?? Carbon::today()))
+        ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+        ->select([
+            'h.mandorid',
+            'l.tenagakerjaid', 
+            't.nama',
+            't.nik',
+            't.gender',
+            't.jenistenagakerja'
+        ])
+        ->get();
+}
 
     /**
      * Validate date range for RKH creation

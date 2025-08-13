@@ -984,41 +984,41 @@
     }
   }
 
-  // ===== ABSEN SUMMARY FUNCTION =====
+  // ===== ABSEN SUMMARY FUNCTION - UPDATED =====
   function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-    if (!selectedMandorId || !window.absenData) {
-      document.getElementById('summary-laki').textContent = '0';
-      document.getElementById('summary-perempuan').textContent = '0';
-      document.getElementById('summary-total').textContent = '0';
-      const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
-      document.getElementById('absen-info').textContent = selectedDate;
-      return;
-    }
-
-    const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
-
-    if (selectedMandorCode && selectedMandorName) {
-      document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
-    }
-
-    const filteredAbsen = window.absenData.filter(absen => 
-      absen.mandorid === selectedMandorId
-    );
-
-    let lakiCount = 0;
-    let perempuanCount = 0;
-
-    filteredAbsen.forEach(absen => {
-      if (absen.gender === 'L') {
-        lakiCount++;
-      } else if (absen.gender === 'P') {
-        perempuanCount++;
+      if (!selectedMandorId || !window.absenData) {
+        document.getElementById('summary-laki').textContent = '0';
+        document.getElementById('summary-perempuan').textContent = '0';
+        document.getElementById('summary-total').textContent = '0';
+        const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+        document.getElementById('absen-info').textContent = selectedDate;
+        return;
       }
-    });
 
-    document.getElementById('summary-laki').textContent = lakiCount;
-    document.getElementById('summary-perempuan').textContent = perempuanCount;
-    document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
+      const selectedDate = '{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}';
+
+      if (selectedMandorCode && selectedMandorName) {
+        document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
+      }
+      
+      const filteredAbsen = window.absenData.filter(absen => 
+        absen.mandorid === selectedMandorId // Filter berdasarkan field yang benar
+      );
+
+      let lakiCount = 0;
+      let perempuanCount = 0;
+
+      filteredAbsen.forEach(absen => {
+        if (absen.gender === 'L') {
+          lakiCount++;
+        } else if (absen.gender === 'P') {
+          perempuanCount++;
+        }
+      });
+
+      document.getElementById('summary-laki').textContent = lakiCount;
+      document.getElementById('summary-perempuan').textContent = perempuanCount;
+      document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
   }
 
   // ===== COMPONENT FUNCTIONS =====
