@@ -2968,63 +2968,140 @@ private function getAttendanceData($companycode, $date)
     }
 
     /**
-     * Handle post-approval actions within existing transaction
-     * FIXED: Tidak create transaction baru, pakai yang sudah ada
-     * FIXED: Throw exception jika ada yang gagal untuk trigger rollback
-     */
-    private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
-    {
+ * Handle post-approval actions within existing transaction
+ * FIXED: Better error handling untuk prevent unnecessary rollback
+ */
+private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
+{
+    \Log::info("Starting post-approval actions", ['rkhno' => $rkhno]);
+    
+    try {
         // Get updated RKH data
         $updatedRkh = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
 
         if (!$this->isRkhFullyApproved($updatedRkh)) {
-            // Belum fully approved, tidak perlu auto-generate
+            \Log::info("RKH not fully approved yet, skipping auto-generation", ['rkhno' => $rkhno]);
             return $responseMessage;
         }
 
+        \Log::info("RKH fully approved, starting auto-generation", ['rkhno' => $rkhno]);
+
+        // ✅ STEP 1: Generate LKH (ALWAYS REQUIRED)
+        \Log::info("Before LKH generation", ['rkhno' => $rkhno]);
+        
+        $lkhGenerator = new LkhGeneratorService();
+        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
+        
+        \Log::info("After LKH generation", [
+            'rkhno' => $rkhno,
+            'success' => $lkhResult['success'],
+            'message' => $lkhResult['message'] ?? 'no message',
+            'total_lkh' => $lkhResult['total_lkh'] ?? 0
+        ]);
+        
+        if (!$lkhResult['success']) {
+            throw new \Exception('LKH generation failed: ' . $lkhResult['message']);
+        }
+        
+        $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
+        
+        // ✅ STEP 2: Check if RKH needs material usage generation
+        $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
+        
+        if (!$needsMaterialUsage) {
+            \Log::info("RKH does not need material usage, skipping material generation", ['rkhno' => $rkhno]);
+            $responseMessage .= '. No material usage required for this RKH';
+            return $responseMessage;
+        }
+
+        // ✅ STEP 3: Generate Material Usage (ONLY IF NEEDED)
+        \Log::info("Before material usage generation", ['rkhno' => $rkhno]);
+        
         try {
-            // FIXED: Generate LKH dengan error handling
-            $lkhGenerator = new LkhGeneratorService();
-            $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
-            
-            if (!$lkhResult['success']) {
-                throw new \Exception('LKH generation failed: ' . $lkhResult['message']);
-            }
-            
-            $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
-            
-            // FIXED: Generate Material Usage dengan error handling
             $materialUsageGenerator = new MaterialUsageGeneratorService();
             $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
             
-            if (!$materialResult['success']) {
-                throw new \Exception('Material usage generation failed: ' . $materialResult['message']);
-            }
+            \Log::info("After material usage generation", [
+                'rkhno' => $rkhno,
+                'success' => $materialResult['success'],
+                'message' => $materialResult['message'] ?? 'no message',
+                'total_items' => $materialResult['total_items'] ?? 0
+            ]);
             
-            if ($materialResult['total_items'] > 0) {
+            if ($materialResult['success'] && ($materialResult['total_items'] ?? 0) > 0) {
                 $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items created)';
+                \Log::info("Material usage created successfully", [
+                    'rkhno' => $rkhno,
+                    'items_count' => $materialResult['total_items']
+                ]);
             } else {
-                $responseMessage .= '. No material usage required for this RKH';
+                // ✅ SOFT FAILURE: Material generation failed, but don't rollback entire transaction
+                \Log::warning("Material generation failed but continuing", [
+                    'rkhno' => $rkhno,
+                    'error' => $materialResult['message'] ?? 'Unknown error'
+                ]);
+                $responseMessage .= '. Material usage generation skipped (no materials found or failed)';
             }
             
-            Log::info("Post-approval auto-generation completed successfully for RKH {$rkhno}", [
-                'lkh_generated' => $lkhResult['total_lkh'],
-                'material_items' => $materialResult['total_items']
+        } catch (\Exception $materialError) {
+            // ✅ SOFT FAILURE: Log error but don't throw exception to prevent rollback
+            \Log::error("Material generation exception caught (but not failing transaction)", [
+                'rkhno' => $rkhno,
+                'error' => $materialError->getMessage()
             ]);
             
-            return $responseMessage;
-
-        } catch (\Exception $e) {
-            Log::error("Post-approval auto-generation failed for RKH {$rkhno}: " . $e->getMessage(), [
-                'lkh_result' => $lkhResult ?? 'not_attempted',
-                'material_result' => $materialResult ?? 'not_attempted',
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            // FIXED: Re-throw exception to trigger transaction rollback
-            throw new \Exception('Auto-generation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+            $responseMessage .= '. Material usage generation failed, but approval completed successfully';
         }
+        
+        \Log::info("Post-approval auto-generation completed", [
+            'rkhno' => $rkhno,
+            'lkh_generated' => $lkhResult['total_lkh']
+        ]);
+        
+        return $responseMessage;
+
+    } catch (\Exception $e) {
+        // ✅ HARD FAILURE: Only critical errors (like LKH generation) should cause rollback
+        if (strpos($e->getMessage(), 'LKH generation failed') !== false) {
+            \Log::error("Critical post-approval failure - rolling back", [
+                'rkhno' => $rkhno,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw new \Exception('LKH auto-generation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+        }
+        
+        // For non-critical errors, just log and continue
+        \Log::warning("Non-critical post-approval error", [
+            'rkhno' => $rkhno,
+            'error' => $e->getMessage()
+        ]);
+        
+        return $responseMessage . '. Some auto-generation processes failed, but approval completed successfully';
     }
+}
+
+/**
+ * Check if RKH needs material usage generation
+ * NEW METHOD: Prevent unnecessary material generation attempts
+ */
+private function checkIfRkhNeedsMaterialUsage($rkhno, $companycode)
+{
+    // Check if any RKH details use material
+    $hasMaterialUsage = DB::table('rkhlst')
+        ->where('companycode', $companycode)
+        ->where('rkhno', $rkhno)
+        ->where('usingmaterial', 1)
+        ->whereNotNull('herbisidagroupid')
+        ->exists();
+    
+    \Log::info("Checking material usage need", [
+        'rkhno' => $rkhno,
+        'has_material_usage' => $hasMaterialUsage
+    ]);
+    
+    return $hasMaterialUsage;
+}
 
     /**
      * Get RKH approval detail
