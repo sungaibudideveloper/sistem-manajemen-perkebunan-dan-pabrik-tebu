@@ -1,6 +1,5 @@
 <x-layout>
-@php 
-@endphp
+
     @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
         <x-slot:title>Penyiapan RKH Herbisida</x-slot:title>
     @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
@@ -95,96 +94,82 @@
         <form action="{{ route('input.gudang.submit', ['rkhno' => $details[0]->rkhno]) }}" method="POST">
             @csrf
             
+            @foreach($details->groupby('herbisidagroupid') as $groupId => $items)
+                @php $title = $items->first(); //dd($groupId, $items);
+                @endphp
+    
+                <div class="mb-4 p-3 bg-white shadow rounded">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-gray-200 text-gray-700">
+                            <tr>
+                                <th class="py-2 px-2 border-b bg-green-100 text-left">
+                                    {{ $title->activitycode }} {{ $title->herbisidagroupname }} {{ $title->lkhno }}
+                                </th>
+                                <th class="py-2 px-2 border-b text-center">Dosage (HA)</th>
+                                <th class="py-2 px-2 border-b text-center">Luas (HA)</th>
+                                <th class="py-2 px-2 border-b text-center">Total Qty</th>
+                                <th class="py-2 px-2 border-b text-center">Qty Retur</th>
+                                <th class="py-2 px-2 border-b text-center">Nomor Retur</th>
+                            </tr>
+                        </thead>
+    
+                        <tbody class="text-gray-600">
+                            @foreach( $details->where('herbisidagroupid', $groupId) as $d )
+                            @php
+                                //$matched = collect($lst)->where('itemcode', $d->itemcode)->where('herbisidagroupid', $d->herbisidagroupid)->first();
+                                
+                                $plot = $plots->where('herbisidagroupid',$d->herbisidagroupid)->first();
 
-
-            <table class='min-w-full md:w-1/3 p-2 bg-white shadow rounded text-xs'>
-                <thead class="text-gray-700">
-                    <tr>
-                        <th class="py-2 px-2 border-b text-center">&nbsp;</th>
-                        <th class="py-2 px-2 border-b text-center">Dosage (HA)</th>
-                        <th class="py-2 px-2 border-b text-center">Qty Disiapkan</th>
-                        <th class="py-2 px-2 border-b text-center">Qty Retur</th>
-                        <th class="py-2 px-2 border-b text-center">Nomor LKH</th>
-                        <th class="py-2 px-2 border-b text-center">Nomor Retur</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-600">
-                    @foreach ($detailmaterial as $d)
-                        @php
-                            // cari luas untuk grup ini
-                            $plot    = $plots->firstWhere('herbisidagroupid', $d->herbisidagroupid);
-                            $luas    = (float) ($plot->luasarea ?? 0);
-                            $dosage  = (float) ($d->dosageperha ?? 0);
-                            
-                        @endphp
-                    
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="py-2 px-2">
-                                <select
-                                    @if (strtoupper($details[0]->flagstatus) != 'ACTIVE') disabled @endif style="color: #374151 !important; opacity: 1 !important;"
-                                    name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                    class="item-select w-full border-none bg-yellow-100 text-xs"
-                                    data-luas="{{ $luas }}"
-                                >
-                                    @foreach ($itemlist as $item)
-
-                                    <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
+                            @endphp
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-2 px-2">
+                                    <select @if(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR') readonly style="pointer-events: none;" @endif
+                                    name="itemcode[{{ $groupId }}][{{ $loop->iteration }}]" class="item-select w-full border-none bg-yellow-100 text-xs">
+                                        @foreach($itemlist as $item) 
+                                        @php 
+                                        //$currentluas = $luas * $item->dosageperha; 
+                                        @endphp
+                                        <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->herbisidagroupid == $d->herbisidagroupid ? 'selected' : '' }}
                                         data-dosage="{{$item->dosageperha}}" >
                                           Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}})
                                         </option>
-                                    @endforeach
-                                </select>
-                    
-                                {{-- keep current values for submit --}}
-                                <input type="hidden" name="qty[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-qty" value="{{ $d->qty }}">
-                                <input type="hidden" name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-dosage" value="{{ $d->dosageperha }}">
-                                <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-unit" value="{{ $d->unit }}">
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center">
-                                <span class="labeldosage">{{ $d->dosageperha }} {{ $d->dosageunit }}</span>
-                            </td>
-                    
-                    
-                            <td class="py-2 px-2 text-center">
-                                <span class="labelqty">{{ $d->qty }}</span>
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center">
-                                {{ $d->qtyretur ?? 0 }}
-                            </td>
-
-                            <td class="py-2 px-2 text-center">
-                                {{ $d->lkhno }}
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center">
-                                @if (empty($d->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE')
-                                    <a href="{{ route('input.gudang.retur', [
-                                            'retur' => $d->qtyretur,
-                                            'itemcode' => $d->itemcode,
-                                            'rkhno' => $details[0]->rkhno,
-                                            'herbisidagroupid' => $d->herbisidagroupid
-                                        ]) }}"
-                                       class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition"
-                                       onclick="return confirm('Proses Retur Barang ini ?')">
-                                        Retur ?
+                                        @endforeach
+                                    </select> 
+                                    <input type="hidden" name="dosage[{{ $groupId }}][{{ $loop->iteration }}]" class="selected-dosage" value="{{ $d->dosageperha }}">
+                                    <input type="hidden" name="unit[{{ $groupId }}][{{ $loop->iteration }}]" class="selected-dosage" value="{{ $d->dosageunit }}">
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                    <span class="labeldosage">{{ $d->dosageperha }} {{ $d->dosageunit }}</span>
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                    <span class="luas">{{$plot->luasarea}}</span>
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                    <span class="labelqty">{{ $d->dosageperha * $plot->luasarea ?? '-' }}</span>
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                    {{ $d->qtyretur }}
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                    @if(empty($d->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE') 
+                                    <a href="{{ route('input.gudang.retur', ['retur' => $d->qtyretur, 'itemcode' => $d->itemcode, 'rkhno' => $details[0]->rkhno, 'herbisidagroupid' => $d->herbisidagroupid] ) }}" 
+                                    class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition"
+                                    onclick="return confirm('Proses Retur Barang ini ?')">
+                                    Retur ?
                                     </a>
-                                @else
-                                    {{ $d->noretur ?? '-' }}
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                    
-            </table>
+                                    @else
+                                     {{ $d->noretur ?? '-' }}
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endforeach
     
             <!-- Submit Button -->
-            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
+            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
             <div class="flex justify-center mt-4">
                 <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
                     type="submit"

@@ -68,14 +68,16 @@ public function selectusematerial($companycode, $rkhno = 0)
 {
     return \DB::select(
     "
-    SELECT a.rkhno, a.blok, a.plot, a.luasarea, b.flagstatus, u.nouse, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
-    c.itemname, d.itemcode, d.dosageperha, d.dosageunit, (d.dosageperha * a.luasarea) AS qty_siapkan
+    SELECT a.rkhno, a.blok, a.plot, a.luasarea, l.createdat, b.flagstatus, u.nouse, u.lkhno, us.name, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
+    c.itemname, d.itemcode, d.dosageperha, c.measure, (d.dosageperha * a.luasarea) AS qty_siapkan, u.qty, u.qtyretur, u.noretur, c.companyinv, c.factoryinv
     FROM rkhlst AS a
     JOIN usematerialhdr AS b ON b.rkhno = a.rkhno
     JOIN herbisidagroup AS e ON e.herbisidagroupid = a.herbisidagroupid
     JOIN herbisidadosage AS d ON d.companycode = a.companycode AND d.herbisidagroupid = a.herbisidagroupid
     JOIN usemateriallst AS u ON u.rkhno = b.rkhno AND u.itemcode = d.itemcode AND u.companycode = b.companycode
     JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
+    JOIN lkhhdr AS l ON u.lkhno = l.lkhno
+    JOIN USER AS us ON us.userid =  l.mandorid
     WHERE a.rkhno = ? AND a.companycode = ? AND a.usingmaterial = 1
     ORDER BY a.blok, a.plot, d.itemcode;
     ",
