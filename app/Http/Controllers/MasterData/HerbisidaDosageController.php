@@ -23,7 +23,7 @@ class HerbisidaDosageController extends Controller
                  ->on('d.itemcode',    '=', 'h.itemcode');
         })
         ->join('herbisidagroup as g', 'd.herbisidagroupid', '=', 'g.herbisidagroupid')
-        ->select('d.*', 'h.itemname', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
+        ->select('d.*', 'h.itemname', 'h.measure', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
 
         if ($search) {
             $qb->where(function($q) use ($search) {
@@ -56,7 +56,6 @@ class HerbisidaDosageController extends Controller
             'herbisidagroupid' => 'required|string|max:4',
             'itemcode' => 'required|string|max:30',
             'dosageperha' => 'required|numeric',
-            'dosageunit' => 'required|string|max:5',
         ]);
 
         $exists = HerbisidaDosage::where('companycode', $request->companycode)
@@ -77,7 +76,6 @@ class HerbisidaDosageController extends Controller
             'herbisidagroupid' => intval($request->input('herbisidagroupid')),
             'itemcode' => $request->input('itemcode'),
             'dosageperha' => $request->input('dosageperha'),
-            'dosageunit' => $request->input('dosageunit'),
             'inputby'      => Auth::user()->userid,
             'createdat'    => now(),
         ]);
@@ -100,7 +98,6 @@ class HerbisidaDosageController extends Controller
             'itemcode'     => 'required|string|max:30',
             'description'  => 'nullable|string|max:100',
             'dosageperha'  => 'required|numeric',
-            'dosageunit'   => 'required|string|max:5',
         ]);
 
         // Check if the companycode, activitycode, or itemcode has changed
@@ -133,7 +130,6 @@ class HerbisidaDosageController extends Controller
             'herbisidagroupid'  => $validated['herbisidagroupid'],
             'itemcode'      => $validated['itemcode'],
             'dosageperha'   => $validated['dosageperha'],
-            'dosageunit'    => $validated['dosageunit'],
             'updateby'      => Auth::user()->userid,
             'updatedat'     => now(),
         ]);

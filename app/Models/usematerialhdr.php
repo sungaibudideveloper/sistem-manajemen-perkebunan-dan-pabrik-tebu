@@ -69,7 +69,7 @@ public function selectusematerial($companycode, $rkhno = 0)
     return \DB::select(
     "
     SELECT a.rkhno, a.blok, a.plot, a.luasarea, b.flagstatus, u.nouse, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
-    c.itemname, d.itemcode, d.dosageperha, d.dosageunit, (d.dosageperha * a.luasarea) AS qty_siapkan
+    c.itemname, d.itemcode, d.dosageperha, c.measure, (d.dosageperha * a.luasarea) AS qty_siapkan
     FROM rkhlst AS a
     JOIN usematerialhdr AS b ON b.rkhno = a.rkhno
     JOIN herbisidagroup AS e ON e.herbisidagroupid = a.herbisidagroupid

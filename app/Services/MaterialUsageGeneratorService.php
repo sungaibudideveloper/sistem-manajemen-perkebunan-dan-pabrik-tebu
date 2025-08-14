@@ -186,7 +186,6 @@ class MaterialUsageGeneratorService
             return 0;
         }
         
-        // FIXED: Collect semua unique herbisidagroupid dari matching RKH details
         $uniqueHerbisidaGroupIds = $matchingRkhDetails
             ->where('herbisidagroupid', '!=', null)
             ->pluck('herbisidagroupid')
@@ -197,10 +196,8 @@ class MaterialUsageGeneratorService
             return 0;
         }
         
-        // FIXED: Container untuk merge intersect items (gunakan array biasa untuk easy modification)
         $mergedItems = [];
         
-        // FIXED: Process setiap herbisida group
         foreach ($uniqueHerbisidaGroupIds as $herbisidaGroupId) {
             // Get herbisida dosage data for this group
             $herbisidaDosages = DB::table('herbisidadosage as hd')
@@ -217,7 +214,6 @@ class MaterialUsageGeneratorService
                 ->select([
                     'hd.itemcode',
                     'hd.dosageperha',
-                    'hd.dosageunit',
                     'h.itemname',
                     'h.measure',
                     'hd.herbisidagroupid'
@@ -233,13 +229,11 @@ class MaterialUsageGeneratorService
                 continue;
             }
             
-            // FIXED: Merge items dari group ini ke array utama
             foreach ($herbisidaDosages as $dosage) {
                 $qtyForThisGroup = $totalLuasLkh * $dosage->dosageperha;
                 
                 // Check if item already exists in merged array
                 if (isset($mergedItems[$dosage->itemcode])) {
-                    // FIXED: Sum qty if item intersect/duplicate
                     $oldQty = $mergedItems[$dosage->itemcode]['qty'];
                     $mergedItems[$dosage->itemcode]['qty'] += $qtyForThisGroup;
                     
@@ -250,7 +244,6 @@ class MaterialUsageGeneratorService
                         'new_total_qty' => $mergedItems[$dosage->itemcode]['qty']
                     ]);
                 } else {
-                    // FIXED: Add new unique item
                     $mergedItems[$dosage->itemcode] = [
                         'companycode' => $companycode,
                         'rkhno' => $rkhno,
@@ -258,7 +251,7 @@ class MaterialUsageGeneratorService
                         'itemcode' => $dosage->itemcode,
                         'qty' => $qtyForThisGroup,
                         'qtyretur' => 0,
-                        'unit' => $dosage->dosageunit ?: $dosage->measure,
+                        'unit' => $dosage->measure,
                         'nouse' => null,
                         'noretur' => null,
                         'itemname' => $dosage->itemname,
@@ -274,7 +267,6 @@ class MaterialUsageGeneratorService
             }
         }
         
-        // FIXED: Insert semua merged items ke database
         $itemsInserted = 0;
         foreach ($mergedItems as $item) {
             DB::table('usemateriallst')->insert($item);
