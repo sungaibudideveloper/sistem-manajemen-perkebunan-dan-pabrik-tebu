@@ -7,18 +7,17 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
- * Updated MaterialUsageGeneratorService
+ * Fixed MaterialUsageGeneratorService
  * 
- * FIXED: Issues with material usage generation per LKH
- * - Fixed column name references (luasrkh vs luasplot)
- * - Added better error handling and debugging
- * - Fixed company code filtering consistency
+ * FIXED: Removed herbisidagroupid from usemateriallst inserts
+ * - Material items from different groups are merged by itemcode
+ * - herbisidagroupid is not stored in usemateriallst table
  */
 class MaterialUsageGeneratorService
 {
     /**
      * Generate material usage data from approved RKH
-     * UPDATED: Generate per LKH instead of per RKH (Option B)
+     * FIXED: Remove herbisidagroupid from insert operations
      * 
      * @param string $rkhno
      * @return array
@@ -49,7 +48,7 @@ class MaterialUsageGeneratorService
                 throw new \Exception("Material usage sudah pernah di-generate untuk RKH: {$rkhno}");
             }
             
-            // Get LKH list untuk RKH ini (CHANGED: process per LKH)
+            // Get LKH list untuk RKH ini
             $lkhList = DB::table('lkhhdr')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkhno)
@@ -77,7 +76,7 @@ class MaterialUsageGeneratorService
             // Calculate total luas for header
             $totalLuas = $rkhDetails->sum('luasarea');
             
-            // Create material usage header (still at RKH level for pickup reference)
+            // Create material usage header
             DB::table('usematerialhdr')->insert([
                 'companycode' => $companycode,
                 'rkhno' => $rkhno,
@@ -92,12 +91,11 @@ class MaterialUsageGeneratorService
             $totalItemsInserted = 0;
             $errors = [];
             
-            // Process each LKH (CHANGED: per LKH processing)
+            // Process each LKH
             foreach ($lkhList as $lkh) {
                 try {
                     $itemsInserted = $this->processLkhMaterialUsage($lkh, $companycode, $rkhno, $rkhDetails);
                     $totalItemsInserted += $itemsInserted;
-                    
                     
                 } catch (\Exception $e) {
                     $errors[] = "Error processing LKH {$lkh->lkhno}: " . $e->getMessage();
@@ -105,14 +103,12 @@ class MaterialUsageGeneratorService
                         'rkhno' => $rkhno,
                         'lkhno' => $lkh->lkhno,
                         'activitycode' => $lkh->activitycode,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                        'error' => $e->getMessage()
                     ]);
                 }
             }
             
             if ($totalItemsInserted === 0) {
-                // Better error reporting
                 $errorDetail = empty($errors) ? "No matching material configuration found" : implode('; ', $errors);
                 throw new \Exception("Tidak ada item material yang berhasil di-generate. Details: " . $errorDetail);
             }
@@ -134,9 +130,7 @@ class MaterialUsageGeneratorService
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error generating material usage for RKH {$rkhno}: " . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error("Error generating material usage for RKH {$rkhno}: " . $e->getMessage());
             
             return [
                 'success' => false,
@@ -148,7 +142,7 @@ class MaterialUsageGeneratorService
     
     /**
      * Process individual LKH to generate material usage items
-     * FIXED: Handle multiple herbisida groups dalam 1 LKH dan merge intersect items
+     * FIXED: Remove herbisidagroupid from insert data
      * 
      * @param object $lkh
      * @param string $companycode
@@ -166,7 +160,7 @@ class MaterialUsageGeneratorService
             return 0;
         }
         
-        // Get plot details for this LKH untuk calculate total luas
+        // Get plot details for this LKH to calculate total luas
         $lkhPlots = DB::table('lkhdetailplot')
             ->where('companycode', $companycode)
             ->where('lkhno', $lkh->lkhno)
@@ -198,6 +192,7 @@ class MaterialUsageGeneratorService
         
         $mergedItems = [];
         
+        // Process each herbisida group and merge items by itemcode
         foreach ($uniqueHerbisidaGroupIds as $herbisidaGroupId) {
             // Get herbisida dosage data for this group
             $herbisidaDosages = DB::table('herbisidadosage as hd')
@@ -241,9 +236,11 @@ class MaterialUsageGeneratorService
                         'itemcode' => $dosage->itemcode,
                         'old_qty' => $oldQty,
                         'added_qty' => $qtyForThisGroup,
-                        'new_total_qty' => $mergedItems[$dosage->itemcode]['qty']
+                        'new_total_qty' => $mergedItems[$dosage->itemcode]['qty'],
+                        'herbisidagroupid' => $herbisidaGroupId
                     ]);
                 } else {
+                    // FIXED: Removed herbisidagroupid from the item array
                     $mergedItems[$dosage->itemcode] = [
                         'companycode' => $companycode,
                         'rkhno' => $rkhno,
@@ -255,8 +252,7 @@ class MaterialUsageGeneratorService
                         'nouse' => null,
                         'noretur' => null,
                         'itemname' => $dosage->itemname,
-                        'herbisidagroupid' => $dosage->herbisidagroupid,
-                        'dosageperha' => $dosage->dosageperha,
+                        'dosageperha' => $dosage->dosageperha, // Keep this for reference
                         'returby' => null,
                         'tglretur' => null,
                         'tglterimaretur' => null,
@@ -277,15 +273,104 @@ class MaterialUsageGeneratorService
             'lkhno' => $lkh->lkhno,
             'herbisida_groups_processed' => $uniqueHerbisidaGroupIds->count(),
             'total_items_inserted' => $itemsInserted,
-            'herbisida_group_ids' => $uniqueHerbisidaGroupIds->toArray()
+            'merged_items' => array_keys($mergedItems)
         ]);
         
         return $itemsInserted;
     }
     
     /**
+     * Check if material usage can be generated for RKH
+     * 
+     * @param string $rkhno
+     * @return bool
+     */
+    public function canGenerateMaterialUsage($rkhno)
+    {
+        // Check if RKH exists
+        $rkhHeader = DB::table('rkhhdr')->where('rkhno', $rkhno)->first();
+        if (!$rkhHeader) {
+            return false;
+        }
+        
+        // Check if already generated
+        $existingUsage = DB::table('usematerialhdr')
+            ->where('companycode', $rkhHeader->companycode)
+            ->where('rkhno', $rkhno)
+            ->exists();
+            
+        if ($existingUsage) {
+            return false;
+        }
+        
+        // Check if LKH exists
+        $hasLkh = DB::table('lkhhdr')
+            ->where('companycode', $rkhHeader->companycode)
+            ->where('rkhno', $rkhno)
+            ->exists();
+            
+        if (!$hasLkh) {
+            return false;
+        }
+        
+        // Check if has material usage
+        $hasMaterialUsage = DB::table('rkhlst')
+            ->where('companycode', $rkhHeader->companycode)
+            ->where('rkhno', $rkhno)
+            ->where('usingmaterial', 1)
+            ->exists();
+            
+        return $hasMaterialUsage;
+    }
+    
+    /**
+     * Get material usage summary per LKH
+     * 
+     * @param string $lkhno
+     * @return array
+     */
+    public function getLkhMaterialUsageSummary($lkhno)
+    {
+        try {
+            $materialUsage = DB::table('usemateriallst as uml')
+                ->leftJoin('herbisida as h', function($join) {
+                    $join->on('uml.companycode', '=', 'h.companycode')
+                         ->on('uml.itemcode', '=', 'h.itemcode');
+                })
+                ->where('uml.lkhno', $lkhno)
+                ->select([
+                    'uml.*',
+                    'h.unitprice',
+                    DB::raw('(uml.qty * COALESCE(h.unitprice, 0)) as total_cost')
+                ])
+                ->get();
+                
+            $totalCost = $materialUsage->sum('total_cost');
+            $totalQty = $materialUsage->sum('qty');
+            
+            return [
+                'success' => true,
+                'lkhno' => $lkhno,
+                'materials' => $materialUsage,
+                'total_items' => $materialUsage->count(),
+                'total_qty' => $totalQty,
+                'total_cost' => $totalCost
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Error getting LKH material usage summary: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Error getting material usage summary: ' . $e->getMessage(),
+                'materials' => collect(),
+                'total_cost' => 0
+            ];
+        }
+    }
+    
+    /**
      * Debug method to check data availability
-     * NEW METHOD: For troubleshooting material generation issues
      * 
      * @param string $rkhno
      * @return array
@@ -332,168 +417,13 @@ class MaterialUsageGeneratorService
                 'lkh_count' => $lkhList->count(),
                 'lkh_data' => $lkhList->toArray(),
                 'herbisida_groups_count' => $herbisidaGroups->count(),
-                'herbisida_dosages_count' => $herbisidaDosages->count(),
-                'sample_herbisida_groups' => $herbisidaGroups->take(5)->toArray(),
-                'sample_herbisida_dosages' => $herbisidaDosages->take(5)->toArray()
+                'herbisida_dosages_count' => $herbisidaDosages->count()
             ];
             
         } catch (\Exception $e) {
             return [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
-            ];
-        }
-    }
-    
-    // ... rest of the methods remain the same ...
-    
-    /**
-     * Check if material usage can be generated for RKH
-     * UPDATED: Check for LKH existence
-     * 
-     * @param string $rkhno
-     * @return bool
-     */
-    public function canGenerateMaterialUsage($rkhno)
-    {
-        // Check if RKH exists
-        $rkhHeader = DB::table('rkhhdr')->where('rkhno', $rkhno)->first();
-        if (!$rkhHeader) {
-            return false;
-        }
-        
-        // Check if already generated
-        $existingUsage = DB::table('usematerialhdr')
-            ->where('companycode', $rkhHeader->companycode)
-            ->where('rkhno', $rkhno)
-            ->exists();
-            
-        if ($existingUsage) {
-            return false;
-        }
-        
-        // Check if LKH exists (ADDED: LKH requirement)
-        $hasLkh = DB::table('lkhhdr')
-            ->where('companycode', $rkhHeader->companycode)
-            ->where('rkhno', $rkhno)
-            ->exists();
-            
-        if (!$hasLkh) {
-            return false;
-        }
-        
-        // Check if has material usage
-        $hasMaterialUsage = DB::table('rkhlst')
-            ->where('companycode', $rkhHeader->companycode)
-            ->where('rkhno', $rkhno)
-            ->where('usingmaterial', 1)
-            ->exists();
-            
-        return $hasMaterialUsage;
-    }
-    
-    /**
-     * Get material usage summary per LKH
-     * NEW METHOD: Get material breakdown per LKH for cost analysis
-     * 
-     * @param string $lkhno
-     * @return array
-     */
-    public function getLkhMaterialUsageSummary($lkhno)
-    {
-        try {
-            $materialUsage = DB::table('usemateriallst as uml')
-                ->leftJoin('herbisida as h', function($join) {
-                    $join->on('uml.companycode', '=', 'h.companycode')
-                         ->on('uml.itemcode', '=', 'h.itemcode');
-                })
-                ->where('uml.lkhno', $lkhno)
-                ->select([
-                    'uml.*',
-                    'h.unitprice',
-                    DB::raw('(uml.qty * COALESCE(h.unitprice, 0)) as total_cost')
-                ])
-                ->get();
-                
-            $totalCost = $materialUsage->sum('total_cost');
-            $totalQty = $materialUsage->sum('qty');
-            
-            return [
-                'success' => true,
-                'lkhno' => $lkhno,
-                'materials' => $materialUsage,
-                'total_items' => $materialUsage->count(),
-                'total_qty' => $totalQty,
-                'total_cost' => $totalCost
-            ];
-            
-        } catch (\Exception $e) {
-            Log::error("Error getting LKH material usage summary: " . $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => 'Error getting material usage summary: ' . $e->getMessage(),
-                'materials' => collect(),
-                'total_cost' => 0
-            ];
-        }
-    }
-    
-    /**
-     * Calculate total material cost per plot
-     * NEW METHOD: For cost per plot analysis
-     * 
-     * @param string $blok
-     * @param string $plot
-     * @param string $dateFrom
-     * @param string $dateTo
-     * @return array
-     */
-    public function getPlotMaterialCostAnalysis($blok, $plot, $dateFrom, $dateTo)
-    {
-        try {
-            $materialCosts = DB::table('lkhdetailplot as ldp')
-                ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
-                ->leftJoin('usemateriallst as uml', 'ldp.lkhno', '=', 'uml.lkhno')
-                ->leftJoin('herbisida as h', function($join) {
-                    $join->on('uml.companycode', '=', 'h.companycode')
-                         ->on('uml.itemcode', '=', 'h.itemcode');
-                })
-                ->where('ldp.blok', $blok)
-                ->where('ldp.plot', $plot)
-                ->whereBetween('lh.lkhdate', [$dateFrom, $dateTo])
-                ->select([
-                    'lh.lkhdate',
-                    'lh.lkhno',
-                    'lh.activitycode',
-                    'uml.itemname',
-                    'uml.qty',
-                    'uml.unit',
-                    'h.unitprice',
-                    DB::raw('(uml.qty * COALESCE(h.unitprice, 0)) as material_cost'),
-                    'ldp.luasrkh',
-                    'ldp.luashasil'
-                ])
-                ->get();
-                
-            $totalMaterialCost = $materialCosts->sum('material_cost');
-            
-            return [
-                'success' => true,
-                'blok' => $blok,
-                'plot' => $plot,
-                'period' => "{$dateFrom} to {$dateTo}",
-                'material_details' => $materialCosts,
-                'total_material_cost' => $totalMaterialCost
-            ];
-            
-        } catch (\Exception $e) {
-            Log::error("Error getting plot material cost analysis: " . $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => 'Error getting plot material cost: ' . $e->getMessage(),
-                'total_material_cost' => 0
             ];
         }
     }
