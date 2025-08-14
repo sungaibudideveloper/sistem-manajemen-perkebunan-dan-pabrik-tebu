@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 // Models
 use App\Models\User;
@@ -158,7 +159,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Display specific RKH record
+     * Display specific RKH record - Updated dengan data herbisida
      */
     public function show($rkhno)
     {
@@ -175,6 +176,9 @@ class RencanaKerjaHarianController extends Controller
         $absenData = $this->getAttendanceData($companycode, $rkhHeader->rkhdate);
         $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
         
+        $herbisidadosages = new Herbisidadosage;
+        $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+        
         return view('input.rencanakerjaharian.show', [
             'title' => 'Detail RKH',
             'navbar' => 'Input',
@@ -183,6 +187,7 @@ class RencanaKerjaHarianController extends Controller
             'rkhDetails' => $rkhDetails,
             'absentenagakerja' => $absenData,
             'operatorsData' => $operatorsWithVehicles,
+            'herbisidagroups' => $herbisidaData,
         ]);
     }
 
@@ -2049,24 +2054,55 @@ private function getPerawatanManualRCData($companycode, $date)
     // =====================================
 
     /**
-     * Load attendance by date
-     */
-    public function loadAbsenByDate(Request $request)
-    {
-        $date = $request->query('date', date('Y-m-d'));
-        $mandorId = $request->query('mandor_id');
-        $companycode = Session::get('companycode');
-        
-        $absenModel = new AbsenHdr;
-        $absenData = $absenModel->getDataAbsenFull($companycode, Carbon::parse($date), $mandorId);
-        $mandorList = $absenModel->getMandorList($companycode, Carbon::parse($date));
+ * Load attendance by date - FIXED
+ */
+public function loadAbsenByDate(Request $request)
+{
+    $date = $request->query('date', date('Y-m-d'));
+    $mandorId = $request->query('mandor_id');
+    $companycode = Session::get('companycode');
+    
+    // Query data absen yang sudah APPROVED saja
+    $absenData = DB::table('absenhdr as h')
+        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+        ->join('tenagakerja as t', function($join) use ($companycode) {
+            $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
+                 ->where('t.companycode', '=', $companycode)
+                 ->where('t.isactive', '=', 1);
+        })
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', $date)
+        ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+        ->when($mandorId, function($query) use ($mandorId) {
+            return $query->where('h.mandorid', $mandorId);
+        })
+        ->select([
+            'h.absenno',
+            'h.mandorid', 
+            'l.tenagakerjaid',
+            't.nama',
+            't.nik',
+            't.gender',
+            't.jenistenagakerja',
+            'l.approval_status'
+        ])
+        ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $absenData,
-            'mandor_list' => $mandorList
-        ]);
-    }
+    // Get mandor list
+    $mandorList = DB::table('absenhdr as h')
+        ->join('user as u', 'h.mandorid', '=', 'u.userid')
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', $date)
+        ->select('h.mandorid', 'u.name as mandor_name')
+        ->distinct()
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $absenData,
+        'mandor_list' => $mandorList
+    ]);
+}
 
     // =====================================
     // PRIVATE HELPER METHODS
@@ -2195,16 +2231,30 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Get attendance data for forms
-     */
-    private function getAttendanceData($companycode, $date)
-    {
-        $absenModel = new AbsenHdr;
-        return $absenModel->getDataAbsenFull(
-            $companycode,
-            Carbon::parse($date ?? Carbon::today())
-        );
-    }
+ * Get attendance data for forms - FIXED
+ */
+private function getAttendanceData($companycode, $date)
+{
+    return DB::table('absenhdr as h')
+        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+        ->join('tenagakerja as t', function($join) use ($companycode) {
+            $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
+                 ->where('t.companycode', '=', $companycode)
+                 ->where('t.isactive', '=', 1);
+        })
+        ->where('h.companycode', $companycode)
+        ->whereDate('h.uploaddate', Carbon::parse($date ?? Carbon::today()))
+        ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+        ->select([
+            'h.mandorid',
+            'l.tenagakerjaid', 
+            't.nama',
+            't.nik',
+            't.gender',
+            't.jenistenagakerja'
+        ])
+        ->get();
+}
 
     /**
      * Validate date range for RKH creation
@@ -2806,7 +2856,8 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Execute approval process
+     * Execute approval process with proper transaction handling
+     * FIXED: Wrap entire approval + post-actions in single transaction
      */
     private function executeApprovalProcess($request)
     {
@@ -2823,48 +2874,74 @@ private function getPerawatanManualRCData($companycode, $date)
             ];
         }
 
-        $rkh = DB::table('rkhhdr as r')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                    ->where('app.companycode', '=', $companycode);
-            })
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select(['r.*', 'app.jumlahapproval', 'app.idjabatanapproval1', 'app.idjabatanapproval2', 'app.idjabatanapproval3'])
-            ->first();
+        try {
+            // FIXED: Start transaction untuk entire approval process
+            DB::beginTransaction();
 
-        if (!$rkh) {
-            return ['success' => false, 'message' => 'RKH tidak ditemukan'];
+            $rkh = DB::table('rkhhdr as r')
+                ->leftJoin('approval as app', function($join) use ($companycode) {
+                    $join->on('r.activitygroup', '=', 'app.activitygroup')
+                        ->where('app.companycode', '=', $companycode);
+                })
+                ->where('r.companycode', $companycode)
+                ->where('r.rkhno', $rkhno)
+                ->select(['r.*', 'app.jumlahapproval', 'app.idjabatanapproval1', 'app.idjabatanapproval2', 'app.idjabatanapproval3'])
+                ->first();
+
+            if (!$rkh) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'RKH tidak ditemukan'];
+            }
+
+            // Validate approval authority
+            $validationResult = $this->validateApprovalAuthority($rkh, $currentUser, $level);
+            if (!$validationResult['success']) {
+                DB::rollBack();
+                return $validationResult;
+            }
+
+            // Process approval
+            $approvalValue = $action === 'approve' ? '1' : '0';
+            $approvalField = "approval{$level}flag";
+            $approvalDateField = "approval{$level}date";
+            $approvalUserField = "approval{$level}userid";
+            
+            DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update([
+                $approvalField => $approvalValue,
+                $approvalDateField => now(),
+                $approvalUserField => $currentUser->userid,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ]);
+
+            $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            // FIXED: Handle post-approval actions within same transaction
+            if ($action === 'approve') {
+                $responseMessage = $this->handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode);
+            }
+
+            // FIXED: Commit only if everything successful
+            DB::commit();
+
+            return ['success' => true, 'message' => $responseMessage];
+
+        } catch (\Exception $e) {
+            // FIXED: Rollback on any error
+            DB::rollBack();
+            
+            Log::error("Approval process failed for RKH {$rkhno}: " . $e->getMessage(), [
+                'user' => $currentUser->userid,
+                'action' => $action,
+                'level' => $level,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Proses approval gagal: ' . $e->getMessage()
+            ];
         }
-
-        // Validate approval authority
-        $validationResult = $this->validateApprovalAuthority($rkh, $currentUser, $level);
-        if (!$validationResult['success']) {
-            return $validationResult;
-        }
-
-        // Process approval
-        $approvalValue = $action === 'approve' ? '1' : '0';
-        $approvalField = "approval{$level}flag";
-        $approvalDateField = "approval{$level}date";
-        $approvalUserField = "approval{$level}userid";
-        
-        DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update([
-            $approvalField => $approvalValue,
-            $approvalDateField => now(),
-            $approvalUserField => $currentUser->userid,
-            'updateby' => $currentUser->userid,
-            'updatedat' => now()
-        ]);
-
-        $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
-
-        // Handle post-approval actions
-        if ($action === 'approve') {
-            $responseMessage = $this->handlePostApprovalActions($rkhno, $responseMessage);
-        }
-
-        return ['success' => true, 'message' => $responseMessage];
     }
 
     /**
@@ -2895,51 +2972,140 @@ private function getPerawatanManualRCData($companycode, $date)
     }
 
     /**
-     * Handle post-approval actions (LKH and Material generation)
-     */
-    private function handlePostApprovalActions($rkhno, $responseMessage)
-    {
-        $companycode = Session::get('companycode');
+ * Handle post-approval actions within existing transaction
+ * FIXED: Better error handling untuk prevent unnecessary rollback
+ */
+private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
+{
+    \Log::info("Starting post-approval actions", ['rkhno' => $rkhno]);
+    
+    try {
+        // Get updated RKH data
         $updatedRkh = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
 
-        if ($this->isRkhFullyApproved($updatedRkh)) {
-            // Generate LKH
-            try {
-                $lkhGenerator = new LkhGeneratorService();
-                $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
-                
-                if ($lkhResult['success']) {
-                    $responseMessage .= '. LKH telah di-generate otomatis (' . $lkhResult['total_lkh'] . ' LKH)';
-                } else {
-                    $responseMessage .= '. WARNING: Gagal auto-generate LKH - ' . $lkhResult['message'];
-                }
-            } catch (\Exception $e) {
-                \Log::error("Exception during LKH auto-generation for RKH {$rkhno}: " . $e->getMessage());
-                $responseMessage .= '. WARNING: Error saat auto-generate LKH';
-            }
-            
-            // Generate Material Usage
-            try {
-                $materialUsageGenerator = new MaterialUsageGeneratorService();
-                $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
-                
-                if ($materialResult['success']) {
-                    if ($materialResult['total_items'] > 0) {
-                        $responseMessage .= '. Material usage berhasil di-generate (' . $materialResult['total_items'] . ' items)';
-                    } else {
-                        $responseMessage .= '. Info: Tidak ada material yang perlu di-generate';
-                    }
-                } else {
-                    $responseMessage .= '. WARNING: Gagal generate material usage - ' . $materialResult['message'];
-                }
-            } catch (\Exception $e) {
-                \Log::error("Exception during Material Usage generation for RKH {$rkhno}: " . $e->getMessage());
-                $responseMessage .= '. WARNING: Error saat generate material usage';
-            }
+        if (!$this->isRkhFullyApproved($updatedRkh)) {
+            \Log::info("RKH not fully approved yet, skipping auto-generation", ['rkhno' => $rkhno]);
+            return $responseMessage;
         }
 
+        \Log::info("RKH fully approved, starting auto-generation", ['rkhno' => $rkhno]);
+
+        // ✅ STEP 1: Generate LKH (ALWAYS REQUIRED)
+        \Log::info("Before LKH generation", ['rkhno' => $rkhno]);
+        
+        $lkhGenerator = new LkhGeneratorService();
+        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
+        
+        \Log::info("After LKH generation", [
+            'rkhno' => $rkhno,
+            'success' => $lkhResult['success'],
+            'message' => $lkhResult['message'] ?? 'no message',
+            'total_lkh' => $lkhResult['total_lkh'] ?? 0
+        ]);
+        
+        if (!$lkhResult['success']) {
+            throw new \Exception('LKH generation failed: ' . $lkhResult['message']);
+        }
+        
+        $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
+        
+        // ✅ STEP 2: Check if RKH needs material usage generation
+        $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
+        
+        if (!$needsMaterialUsage) {
+            \Log::info("RKH does not need material usage, skipping material generation", ['rkhno' => $rkhno]);
+            $responseMessage .= '. No material usage required for this RKH';
+            return $responseMessage;
+        }
+
+        // ✅ STEP 3: Generate Material Usage (ONLY IF NEEDED)
+        \Log::info("Before material usage generation", ['rkhno' => $rkhno]);
+        
+        try {
+            $materialUsageGenerator = new MaterialUsageGeneratorService();
+            $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+            
+            \Log::info("After material usage generation", [
+                'rkhno' => $rkhno,
+                'success' => $materialResult['success'],
+                'message' => $materialResult['message'] ?? 'no message',
+                'total_items' => $materialResult['total_items'] ?? 0
+            ]);
+            
+            if ($materialResult['success'] && ($materialResult['total_items'] ?? 0) > 0) {
+                $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items created)';
+                \Log::info("Material usage created successfully", [
+                    'rkhno' => $rkhno,
+                    'items_count' => $materialResult['total_items']
+                ]);
+            } else {
+                // ✅ SOFT FAILURE: Material generation failed, but don't rollback entire transaction
+                \Log::warning("Material generation failed but continuing", [
+                    'rkhno' => $rkhno,
+                    'error' => $materialResult['message'] ?? 'Unknown error'
+                ]);
+                $responseMessage .= '. Material usage generation skipped (no materials found or failed)';
+            }
+            
+        } catch (\Exception $materialError) {
+            // ✅ SOFT FAILURE: Log error but don't throw exception to prevent rollback
+            \Log::error("Material generation exception caught (but not failing transaction)", [
+                'rkhno' => $rkhno,
+                'error' => $materialError->getMessage()
+            ]);
+            
+            $responseMessage .= '. Material usage generation failed, but approval completed successfully';
+        }
+        
+        \Log::info("Post-approval auto-generation completed", [
+            'rkhno' => $rkhno,
+            'lkh_generated' => $lkhResult['total_lkh']
+        ]);
+        
         return $responseMessage;
+
+    } catch (\Exception $e) {
+        // ✅ HARD FAILURE: Only critical errors (like LKH generation) should cause rollback
+        if (strpos($e->getMessage(), 'LKH generation failed') !== false) {
+            \Log::error("Critical post-approval failure - rolling back", [
+                'rkhno' => $rkhno,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw new \Exception('LKH auto-generation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+        }
+        
+        // For non-critical errors, just log and continue
+        \Log::warning("Non-critical post-approval error", [
+            'rkhno' => $rkhno,
+            'error' => $e->getMessage()
+        ]);
+        
+        return $responseMessage . '. Some auto-generation processes failed, but approval completed successfully';
     }
+}
+
+/**
+ * Check if RKH needs material usage generation
+ * NEW METHOD: Prevent unnecessary material generation attempts
+ */
+private function checkIfRkhNeedsMaterialUsage($rkhno, $companycode)
+{
+    // Check if any RKH details use material
+    $hasMaterialUsage = DB::table('rkhlst')
+        ->where('companycode', $companycode)
+        ->where('rkhno', $rkhno)
+        ->where('usingmaterial', 1)
+        ->whereNotNull('herbisidagroupid')
+        ->exists();
+    
+    \Log::info("Checking material usage need", [
+        'rkhno' => $rkhno,
+        'has_material_usage' => $hasMaterialUsage
+    ]);
+    
+    return $hasMaterialUsage;
+}
 
     /**
      * Get RKH approval detail

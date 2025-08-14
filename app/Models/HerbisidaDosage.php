@@ -19,7 +19,6 @@ class HerbisidaDosage extends Model
         'herbisidagroupid',
         'itemcode',
         'dosageperha',
-        'dosageunit',
         'inputby',
         'updateby',
         'createdat',

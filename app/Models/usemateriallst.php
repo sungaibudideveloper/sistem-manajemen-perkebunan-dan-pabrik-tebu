@@ -22,9 +22,10 @@ public function joinlst($rkhno)
     return \DB::select(
     "
     SELECT u.itemcode, u.qty, u.qtyretur, u.unit, u.nouse, u.noretur, u.itemname, d.dosageperha, 
-    d.dosageunit, d.herbisidagroupid FROM usemateriallst u
+    h.measure, d.herbisidagroupid FROM usemateriallst u
     JOIN HerbisidaDosage d ON u.itemcode = d.itemcode 
     AND u.herbisidagroupid = d.herbisidagroupid
+    JOIN herbisida h ON u.companycode = h.companycode AND u.itemcode = h.itemcode
     WHERE u.rkhno = '".$rkhno."'
     "
     );

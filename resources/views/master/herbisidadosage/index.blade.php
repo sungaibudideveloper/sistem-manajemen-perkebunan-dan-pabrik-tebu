@@ -4,17 +4,16 @@
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
   <div 
-  {{-- Untuk Data Default Awal (Modal)--}}
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', dosageperha: '', dosageunit: 'L'},
+      form: { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', dosageperha: ''},
       items: [],
        groups: [],
       loadItems() {
-      fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode) {{-- Ambil data item dari routes (secara default fetch = GET)--}}
-        .then(res => res.json()) {{-- Mengambil data dari response json dan Convert--}}
-        .then(data => this.items = data); {{-- Simpan data ke dalam items --}}
+      fetch('{{ route("masterdata.herbisida.items") }}'+ '?companycode=' + this.form.companycode)
+        .then(res => res.json())
+        .then(data => this.items = data);
       },
       loadGroups() {
       fetch('{{ route("masterdata.herbisida.group") }}?herbisidagroupid=' + this.form.herbisidagroupid)
@@ -23,7 +22,7 @@
       },
       resetForm() {
         this.mode = 'create';
-        this.form = { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', dosageperha: '', dosageunit: 'L' };
+        this.form = { companycode:'TBL1', activitycode: '', itemcode: '', time: '', description: '', dosageperha: '' };
         this.open = true;
         this.loadItems()
       },
@@ -37,7 +36,6 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      {{-- Create Button (Modal)--}}
       @if (auth()->user() && in_array('Create Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
@@ -49,7 +47,6 @@
         </button>
       @endif
         
-        {{-- Search Form --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
         <input
@@ -62,7 +59,6 @@
         />
       </form>
 
-      {{-- Item Per Page: --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
         <select 
@@ -75,16 +71,13 @@
         </select>
       </form>
     
-
-      {{-- Modal - Form --}}
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        {{-- Modal - Backdrop --}}
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
 
         <div class="fixed inset-0 z-10 overflow-y-auto">
           <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div {{-- @click.away="open = false" --}} {{-- matikan @clickaway= memencet selain modal akan menjadi false--}}
+            <div
                 x-show="open"
                 x-transition:enter="ease-out duration-300"
                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -100,7 +93,7 @@
                 class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
                 <template x-if="mode === 'edit'">
-                  <input type="hidden" name="_method" value="PATCH"> {{-- Spoofing PATCH method --}}
+                  <input type="hidden" name="_method" value="PATCH">
                 </template>
                 <div class="text-center sm:text-left">
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Herbisida Dosage' : 'Create Herbisida Dosage'">
@@ -153,21 +146,12 @@
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" maxlength="100"
                                 style='border:none;'></textarea>
                     </div>
-                    <div class="grid grid-cols-5 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                       <div class="col-span-2">
-                        <label for="dosageperha" class="block text-sm font-medium text-gray-700">Total Dosis</label>
+                        <label for="dosageperha" class="block text-sm font-medium text-gray-700">Total Dosis (per Ha)</label>
                         <input type="number" step="0.01" name="dosageperha" id="dosageperha" x-model="form.dosageperha" x-init="form.dosageperha = '{{ old('dosageperha') }}'"
                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                               min="0" max="9999.99" required>
-                      </div>
-                      <div>
-                        <label for="dosageunit" class="block text-sm font-medium text-gray-700">Satuan</label>
-                        <select name="dosageunit" id="dosageunit" x-model="form.dosageunit" x-init="form.dosageunit = '{{ old('dosageunit') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                          <option value="L">L</option>
-                          <option value="GR">GR</option>
-                          <option value="KG">KG</option>
-                        </select>
                       </div>
                     </div>
                   </div>
@@ -190,7 +174,6 @@
       </div>
     </div>
 
-    {{-- Table --}}
     <div class="mx-auto px-4 py-2">
         <div class="overflow-x-auto border border-gray-300 rounded-md">
             <table class="min-w-full bg-white text-sm text-center">
@@ -225,8 +208,7 @@
                             <td class="py-2 px-4 border-b">{{ $data->createdat }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->itemname }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->dosageperha }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->dosageunit}}</td>
-                            {{-- Edit Button (Modal)--}}
+                            <td class="py-2 px-4 border-b">{{ $data->measure }}</td>
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
                                   @if (auth()->user() && in_array('Edit Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
@@ -235,29 +217,28 @@
                                       mode = 'edit';
                                       form.companycodeoriginal = '{{ $data->companycode }}';
                                       form.companycode = '{{ $data->companycode }}';
-                                      form.activitycodeoriginal = '{{ $data->activitycode }}'; {{-- Original activity code for update --}}
+                                      form.activitycodeoriginal = '{{ $data->activitycode }}';
                                       form.activitycode = '{{ $data->activitycode }}';
                                       form.herbisidagroupid_original = '{{ $data->herbisidagroupid }}';
                                       form.herbisidagroupid = '{{ $data->herbisidagroupid }}';
-                                      form.itemcodeoriginal = '{{ $data->itemcode }}'; {{-- Original item code for update --}}
+                                      form.itemcodeoriginal = '{{ $data->itemcode }}';
                                       form.itemcode = '{{ $data->itemcode }}';
                                       form.time = '{{ $data->createdat }}';
                                       form.description = '{{ $data->itemname }}';
                                       form.dosageperha = {{ $data->dosageperha ?? 0}};
-                                      form.dosageunit = '{{ $data->dosageunit}}';
                                       loadFormData(); 
                                       open = true
 
-                                      console.log('form after edit clicked:', form); // for debugging
+                                      console.log('form after edit clicked:', form);
                                     "
-                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm" {{-- Pake class group biar icon bisa ganti pas di hover --}}
+                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
                                     >
                                     <svg
                                       class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                       aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                       width="24" height="24" fill="none"
                                       viewBox="0 0 24 24">
-                                        <use xlink:href="#icon-edit-outline" /> {{-- Ambil dari sprite-svg.blade yang sudah di incldue di x-sprite-svg di x-layout --}}
+                                        <use xlink:href="#icon-edit-outline" />
                                     </svg>
                                     <svg 
                                       class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
@@ -270,7 +251,6 @@
                                     <span class="w-0.5"></span>
                                   </button>
                                   @endif
-                                  {{-- Delete Button --}}
                                   @if (auth()->user() && in_array('Hapus Dosis Herbisida', json_decode(auth()->user()->permissions ?? '[]')))
                                     <form 
                                       action="{{ url("masterdata/herbisida-dosage/{$data->companycode}/{$data->herbisidagroupid}/{$data->itemcode}") }}" 
@@ -301,7 +281,7 @@
                                       </button>
                                     </form>
                                   @endif
-                                </div> {{-- Untuk membungkus 2 button edit dan delete agar sebelahan --}}
+                                </div>
                               </td>
                         </tr>
                     @endforeach
@@ -310,7 +290,6 @@
         </div>
     </div>
 
-    {{-- Pagination --}}
     <div class="mx-4 my-1">
         @if ($herbisidaDosages->hasPages())
             {{ $herbisidaDosages->appends(['perPage' => $herbisidaDosages->perPage()])->links() }}
@@ -323,7 +302,6 @@
         @endif
     </div>
 
-    {{-- Toast Notification --}}
     @if (session('success'))
       <div x-data x-init="alert('{{ session('success') }}')"></div>
     @endif
@@ -332,8 +310,8 @@
 
 <script>
   $('#submitmodal').on('click', function() {
-    $(this).attr('disabled', true); // Disable the button
-    $(this).text('Saving...'); // Change the button text to "Saving..."
-    $('#formcreateedit').submit(); // Submit the form
+    $(this).attr('disabled', true);
+    $(this).text('Saving...');
+    $('#formcreateedit').submit();
   });
 </script>

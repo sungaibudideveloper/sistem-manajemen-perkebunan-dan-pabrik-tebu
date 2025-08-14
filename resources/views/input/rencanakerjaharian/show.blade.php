@@ -58,8 +58,8 @@
             }
             
             // Status RKH
-            $rkhStatus = $rkhHeader->status === 'Done' ? 'Done' : 'On Progress';
-            $rkhStatusClass = $rkhHeader->status === 'Done' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+            $rkhStatus = $rkhHeader->status === 'Completed' ? 'Completed' : 'On Progress';
+            $rkhStatusClass = $rkhHeader->status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
           @endphp
           
           <div class="flex items-center space-x-2">
@@ -229,11 +229,26 @@
                   @endif
                 </td>
                 
-                <!-- Material -->
+                <!-- Material - UPDATED WITH CLICK FUNCTIONALITY -->
                 <td class="px-3 py-3 text-xs text-center">
                   @if($detail->usingmaterial == 1 && $detail->herbisidagroupname)
-                    <div class="bg-green-100 text-green-800 px-2 py-1 rounded-lg">
+                    <div 
+                      class="bg-green-100 text-green-800 px-2 py-1 rounded-lg cursor-pointer hover:bg-green-200 transition-colors"
+                      onclick="openMaterialModal({
+                        activitycode: '{{ $detail->activitycode }}',
+                        activityname: '{{ addslashes($detail->activityname ?? '') }}',
+                        blok: '{{ $detail->blok }}',
+                        plot: '{{ $detail->plot }}',
+                        luasarea: {{ $detail->luasarea ?? 0 }},
+                        herbisidagroupid: {{ $detail->herbisidagroupid ?? 'null' }},
+                        herbisidagroupname: '{{ addslashes($detail->herbisidagroupname) }}'
+                      })"
+                      title="Klik untuk melihat detail material"
+                    >
                       <div class="font-semibold">{{ $detail->herbisidagroupname }}</div>
+                      <div class="text-[10px] text-green-600 mt-1">
+                        (klik untuk melihat detail)
+                      </div>
                     </div>
                   @elseif($detail->usingmaterial == 1)
                     <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Ya</span>
@@ -378,7 +393,7 @@
     </button>
 
     <!-- Edit Button (if allowed) -->
-    @if($rkhHeader->status !== 'Done')
+    @if($rkhHeader->status !== 'Completed')
       <button
         onclick="window.location.href = '{{ route('input.rencanakerjaharian.edit', $rkhHeader->rkhno) }}';"
         class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors flex items-center"
@@ -410,6 +425,104 @@
       </svg>
       Export
     </button>
+  </div>
+
+  <!-- Material Detail Modal -->
+  <div x-data="materialShowModal()" x-cloak>
+    <!-- Modal Overlay -->
+    <div
+      x-show="open"
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+      style="display: none;"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+    >
+      <div
+        @click.away="open = false"
+        class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
+      >
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Detail Material</h2>
+            <button @click="open = false" type="button" class="text-gray-400 hover:text-gray-600 rounded-full p-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="mt-2 text-sm text-gray-600">
+            <p><strong>Aktivitas:</strong> <span x-text="selectedDetail.activitycode"></span> - <span x-text="selectedDetail.activityname"></span></p>
+            <p><strong>Lokasi:</strong> <span x-text="selectedDetail.blok"></span> - <span x-text="selectedDetail.plot"></span></p>
+            <p><strong>Luas Area:</strong> <span x-text="selectedDetail.luasarea"></span> ha</p>
+          </div>
+        </div>
+
+        {{-- Content --}}
+        <div class="flex-1 overflow-y-auto p-6">
+          <!-- Group Information -->
+          <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-green-800 mb-1" x-text="selectedDetail.herbisidagroupname"></h3>
+            <p class="text-sm text-green-700" x-text="materialList.length > 0 ? materialList[0].description || 'Material yang direncanakan untuk aktivitas ini' : 'Material yang direncanakan untuk aktivitas ini'"></p>
+          </div>
+
+          <!-- Loading State -->
+          <div x-show="loading" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span class="ml-2 text-gray-600">Memuat detail material...</span>
+          </div>
+
+          <!-- Material List -->
+          <div x-show="!loading && materialList.length > 0" class="space-y-4">
+            <template x-for="(material, index) in materialList" :key="material.itemcode">
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center mb-2">
+                      <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-800 text-sm font-medium mr-3" x-text="index + 1"></span>
+                      <h4 class="font-semibold text-gray-900" x-text="material.itemname"></h4>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600 ml-9">
+                      <div>
+                        <span class="font-medium">Kode:</span>
+                        <span class="font-mono ml-1" x-text="material.itemcode"></span>
+                      </div>
+                      <div>
+                        <span class="font-medium">Dosis per Ha:</span>
+                        <span class="ml-1" x-text="`${material.dosageperha} ${material.measure}`"></span>
+                      </div>
+                      <div>
+                        <span class="font-medium">Total Kebutuhan:</span>
+                        <span class="ml-1 font-semibold text-green-700" x-text="`${(material.dosageperha * selectedDetail.luasarea).toFixed(2)} ${material.measure}`"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- No Material State -->
+          <div x-show="!loading && materialList.length === 0" class="text-center py-8">
+            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="text-gray-500">Tidak ada detail material yang ditemukan</p>
+          </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-end">
+          <button @click="open = false" type="button" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Print Styles -->
@@ -447,5 +560,88 @@
       }
     }
   </style>
+
+  <script>
+    // Global data untuk material modal
+    window.herbisidaData = @json($herbisidagroups ?? []);
+
+    // Fungsi Alpine untuk Material Show Modal
+    function materialShowModal() {
+      return {
+        open: false,
+        loading: false,
+        selectedDetail: {
+          activitycode: '',
+          activityname: '',
+          blok: '',
+          plot: '',
+          luasarea: 0,
+          herbisidagroupid: null,
+          herbisidagroupname: ''
+        },
+        materialList: [],
+
+        // Method untuk membuka modal dengan data detail
+        showMaterialDetail(detail) {
+          this.selectedDetail = {
+            activitycode: detail.activitycode || '',
+            activityname: detail.activityname || '',
+            blok: detail.blok || '',
+            plot: detail.plot || '',
+            luasarea: parseFloat(detail.luasarea) || 0,
+            herbisidagroupid: detail.herbisidagroupid || null,
+            herbisidagroupname: detail.herbisidagroupname || ''
+          };
+          
+          this.open = true;
+          this.loadMaterialDetail();
+        },
+
+        // Load material detail dari server atau data lokal
+        async loadMaterialDetail() {
+          if (!this.selectedDetail.herbisidagroupid || !this.selectedDetail.activitycode) {
+            this.materialList = [];
+            return;
+          }
+
+          this.loading = true;
+          
+          try {
+            // Jika ada window.herbisidaData (data lokal), gunakan itu
+            if (window.herbisidaData) {
+              const materials = window.herbisidaData.filter(item => 
+                item.herbisidagroupid == this.selectedDetail.herbisidagroupid && 
+                item.activitycode === this.selectedDetail.activitycode
+              );
+              
+              this.materialList = materials.map(item => ({
+                itemcode: item.itemcode,
+                itemname: item.itemname,
+                dosageperha: parseFloat(item.dosageperha) || 0,
+                measure: item.measure || 'unit',
+                description: item.description || ''
+              }));
+            } else {
+              this.materialList = [];
+            }
+          } catch (error) {
+            console.error('Error loading material detail:', error);
+            this.materialList = [];
+          } finally {
+            this.loading = false;
+          }
+        }
+      }
+    }
+
+    // Global function untuk membuka modal material (dipanggil dari tabel)
+    window.openMaterialModal = function(detail) {
+      // Trigger Alpine component
+      const modalComponent = document.querySelector('[x-data*="materialShowModal"]');
+      if (modalComponent && modalComponent._x_dataStack && modalComponent._x_dataStack[0]) {
+        modalComponent._x_dataStack[0].showMaterialDetail(detail);
+      }
+    };
+  </script>
 
 </x-layout>

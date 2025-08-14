@@ -512,66 +512,80 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
               })}</span>
             </div>
 
-            {/* Action Row - Sync & Complete All - UPDATED */}
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Complete All Button - Enhanced with COMPLETED status */}
-              {lkhList.length > 0 && (
-                (() => {
-                  const { ready, total, completed } = getCompletableCount();
-                  const allCompleted = completed === total && total > 0;
-                  
-                  if (allCompleted) {
-                    // All LKH completed - show disabled success button
-                    return (
-                      <div className="flex items-center gap-4">
-                        <button
-                          disabled
-                          className="flex items-center gap-2 px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"
-                        >
-                          <FiCheckCircle className="w-4 h-4" />
-                          <span>Sudah Selesai</span>
-                        </button>
-                        
-                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-100 px-3 py-2 rounded-lg">
-                          <FiCheckCircle className="w-4 h-4" />
-                          <span>Semua data sudah disubmit ke sistem</span>
+            {/* Action Row - Sync & Complete All */}
+            <div className="flex items-center justify-between flex-wrap">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Complete All Button - Enhanced with COMPLETED status */}
+                {lkhList.length > 0 && (
+                  (() => {
+                    const { ready, total, completed } = getCompletableCount();
+                    const allCompleted = completed === total && total > 0;
+                    
+                    if (allCompleted) {
+                      // All LKH completed - show disabled success button
+                      return (
+                        <div className="flex items-center gap-4">
+                          <button
+                            disabled
+                            className="flex items-center gap-2 px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"
+                          >
+                            <FiCheckCircle className="w-4 h-4" />
+                            <span>Sudah Selesai</span>
+                          </button>
+                          
+                          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-100 px-3 py-2 rounded-lg">
+                            <FiCheckCircle className="w-4 h-4" />
+                            <span>Semua data sudah disubmit ke sistem</span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  } else {
-                    // Still in progress - show normal flow
-                    return (
-                      <>
-                        <button
-                          onClick={completeAllLKH}
-                          disabled={isLoading || ready !== total}
-                          className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        >
-                          {isLoading ? (
-                            <>
-                              <FiLoader className="w-4 h-4 animate-spin" />
-                              <span>Memproses...</span>
-                            </>
-                          ) : (
-                            <>
-                              <FiCheckCircle className="w-4 h-4" />
-                              <span>Complete All Data</span>
-                            </>
-                          )}
-                        </button>
+                      );
+                    } else {
+                      // Still in progress - show normal flow
+                      return (
+                        <>
+                          <button
+                            onClick={completeAllLKH}
+                            disabled={isLoading || ready !== total}
+                            className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                          >
+                            {isLoading ? (
+                              <>
+                                <FiLoader className="w-4 h-4 animate-spin" />
+                                <span>Memproses...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiCheckCircle className="w-4 h-4" />
+                                <span>Complete All Data</span>
+                              </>
+                            )}
+                          </button>
 
-                        {/* FIXED: Progress Info without amber text */}
-                        <div className="flex items-center gap-2 text-sm text-neutral-600 bg-neutral-100 px-3 py-2 rounded-lg">
-                          <FiClipboard className="w-4 h-4" />
-                          <span>
-                            {ready}/{total} LKH Sudah Diinput
-                          </span>
-                        </div>
-                      </>
-                    );
-                  }
-                })()
-              )}
+                          <div className="flex items-center gap-2 text-sm text-neutral-600 bg-neutral-100 px-3 py-2 rounded-lg">
+                            <FiClipboard className="w-4 h-4" />
+                            <span>
+                              {ready}/{total} LKH Sudah Diinput
+                            </span>
+                          </div>
+                        </>
+                      );
+                    }
+                  })()
+                )}
+              </div>
+
+              {/* Refresh Button - NEW */}
+              <button
+                onClick={() => {
+                  setIsLoading(true);
+                  loadInitialData();
+                }}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                <FiRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
         </div>
@@ -791,15 +805,15 @@ const FieldCollectionSystem: React.FC<FieldCollectionProps> = ({
                               <div className="grid grid-cols-3 gap-6 text-center">
                                 <div>
                                   <p className="text-xs text-neutral-500">Qty Diterima</p>
-                                  <p className="font-semibold">{material.total_qty} {material.unit}</p>
+                                  <p className="font-semibold">{Number(material.total_qty).toFixed(3)} {material.unit}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-neutral-500">Terpakai</p>
-                                  <p className="font-semibold text-green-600">{material.total_qtydigunakan || 0} {material.unit}</p>
+                                  <p className="font-semibold text-green-600">{Number(material.total_qtydigunakan || 0).toFixed(3)} {material.unit}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-neutral-500">Sisa/Retur</p>
-                                  <p className="font-semibold text-orange-600">{material.total_qtyretur || 0} {material.unit}</p>
+                                  <p className="font-semibold text-orange-600">{Number(material.total_qtyretur || 0).toFixed(3)} {material.unit}</p>
                                 </div>
                               </div>
                               

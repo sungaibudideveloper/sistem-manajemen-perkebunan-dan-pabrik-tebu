@@ -24,8 +24,8 @@
                     <select id="mandor_filter" x-model="selectedMandor" @change="loadAbsenData(absenDate, selectedMandor)"
                             class="text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Semua Mandor</option>
-                        <template x-for="mandor in mandorList" :key="mandor.id">
-                            <option :value="mandor.id" x-text="mandor.name"></option>
+                        <template x-for="mandor in mandorList" :key="mandor.mandorid">
+                            <option :value="mandor.mandorid" x-text="`${mandor.mandorid} - ${mandor.mandor_name}`"></option>
                         </template>
                     </select>
                 </div>
@@ -49,32 +49,45 @@
                     <table class="min-w-full table-auto text-sm">
                         <thead class="bg-gray-100 sticky top-0">
                             <tr>
-                                <th class="px-3 py-2 text-left">ID</th>
+                                <th class="px-3 py-2 text-left">ID Tenaga Kerja</th>
                                 <th class="px-3 py-2 text-left">Nama</th>
+                                <th class="px-3 py-2 text-left">NIK</th>
                                 <th class="px-3 py-2 text-center">Gender</th>
-                                <th class="px-3 py-2 text-left">Jenis TK</th>
+                                <th class="px-3 py-2 text-center">Jenis TK</th>
                                 <th class="px-3 py-2 text-left">Mandor</th>
-                                <th class="px-3 py-2 text-center">Jam Absen</th>
+                                <th class="px-3 py-2 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="person in absenList" :key="person.id">
+                            <template x-for="person in absenList" :key="person.tenagakerjaid">
                                 <tr class="hover:bg-gray-50">
-                                    <td class="border px-3 py-2 font-mono text-xs" x-text="person.id"></td>
+                                    <td class="border px-3 py-2 font-mono text-xs" x-text="person.tenagakerjaid"></td>
                                     <td class="border px-3 py-2" x-text="person.nama"></td>
+                                    <td class="border px-3 py-2 font-mono text-xs" x-text="person.nik || '-'"></td>
+                                    <td class="border px-3 py-2 text-center" x-text="person.gender === 'L' ? 'Laki-laki' : 'Perempuan'"></td>
+                                    <td class="border px-3 py-2 text-center" x-text="{
+                                        1: 'Harian',
+                                        2: 'Borongan', 
+                                        3: 'Operator',
+                                        4: 'Helper'
+                                    }[person.jenistenagakerja] || 'Unknown'"></td>
+                                    <td class="border px-3 py-2" x-text="person.mandorid"></td>
                                     <td class="border px-3 py-2 text-center">
-                                        <span class="px-2 py-1 text-xs rounded-full"
-                                              :class="person.gender === 'L' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'"
-                                              x-text="person.gender === 'L' ? 'L' : 'P'"></span>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">
+                                            APPROVED
+                                        </span>
                                     </td>
-                                    <td class="border px-3 py-2" x-text="person.jenistenagakerja_nama"></td>
-                                    <td class="border px-3 py-2" x-text="person.mandor_nama"></td>
-                                    <td class="border px-3 py-2 text-center font-mono text-xs" x-text="person.jam_absen"></td>
                                 </tr>
                             </template>
                             <tr x-show="absenList.length === 0">
-                                <td colspan="6" class="border px-3 py-8 text-center text-gray-500">
-                                    Tidak ada data absen yang tersedia untuk tanggal ini
+                                <td colspan="7" class="border px-3 py-8 text-center text-gray-500">
+                                    <div class="flex flex-col items-center">
+                                        <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        </svg>
+                                        <p>Tidak ada data absen yang tersedia</p>
+                                        <p class="text-xs text-gray-400 mt-1">untuk tanggal dan mandor yang dipilih</p>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
