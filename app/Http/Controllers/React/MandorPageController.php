@@ -1332,7 +1332,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             $user = auth()->user();
             $date = $request->input('date', now()->format('Y-m-d'));
             
-            // Query materials with original status
+            // Query materials with proper joins
             $materials = DB::table('usemateriallst as uml')
                 ->join('usematerialhdr as umh', function($join) {
                     $join->on('uml.companycode', '=', 'umh.companycode')
@@ -1347,7 +1347,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                 ->whereDate('lkh.lkhdate', $date)
                 ->select([
                     'uml.itemcode', 'uml.itemname', 'uml.qty', 'uml.qtyretur', 'uml.qtydigunakan',
-                    'uml.unit', 'uml.herbisidagroupid', 'uml.dosageperha', 'umh.flagstatus as status',
+                    'uml.unit', 'uml.dosageperha', 'umh.flagstatus as status',
                     'uml.lkhno', 'uml.rkhno'
                 ])
                 ->orderBy('uml.itemcode')
@@ -1370,7 +1370,6 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                         'status' => $material->status,
                         'lkh_details' => [],
                         'plot_breakdown' => [],
-                        'herbisidagroupid' => $material->herbisidagroupid,
                         'dosageperha' => $material->dosageperha,
                         'rkhno' => $material->rkhno
                     ];
@@ -1378,7 +1377,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                 
                 $groupedMaterials[$key]['total_qty'] += (float) $material->qty;
                 
-                // FIXED: Get live usage data from lkhdetailmaterial if available
+                // Get live usage data from lkhdetailmaterial if available
                 $liveUsage = $this->getLiveUsageData($user->companycode, $material->lkhno, $material->itemcode);
                 
                 if ($liveUsage) {
@@ -1407,7 +1406,6 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                     $materialData['rkhno'], 
                     $itemcode, 
                     $user->companycode,
-                    $materialData['herbisidagroupid'],
                     $materialData['dosageperha']
                 );
                 $materialData['plot_breakdown'] = $plotBreakdown;
@@ -1420,8 +1418,11 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             ]);
             
         } catch (\Exception $e) {
+            // KEEP: Production error logging (important for debugging real issues)
             Log::error('Error in getAvailableMaterials', [
                 'message' => $e->getMessage(),
+                'user_id' => auth()->user()->userid ?? 'unknown',
+                'date' => $request->input('date'),
                 'trace' => $e->getTraceAsString()
             ]);
             
@@ -2117,7 +2118,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
     /**
      * Get material breakdown per plot
      */
-    private function getMaterialPlotBreakdown($rkhno, $itemcode, $companyCode, $herbisidagroupid, $dosageperha)
+    private function getMaterialPlotBreakdown($rkhno, $itemcode, $companyCode, $dosageperha)
     {
         try {
             // Get all material records with their LKH and plot details
@@ -2128,7 +2129,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
                 ->where('uml.rkhno', $rkhno)
                 ->where('uml.itemcode', $itemcode)
                 ->select([
-                    'uml.lkhno', 'uml.qty', 'uml.unit', 'uml.herbisidagroupid', 
+                    'uml.lkhno', 'uml.qty', 'uml.unit', 
                     'uml.dosageperha', 'ldp.plot', 'ldp.blok', 'ldp.luasrkh'
                 ])
                 ->get();
@@ -2144,7 +2145,6 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
                     'blok' => $record->blok,
                     'luasarea' => (float) $record->luasrkh,
                     'usage' => $usage,
-                    // Use the correct unit from the material record
                     'usage_formatted' => number_format($usage, 3) . ' ' . $record->unit
                 ];
             }
@@ -2152,6 +2152,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             return $breakdown;
             
         } catch (\Exception $e) {
+            // KEEP: Error logging for production debugging
             Log::error('Error in getMaterialPlotBreakdown', [
                 'rkhno' => $rkhno,
                 'itemcode' => $itemcode,
