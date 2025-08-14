@@ -159,7 +159,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Display specific RKH record
+     * Display specific RKH record - Updated dengan data herbisida
      */
     public function show($rkhno)
     {
@@ -176,6 +176,9 @@ class RencanaKerjaHarianController extends Controller
         $absenData = $this->getAttendanceData($companycode, $rkhHeader->rkhdate);
         $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
         
+        $herbisidadosages = new Herbisidadosage;
+        $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData($companycode);
+        
         return view('input.rencanakerjaharian.show', [
             'title' => 'Detail RKH',
             'navbar' => 'Input',
@@ -184,6 +187,7 @@ class RencanaKerjaHarianController extends Controller
             'rkhDetails' => $rkhDetails,
             'absentenagakerja' => $absenData,
             'operatorsData' => $operatorsWithVehicles,
+            'herbisidagroups' => $herbisidaData,
         ]);
     }
 
