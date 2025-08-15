@@ -276,12 +276,15 @@ class GudangController extends Controller
               usemateriallst::insert($insertData);
               
               // Filter untuk insert atau edit
+              // https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api
+              // http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api
+              // http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/edituse_api
               if($details->whereNotNull('nouse')->count() < 1) {  
                   // Mode insert
                   $response = Http::withOptions([
                       'headers' => ['Accept' => 'application/json']
                   ])->asJson()
-                  ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api', [
+                  ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
                       'connection' => 'TESTING',
                       'company' => $first->companyinv,
                       'factory' => $first->factoryinv,
@@ -293,7 +296,7 @@ class GudangController extends Controller
                   $response = Http::withOptions([
                       'headers' => ['Accept' => 'application/json']
                   ])->asJson()
-                  ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/edituse_api', [
+                  ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
                       'connection' => 'TESTING',
                       'nouse' => $first->nouse,
                       'company' => $first->companyinv,
