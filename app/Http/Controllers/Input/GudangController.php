@@ -199,8 +199,8 @@ class GudangController extends Controller
 
     public function submit(Request $request)
     {
-        try {
-           DB::transaction(function() use ($request) {
+        // try {
+        //    DB::transaction(function() use ($request) {
               // Validasi basic
               $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
               $first = $details->first();
@@ -322,14 +322,14 @@ class GudangController extends Controller
               } else {
                   dd($response->json(), $response->body(), $response->status());
               }
-           });
+        //    });
           
           return redirect()->back()->with('success1', 'Data updated successfully');
           
-       } catch (\Exception $e) {
-           Log::error('Submit Error', ['error' => $e->getMessage()]);
-           return redirect()->back()->with('error', $e->getMessage());
-       }
+    //    } catch (\Exception $e) {
+    //        Log::error('Submit Error', ['error' => $e->getMessage()]);
+    //        return redirect()->back()->with('error', $e->getMessage());
+    //    }
     }
 
 

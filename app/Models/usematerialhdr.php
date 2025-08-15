@@ -68,8 +68,8 @@ public function selectusematerial($companycode, $rkhno = 0)
 {
     return \DB::select(
     "
-    SELECT a.rkhno, a.blok, a.plot, a.luasarea, l.createdat, b.flagstatus, u.nouse, u.lkhno, us.name, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
-    c.itemname, d.itemcode, d.dosageperha, c.measure, (d.dosageperha * a.luasarea) AS qty_siapkan, u.qty, u.qtyretur, u.noretur, c.companyinv, c.factoryinv
+    SELECT a.rkhno, a.blok, a.plot, lk.luasrkh, l.createdat, b.flagstatus, u.nouse, u.lkhno, us.name, e.activitycode, e.herbisidagroupid, e.herbisidagroupname, 
+    c.itemname, d.itemcode, d.dosageperha, c.measure, (d.dosageperha * lk.luasrkh) AS qty_siapkan, u.qty, u.qtyretur, u.noretur, c.companyinv, c.factoryinv
     FROM rkhlst AS a
     JOIN usematerialhdr AS b ON b.rkhno = a.rkhno
     JOIN herbisidagroup AS e ON e.herbisidagroupid = a.herbisidagroupid
@@ -78,6 +78,7 @@ public function selectusematerial($companycode, $rkhno = 0)
     JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
     JOIN lkhhdr AS l ON u.lkhno = l.lkhno
     JOIN USER AS us ON us.userid =  l.mandorid
+    JOIN lkhdetailplot AS lk ON lk.lkhno = u.lkhno
     WHERE a.rkhno = ? AND a.companycode = ? AND a.usingmaterial = 1
     ORDER BY a.blok, a.plot, d.itemcode;
     ",

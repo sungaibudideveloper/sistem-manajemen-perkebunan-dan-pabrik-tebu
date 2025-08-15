@@ -65,17 +65,16 @@
                         </tr>
                     </thead>
                     <tbody class="text-gray-600">
-                        @php $totalLuas = 0; $plots = $details->unique('plot'); @endphp
+                        @php $totalLuas = 0; $plots = $details->unique('lkhno'); @endphp
                         @foreach($plots as $d)  
-                        
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="py-1 px-2">{{ $d->lkhno }}</td>
                                 <td class="py-1 px-2">{{ $d->blok }}</td>
                                 <td class="py-1 px-2">{{ $d->plot }}</td>
-                                <td class="py-1 px-2 text-right">{{ $d->luasarea }} HA</td>
+                                <td class="py-1 px-2 text-right">{{ $d->luasrkh }} HA</td>
                                 <td class="py-1 px-2 bg-green-100">{{ $d->activitycode }} {{ $d->herbisidagroupname }}</td>
                             </tr>
-                            @php $totalLuas += floatval($d->luasarea); @endphp
+                            @php $totalLuas += floatval($d->luasrkh); @endphp
 
                         @endforeach
                     </tbody>
@@ -112,10 +111,13 @@
                     @foreach ($detailmaterial as $d)
                         @php
                             // cari luas untuk grup ini
-                            $plot    = $plots->firstWhere('herbisidagroupid', $d->herbisidagroupid);
-                            $luas    = (float) ($plot->luasarea ?? 0);
-                            $dosage  = (float) ($d->dosageperha ?? 0);
-                            
+                            $plot    = $plots->Where('lkhno', $d->lkhno)->first();
+                            $luas    = $plot->luasrkh ?? 0;
+
+                            if(empty($luas) || $plot->luasrkh == 0){
+                                dd($plots, $d->lkhno, $detailmaterial);
+                            }
+
                         @endphp
                     
                         <tr class="border-b hover:bg-gray-50">
@@ -130,7 +132,7 @@
 
                                     <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
                                         data-dosage="{{$item->dosageperha}}" >
-                                          Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}})
+                                          Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}}) ({{$luas}})
                                         </option>
                                     @endforeach
                                 </select>
@@ -209,25 +211,44 @@
     </x-layout>
     
     <script>
-    $(document).ready(function() {
-        $('.item-select').each(function() {
+        $(document).ready(function() {
+            $('.item-select').each(function() {
+                const selected = $(this).find('option:selected');
+                const dosage = selected.data('dosage');
+                const luasArea = $(this).data('luas');
+                const qty = (dosage * luasArea).toFixed(3); // Max 3 angka belakang koma
+                
+                const row = $(this).closest('tr');
+                row.find('.labelqty').text(qty);
+                row.find('.selected-qty').val(qty); // Update nilai input hidden juga
+            });
+        });
+        
+        $('.item-select').on('change', function () {
             const selected = $(this).find('option:selected');
-            const qty = selected.data('qty');
+            const dosage = selected.data('dosage');
+            const luasArea = $(this).data('luas');
+            const qty = (dosage * luasArea).toFixed(3); // Max 3 angka belakang koma
+            const newItemcode = selected.val();
+        
+            // Ambil lkhno dari name attribute select
+            const selectName = $(this).attr('name');
+            const lkhno = selectName.match(/\[(.*?)\]/)[1];
+        
             const row = $(this).closest('tr');
+            
+            // Update values
+            row.find('.selected-dosage').val(dosage);
+            row.find('.selected-qty').val(qty);
+            
+            // Update name attribute dengan itemcode baru
+            row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}]`);
+            row.find('.selected-qty').attr('name', `qty[${lkhno}][${newItemcode}]`);
+            row.find('.selected-unit').attr('name', `unit[${lkhno}][${newItemcode}]`);
+            $(this).attr('name', `itemcode[${lkhno}][${newItemcode}]`);
+            
+            // Update display
+            row.find('.labeldosage').text(dosage);
             row.find('.labelqty').text(qty);
         });
-    });
-    
-    $('.item-select').on('change', function () {
-        const selected = $(this).find('option:selected');
-        const dosage = selected.data('dosage');
-        const qty = selected.data('qty');
-    
-        const row = $(this).closest('tr');
-        row.find('.selected-dosage').val(dosage);
-        row.find('.selected-qty').val(qty);
-        
-        row.find('.labeldosage').text(dosage);
-        row.find('.labelqty').text(qty);
-    });
-    </script>
+        </script>
