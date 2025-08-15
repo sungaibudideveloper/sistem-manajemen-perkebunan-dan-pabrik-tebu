@@ -795,8 +795,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get LKH Rekap data
-     * FIXED: Updated to use new table structure
+     * Get LKH Rekap data - UPDATED VERSION
      */
     public function getLKHRekapData(Request $request)
     {
@@ -809,24 +808,21 @@ class RencanaKerjaHarianController extends Controller
             
             $rekapData = [
                 'pengolahan' => $this->getPengolahanData($companycode, $date),
-                'perawatan_manual' => [
-                    'pc' => $this->getPerawatanManualPCData($companycode, $date),
-                    'rc' => $this->getPerawatanManualRCData($companycode, $date)
-                ]
+                'perawatan' => $this->getPerawatanData($companycode, $date) // UPDATED: Combined manual & mekanis
             ];
 
             return response()->json([
                 'success' => true,
                 'company_info' => $companyInfo,
                 'pengolahan' => $rekapData['pengolahan'],
-                'perawatan_manual' => $rekapData['perawatan_manual'],
+                'perawatan' => $rekapData['perawatan'], // UPDATED: Single perawatan section
                 'lkh_numbers' => $lkhNumbers,
                 'date' => $date,
                 'generated_at' => now()->format('d/m/Y H:i:s'),
                 'debug' => [
                     'pengolahan_count' => count($rekapData['pengolahan']),
-                    'perawatan_pc_count' => count($rekapData['perawatan_manual']['pc']),
-                    'perawatan_rc_count' => count($rekapData['perawatan_manual']['rc']),
+                    'perawatan_pc_count' => count($rekapData['perawatan']['pc'] ?? []),
+                    'perawatan_rc_count' => count($rekapData['perawatan']['rc'] ?? []),
                     'total_lkh' => count($lkhNumbers)
                 ]
             ]);
@@ -838,6 +834,82 @@ class RencanaKerjaHarianController extends Controller
                 'message' => 'Gagal mengambil data LKH Rekap: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function getPerawatanData($companycode, $date)
+    {
+        $perawatanData = DB::table('lkhhdr as h')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldp.lkhno')
+                    ->where('ldp.companycode', '=', $companycode);
+            })
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('rkhlst as rls', function($join) use ($companycode) {
+                $join->on('h.rkhno', '=', 'rls.rkhno')
+                    ->on('h.activitycode', '=', 'rls.activitycode')
+                    ->on('ldp.plot', '=', 'rls.plot')
+                    ->where('rls.companycode', '=', $companycode);
+            })
+            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
+                $join->on('rls.operatorid', '=', 'tk.tenagakerjaid')
+                    ->where('tk.companycode', '=', $companycode)
+                    ->where('tk.jenistenagakerja', '=', 3); // Only operators
+            })
+            ->leftJoin('plot as p', function($join) use ($companycode) {
+                $join->on('ldp.plot', '=', 'p.plot')
+                    ->where('p.companycode', '=', $companycode);
+            })
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.lkhdate', $date)
+            ->where('h.activitycode', 'like', 'V.%') // All Activity V
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'h.totalworkers',
+                'ldp.luashasil as totalhasil', // FIXED: Use per-plot hasil instead of header total
+                'h.totalupahall',
+                'a.activityname',
+                'ldp.plot', // Just plot, no blok
+                'p.luasarea', // Plot area from plot table
+                'tk.nama as operator_nama', // Operator name (if using vehicle)
+                'rls.usingvehicle' // To check if using vehicle
+            ])
+            ->orderBy('h.activitycode')
+            ->orderBy('h.lkhno')
+            ->get();
+        
+        // Group by PC/RC based on activity code pattern
+        $result = ['pc' => [], 'rc' => []];
+        
+        foreach ($perawatanData as $record) {
+            // Determine PC or RC based on activity code pattern
+            $type = 'pc'; // default
+            if (strpos($record->activitycode, 'V.5.2.') === 0) {
+                $type = 'rc';
+            } elseif (strpos($record->activitycode, 'V.5.1.') === 0) {
+                $type = 'pc';
+            }
+            
+            $activityCode = $record->activitycode;
+            
+            if (!isset($result[$type][$activityCode])) {
+                $result[$type][$activityCode] = [];
+            }
+            
+            $result[$type][$activityCode][] = (object)[
+                'lkhno' => $record->lkhno,
+                'activitycode' => $record->activitycode,
+                'activityname' => $record->activityname,
+                'totalworkers' => $record->totalworkers,
+                'totalhasil' => $record->totalhasil, // Now this is per-plot hasil
+                'totalupahall' => $record->totalupahall,
+                'plot' => $record->plot, // Just plot without blok prefix
+                'luasarea' => $record->luasarea ?: 0, // Plot area
+                'operator_nama' => $record->usingvehicle && $record->operator_nama ? $record->operator_nama : '-', // Show operator only if using vehicle
+            ];
+        }
+        
+        return $result;
     }
 
     // =====================================
@@ -1779,42 +1851,41 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
- * Get Pengolahan data (Activity II, III, IV) - FIXED: Ambil mandor yang benar
- * UPDATED: using lkhdetailplot and proper mandor from header
- */
-private function getPengolahanData($companycode, $date)
-{
-    return DB::table('lkhhdr as h')
-        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-            $join->on('h.lkhno', '=', 'ldp.lkhno')
-                 ->where('ldp.companycode', '=', $companycode);
-        })
-        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
-        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-        ->where('h.companycode', $companycode)
-        ->whereDate('h.lkhdate', $date)
-        ->where(function($query) {
-            $query->where('h.activitycode', 'like', 'II.%')
-                ->orWhere('h.activitycode', 'like', 'III.%')
-                ->orWhere('h.activitycode', 'like', 'IV.%');
-        })
-        ->select([
-            'h.lkhno',
-            'h.activitycode',
-            'h.totalworkers',
-            'h.totalhasil',
-            'h.totalupahall', // FIXED: Use totalupahall instead of totalluasactual
-            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
-            'a.activityname',
-            'ldp.blok', // NOW from lkhdetailplot
-            'ldp.plot'  // NOW from lkhdetailplot
-        ])
-        ->orderBy('h.activitycode')
-        ->orderBy('h.lkhno')
-        ->get()
-        ->groupBy('activitycode')
-        ->toArray();
-}
+     * Get Pengolahan data (Activity II, III, IV) - FIXED: Use luashasil per plot  
+     * UPDATED: using lkhdetailplot and proper mandor from header with correct hasil per plot
+     */
+    private function getPengolahanData($companycode, $date)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('h.lkhno', '=', 'ldp.lkhno')
+                    ->where('ldp.companycode', '=', $companycode);
+            })
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // Mandor dari header
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->whereDate('h.lkhdate', $date)
+            ->where(function($query) {
+                $query->where('h.activitycode', 'like', 'II.%')
+                    ->orWhere('h.activitycode', 'like', 'III.%')
+                    ->orWhere('h.activitycode', 'like', 'IV.%');
+            })
+            ->select([
+                'h.lkhno',
+                'h.activitycode',
+                'h.totalworkers',
+                'ldp.luashasil as totalhasil', // FIXED: Use per-plot hasil
+                'h.totalupahall',
+                'u.name as mandor_nama', // Nama mandor dari user table
+                'a.activityname',
+                'ldp.plot'  // FIXED: Just plot, no blok (consistent with Perawatan)
+            ])
+            ->orderBy('h.activitycode')
+            ->orderBy('h.lkhno')
+            ->get()
+            ->groupBy('activitycode')
+            ->toArray();
+    }
 
     /**
  * Get Perawatan Manual PC data - FIXED: Ambil mandor yang benar

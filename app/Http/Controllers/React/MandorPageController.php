@@ -1320,7 +1320,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
     // =============================================================================
 
     /**
-     * Get available materials for mandor - FIXED to show live usage data
+     * FIXED: Get available materials - Remove herbisidagroupid reference
      */
     public function getAvailableMaterials(Request $request)
     {
@@ -1332,7 +1332,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             $user = auth()->user();
             $date = $request->input('date', now()->format('Y-m-d'));
             
-            // Query materials with proper joins
+            // FIXED: Remove herbisidagroupid from select
             $materials = DB::table('usemateriallst as uml')
                 ->join('usematerialhdr as umh', function($join) {
                     $join->on('uml.companycode', '=', 'umh.companycode')
@@ -1418,7 +1418,6 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             ]);
             
         } catch (\Exception $e) {
-            // KEEP: Production error logging (important for debugging real issues)
             Log::error('Error in getAvailableMaterials', [
                 'message' => $e->getMessage(),
                 'user_id' => auth()->user()->userid ?? 'unknown',
@@ -2054,7 +2053,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
 }
 
     /**
-     * Get materials for LKH with calculated breakdown per plot
+     * FIXED: Get materials for LKH - Remove herbisidagroupid reference
      */
     private function getMaterialsForLKH($lkhno, $companyCode)
     {
@@ -2068,15 +2067,15 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             return [];
         }
         
-        // Get materials from usemateriallst
+        // FIXED: Remove herbisidagroupid from usemateriallst query
         $materials = DB::table('usemateriallst as uml')
             ->where('uml.companycode', $companyCode)
             ->where('uml.rkhno', $rkhno)
             ->where('uml.lkhno', $lkhno)
-            ->select(['uml.itemcode', 'uml.itemname', 'uml.qty', 'uml.unit', 'uml.herbisidagroupid', 'uml.dosageperha'])
+            ->select(['uml.itemcode', 'uml.itemname', 'uml.qty', 'uml.unit', 'uml.dosageperha'])
             ->get();
         
-        // Get plot details for breakdown calculation
+        // Get plot details for breakdown calculation from RKHLST
         $plotDetails = DB::table('rkhlst as rls')
             ->where('rls.companycode', $companyCode)
             ->where('rls.rkhno', $rkhno)
@@ -2090,16 +2089,16 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             $plotBreakdown = [];
             $totalCalculated = 0;
             
+            // Since herbisidagroupid is no longer in usemateriallst, 
+            // we'll calculate for all plots (simplified approach)
             foreach ($plotDetails as $plot) {
-                if ($plot->herbisidagroupid === $material->herbisidagroupid) {
-                    $plotUsage = $plot->luasarea * $material->dosageperha;
-                    $plotBreakdown[] = [
-                        'plot' => $plot->plot,
-                        'luasarea' => (float) $plot->luasarea,
-                        'usage' => $plotUsage
-                    ];
-                    $totalCalculated += $plotUsage;
-                }
+                $plotUsage = $plot->luasarea * $material->dosageperha;
+                $plotBreakdown[] = [
+                    'plot' => $plot->plot,
+                    'luasarea' => (float) $plot->luasarea,
+                    'usage' => $plotUsage
+                ];
+                $totalCalculated += $plotUsage;
             }
             
             $materialWithBreakdown[] = [
@@ -2116,7 +2115,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
     }
 
     /**
-     * Get material breakdown per plot
+     * FIXED: Get material plot breakdown - herbisidagroupid dari rkhlst
      */
     private function getMaterialPlotBreakdown($rkhno, $itemcode, $companyCode, $dosageperha)
     {
@@ -2152,7 +2151,6 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             return $breakdown;
             
         } catch (\Exception $e) {
-            // KEEP: Error logging for production debugging
             Log::error('Error in getMaterialPlotBreakdown', [
                 'rkhno' => $rkhno,
                 'itemcode' => $itemcode,
@@ -2340,12 +2338,12 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
     }
 
     /**
-     * Get vehicle info for specific LKH - FIXED: Support multiple vehicles
+     * Get vehicle info for specific LKH - UPDATED: Include Helper Information
      */
     private function getVehicleInfoForLKH($lkhno)
     {
         try {
-            // Get all vehicles associated with this LKH through RKHLST
+            // Get all vehicles associated with this LKH through RKHLST with helper info
             $vehicleInfo = DB::table('lkhhdr as lkh')
                 ->join('rkhlst as rls', function($join) {
                     $join->on('lkh.rkhno', '=', 'rls.rkhno')
@@ -2355,16 +2353,27 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
                     $join->on('rls.operatorid', '=', 'k.idtenagakerja')
                         ->where('k.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk', function($join) {
-                    $join->on('k.idtenagakerja', '=', 'tk.tenagakerjaid')
-                        ->where('tk.isactive', '=', 1);
+                ->leftJoin('tenagakerja as tk_operator', function($join) {
+                    $join->on('k.idtenagakerja', '=', 'tk_operator.tenagakerjaid')
+                        ->where('tk_operator.isactive', '=', 1);
+                })
+                // NEW: Join with helper information
+                ->leftJoin('tenagakerja as tk_helper', function($join) {
+                    $join->on('rls.helperid', '=', 'tk_helper.tenagakerjaid')
+                        ->where('tk_helper.isactive', '=', 1);
                 })
                 ->where('lkh.lkhno', $lkhno)
                 ->where('rls.usingvehicle', 1)
                 ->whereNotNull('k.nokendaraan') // Ensure vehicle exists
                 ->select([
                     'k.nokendaraan', 'k.jenis', 'k.hourmeter',
-                    'tk.nama as operator_nama', 'tk.nik as operator_nik',
+                    'tk_operator.nama as operator_nama', 
+                    'tk_operator.nik as operator_nik',
+                    // NEW: Helper information
+                    'rls.usinghelper',
+                    'rls.helperid',
+                    'tk_helper.nama as helper_nama',
+                    'tk_helper.nik as helper_nik',
                     'rls.plot', 'rls.luasarea' // Include plot info for context
                 ])
                 ->orderBy('k.nokendaraan')
@@ -2383,12 +2392,17 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
                     'hourmeter' => (float) $vehicle->hourmeter,
                     'operator_nama' => $vehicle->operator_nama,
                     'operator_nik' => $vehicle->operator_nik,
+                    // NEW: Helper information for single vehicle
+                    'helper_nama' => $vehicle->usinghelper ? $vehicle->helper_nama : null,
+                    'helper_id' => $vehicle->usinghelper ? $vehicle->helperid : null,
+                    'helper_nik' => $vehicle->usinghelper ? $vehicle->helper_nik : null,
+                    'has_helper' => (bool) $vehicle->usinghelper,
                     'is_multiple' => false,
                     'plots' => [$vehicle->plot]
                 ];
             }
 
-            // Multiple vehicles - group by vehicle and include plot details
+            // Multiple vehicles - group by vehicle and include helper details
             $groupedVehicles = [];
             foreach ($vehicleInfo as $vehicle) {
                 $key = $vehicle->nokendaraan;
@@ -2400,6 +2414,11 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
                         'hourmeter' => (float) $vehicle->hourmeter,
                         'operator_nama' => $vehicle->operator_nama,
                         'operator_nik' => $vehicle->operator_nik,
+                        // NEW: Helper information for multiple vehicles
+                        'helper_nama' => $vehicle->usinghelper ? $vehicle->helper_nama : null,
+                        'helper_id' => $vehicle->usinghelper ? $vehicle->helperid : null,
+                        'helper_nik' => $vehicle->usinghelper ? $vehicle->helper_nik : null,
+                        'has_helper' => (bool) $vehicle->usinghelper,
                         'plots' => [],
                         'total_luasarea' => 0
                     ];
@@ -2416,7 +2435,7 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             ];
 
         } catch (\Exception $e) {
-            Log::error('Error in getVehicleInfoForLKH', [
+            Log::error('Error in getVehicleInfoForLKH with helper info', [
                 'lkhno' => $lkhno,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

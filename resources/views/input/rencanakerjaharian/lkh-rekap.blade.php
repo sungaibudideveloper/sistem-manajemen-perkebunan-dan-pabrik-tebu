@@ -1,4 +1,4 @@
-{{--resources\views\input\rencanakerjaharian\lkh-rekap.blade.php--}}
+{{-- resources\views\input\rencanakerjaharian\lkh-rekap.blade.php --}}
 <x-layout>
     <x-slot:title>Rekap Laporan Kegiatan Harian (LKH)</x-slot:title>
     <x-slot:navbar>Input</x-slot:navbar>
@@ -6,24 +6,11 @@
 
     <!-- Print-optimized container -->
     <div class="print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-2">
-        
-        <!-- Debug button (top right, small) -->
-        <div class="absolute top-2 right-2 z-50 no-print">
-            <button onclick="toggleDebugInfo()" class="bg-yellow-400 text-yellow-900 px-1 py-0.5 rounded text-xs font-medium hover:bg-yellow-500">
-                Debug
-            </button>
-        </div>
 
         <!-- Title -->
         <h1 class="text-xl font-bold text-center text-gray-800 mb-3 uppercase tracking-wider">
             Rekap Laporan Kegiatan Harian (LKH)
         </h1>
-
-        <!-- Debug Info -->
-        <div id="debug-info" class="bg-yellow-50 border border-yellow-200 text-yellow-800 p-2 rounded mb-2 text-xs hidden">
-            <strong>Debug Information:</strong>
-            <div id="debug-content">Loading debug info...</div>
-        </div>
 
         <!-- Info Box -->
         <div class="flex justify-between items-start mb-3 p-2 bg-gray-50 rounded-lg">
@@ -49,45 +36,24 @@
             </div>
         </div>
 
-        <!-- Section 2: LKH Perawatan Manual -->
+        <!-- Section 2: LKH Perawatan Manual dan Mekanis - UPDATED -->
         <div class="mb-3">
             <h2 class="text-lg font-bold text-gray-800 mb-2 pb-1 border-b border-gray-300">
-                2. LKH Perawatan Manual (Activity V)
+                2. LKH Perawatan Manual dan Mekanis (Activity V)
             </h2>
             
             <h3 class="text-base font-semibold text-gray-700 mb-1">
                 PC (Plant Cane)
             </h3>
-            <div id="perawatan-manual-pc-section" class="text-center py-3 text-gray-500 mb-2">
-                Memuat data perawatan manual PC...
+            <div id="perawatan-pc-section" class="text-center py-3 text-gray-500 mb-2">
+                Memuat data perawatan PC...
             </div>
 
             <h3 class="text-base font-semibold text-gray-700 mb-1">
                 RC (Ratoon Cane)
             </h3>
-            <div id="perawatan-manual-rc-section" class="text-center py-3 text-gray-500">
-                Memuat data perawatan manual RC...
-            </div>
-        </div>
-
-        <!-- Section 3: LKH Perawatan Mekanis -->
-        <div class="mb-3">
-            <h2 class="text-lg font-bold text-gray-800 mb-2 pb-1 border-b border-gray-300">
-                3. LKH Perawatan Mekanis
-            </h2>
-            
-            <h3 class="text-base font-semibold text-gray-700 mb-1">
-                PC (Plant Cane)
-            </h3>
-            <div class="text-center py-3 text-gray-400 italic mb-2">
-                Fitur perawatan mekanis akan ditambahkan pada update selanjutnya
-            </div>
-
-            <h3 class="text-base font-semibold text-gray-700 mb-1">
-                RC (Ratoon Cane)
-            </h3>
-            <div class="text-center py-3 text-gray-400 italic">
-                Fitur perawatan mekanis akan ditambahkan pada update selanjutnya
+            <div id="perawatan-rc-section" class="text-center py-3 text-gray-500">
+                Memuat data perawatan RC...
             </div>
         </div>
 
@@ -150,15 +116,13 @@
                 if (data.success) {
                     updateHeaderInfo(data);
                     populatePengolahanSection(data.pengolahan || {});
-                    populatePerawatanManualSection(data.perawatan_manual || {});
-                    updateDebugInfo(data);
+                    populatePerawatanSection(data.perawatan || {}); // UPDATED: Single perawatan section
                 } else {
                     showError('Gagal memuat data LKH Rekap: ' + data.message);
                 }
             } catch (error) {
                 console.error('Error loading LKH Rekap data:', error);
                 showError('Terjadi kesalahan saat memuat data: ' + error.message);
-                updateDebugInfo({error: error.message, stack: error.stack});
             }
         }
 
@@ -186,10 +150,11 @@
                 });
             }
 
-            if (data.perawatan_manual) {
+            // UPDATED: Single perawatan section with PC/RC subsections
+            if (data.perawatan) {
                 ['pc', 'rc'].forEach(type => {
-                    if (data.perawatan_manual[type]) {
-                        Object.values(data.perawatan_manual[type]).forEach(activities => {
+                    if (data.perawatan[type]) {
+                        Object.values(data.perawatan[type]).forEach(activities => {
                             if (Array.isArray(activities)) {
                                 activities.forEach(item => {
                                     totalLkh++; totalHasil += parseFloat(item.totalhasil || 0);
@@ -217,25 +182,27 @@
                 section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data pengolahan untuk tanggal yang dipilih</div>';
                 return;
             }
-            createActivityGrid(section, data);
+            createActivityGrid(section, data, 'pengolahan');
         }
 
-        function populatePerawatanManualSection(data) {
-            populatePerawatanSubsection(data?.pc, 'perawatan-manual-pc-section', 'PC');
-            populatePerawatanSubsection(data?.rc, 'perawatan-manual-rc-section', 'RC');
+        // UPDATED: Single function for perawatan section
+        function populatePerawatanSection(data) {
+            populatePerawatanSubsection(data?.pc, 'perawatan-pc-section', 'PC');
+            populatePerawatanSubsection(data?.rc, 'perawatan-rc-section', 'RC');
         }
 
         function populatePerawatanSubsection(data, sectionId, type) {
             const section = document.getElementById(sectionId);
             section.innerHTML = '';
             if (!data || Object.keys(data).length === 0) {
-                section.innerHTML = `<div class="text-center py-6 text-gray-400 italic">Tidak ada data perawatan manual ${type} untuk tanggal yang dipilih</div>`;
+                section.innerHTML = `<div class="text-center py-6 text-gray-400 italic">Tidak ada data perawatan ${type} untuk tanggal yang dipilih</div>`;
                 return;
             }
-            createActivityGrid(section, data);
+            createActivityGrid(section, data, 'perawatan');
         }
 
-        function createActivityGrid(section, data) {
+        // JavaScript untuk LKH Rekap
+        function createActivityGrid(section, data, type) {
             const tablesGrid = document.createElement('div');
             tablesGrid.className = 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mb-3';
 
@@ -254,17 +221,32 @@
 
                 const table = document.createElement('table');
                 table.className = 'w-full text-xs';
-                table.innerHTML = `
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-1 py-0.5 text-left border-b text-gray-600 w-8">No.</th>
-                            <th class="px-1 py-0.5 text-center border-b text-gray-600">Mandor</th>
-                            <th class="px-1 py-0.5 text-center border-b text-gray-600 w-16">Plot</th>
-                            <th class="px-1 py-0.5 text-right border-b text-gray-600 w-12">Hasil</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                `;
+                
+                // Table headers based on type
+                const headers = type === 'pengolahan' 
+                    ? `
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-1 py-0.5 text-left border-b text-gray-600 w-8">No.</th>
+                                <th class="px-1 py-0.5 text-center border-b text-gray-600">Mandor</th>
+                                <th class="px-1 py-0.5 text-center border-b text-gray-600 w-16">Plot</th>
+                                <th class="px-1 py-0.5 text-right border-b text-gray-600 w-12">Hasil</th>
+                            </tr>
+                        </thead>
+                    `
+                    : `
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-1 py-0.5 text-left border-b text-gray-600 w-8">No.</th>
+                                <th class="px-1 py-0.5 text-center border-b text-gray-600">Operator</th>
+                                <th class="px-1 py-0.5 text-center border-b text-gray-600 w-16">Plot</th>
+                                <th class="px-1 py-0.5 text-center border-b text-gray-600 w-16">Luas Plot</th>
+                                <th class="px-1 py-0.5 text-right border-b text-gray-600 w-12">Hasil</th>
+                            </tr>
+                        </thead>
+                    `;
+
+                table.innerHTML = headers + '<tbody></tbody>';
 
                 const tbody = table.querySelector('tbody');
                 let totalHasil = 0;
@@ -276,24 +258,51 @@
                     const hasil = parseFloat(item.totalhasil || 0);
                     totalHasil += hasil;
 
-                    const mandorName = item.mandor_nama || '-';
-                    const plotDisplay = `${item.blok}-${item.plot}` || '-';
+                    // FIXED: Plot display - consistent for both types (no blok prefix)
+                    if (type === 'pengolahan') {
+                        const mandorName = item.mandor_nama || '-';
+                        const plotDisplay = item.plot || '-'; // FIXED: Just plot, no blok
 
-                    row.innerHTML = `
-                        <td class="px-1 py-0.5 border-b text-center">${index + 1}</td>
-                        <td class="px-1 py-0.5 border-b font-medium text-xs">${mandorName}</td>
-                        <td class="px-1 py-0.5 border-b text-center">${plotDisplay}</td>
-                        <td class="px-1 py-0.5 border-b text-right">${hasil.toFixed(2)}</td>
-                    `;
+                        row.innerHTML = `
+                            <td class="px-1 py-0.5 border-b text-center">${index + 1}</td>
+                            <td class="px-1 py-0.5 border-b font-medium text-xs">${mandorName}</td>
+                            <td class="px-1 py-0.5 border-b text-center">${plotDisplay}</td>
+                            <td class="px-1 py-0.5 border-b text-right">${hasil.toFixed(2)}</td>
+                        `;
+                    } else {
+                        // Perawatan - show operator and plot area
+                        const operatorName = item.operator_nama || '-';
+                        const plotDisplay = item.plot || '-'; // FIXED: Just plot, consistent
+                        const luasArea = item.luasarea ? parseFloat(item.luasarea).toFixed(2) : '0.00';
+
+                        row.innerHTML = `
+                            <td class="px-1 py-0.5 border-b text-center">${index + 1}</td>
+                            <td class="px-1 py-0.5 border-b font-medium text-xs">${operatorName}</td>
+                            <td class="px-1 py-0.5 border-b text-center">${plotDisplay}</td>
+                            <td class="px-1 py-0.5 border-b text-center">${luasArea}</td>
+                            <td class="px-1 py-0.5 border-b text-right">${hasil.toFixed(2)}</td>
+                        `;
+                    }
+                    
                     tbody.appendChild(row);
                 });
 
+                // Total row based on type
                 const totalRow = document.createElement('tr');
                 totalRow.className = 'bg-gray-100 font-semibold';
-                totalRow.innerHTML = `
-                    <td colspan="3" class="px-1 py-0.5 text-center border-t-2 border-gray-400">TOTAL</td>
-                    <td class="px-1 py-0.5 text-right border-t-2 border-gray-400">${totalHasil.toFixed(2)}</td>
-                `;
+                
+                if (type === 'pengolahan') {
+                    totalRow.innerHTML = `
+                        <td colspan="3" class="px-1 py-0.5 text-center border-t-2 border-gray-400">TOTAL</td>
+                        <td class="px-1 py-0.5 text-right border-t-2 border-gray-400">${totalHasil.toFixed(2)}</td>
+                    `;
+                } else {
+                    totalRow.innerHTML = `
+                        <td colspan="4" class="px-1 py-0.5 text-center border-t-2 border-gray-400">TOTAL</td>
+                        <td class="px-1 py-0.5 text-right border-t-2 border-gray-400">${totalHasil.toFixed(2)}</td>
+                    `;
+                }
+                
                 tbody.appendChild(totalRow);
 
                 activityTable.appendChild(table);
@@ -303,52 +312,13 @@
             section.appendChild(tablesGrid);
         }
 
-        function updateDebugInfo(data) {
-            const debugContent = document.getElementById('debug-content');
-            if (!debugContent) return;
-
-            let debugHtml = '';
-            
-            if (data.error) {
-                debugHtml += `<div><strong>Error:</strong> ${data.error}</div>`;
-                if (data.stack) debugHtml += `<div><strong>Stack:</strong> <pre class="text-xs whitespace-pre-wrap mt-2">${data.stack}</pre></div>`;
-            } else {
-                debugHtml += `<div><strong>Data loaded successfully</strong></div>`;
-                if (data.debug) {
-                    debugHtml += '<div class="mt-2"><strong>Counts:</strong></div>';
-                    Object.keys(data.debug).forEach(key => {
-                        debugHtml += `<div>- ${key}: ${data.debug[key]}</div>`;
-                    });
-                }
-                
-                if (data.pengolahan) debugHtml += `<div class="mt-2"><strong>Pengolahan activities:</strong> ${Object.keys(data.pengolahan).join(', ')}</div>`;
-                
-                if (data.perawatan_manual) {
-                    if (data.perawatan_manual.pc) debugHtml += `<div><strong>PC activities:</strong> ${Object.keys(data.perawatan_manual.pc).join(', ')}</div>`;
-                    if (data.perawatan_manual.rc) debugHtml += `<div><strong>RC activities:</strong> ${Object.keys(data.perawatan_manual.rc).join(', ')}</div>`;
-                }
-            }
-            
-            debugContent.innerHTML = debugHtml;
-        }
-
-        function toggleDebugInfo() {
-            const debugDiv = document.getElementById('debug-info');
-            debugDiv.classList.toggle('hidden');
-        }
-
         function showError(message) {
-            ['pengolahan-section', 'perawatan-manual-pc-section', 'perawatan-manual-rc-section'].forEach(sectionId => {
+            ['pengolahan-section', 'perawatan-pc-section', 'perawatan-rc-section'].forEach(sectionId => {
                 const section = document.getElementById(sectionId);
                 if (section) section.innerHTML = `<div class="text-center py-6 text-red-500">${message}</div>`;
             });
         }
 
         document.addEventListener('DOMContentLoaded', function() { loadLKHRekapData(); });
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-                e.preventDefault(); toggleDebugInfo();
-            }
-        });
     </script>
 </x-layout>

@@ -1,4 +1,4 @@
-// resources/js/pages/lkh-assignment.tsx - UPDATED: Multiple Vehicles Support
+// resources/js/pages/lkh-assignment.tsx - UPDATED: With Helper Information Support
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
@@ -21,13 +21,15 @@ interface LKHData {
   mandor_nama: string;
 }
 
-// UPDATED: Support both single and multiple vehicles
+// UPDATED: Support both single and multiple vehicles with helper info
 interface SingleVehicle {
   nokendaraan: string;
   jenis: string;
   hourmeter: number;
   operator_nama: string;
   operator_nik?: string;
+  helper_nama?: string;
+  helper_id?: string;
   is_multiple: false;
   plots: string[];
 }
@@ -41,6 +43,8 @@ interface MultipleVehicles {
     hourmeter: number;
     operator_nama: string;
     operator_nik?: string;
+    helper_nama?: string;
+    helper_id?: string;
     plots: string[];
     total_luasarea: number;
   }>;
@@ -216,7 +220,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
     !existingAssignments.includes(w.tenagakerjaid)
   );
 
-  // UPDATED: Render vehicle info based on type
+  // UPDATED: Render vehicle info with helper information
   const renderVehicleInfo = () => {
     if (!vehicleInfo) {
       return (
@@ -247,12 +251,16 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
             <label className="text-sm font-medium text-neutral-500">Operator</label>
             <p className="text-lg font-semibold">{vehicleInfo.operator_nama}</p>
           </div>
-          {vehicleInfo.plots && vehicleInfo.plots.length > 0 && (
-            <div className="col-span-2">
-              <label className="text-sm font-medium text-neutral-500">Plot</label>
-              <p className="text-lg font-semibold">{vehicleInfo.plots.join(', ')}</p>
+          {vehicleInfo.helper_nama && (
+            <div>
+              <label className="text-sm font-medium text-neutral-500">Helper</label>
+              <p className="text-lg font-semibold">{vehicleInfo.helper_nama}</p>
             </div>
           )}
+          <div className={vehicleInfo.helper_nama ? "" : "col-span-2"}>
+            <label className="text-sm font-medium text-neutral-500">Plot</label>
+            <p className="text-lg font-semibold">{vehicleInfo.plots.join(', ')}</p>
+          </div>
         </div>
       );
     }
@@ -290,7 +298,13 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
                 <span className="text-neutral-500">Operator:</span>
                 <span className="ml-2 font-medium">{vehicle.operator_nama}</span>
               </div>
-              <div>
+              {vehicle.helper_nama && (
+                <div>
+                  <span className="text-neutral-500">Helper:</span>
+                  <span className="ml-2 font-medium">{vehicle.helper_nama}</span>
+                </div>
+              )}
+              <div className={vehicle.helper_nama ? "" : "col-span-2"}>
                 <span className="text-neutral-500">Plot:</span>
                 <span className="ml-2 font-medium">{vehicle.plots.join(', ')}</span>
               </div>
@@ -432,7 +446,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
             </div>
           </div>
 
-          {/* UPDATED: Vehicle Info Card with multiple vehicles support */}
+          {/* UPDATED: Vehicle Info Card with helper information */}
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
