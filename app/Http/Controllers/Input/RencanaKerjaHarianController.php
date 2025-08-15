@@ -3581,4 +3581,248 @@ private function checkIfRkhNeedsMaterialUsage($rkhno, $companycode)
     {
         return Kendaraan::getOperatorsWithVehicles($companycode);
     }
+
+    // Section, Report Operators LKH
+
+    /**
+     * Get operators who worked on specific date
+     */
+    public function getOperatorsForDate(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $companycode = Session::get('companycode');
+
+        try {
+            $operators = DB::table('kendaraanbbm as kb')
+                ->join('lkhhdr as lh', 'kb.lkhno', '=', 'lh.lkhno')
+                ->join('tenagakerja as tk', function($join) use ($companycode) {
+                    $join->on('kb.operatorid', '=', 'tk.tenagakerjaid')
+                        ->where('tk.companycode', '=', $companycode)
+                        ->where('tk.jenistenagakerja', '=', 3); // Operator type
+                })
+                ->join('kendaraan as k', function($join) use ($companycode) {
+                    $join->on('kb.nokendaraan', '=', 'k.nokendaraan')
+                        ->where('k.companycode', '=', $companycode);
+                })
+                ->where('lh.companycode', $companycode)
+                ->whereDate('lh.lkhdate', $date)
+                ->select([
+                    'tk.tenagakerjaid',
+                    'tk.nama',
+                    'k.nokendaraan',
+                    'k.jenis'
+                ])
+                ->distinct()
+                ->orderBy('tk.nama')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'operators' => $operators,
+                'date' => $date,
+                'total_operators' => $operators->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting operators for date {$date}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data operator: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate operator report
+     */
+    public function generateOperatorReport(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'operator_id' => 'required|string'
+        ]);
+        
+        $url = route('input.rencanakerjaharian.operator-report', [
+            'date' => $request->date,
+            'operator_id' => $request->operator_id
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Membuka laporan operator...',
+            'redirect_url' => $url
+        ]);
+    }
+
+    /**
+     * Show operator report view
+     */
+    public function showOperatorReport(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $operatorId = $request->query('operator_id');
+        
+        if (!$operatorId) {
+            return redirect()->route('input.rencanakerjaharian.index')
+                ->with('error', 'Operator ID tidak ditemukan');
+        }
+        
+        return view('input.rencanakerjaharian.lkh-report-operator', [
+            'date' => $date,
+            'operator_id' => $operatorId
+        ]);
+    }
+
+    /**
+     * Get operator report data
+     */
+    public function getOperatorReportData(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $operatorId = $request->query('operator_id');
+        $companycode = Session::get('companycode');
+
+        try {
+            // Get operator basic info
+            $operatorInfo = DB::table('tenagakerja as tk')
+                ->join('kendaraan as k', function($join) use ($companycode) {
+                    $join->on('tk.tenagakerjaid', '=', 'k.idtenagakerja')
+                        ->where('k.companycode', '=', $companycode);
+                })
+                ->where('tk.tenagakerjaid', $operatorId)
+                ->where('tk.companycode', $companycode)
+                ->where('tk.jenistenagakerja', 3)
+                ->select([
+                    'tk.tenagakerjaid',
+                    'tk.nama as operator_name',
+                    'tk.nik',
+                    'k.nokendaraan',
+                    'k.jenis as vehicle_type'
+                ])
+                ->first();
+
+            if (!$operatorInfo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data operator tidak ditemukan'
+                ]);
+            }
+
+            // Get activities for this operator on this date
+            $activities = DB::table('kendaraanbbm as kb')
+                ->join('lkhhdr as lh', 'kb.lkhno', '=', 'lh.lkhno')
+                ->join('lkhdetailplot as ldp', function($join) {
+                    $join->on('lh.lkhno', '=', 'ldp.lkhno')
+                        ->on('kb.plot', '=', 'ldp.plot');
+                })
+                ->join('activity as a', 'lh.activitycode', '=', 'a.activitycode')
+                ->where('lh.companycode', $companycode)
+                ->whereDate('lh.lkhdate', $date)
+                ->where('kb.operatorid', $operatorId)
+                ->select([
+                    // Time & Duration
+                    'kb.jammulai',
+                    'kb.jamselesai',
+                    DB::raw('TIMEDIFF(kb.jamselesai, kb.jammulai) as durasi_kerja'),
+                    
+                    // Location & Activity
+                    'ldp.blok',
+                    'kb.plot',
+                    'lh.activitycode',
+                    'a.activityname',
+                    
+                    // Area Data
+                    'ldp.luasrkh as luas_rencana_ha',
+                    'ldp.luashasil as luas_hasil_ha',
+                    
+                    // Fuel Data
+                    'kb.solar',
+                    'kb.hourmeterstart',
+                    'kb.hourmeterend',
+                    
+                    // Reference
+                    'lh.lkhno',
+                    'lh.rkhno'
+                ])
+                ->orderBy('kb.jammulai')
+                ->orderBy('kb.plot')
+                ->get()
+                ->map(function($activity) {
+                    return [
+                        'jam_mulai' => substr($activity->jammulai, 0, 5), // HH:MM format
+                        'jam_selesai' => substr($activity->jamselesai, 0, 5),
+                        'durasi_kerja' => $activity->durasi_kerja ? substr($activity->durasi_kerja, 0, 5) : '00:00',
+                        'blok' => $activity->blok,
+                        'plot' => $activity->plot,
+                        'plot_display' => $activity->blok . '-' . $activity->plot,
+                        'activitycode' => $activity->activitycode,
+                        'activityname' => $activity->activityname,
+                        'luas_rencana_ha' => number_format((float)$activity->luas_rencana_ha, 2),
+                        'luas_hasil_ha' => number_format((float)$activity->luas_hasil_ha, 2),
+                        'solar_liter' => $activity->solar ? number_format((float)$activity->solar, 1) : null,
+                        'solar_display' => $activity->solar ? number_format((float)$activity->solar, 1) . ' L' : 'Belum diinput',
+                        'hourmeter_start' => $activity->hourmeterstart ? number_format((float)$activity->hourmeterstart, 1) : null,
+                        'hourmeter_end' => $activity->hourmeterend ? number_format((float)$activity->hourmeterend, 1) : null,
+                        'lkhno' => $activity->lkhno,
+                        'rkhno' => $activity->rkhno
+                    ];
+                });
+
+            // Calculate totals
+            $totals = [
+                'total_activities' => $activities->count(),
+                'total_luas_rencana' => $activities->sum(function($activity) {
+                    return (float)str_replace(',', '', $activity['luas_rencana_ha']);
+                }),
+                'total_luas_hasil' => $activities->sum(function($activity) {
+                    return (float)str_replace(',', '', $activity['luas_hasil_ha']);
+                }),
+                'total_solar' => $activities->where('solar_liter', '!=', null)->sum('solar_liter'),
+                'total_duration_minutes' => $this->calculateTotalDurationMinutes($activities)
+            ];
+
+            // Company info
+            $companyInfo = DB::table('company')
+                ->where('companycode', $companycode)
+                ->select('companycode', 'name')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'date' => $date,
+                'date_formatted' => Carbon::parse($date)->format('d F Y'),
+                'company_info' => $companyInfo ? $companyInfo->companycode . ' - ' . $companyInfo->name : $companycode,
+                'operator_info' => $operatorInfo,
+                'activities' => $activities->toArray(),
+                'totals' => $totals,
+                'generated_at' => now()->format('d/m/Y H:i:s')
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error getting operator report data: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data laporan operator: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate total duration in minutes from activities
+     */
+    private function calculateTotalDurationMinutes($activities)
+    {
+        $totalMinutes = 0;
+        
+        foreach ($activities as $activity) {
+            if ($activity['durasi_kerja'] && $activity['durasi_kerja'] !== '00:00') {
+                list($hours, $minutes) = explode(':', $activity['durasi_kerja']);
+                $totalMinutes += ($hours * 60) + $minutes;
+            }
+        }
+        
+        return $totalMinutes;
+    }
 }
+
+

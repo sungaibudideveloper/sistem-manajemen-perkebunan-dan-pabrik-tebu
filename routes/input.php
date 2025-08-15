@@ -61,7 +61,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 });
 
 // =====================================
-// RENCANA KERJA HARIAN ROUTES
+// RENCANA KERJA HARIAN ROUTES - UPDATED WITH OPERATOR REPORT
 // =====================================
 Route::middleware('auth')->group(function () {
     // RKH Routes Group
@@ -100,6 +100,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', [RencanaKerjaHarianController::class, 'getPendingLKHApprovals'])->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', [RencanaKerjaHarianController::class, 'processLKHApproval'])->name('processLKHApproval');
             
+            // ✅ NEW: Operator Report routes
+            Route::get('/operators-for-date', [RencanaKerjaHarianController::class, 'getOperatorsForDate'])->name('getOperatorsForDate');
+            Route::post('/generate-operator-report', [RencanaKerjaHarianController::class, 'generateOperatorReport'])->name('generateOperatorReport');
+            Route::get('/operator-report', [RencanaKerjaHarianController::class, 'showOperatorReport'])->name('operator-report');
+            Route::get('/operator-report-data', [RencanaKerjaHarianController::class, 'getOperatorReportData'])->name('operator-report-data');
+            
             // Other utility routes
             Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
             Route::get('/load-absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate');
@@ -126,7 +132,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // =====================================
-// KENDARAAN BBM SYSTEM ROUTES (NEW)
+// KENDARAAN BBM SYSTEM ROUTES (EXISTING)
 // =====================================
 Route::middleware('auth')->prefix('input')->group(function () {
     
@@ -139,7 +145,7 @@ Route::middleware('auth')->prefix('input')->group(function () {
         Route::get('/{lkhno}/print', [KendaraanController::class, 'print'])->name('print');
     });
     
-    // Admin BBM Routes - UPDATE INI
+    // Admin BBM Routes
     Route::prefix('gudang')->name('input.gudang.')->group(function () {
         Route::get('/bbm', [GudangBbmController::class, 'index'])->name('bbm.index');
         Route::get('/bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('bbm.show');
