@@ -213,7 +213,9 @@ class GudangController extends Controller
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
                   return $item->lkhno . '-' . $item->itemcode;
               });
-    
+              
+              dd();
+
               // Key details by lkhno untuk lookup
               $detailsByLkhno = $details->keyBy('lkhno');
               $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
@@ -320,7 +322,7 @@ class GudangController extends Controller
               if($response->status() == 200) { 
                   if($response->json()['status'] == 1) {
                       usemateriallst::where('rkhno', $request->rkhno)->update(['nouse' => $response->json()['noUse']]);
-                      usematerialhdr::where('rkhno', $request->rkhno)->update(['flagstatus' => 'SUBMITTED']);
+                      usematerialhdr::where('rkhno', $request->rkhno)->update(['flagstatus' => 'DISPATCHED']);
                   }
               } else {
                   dd($response->json(), $response->body(), $response->status());
