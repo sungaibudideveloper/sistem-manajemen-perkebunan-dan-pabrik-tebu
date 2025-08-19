@@ -1,6 +1,22 @@
+
 <x-layout>
 @php 
 @endphp
+
+<style>
+@media print {
+select.item-select { display: none !important; }
+.print-label { display: inline !important; }
+table th, table td {
+    border: 1px solid #d1d5db; /* abu Tailwind gray-300 */
+  }
+}
+@media screen {
+.print-label { display: none; }
+}
+
+</style>
+
     @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
         <x-slot:title>Penyiapan RKH Herbisida</x-slot:title>
     @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
@@ -13,27 +29,27 @@
         <!-- Status Badge -->
         <div class="flex justify-center mb-3">
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
-                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-clock me-1"></i>Apabila Sudah Diperiksa, Klik Button Penyerahan Di Bawah
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'DISPATCHED')
-                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diserahan Kepada Mandor.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
-                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima. Untuk Retur, Ajukan Dokumen Retur.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURNED_BY_MANDOR')
-                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diretur.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURN_RECEIVED')
-                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Retur Sudah Diterima.
                 </div>
             @else
-                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded shadow text-sm">
+                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-all me-1"></i>Dokumen RKH Herbisida Telah Diselesaikan
                 </div>
             @endif
@@ -43,13 +59,15 @@
         <div class="flex flex-col md:flex-row gap-3 mb-4">
             <!-- Box 1: No RKH & Mandor -->
             <div class="w-full md:w-1/3 p-2 bg-white shadow rounded">
+                <div class="text-gray-600 text-xs font-medium">Company:</div>
+                <div class="text-xs bg-blue-100 px-1 mb-1"><b>{{ $details[0]->companyinv }}</b></div>
                 <div class="text-gray-600 text-xs font-medium">No Dokumen:</div>
-                <div class="text-xs bg-green-100 px-1 mb-1">RKH <b>{{ $details[0]->rkhno }}</b></div>
-                <div class="text-xs bg-blue-100 px-1 mb-2">USE <b>{{ $details[0]->nouse }}</b></div>
+                <div class="text-xs bg-green-100 px-1 mb-1">RKH No. <b>{{ $details[0]->rkhno }}</b></div>
+                <div class="text-xs bg-blue-100 px-1 mb-2">USE No. <b>{{ $details[0]->nouse }}</b></div>
                 <div class="text-gray-600 text-xs font-medium">Nama Mandor:</div>
-                <div class="text-xs mb-1">{{ $details[0]->name }}</div>
+                <div class="text-xs mb-1 bg-green-100 px-1 mb-2">{{ $details[0]->name }}</div>
                 <div class="text-gray-600 text-xs font-medium">Tanggal:</div>
-                <div class="text-xs">{{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/Y') }}</div>
+                <div class="text-xs bg-blue-100 px-1 mb-2">{{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/Y') }}</div>
             </div>
     
             <!-- Box 2: Table of Blok, Plot, Luas, Activity -->
@@ -80,8 +98,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="bg-gray-200 text-gray-800">
-                            <td class="py-1 px-2"></td>
-                            <td colspan="2" class="py-1 px-2 font-semibold text-xs">Total Luas</td>
+                            <td colspan="3" class="py-1 px-2 font-semibold text-right text-xs">Total Luas</td>
                             <td class="py-1 px-2 font-semibold text-right text-xs">{{ $totalLuas }} HA</td>
                             <td class="py-1 px-2"></td>
                         </tr>
@@ -99,7 +116,7 @@
             <table class='min-w-full md:w-1/3 p-2 bg-white shadow rounded text-xs'>
                 <thead class="text-gray-700">
                     <tr>
-                        <th class="py-2 px-2 border-b text-center">&nbsp;</th>
+                        <th class="py-2 px-2 border-b text-center">Herbisida - Item</th>
                         <th class="py-2 px-2 border-b text-center">Dosage (HA)</th>
                         <th class="py-2 px-2 border-b text-center">Qty Disiapkan</th>
                         <th class="py-2 px-2 border-b text-center">Qty Retur</th>
@@ -132,10 +149,14 @@
 
                                     <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
                                         data-dosage="{{$item->dosageperha}}" >
-                                          Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}}) ({{$luas}})
+                                          Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}})
                                         </option>
                                     @endforeach
                                 </select>
+
+                                <span class="print-label text-xs">
+                                    Herbisida {{ $d->herbisidagroupid }} - {{ $d->itemcode }} - {{ $d->itemname ?? '[Nama Item]' }} - {{ $d->dosageperha }} ({{ $d->unit }}) ({{ $luas }})
+                                </span>
                     
                                 {{-- keep current values for submit --}}
                                 <input type="hidden" name="qty[{{ $d->lkhno }}][{{ $d->itemcode }}]"
@@ -144,6 +165,8 @@
                                        class="selected-dosage" value="{{ $d->dosageperha }}">
                                 <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}]"
                                        class="selected-unit" value="{{ $d->unit }}">
+                                <input type="hidden" name="itemcodelist[{{ $d->lkhno }}][]"
+                                       class="selected-itemcode" value="{{ $d->itemcode }}">
                             </td>
                     
                             <td class="py-2 px-2 text-center">
@@ -171,7 +194,7 @@
                                             'rkhno' => $details[0]->rkhno,
                                             'herbisidagroupid' => $d->herbisidagroupid
                                         ]) }}"
-                                       class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition"
+                                       class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition no-print"
                                        onclick="return confirm('Proses Retur Barang ini ?')">
                                         Retur ?
                                     </a>
@@ -201,9 +224,14 @@
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
             <a href="{{ url()->previous() }}" 
-               class="inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition">
+               class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
                 ← Kembali
-            </a>
+            </a>&nbsp;
+            <button type="button"
+                onclick="window.print()"
+                class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 rounded shadow no-print">
+                🖨️ Cetak
+            </button>
         </div>
         
     </div>
@@ -250,5 +278,7 @@
             // Update display
             row.find('.labeldosage').text(dosage);
             row.find('.labelqty').text(qty);
+
+            row.find('.selected-itemcode').val(selected.val());
         });
         </script>

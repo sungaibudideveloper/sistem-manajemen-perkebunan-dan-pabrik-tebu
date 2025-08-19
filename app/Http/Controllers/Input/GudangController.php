@@ -121,7 +121,7 @@ class GudangController extends Controller
     }
 
     public function retur(Request $request)
-    {
+    {   return redirect()->back();
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
@@ -198,7 +198,7 @@ class GudangController extends Controller
 
 
     public function submit(Request $request)
-    {
+    { 
         // try {
         //    DB::transaction(function() use ($request) {
               // Validasi basic
@@ -208,13 +208,26 @@ class GudangController extends Controller
               if (strtoupper($first->flagstatus) != 'ACTIVE') {
                   throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
               }
-    
+
+             //cek lkhno
+             // Validasi: tolak item duplikat dalam LKH yang sama
+             foreach (($request->itemcodelist ?? []) as $lkhno => $itemsFlat) {
+                $counts = array_count_values($itemsFlat); // duplikat masih terlihat karena [] bukan key
+                foreach ($counts as $itemcode => $cnt) {
+                    if ($cnt > 1) {
+                        // throw new \Exception("Tidak Dapat Edit! Item {$itemcode} duplikat di LKH {$lkhno}");
+                        return redirect()->back()->withInput() // biar form sebelumnya nggak hilang
+                        ->with('error', "Item {$itemcode} duplikat di LKH {$lkhno}");
+                    }
+                }
+             }
+
               // Get existing data dengan key lkhno-itemcode
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
                   return $item->lkhno . '-' . $item->itemcode;
               });
               
-              dd();
+              
 
               // Key details by lkhno untuk lookup
               $detailsByLkhno = $details->keyBy('lkhno');
