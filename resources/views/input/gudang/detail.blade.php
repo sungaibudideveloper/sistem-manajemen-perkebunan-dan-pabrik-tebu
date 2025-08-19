@@ -60,7 +60,7 @@ table th, table td {
             <!-- Box 1: No RKH & Mandor -->
             <div class="w-full md:w-1/3 p-2 bg-white shadow rounded">
                 <div class="text-gray-600 text-xs font-medium">Company:</div>
-                <div class="text-xs bg-blue-100 px-1 mb-1"><b>{{ $details[0]->companyinv }}</b></div>
+                <div class="text-xs bg-blue-100 px-1 mb-1"><b>{{ $details[0]->companycode }}</b></div>
                 <div class="text-gray-600 text-xs font-medium">No Dokumen:</div>
                 <div class="text-xs bg-green-100 px-1 mb-1">RKH No. <b>{{ $details[0]->rkhno }}</b></div>
                 <div class="text-xs bg-blue-100 px-1 mb-2">USE No. <b>{{ $details[0]->nouse }}</b></div>
@@ -169,16 +169,16 @@ table th, table td {
                                        class="selected-itemcode" value="{{ $d->itemcode }}">
                             </td>
                     
-                            <td class="py-2 px-2 text-center">
+                            <td class="py-2 px-2 text-center text-right">
                                 <span class="labeldosage">{{ $d->dosageperha }} {{ $d->dosageunit }}</span>
                             </td>
                     
                     
-                            <td class="py-2 px-2 text-center">
+                            <td class="py-2 px-2 text-center text-right">
                                 <span class="labelqty">{{ $d->qty }}</span>
                             </td>
                     
-                            <td class="py-2 px-2 text-center">
+                            <td class="py-2 px-2 text-center text-right">
                                 {{ $d->qtyretur ?? 0 }}
                             </td>
 
@@ -227,11 +227,13 @@ table th, table td {
                class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
                 ← Kembali
             </a>&nbsp;
+            @if(strtoupper($details[0]->flagstatus) != 'ACTIVE' )
             <button type="button"
                 onclick="window.print()"
                 class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 rounded shadow no-print">
                 🖨️ Cetak
             </button>
+            @endif
         </div>
         
     </div>
