@@ -62,12 +62,12 @@ table th, table td {
                 <div class="text-gray-600 text-xs font-medium">Company:</div>
                 <div class="text-xs bg-blue-100 px-1 mb-1"><b>{{ $details[0]->companycode }}</b></div>
                 <div class="text-gray-600 text-xs font-medium">No Dokumen:</div>
-                <div class="text-xs bg-green-100 px-1 mb-1">RKH No. <b>{{ $details[0]->rkhno }}</b></div>
-                <div class="text-xs bg-blue-100 px-1 mb-2">USE No. <b>{{ $details[0]->nouse }}</b></div>
+                <div class="text-xs  px-1 mb-1">RKH No. <b>{{ $details[0]->rkhno }}</b></div>
+                <div class="text-xs  px-1 mb-2">USE No. <b>{{ $details[0]->nouse }}</b></div>
                 <div class="text-gray-600 text-xs font-medium">Nama Mandor:</div>
-                <div class="text-xs mb-1 bg-green-100 px-1 mb-2">{{ $details[0]->name }}</div>
+                <div class="text-xs mb-1  px-1 mb-2">{{ $details[0]->name }}</div>
                 <div class="text-gray-600 text-xs font-medium">Tanggal:</div>
-                <div class="text-xs bg-blue-100 px-1 mb-2">{{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/Y') }}</div>
+                <div class="text-xs px-1 mb-2">{{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/Y') }}</div>
             </div>
     
             <!-- Box 2: Table of Blok, Plot, Luas, Activity -->
