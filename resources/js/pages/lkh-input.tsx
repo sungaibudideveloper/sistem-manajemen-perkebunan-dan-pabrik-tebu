@@ -1,4 +1,4 @@
-// resources/js/pages/lkh-input.tsx - UPDATED: With Vehicle Time Input
+// resources/js/pages/lkh-input.tsx - COMPLETE: With Per-Plot Material Input
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
@@ -11,18 +11,15 @@ const getBaseUrl = (): string => {
   const origin = window.location.origin;
   const pathname = window.location.pathname;
   
-  // Check if we're in development (has /tebu/public) or production
   if (pathname.includes('/tebu/public')) {
     return `${origin}/tebu/public`;
   }
   
-  // Production or other environments
   return origin;
 };
 
 const buildMandorUrl = (path: string): string => {
   const baseUrl = getBaseUrl();
-  // Remove leading slash if exists to avoid double slashes
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   return `${baseUrl}/${cleanPath}`;
 };
@@ -54,9 +51,9 @@ interface AssignedWorker {
 interface PlotInput {
   blok: string;
   plot: string;
-  luasarea: number;  // From lkhdetailplot.luasrkh (read-only)
-  luashasil: number; // User input - hasil yang dikerjakan
-  luassisa: number;  // Calculated: luasarea - luashasil
+  luasarea: number;
+  luashasil: number;
+  luassisa: number;
 }
 
 interface WorkerInput {
@@ -70,23 +67,37 @@ interface WorkerInput {
   isFullTime: boolean;
 }
 
+// UPDATED: Material structure for per-plot input
+interface MaterialPlotBreakdown {
+  plot: string;
+  planned_usage: number;
+  qtysisa: number;
+  qtydigunakan: number;
+}
+
 interface MaterialInput {
   itemcode: string;
   itemname: string;
-  qtyditerima: number;
-  qtysisa: number;
-  qtydigunakan: number;
   unit: string;
+  plot_breakdown: MaterialPlotBreakdown[];
+  total_planned: number;
+  total_sisa: number;
+  total_digunakan: number;
 }
 
 interface MaterialInfo {
   itemcode: string;
   itemname: string;
-  qty: number;
   unit: string;
+  plot_breakdown: Array<{
+    plot: string;
+    luasarea: number;
+    dosage_per_ha: number;
+    planned_usage: number;
+  }>;
 }
 
-// NEW: Vehicle input interface
+// Vehicle input interface
 interface VehicleInput {
   nokendaraan: string;
   jenis: string;
@@ -94,10 +105,9 @@ interface VehicleInput {
   plots: string[];
   jammulai: string;
   jamselesai: string;
-  total_luasarea: number;
+  total_luasarea?: number;
 }
 
-// UPDATED: Support both single and multiple vehicles
 interface SingleVehicle {
   nokendaraan: string;
   jenis: string;
@@ -130,7 +140,7 @@ interface LKHInputProps {
   assignedWorkers: AssignedWorker[];
   plotData: Array<{blok: string, plot: string, luasarea: number, luashasil: number, luassisa: number}>;
   materials?: MaterialInfo[];
-  vehicleInfo?: VehicleInfo; // NEW: Vehicle info prop
+  vehicleInfo?: VehicleInfo;
   routes: {
     lkh_save_results: string;
     lkh_assign: string;
@@ -155,7 +165,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   assignedWorkers,
   plotData = [],
   materials = [],
-  vehicleInfo, // NEW
+  vehicleInfo,
   routes,
   csrf_token,
   flash
@@ -163,29 +173,25 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   const [plotInputs, setPlotInputs] = useState<PlotInput[]>([]);
   const [workerInputs, setWorkerInputs] = useState<WorkerInput[]>([]);
   const [materialInputs, setMaterialInputs] = useState<MaterialInput[]>([]);
-  const [vehicleInputs, setVehicleInputs] = useState<VehicleInput[]>([]); // NEW
+  const [vehicleInputs, setVehicleInputs] = useState<VehicleInput[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [keterangan, setKeterangan] = useState('');
   const [expandedWorkers, setExpandedWorkers] = useState<Set<string>>(new Set());
-  const [expandedVehicles, setExpandedVehicles] = useState<Set<string>>(new Set()); // NEW
+  const [expandedVehicles, setExpandedVehicles] = useState<Set<string>>(new Set());
 
-  // Helper function untuk strip detik dari format time database
   const stripSeconds = (timeString: string): string => {
     if (!timeString) return '07:00';
-    // Handle both "HH:MM:SS" and "HH:MM" formats
     if (timeString.includes(':')) {
-      return timeString.substring(0, 5); // "07:00:00" → "07:00" or "07:00" → "07:00"
+      return timeString.substring(0, 5);
     }
     return timeString;
   };
 
-  // Helper function untuk hitung jam kerja dari format HH:MM
   const calculateWorkHours = (jamMasuk: string, jamSelesai: string): number => {
     try {
       const start = new Date(`2025-01-01T${jamMasuk}:00`);
       const end = new Date(`2025-01-01T${jamSelesai}:00`);
       
-      // Handle overnight work
       if (end.getTime() <= start.getTime()) {
         end.setDate(end.getDate() + 1);
       }
@@ -194,11 +200,10 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
       return Math.max(0, diffHours);
     } catch (error) {
       console.error('Error calculating work hours:', error);
-      return 8; // Default fallback
+      return 8;
     }
   };
 
-  // Handle flash messages
   useEffect(() => {
     if (flash?.success) {
       alert(flash.success);
@@ -208,7 +213,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     }
   }, [flash]);
 
-  // Initialize plot inputs from database
   useEffect(() => {
     const initialPlots: PlotInput[] = plotData.map(plot => ({
       blok: plot.blok,
@@ -220,7 +224,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     setPlotInputs(initialPlots);
   }, [plotData]);
 
-  // Initialize worker inputs
   useEffect(() => {
     const initialWorkers: WorkerInput[] = assignedWorkers.map(worker => {
       const jamMasuk = stripSeconds(worker.jammasuk || '07:00:00');
@@ -243,20 +246,31 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     setWorkerInputs(initialWorkers);
   }, [assignedWorkers]);
 
-  // Initialize material inputs
+  // Initialize material inputs with per-plot breakdown
   useEffect(() => {
-    const initialMaterials: MaterialInput[] = materials.map(material => ({
-      itemcode: material.itemcode,
-      itemname: material.itemname,
-      qtyditerima: material.qty,
-      qtysisa: 0,
-      qtydigunakan: material.qty,
-      unit: material.unit
-    }));
+    const initialMaterials: MaterialInput[] = materials.map(material => {
+      const plotBreakdown: MaterialPlotBreakdown[] = material.plot_breakdown.map(plot => ({
+        plot: plot.plot,
+        planned_usage: plot.planned_usage,
+        qtysisa: 0,
+        qtydigunakan: plot.planned_usage
+      }));
+
+      const totalPlanned = plotBreakdown.reduce((sum, plot) => sum + plot.planned_usage, 0);
+
+      return {
+        itemcode: material.itemcode,
+        itemname: material.itemname,
+        unit: material.unit,
+        plot_breakdown: plotBreakdown,
+        total_planned: totalPlanned,
+        total_sisa: 0,
+        total_digunakan: totalPlanned
+      };
+    });
     setMaterialInputs(initialMaterials);
   }, [materials]);
 
-  // NEW: Initialize vehicle inputs
   useEffect(() => {
     if (!vehicleInfo) {
       setVehicleInputs([]);
@@ -266,7 +280,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     let initialVehicles: VehicleInput[] = [];
 
     if (vehicleInfo.is_multiple) {
-      // Multiple vehicles
       initialVehicles = vehicleInfo.vehicles.map(vehicle => ({
         nokendaraan: vehicle.nokendaraan,
         jenis: vehicle.jenis,
@@ -277,15 +290,13 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         total_luasarea: vehicle.total_luasarea
       }));
     } else {
-      // Single vehicle
       initialVehicles = [{
         nokendaraan: vehicleInfo.nokendaraan,
         jenis: vehicleInfo.jenis,
         operator_nama: vehicleInfo.operator_nama,
         plots: vehicleInfo.plots,
         jammulai: '07:00',
-        jamselesai: '15:00',
-        total_luasarea: 0
+        jamselesai: '15:00'
       }];
     }
 
@@ -377,7 +388,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     });
   };
 
-  // NEW: Vehicle time adjustment functions
   const adjustVehicleTime = (index: number, field: 'jammulai' | 'jamselesai', direction: 'up' | 'down') => {
     setVehicleInputs(prev => {
       const updated = [...prev];
@@ -411,17 +421,27 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     setExpandedVehicles(newExpanded);
   };
 
-  const updateMaterialInput = (index: number, field: 'qtysisa', value: number) => {
+  // Update material per plot with auto-calculation of totals
+  const updateMaterialPlotInput = (materialIndex: number, plotIndex: number, field: 'qtysisa', value: number) => {
     setMaterialInputs(prev => {
       const updated = [...prev];
-      const material = { ...updated[index] };
+      const material = { ...updated[materialIndex] };
+      const plotBreakdown = [...material.plot_breakdown];
+      const plotMaterial = { ...plotBreakdown[plotIndex] };
       
       if (field === 'qtysisa') {
-        material.qtysisa = Math.max(0, Math.min(value, material.qtyditerima));
-        material.qtydigunakan = material.qtyditerima - material.qtysisa;
+        plotMaterial.qtysisa = Math.max(0, Math.min(value, plotMaterial.planned_usage));
+        plotMaterial.qtydigunakan = plotMaterial.planned_usage - plotMaterial.qtysisa;
       }
       
-      updated[index] = material;
+      plotBreakdown[plotIndex] = plotMaterial;
+      material.plot_breakdown = plotBreakdown;
+      
+      // Recalculate totals
+      material.total_sisa = plotBreakdown.reduce((sum, plot) => sum + plot.qtysisa, 0);
+      material.total_digunakan = plotBreakdown.reduce((sum, plot) => sum + plot.qtydigunakan, 0);
+      
+      updated[materialIndex] = material;
       return updated;
     });
   };
@@ -449,7 +469,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
   };
 
   const saveResults = async () => {
-    // Validation
     const hasValidInput = plotInputs.some(plot => plot.luashasil > 0);
     if (!hasValidInput) {
       alert('Input minimal 1 plot dengan hasil yang dikerjakan');
@@ -459,13 +478,24 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
     setIsLoading(true);
     
     try {
-      // NEW: Prepare vehicle data for submission
       const vehicleSubmissionData = vehicleInputs.flatMap(vehicle => 
         vehicle.plots.map(plot => ({
           nokendaraan: vehicle.nokendaraan,
           plot: plot,
           jammulai: vehicle.jammulai + ':00',
           jamselesai: vehicle.jamselesai + ':00'
+        }))
+      );
+
+      // Send material data per plot
+      const materialSubmissionData = materialInputs.flatMap(material =>
+        material.plot_breakdown.map(plotMaterial => ({
+          itemcode: material.itemcode,
+          plot: plotMaterial.plot,
+          qtyditerima: plotMaterial.planned_usage,
+          qtysisa: plotMaterial.qtysisa,
+          qtydigunakan: plotMaterial.qtydigunakan,
+          keterangan: null
         }))
       );
 
@@ -481,12 +511,8 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           luashasil: plot.luashasil,
           luassisa: plot.luassisa
         })),
-        material_inputs: materialInputs.map(material => ({
-          itemcode: material.itemcode,
-          qtysisa: material.qtysisa,
-          keterangan: null
-        })),
-        vehicle_inputs: vehicleSubmissionData, // NEW: Send vehicle time data
+        material_inputs: materialSubmissionData,
+        vehicle_inputs: vehicleSubmissionData,
         keterangan: keterangan,
         _token: csrf_token
       }, {
@@ -538,7 +564,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </button>
           
           <div className="flex items-center gap-4">
-            {/* Logo with proper fallback */}
             {app?.logo_url ? (
               <img 
                 src={app.logo_url} 
@@ -585,7 +610,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* NEW: Vehicle Time Input Section */}
+        {/* Vehicle Time Input Section */}
         {vehicleInputs.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
@@ -602,7 +627,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
               <div className="space-y-3">
                 {vehicleInputs.map((vehicle, index) => (
                   <div key={vehicle.nokendaraan} className="border border-neutral-200 rounded-xl overflow-hidden">
-                    {/* Vehicle Header */}
                     <div 
                       className="p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors"
                       onClick={() => toggleVehicleExpanded(vehicle.nokendaraan)}
@@ -635,7 +659,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                       </div>
                     </div>
 
-                    {/* Vehicle Time Details */}
                     {expandedVehicles.has(vehicle.nokendaraan) && (
                       <div className="p-4 border-t bg-white">
                         <div className="grid grid-cols-2 gap-4">
@@ -720,7 +743,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
             <div className="space-y-3">
               {workerInputs.map((worker, index) => (
                 <div key={worker.tenagakerjaid} className="border border-neutral-200 rounded-xl overflow-hidden">
-                  {/* Worker Header - Always Visible */}
                   <div 
                     className="p-4 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors"
                     onClick={() => toggleWorkerExpanded(worker.tenagakerjaid)}
@@ -734,7 +756,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                       </div>
                       
                       <div className="flex items-center gap-4">
-                        {/* Status Badge */}
                         <div className="text-center">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             worker.isFullTime 
@@ -751,7 +772,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                           )}
                         </div>
                         
-                        {/* Dropdown Icon */}
                         {expandedWorkers.has(worker.tenagakerjaid) ? (
                           <ChevronUp className="w-5 h-5 text-neutral-500" />
                         ) : (
@@ -761,10 +781,8 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                     </div>
                   </div>
 
-                  {/* Worker Details - Expandable */}
                   {expandedWorkers.has(worker.tenagakerjaid) && (
                     <div className="p-4 border-t bg-white">
-                      {/* Full Time Toggle */}
                       <div className="mb-4">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -777,7 +795,6 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                         </label>
                       </div>
                       
-                      {/* Time Inputs */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
@@ -994,53 +1011,103 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Material Usage */}
+        {/* Material Usage Per Plot */}
         {materialInputs.length > 0 ? (
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Package className="w-5 h-5 text-orange-600" />
-                Input Sisa Material
+                Input Sisa Material per Plot
               </h3>
+              <p className="text-sm text-neutral-600 mt-1">
+                Input sisa material untuk setiap plot. Terpakai akan otomatis terhitung.
+              </p>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {materialInputs.map((material, index) => (
-                  <div key={material.itemcode} className="p-4 border border-neutral-200 rounded-xl">
-                    <h4 className="font-semibold text-orange-900 mb-4">{material.itemname}</h4>
+              <div className="space-y-6">
+                {materialInputs.map((material, materialIndex) => (
+                  <div key={material.itemcode} className="border border-orange-200 rounded-xl overflow-hidden">
+                    <div className="bg-orange-50 p-4">
+                      <h4 className="font-semibold text-orange-900 text-lg">{material.itemname}</h4>
+                      <p className="text-sm text-orange-700">
+                        Total Rencana: {material.total_planned.toFixed(3)} {material.unit}
+                      </p>
+                    </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          Qty Diterima
-                        </label>
-                        <div className="w-full px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600">
-                          {material.qtyditerima} {material.unit}
-                        </div>
+                    <div className="p-4">
+                      <div className="space-y-4">
+                        {material.plot_breakdown.map((plotMaterial, plotIndex) => (
+                          <div key={plotMaterial.plot} className="p-3 border border-neutral-200 rounded-lg bg-neutral-50">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="font-medium text-neutral-900">Plot {plotMaterial.plot}</h5>
+                              <span className="text-sm text-neutral-600">
+                                Rencana: {plotMaterial.planned_usage.toFixed(3)} {material.unit}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                                  Rencana Pakai
+                                </label>
+                                <div className="px-2 py-2 text-sm border border-neutral-200 rounded bg-white text-neutral-600">
+                                  {plotMaterial.planned_usage.toFixed(3)} {material.unit}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                                  Sisa *
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min="0"
+                                  max={plotMaterial.planned_usage}
+                                  value={plotMaterial.qtysisa}
+                                  onChange={(e) => updateMaterialPlotInput(materialIndex, plotIndex, 'qtysisa', parseFloat(e.target.value) || 0)}
+                                  className="w-full px-2 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                  placeholder="0.000"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                                  Terpakai
+                                </label>
+                                <div className={`px-2 py-2 text-sm border rounded ${
+                                  plotMaterial.qtydigunakan > 0 
+                                    ? 'border-green-200 bg-green-50 text-green-800' 
+                                    : 'border-neutral-200 bg-neutral-50 text-neutral-600'
+                                }`}>
+                                  {plotMaterial.qtydigunakan.toFixed(3)} {material.unit}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                       
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          Sisa *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max={material.qtyditerima}
-                          value={material.qtysisa}
-                          onChange={(e) => updateMaterialInput(index, 'qtysisa', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          placeholder="0.00"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          Terpakai
-                        </label>
-                        <div className="w-full px-3 py-2 border border-green-200 rounded-lg bg-green-50 text-green-800">
-                          {material.qtydigunakan.toFixed(2)} {material.unit}
+                      <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-xs text-orange-600 font-medium">Total Rencana</p>
+                            <p className="text-sm font-semibold text-orange-900">
+                              {material.total_planned.toFixed(3)} {material.unit}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-orange-600 font-medium">Total Sisa</p>
+                            <p className="text-sm font-semibold text-orange-900">
+                              {material.total_sisa.toFixed(3)} {material.unit}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-orange-600 font-medium">Total Terpakai</p>
+                            <p className="text-sm font-semibold text-orange-900">
+                              {material.total_digunakan.toFixed(3)} {material.unit}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1111,7 +1178,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Save Button - Bottom */}
+        {/* Save Button */}
         <div className="flex justify-center">
           <button
             onClick={saveResults}

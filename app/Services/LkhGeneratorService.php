@@ -19,7 +19,7 @@ use Carbon\Carbon;
  * - lkhdetailplot (plot assignments & areas) - Generated immediately
  * - lkhdetailworker (worker assignments & wages) - Assigned by mandor via handheld
  * 
- * FIXED: Proper area calculation and data type handling
+ * FIXED: Removed deprecated columns (jammulaikerja, jamselesaikerja, totalovertimehours)
  */
 class LkhGeneratorService
 {
@@ -99,7 +99,7 @@ class LkhGeneratorService
                     'jenistenagakerja' => $jenistenagakerja,
                     'total_luas' => $lkhHeaderResult['total_luas'],
                     'planned_workers' => $lkhHeaderResult['planned_workers'],
-                    'status' => 'EMPTY'
+                    'status' => 'DRAFT'
                 ];
 
                 $lkhIndex++;
@@ -138,6 +138,7 @@ class LkhGeneratorService
 
     /**
      * Create LKH Header
+     * FIXED: Removed deprecated columns (jammulaikerja, jamselesaikerja, totalovertimehours)
      * 
      * @param Rkhhdr $rkh
      * @param string $lkhno
@@ -159,7 +160,7 @@ class LkhGeneratorService
         $plotList = $activities->pluck('plot')->unique()->join(', ');
         $blokList = $activities->pluck('blok')->unique()->join(', ');
         
-        // Buat LKH Header dengan approval requirements
+        // FIXED: Removed deprecated columns from LKH header creation
         $lkhHeaderData = array_merge([
             'lkhno' => $lkhno,
             'rkhno' => $rkh->rkhno,
@@ -173,10 +174,8 @@ class LkhGeneratorService
             'totalhasil' => 0.00, // Will be updated when work is completed
             'totalsisa' => $totalLuas, // Sisa = total luas area awal dari semua plot
             'totalupahall' => 0.00, // Will be calculated when wages are computed
-            'jammulaikerja' => null,
-            'jamselesaikerja' => null,
-            'totalovertimehours' => 0.00,
-            'status' => 'EMPTY',
+            // REMOVED: jammulaikerja, jamselesaikerja, totalovertimehours - these columns no longer exist
+            'status' => 'DRAFT', // Changed from 'EMPTY' to 'DRAFT'
             'issubmit' => 0,
             'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',

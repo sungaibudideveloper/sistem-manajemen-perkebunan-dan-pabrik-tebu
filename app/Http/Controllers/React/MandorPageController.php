@@ -485,8 +485,8 @@ public function updateAttendancePhoto(Request $request)
     }
 
     /**
-     * Complete All LKH - Enhanced version with material aggregation
-     * STRICT: All LKH must be DRAFT before completing
+     * FIXED: Complete All LKH - Correct per-LKH material aggregation
+     * Each LKH gets its own material return calculation from its plots
      */
     public function completeAllLKH(Request $request)
     {
@@ -531,12 +531,12 @@ public function updateAttendancePhoto(Request $request)
                     ]);
                 }
                 
-                // Process each DRAFT LKH
+                // Process each DRAFT LKH individually
                 $processedLKH = [];
-                $materialAggregation = [];
+                $materialUpdates = [];
                 
                 foreach ($draftLKH as $lkh) {
-                    // Update LKH status to COMPLETED
+                    // 1. Update LKH status to COMPLETED
                     DB::table('lkhhdr')
                         ->where('lkhno', $lkh->lkhno)
                         ->where('companycode', $user->companycode)
@@ -547,67 +547,73 @@ public function updateAttendancePhoto(Request $request)
                             'mobileupdatedat' => now()
                         ]);
                     
-                    // Get material usage from lkhdetailmaterial
+                    // 2. FIXED: Get material usage from lkhdetailmaterial for THIS LKH only
                     $materialUsage = DB::table('lkhdetailmaterial')
                         ->where('companycode', $user->companycode)
                         ->where('lkhno', $lkh->lkhno)
-                        ->select(['itemcode', 'qtyditerima', 'qtysisa', 'qtydigunakan'])
+                        ->select(['itemcode', 'plot', 'qtyditerima', 'qtysisa', 'qtydigunakan'])
                         ->get();
                     
-                    // Aggregate material usage per itemcode
+                    // 3. FIXED: Aggregate material per itemcode within THIS LKH
+                    $lkhMaterialAggregation = [];
+                    
                     foreach ($materialUsage as $material) {
                         $key = $material->itemcode;
                         
-                        if (!isset($materialAggregation[$key])) {
-                            $materialAggregation[$key] = [
+                        if (!isset($lkhMaterialAggregation[$key])) {
+                            $lkhMaterialAggregation[$key] = [
+                                'itemcode' => $material->itemcode,
+                                'lkhno' => $lkh->lkhno,
                                 'total_diterima' => 0,
                                 'total_sisa' => 0,
                                 'total_digunakan' => 0,
-                                'lkh_details' => []
+                                'plot_details' => []
                             ];
                         }
                         
-                        $materialAggregation[$key]['total_diterima'] += (float) $material->qtyditerima;
-                        $materialAggregation[$key]['total_sisa'] += (float) $material->qtysisa;
-                        $materialAggregation[$key]['total_digunakan'] += (float) $material->qtydigunakan;
+                        // Sum across plots within this LKH
+                        $lkhMaterialAggregation[$key]['total_diterima'] += (float) $material->qtyditerima;
+                        $lkhMaterialAggregation[$key]['total_sisa'] += (float) $material->qtysisa;
+                        $lkhMaterialAggregation[$key]['total_digunakan'] += (float) $material->qtydigunakan;
                         
-                        $materialAggregation[$key]['lkh_details'][] = [
-                            'lkhno' => $lkh->lkhno,
+                        // Store plot-level details for cost analysis
+                        $lkhMaterialAggregation[$key]['plot_details'][] = [
+                            'plot' => $material->plot,
                             'qtyditerima' => (float) $material->qtyditerima,
                             'qtysisa' => (float) $material->qtysisa,
                             'qtydigunakan' => (float) $material->qtydigunakan
                         ];
                     }
                     
+                    // 4. FIXED: Update usemateriallst for each material in THIS LKH
+                    foreach ($lkhMaterialAggregation as $itemcode => $aggregatedData) {
+                        $updatedRecords = DB::table('usemateriallst')
+                            ->where('companycode', $user->companycode)
+                            ->where('lkhno', $lkh->lkhno)
+                            ->where('itemcode', $itemcode)
+                            ->update([
+                                'qtydigunakan' => $aggregatedData['total_digunakan'],
+                                'qtyretur' => $aggregatedData['total_sisa'],
+                                'returby' => $user->name,
+                                'tglretur' => now()
+                            ]);
+                        
+                        if ($updatedRecords > 0) {
+                            $materialUpdates[] = [
+                                'lkhno' => $lkh->lkhno,
+                                'itemcode' => $itemcode,
+                                'total_used' => $aggregatedData['total_digunakan'],
+                                'total_returned' => $aggregatedData['total_sisa'],
+                                'plot_count' => count($aggregatedData['plot_details']),
+                                'records_updated' => $updatedRecords
+                            ];
+                        }
+                    }
+                    
                     $processedLKH[] = $lkh->lkhno;
                 }
                 
-                // Update usemateriallst with aggregated data
-                $materialUpdates = [];
-                foreach ($materialAggregation as $itemcode => $aggregatedData) {
-                    // Update all usemateriallst records for this itemcode and date
-                    $updatedRecords = DB::table('usemateriallst as uml')
-                        ->join('lkhhdr as lkh', 'uml.lkhno', '=', 'lkh.lkhno')
-                        ->where('uml.companycode', $user->companycode)
-                        ->where('uml.itemcode', $itemcode)
-                        ->where('lkh.mandorid', $user->userid)
-                        ->whereDate('lkh.lkhdate', $date)
-                        ->update([
-                            'uml.qtydigunakan' => $aggregatedData['total_digunakan'],
-                            'uml.qtyretur' => $aggregatedData['total_sisa'],
-                            'uml.returby' => $user->name,
-                            'uml.tglretur' => now()
-                        ]);
-                    
-                    $materialUpdates[] = [
-                        'itemcode' => $itemcode,
-                        'total_used' => $aggregatedData['total_digunakan'],
-                        'total_returned' => $aggregatedData['total_sisa'],
-                        'records_updated' => $updatedRecords
-                    ];
-                }
-                
-                // Update usematerialhdr status to RETURNED_BY_MANDOR
+                // 5. Update usematerialhdr status to RETURNED_BY_MANDOR
                 $rkhNumbers = $allLKH->pluck('rkhno')->unique();
                 $updatedHeaders = DB::table('usematerialhdr')
                     ->where('companycode', $user->companycode)
@@ -623,13 +629,14 @@ public function updateAttendancePhoto(Request $request)
                 
                 return response()->json([
                     'success' => true,
-                    'message' => "Berhasil menyelesaikan {$draftLKH->count()} LKH dan menghitung material return",
+                    'message' => "Berhasil menyelesaikan {$draftLKH->count()} LKH dan menghitung material return per LKH",
                     'data' => [
                         'completed_lkh' => $processedLKH,
                         'material_updates' => $materialUpdates,
                         'header_updates' => $updatedHeaders,
                         'total_lkh' => $allLKH->count(),
-                        'completed_count' => $draftLKH->count()
+                        'completed_count' => $draftLKH->count(),
+                        'aggregation_method' => 'per_lkh_correct' // Indicator of correct method
                     ]
                 ]);
                 
@@ -639,7 +646,7 @@ public function updateAttendancePhoto(Request $request)
             }
             
         } catch (\Exception $e) {
-            Log::error('Error in completeAllLKH', [
+            Log::error('Error in completeAllLKH with fixed per-LKH aggregation', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => auth()->user()->userid ?? 'unknown',
@@ -1119,7 +1126,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
     }
 
     /**
-     * Save LKH Results with Vehicle BBM data - UPDATED
+     * UPDATED: Save LKH Results with Vehicle BBM data and Per-Plot Material Support
      */
     public function saveLKHResults(Request $request, $lkhno = null)
     {
@@ -1136,10 +1143,14 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                 'plot_inputs.*.plot' => 'required|string',
                 'plot_inputs.*.luashasil' => 'required|numeric|min:0',
                 'plot_inputs.*.luassisa' => 'nullable|numeric|min:0',
+                // UPDATED: Material validation for per-plot input
                 'material_inputs' => 'nullable|array',
                 'material_inputs.*.itemcode' => 'required_with:material_inputs|string',
+                'material_inputs.*.plot' => 'required_with:material_inputs|string',
+                'material_inputs.*.qtyditerima' => 'required_with:material_inputs|numeric|min:0',
                 'material_inputs.*.qtysisa' => 'required_with:material_inputs|numeric|min:0',
-                'vehicle_inputs' => 'nullable|array', // NEW: Vehicle time inputs
+                'material_inputs.*.qtydigunakan' => 'required_with:material_inputs|numeric|min:0',
+                'vehicle_inputs' => 'nullable|array',
                 'vehicle_inputs.*.nokendaraan' => 'required_with:vehicle_inputs|string',
                 'vehicle_inputs.*.plot' => 'required_with:vehicle_inputs|string',
                 'vehicle_inputs.*.jammulai' => 'required_with:vehicle_inputs|string',
@@ -1155,7 +1166,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             $workerInputs = $request->input('worker_inputs', []);
             $plotInputs = $request->input('plot_inputs', []);
             $materialInputs = $request->input('material_inputs', []);
-            $vehicleInputs = $request->input('vehicle_inputs', []); // NEW
+            $vehicleInputs = $request->input('vehicle_inputs', []);
             $keterangan = $request->input('keterangan');
             
             DB::beginTransaction();
@@ -1168,10 +1179,10 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                     return back()->withErrors(['message' => 'LKH tidak ditemukan']);
                 }
                 
-                // Update worker details
+                // 1. Update worker details
                 foreach ($workerInputs as $workerInput) {
-                    $jamMasuk = $workerInput['jammasuk'] ?? '07:00';
-                    $jamSelesai = $workerInput['jamselesai'] ?? '15:00';
+                    $jamMasuk = $workerInput['jammasuk'] ?? '07:00:00';
+                    $jamSelesai = $workerInput['jamselesai'] ?? '15:00:00';
                     $overtimeHours = $workerInput['overtimehours'] ?? 0;
                     
                     $totalJamKerja = $this->calculateWorkHours($jamMasuk, $jamSelesai);
@@ -1195,7 +1206,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                         ]);
                 }
                 
-                // Update plot details
+                // 2. Update plot details
                 foreach ($plotInputs as $plotInput) {
                     DB::table('lkhdetailplot')
                         ->where('companycode', $user->companycode)
@@ -1207,26 +1218,25 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                         ]);
                 }
                 
-                // Update material details if provided
+                // 3. UPDATED: Handle per-plot material input
                 foreach ($materialInputs as $materialInput) {
-                    if (isset($materialInput['itemcode']) && isset($materialInput['qtysisa'])) {
-                        $qtyDiterima = DB::table('usemateriallst')
-                            ->where('companycode', $user->companycode)
-                            ->where('lkhno', $lkhno)
-                            ->where('itemcode', $materialInput['itemcode'])
-                            ->value('qty');
+                    if (isset($materialInput['itemcode']) && 
+                        isset($materialInput['plot']) && 
+                        isset($materialInput['qtysisa'])) {
                         
+                        // Insert/Update lkhdetailmaterial with plot information
                         DB::table('lkhdetailmaterial')
                             ->updateOrInsert(
                                 [
                                     'companycode' => $user->companycode,
                                     'lkhno' => $lkhno,
+                                    'plot' => $materialInput['plot'], // NEW: Include plot for cost tracking
                                     'itemcode' => $materialInput['itemcode']
                                 ],
                                 [
-                                    'qtyditerima' => $qtyDiterima ?? 0,
+                                    'qtyditerima' => $materialInput['qtyditerima'],
                                     'qtysisa' => $materialInput['qtysisa'],
-                                    'qtydigunakan' => ($qtyDiterima ?? 0) - $materialInput['qtysisa'],
+                                    'qtydigunakan' => $materialInput['qtydigunakan'],
                                     'keterangan' => $materialInput['keterangan'] ?? null,
                                     'inputby' => $user->name,
                                     'createdat' => now(),
@@ -1236,7 +1246,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                     }
                 }
                 
-                // NEW: Insert vehicle BBM data
+                // 4. Insert vehicle BBM data
                 foreach ($vehicleInputs as $vehicleInput) {
                     // Get operator ID from kendaraan table
                     $operatorId = DB::table('kendaraan')
@@ -1263,15 +1273,15 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                         'operatorid' => $operatorId,
                         'jammulai' => $vehicleInput['jammulai'],
                         'jamselesai' => $vehicleInput['jamselesai'],
-                        'hourmeterstart' => null,     // Will be filled by admin kendaraan
-                        'hourmeterend' => null,       // Will be filled by admin kendaraan
-                        'solar' => null,              // Will be filled by admin kendaraan
+                        'hourmeterstart' => null, // Will be filled by admin kendaraan
+                        'hourmeterend' => null,   // Will be filled by admin kendaraan
+                        'solar' => null,          // Will be filled by admin kendaraan
                         'inputby' => $user->name,
                         'createdat' => now()
                     ]);
                 }
                 
-                // Calculate totals and update header
+                // 5. Calculate totals and update header
                 $totals = $this->calculateLKHTotals($lkhno, $user->companycode);
                 
                 // Update header with keterangan
@@ -1295,7 +1305,8 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                     'success' => true,
                     'flash' => [
                         'success' => 'Data LKH berhasil disimpan sebagai draft!' . 
-                                    (count($vehicleInputs) > 0 ? ' Data kendaraan juga tersimpan.' : '')
+                                    (count($vehicleInputs) > 0 ? ' Data kendaraan juga tersimpan.' : '') .
+                                    (count($materialInputs) > 0 ? ' Data material per plot tersimpan.' : '')
                     ]
                 ]);
                 
@@ -1320,7 +1331,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
     // =============================================================================
 
     /**
-     * FIXED: Get available materials - Remove herbisidagroupid reference
+     * FIXED: Get available materials - Proper aggregation of actual usage data
      */
     public function getAvailableMaterials(Request $request)
     {
@@ -1332,7 +1343,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             $user = auth()->user();
             $date = $request->input('date', now()->format('Y-m-d'));
             
-            // FIXED: Remove herbisidagroupid from select
+            // Get base materials from usemateriallst
             $materials = DB::table('usemateriallst as uml')
                 ->join('usematerialhdr as umh', function($join) {
                     $join->on('uml.companycode', '=', 'umh.companycode')
@@ -1353,7 +1364,7 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                 ->orderBy('uml.itemcode')
                 ->get();
             
-            // Group by itemcode and calculate totals
+            // Group by itemcode and calculate REAL totals
             $groupedMaterials = [];
             
             foreach ($materials as $material) {
@@ -1375,34 +1386,42 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
                     ];
                 }
                 
+                // Add base qty from usemateriallst
                 $groupedMaterials[$key]['total_qty'] += (float) $material->qty;
                 
-                // Get live usage data from lkhdetailmaterial if available
-                $liveUsage = $this->getLiveUsageData($user->companycode, $material->lkhno, $material->itemcode);
+                // FIXED: Get ACTUAL usage data from lkhdetailmaterial table
+                $actualUsageData = $this->getActualMaterialUsage(
+                    $user->companycode, 
+                    $material->lkhno, 
+                    $material->itemcode
+                );
                 
-                if ($liveUsage) {
-                    // Use live data from lkhdetailmaterial
-                    $groupedMaterials[$key]['total_qtyretur'] += (float) $liveUsage->qtysisa;
-                    $groupedMaterials[$key]['total_qtydigunakan'] += (float) $liveUsage->qtydigunakan;
+                if ($actualUsageData) {
+                    // Use actual data from lkhdetailmaterial (aggregated per LKH)
+                    $groupedMaterials[$key]['total_qtyretur'] += $actualUsageData['total_sisa'];
+                    $groupedMaterials[$key]['total_qtydigunakan'] += $actualUsageData['total_digunakan'];
+                    
+                    $groupedMaterials[$key]['lkh_details'][] = [
+                        'lkhno' => $material->lkhno,
+                        'qty' => (float) $material->qty,
+                        'actual_usage' => $actualUsageData
+                    ];
                 } else {
-                    // Fallback to usemateriallst data (for completed LKH)
+                    // Fallback to usemateriallst data if no lkhdetailmaterial data exists
                     $groupedMaterials[$key]['total_qtyretur'] += (float) ($material->qtyretur ?? 0);
                     $groupedMaterials[$key]['total_qtydigunakan'] += (float) ($material->qtydigunakan ?? 0);
+                    
+                    $groupedMaterials[$key]['lkh_details'][] = [
+                        'lkhno' => $material->lkhno,
+                        'qty' => (float) $material->qty,
+                        'actual_usage' => null
+                    ];
                 }
-                
-                $groupedMaterials[$key]['lkh_details'][] = [
-                    'lkhno' => $material->lkhno,
-                    'qty' => (float) $material->qty,
-                    'live_usage' => $liveUsage ? [
-                        'qtysisa' => (float) $liveUsage->qtysisa,
-                        'qtydigunakan' => (float) $liveUsage->qtydigunakan
-                    ] : null
-                ];
             }
             
-            // Get plot breakdown for each material
+            // Get plot breakdown for each material with ACTUAL totals
             foreach ($groupedMaterials as $itemcode => &$materialData) {
-                $plotBreakdown = $this->getMaterialPlotBreakdown(
+                $plotBreakdown = $this->getMaterialPlotBreakdownWithActuals(
                     $materialData['rkhno'], 
                     $itemcode, 
                     $user->companycode,
@@ -1426,6 +1445,48 @@ private function calculateWorkDuration($jamMulai, $jamSelesai)
             ]);
             
             return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * FIXED: Get actual material usage from lkhdetailmaterial table
+     * Returns aggregated totals per LKH per itemcode
+     */
+    private function getActualMaterialUsage($companyCode, $lkhno, $itemcode)
+    {
+        try {
+            $actualUsage = DB::table('lkhdetailmaterial')
+                ->where('companycode', $companyCode)
+                ->where('lkhno', $lkhno)
+                ->where('itemcode', $itemcode)
+                ->select([
+                    DB::raw('SUM(qtyditerima) as total_diterima'),
+                    DB::raw('SUM(qtysisa) as total_sisa'),
+                    DB::raw('SUM(qtydigunakan) as total_digunakan'),
+                    DB::raw('COUNT(*) as plot_count')
+                ])
+                ->first();
+            
+            if ($actualUsage && $actualUsage->plot_count > 0) {
+                return [
+                    'total_diterima' => (float) $actualUsage->total_diterima,
+                    'total_sisa' => (float) $actualUsage->total_sisa,
+                    'total_digunakan' => (float) $actualUsage->total_digunakan,
+                    'plot_count' => (int) $actualUsage->plot_count
+                ];
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting actual material usage', [
+                'companyCode' => $companyCode,
+                'lkhno' => $lkhno,
+                'itemcode' => $itemcode,
+                'error' => $e->getMessage()
+            ]);
+            
+            return null;
         }
     }
 
@@ -2053,7 +2114,9 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
 }
 
     /**
-     * FIXED: Get materials for LKH - Remove herbisidagroupid reference
+     * FIXED: Get materials for LKH with per-plot breakdown
+     * Returns material data structured for per-plot input by mandor
+     * Now includes actual usage data from lkhdetailmaterial table
      */
     private function getMaterialsForLKH($lkhno, $companyCode)
     {
@@ -2067,60 +2130,105 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             return [];
         }
         
-        // FIXED: Remove herbisidagroupid from usemateriallst query
-        $materials = DB::table('usemateriallst as uml')
+        // Get base materials from usemateriallst
+        $baseMaterials = DB::table('usemateriallst as uml')
             ->where('uml.companycode', $companyCode)
             ->where('uml.rkhno', $rkhno)
             ->where('uml.lkhno', $lkhno)
-            ->select(['uml.itemcode', 'uml.itemname', 'uml.qty', 'uml.unit', 'uml.dosageperha'])
+            ->select([
+                'uml.itemcode', 
+                'uml.itemname', 
+                'uml.unit', 
+                'uml.dosageperha',
+                'uml.qty'
+            ])
             ->get();
-        
-        // Get plot details for breakdown calculation from RKHLST
-        $plotDetails = DB::table('rkhlst as rls')
-            ->where('rls.companycode', $companyCode)
-            ->where('rls.rkhno', $rkhno)
-            ->select(['rls.plot', 'rls.luasarea', 'rls.herbisidagroupid'])
+
+        if ($baseMaterials->isEmpty()) {
+            return [];
+        }
+
+        // Get plot data for this LKH
+        $plotData = DB::table('lkhdetailplot')
+            ->where('companycode', $companyCode)
+            ->where('lkhno', $lkhno)
+            ->select(['plot', 'luasrkh'])
             ->get();
+
+        // Group materials and build per-plot breakdown
+        $groupedMaterials = [];
         
-        // Calculate breakdown per plot for each material
-        $materialWithBreakdown = [];
-        
-        foreach ($materials as $material) {
-            $plotBreakdown = [];
-            $totalCalculated = 0;
+        foreach ($baseMaterials as $material) {
+            $key = $material->itemcode;
             
-            // Since herbisidagroupid is no longer in usemateriallst, 
-            // we'll calculate for all plots (simplified approach)
-            foreach ($plotDetails as $plot) {
-                $plotUsage = $plot->luasarea * $material->dosageperha;
-                $plotBreakdown[] = [
-                    'plot' => $plot->plot,
-                    'luasarea' => (float) $plot->luasarea,
-                    'usage' => $plotUsage
+            // Initialize material if not exists
+            if (!isset($groupedMaterials[$key])) {
+                $groupedMaterials[$key] = [
+                    'itemcode' => $material->itemcode,
+                    'itemname' => $material->itemname,
+                    'unit' => $material->unit,
+                    'plot_breakdown' => [],
+                    'total_planned' => 0,
+                    'total_sisa' => 0,
+                    'total_digunakan' => 0
                 ];
-                $totalCalculated += $plotUsage;
             }
             
-            $materialWithBreakdown[] = [
-                'itemcode' => $material->itemcode,
-                'itemname' => $material->itemname,
-                'qty' => (float) $material->qty,
-                'unit' => $material->unit,
-                'plot_breakdown' => $plotBreakdown,
-                'total_calculated' => $totalCalculated
-            ];
+            // Build plot breakdown for this material
+            foreach ($plotData as $plot) {
+                // Calculate planned usage for this plot
+                $plannedUsage = $plot->luasrkh * $material->dosageperha;
+                
+                // Get actual usage data from lkhdetailmaterial if exists
+                $actualUsage = DB::table('lkhdetailmaterial')
+                    ->where('companycode', $companyCode)
+                    ->where('lkhno', $lkhno)
+                    ->where('plot', $plot->plot)
+                    ->where('itemcode', $material->itemcode)
+                    ->select(['qtyditerima', 'qtysisa', 'qtydigunakan'])
+                    ->first();
+                
+                // Use actual data if available, otherwise use planned/default values
+                if ($actualUsage) {
+                    $qtyditerima = (float) $actualUsage->qtyditerima;
+                    $qtysisa = (float) $actualUsage->qtysisa;
+                    $qtydigunakan = (float) $actualUsage->qtydigunakan;
+                } else {
+                    // Default values for new input
+                    $qtyditerima = $plannedUsage;
+                    $qtysisa = 0; // Default to 0, will be input by mandor
+                    $qtydigunakan = $plannedUsage; // Default planned usage
+                }
+                
+                // Add to plot breakdown
+                $groupedMaterials[$key]['plot_breakdown'][] = [
+                    'plot' => $plot->plot,
+                    'luasarea' => (float) $plot->luasrkh,
+                    'dosage_per_ha' => (float) $material->dosageperha,
+                    'planned_usage' => (float) $plannedUsage,
+                    'qtyditerima' => $qtyditerima,
+                    'qtysisa' => $qtysisa,
+                    'qtydigunakan' => $qtydigunakan
+                ];
+                
+                // Add to totals
+                $groupedMaterials[$key]['total_planned'] += $plannedUsage;
+                $groupedMaterials[$key]['total_sisa'] += $qtysisa;
+                $groupedMaterials[$key]['total_digunakan'] += $qtydigunakan;
+            }
         }
         
-        return $materialWithBreakdown;
+        // Return as array for frontend consumption
+        return array_values($groupedMaterials);
     }
 
     /**
-     * FIXED: Get material plot breakdown - herbisidagroupid dari rkhlst
+     * FIXED: Get material plot breakdown with actual usage data
      */
-    private function getMaterialPlotBreakdown($rkhno, $itemcode, $companyCode, $dosageperha)
+    private function getMaterialPlotBreakdownWithActuals($rkhno, $itemcode, $companyCode, $dosageperha)
     {
         try {
-            // Get all material records with their LKH and plot details
+            // Get planned usage per plot
             $materialData = DB::table('usemateriallst as uml')
                 ->join('lkhhdr as lkh', 'uml.lkhno', '=', 'lkh.lkhno')
                 ->join('lkhdetailplot as ldp', 'lkh.lkhno', '=', 'ldp.lkhno')
@@ -2136,22 +2244,37 @@ private function renderLKHForm($lkhno, $mode = 'input', $vehicleBBMData = [])
             $breakdown = [];
             
             foreach ($materialData as $record) {
-                // Use the actual dosage from the record
-                $usage = $record->luasrkh * $record->dosageperha;
+                // Calculate planned usage
+                $plannedUsage = $record->luasrkh * $record->dosageperha;
+                
+                // Get actual usage for this specific plot
+                $actualPlotUsage = DB::table('lkhdetailmaterial')
+                    ->where('companycode', $companyCode)
+                    ->where('lkhno', $record->lkhno)
+                    ->where('plot', $record->plot)
+                    ->where('itemcode', $itemcode)
+                    ->select(['qtyditerima', 'qtysisa', 'qtydigunakan'])
+                    ->first();
                 
                 $breakdown[] = [
                     'plot' => $record->plot,
                     'blok' => $record->blok,
                     'luasarea' => (float) $record->luasrkh,
-                    'usage' => $usage,
-                    'usage_formatted' => number_format($usage, 3) . ' ' . $record->unit
+                    'usage' => $plannedUsage,
+                    'usage_formatted' => number_format($plannedUsage, 3) . ' ' . $record->unit,
+                    // ADDED: Actual usage data if available
+                    'actual_usage' => $actualPlotUsage ? [
+                        'qtyditerima' => (float) $actualPlotUsage->qtyditerima,
+                        'qtysisa' => (float) $actualPlotUsage->qtysisa,
+                        'qtydigunakan' => (float) $actualPlotUsage->qtydigunakan
+                    ] : null
                 ];
             }
             
             return $breakdown;
             
         } catch (\Exception $e) {
-            Log::error('Error in getMaterialPlotBreakdown', [
+            Log::error('Error in getMaterialPlotBreakdownWithActuals', [
                 'rkhno' => $rkhno,
                 'itemcode' => $itemcode,
                 'error' => $e->getMessage()
