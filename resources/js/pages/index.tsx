@@ -1,5 +1,5 @@
-// resources/js/pages/index.tsx - FIXED VERSION
-import React, { useState } from 'react';
+// resources/js/pages/index.tsx - FIXED VERSION with Persistent State
+import React, { useState, useEffect } from 'react';
 import { PageProps } from '@inertiajs/core';
 import LayoutMandor from '../components/layout-mandor';
 import DashboardMandor from './dashboard-mandor';
@@ -55,13 +55,68 @@ const MandorIndex: React.FC<MandorIndexProps> = ({
   routes,
   csrf_token
 }) => {
-  const [activeSection, setActiveSection] = useState('dashboard');
-
-  const handleSectionChange = (section: string) => {
-    setActiveSection(section);
+  // UPDATED: Initialize state from localStorage or URL hash, fallback to 'dashboard'
+  const getInitialSection = (): string => {
+    // Method 1: Check URL hash first
+    if (window.location.hash) {
+      const hashSection = window.location.hash.substring(1);
+      if (['dashboard', 'absensi', 'data-collection'].includes(hashSection)) {
+        return hashSection;
+      }
+    }
+    
+    // Method 2: Check localStorage as fallback
+    const savedSection = localStorage.getItem('mandor_active_section');
+    if (savedSection && ['dashboard', 'absensi', 'data-collection'].includes(savedSection)) {
+      return savedSection;
+    }
+    
+    // Method 3: Default fallback
+    return 'dashboard';
   };
 
-  // Removed console.log to fix spam
+  const [activeSection, setActiveSection] = useState<string>(getInitialSection);
+
+  // UPDATED: Enhanced section change handler with persistence
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    
+    // Save to localStorage
+    localStorage.setItem('mandor_active_section', section);
+    
+    // Update URL hash without triggering page reload
+    window.history.replaceState(null, '', `#${section}`);
+  };
+
+  // ADDED: Listen for browser back/forward navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hashSection = window.location.hash.substring(1);
+      if (['dashboard', 'absensi', 'data-collection'].includes(hashSection)) {
+        setActiveSection(hashSection);
+        localStorage.setItem('mandor_active_section', hashSection);
+      }
+    };
+
+    // Set initial hash if not present
+    if (!window.location.hash && activeSection) {
+      window.history.replaceState(null, '', `#${activeSection}`);
+    }
+
+    // Listen for hash changes (back/forward buttons)
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [activeSection]);
+
+  // ADDED: Clear localStorage on logout (optional)
+  const handleLogout = () => {
+    localStorage.removeItem('mandor_active_section');
+    // Then proceed with normal logout
+    window.location.href = routes.logout;
+  };
 
   return (
     <LayoutMandor

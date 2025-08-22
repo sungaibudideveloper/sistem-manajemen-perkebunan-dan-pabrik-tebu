@@ -223,7 +223,7 @@
         </div>
         @endif
 
-        <!-- Material Details Section - REVISED: Remove Efisiensi column -->
+        <!-- Material Details Section -->
         @if($lkhMaterialDetails && $lkhMaterialDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -238,18 +238,23 @@
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-12">No</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Plot</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Item Code</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-40">Nama Item</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Diterima</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Sisa</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Digunakan</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Satuan</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($lkhMaterialDetails as $index => $material)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">
+                                {{ $material->plot ?? '-' }}
+                            </td>
                             <td class="border border-gray-300 px-3 py-2 text-sm font-mono font-medium">
                                 {{ $material->itemcode }}
                             </td>
@@ -262,31 +267,41 @@
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($material->qtysisa ?? 0, 3) }}
                             </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold {{ ($material->qtydigunakan ?? 0) > 0 ? 'text-green-600' : '' }}">
                                 {{ number_format($material->qtydigunakan ?? 0, 3) }}
                             </td>
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm">
                                 {{ $material->satuan ?? '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
+                                {{ $material->keterangan ?? '-' }}
                             </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
-                            <td colspan="3" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
+                            <td colspan="4" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($lkhMaterialDetails->sum('qtyditerima'), 3) }}
                             </td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm">
                                 {{ number_format($lkhMaterialDetails->sum('qtysisa'), 3) }}
                             </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-bold text-green-600">
                                 {{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 3) }}
                             </td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">-</td>
+                            <td colspan="2" class="border border-gray-300 px-3 py-2 text-center text-sm">-</td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+        </div>
+        @else
+        <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="text-center">
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Detail Material</h3>
+                <p class="text-gray-500">Tidak ada data material untuk LKH ini</p>
             </div>
         </div>
         @endif
