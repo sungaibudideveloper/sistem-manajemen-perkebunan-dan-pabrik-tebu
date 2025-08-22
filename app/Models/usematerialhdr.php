@@ -78,7 +78,7 @@ public function selectusematerial($companycode, $rkhno = 0)
     JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
     JOIN lkhhdr AS l ON u.lkhno = l.lkhno
     JOIN USER AS us ON us.userid =  l.mandorid
-    JOIN lkhdetailplot AS lk ON lk.lkhno = u.lkhno
+    JOIN lkhdetailplot AS lk ON lk.lkhno = u.lkhno AND lk.blok = a.blok AND lk.plot = a.plot
     WHERE a.rkhno = ? AND a.companycode = ? AND a.usingmaterial = 1
     ORDER BY a.blok, a.plot, d.itemcode;
     ",

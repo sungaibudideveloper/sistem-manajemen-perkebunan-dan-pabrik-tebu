@@ -83,7 +83,14 @@ table th, table td {
                         </tr>
                     </thead>
                     <tbody class="text-gray-600">
-                        @php $totalLuas = 0; $plots = $details->unique('lkhno'); @endphp
+                        @php 
+                        $totalLuas = 0; 
+                        // Unique berdasarkan kombinasi lkhno + blok + plot untuk hindari duplikat dari JOIN
+                        $plots = $details->unique(function($item) {
+                            return $item->lkhno . '|' . $item->blok . '|' . $item->plot;
+                        });
+                        @endphp
+                        
                         @foreach($plots as $d)  
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="py-1 px-2">{{ $d->lkhno }}</td>
@@ -93,7 +100,6 @@ table th, table td {
                                 <td class="py-1 px-2 bg-green-100">{{ $d->activitycode }} {{ $d->herbisidagroupname }}</td>
                             </tr>
                             @php $totalLuas += floatval($d->luasrkh); @endphp
-
                         @endforeach
                     </tbody>
                     <tfoot>
@@ -126,84 +132,83 @@ table th, table td {
                 </thead>
                 <tbody class="text-gray-600">
                     @foreach ($detailmaterial as $d)
-                        @php
-                            // cari luas untuk grup ini
-                            $plot    = $plots->Where('lkhno', $d->lkhno)->first();
-                            $luas    = $plot->luasrkh ?? 0;
+    @php
+        // Hitung total luas semua blok untuk lkhno ini
+        $plotsInLkh = $plots->where('lkhno', $d->lkhno);
+        $totalLuas = $plotsInLkh->sum('luasrkh');
+        
+        // Hitung total qty = dosage × total luas semua blok
+        $totalQty = $d->dosageperha * $totalLuas;
+    @endphp
 
-                            if(empty($luas) || $plot->luasrkh == 0){
-                                dd($plots, $d->lkhno, $detailmaterial);
-                            }
+    <tr class="border-b hover:bg-gray-50">
+        <td class="py-2 px-2">
+            <select
+                @if (strtoupper($details[0]->flagstatus) != 'ACTIVE') disabled @endif
+                name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+                class="item-select w-full border-none bg-yellow-100 text-xs"
+                data-luas="{{ $totalLuas }}"
+                data-lkhno="{{ $d->lkhno }}"
+            >
+                @foreach ($itemlist as $item)
+                    <option value="{{ $item->itemcode }}" 
+                            {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
+                            data-dosage="{{$item->dosageperha}}">
+                        Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}}) - Total: {{$totalLuas}} HA
+                    </option>
+                @endforeach
+            </select>
 
-                        @endphp
-                    
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="py-2 px-2">
-                                <select
-                                    @if (strtoupper($details[0]->flagstatus) != 'ACTIVE') disabled @endif style="color: #374151 !important; opacity: 1 !important;"
-                                    name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                    class="item-select w-full border-none bg-yellow-100 text-xs"
-                                    data-luas="{{ $luas }}"
-                                >
-                                    @foreach ($itemlist as $item)
+            <span class="print-label text-xs">
+                Herbisida {{ $d->herbisidagroupid }} - {{ $d->itemcode }} - {{ $d->itemname ?? '[Nama Item]' }} - {{ $d->dosageperha }} ({{ $d->unit }}) (Total: {{ $totalLuas }} HA)
+            </span>
 
-                                    <option value="{{ $item->itemcode }}" {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
-                                        data-dosage="{{$item->dosageperha}}" >
-                                          Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemcode == $d->itemcode ? ($item->itemname ?? '[Nama Item]') : $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}})
-                                        </option>
-                                    @endforeach
-                                </select>
+            {{-- Hidden inputs dengan total qty --}}
+            <input type="hidden" name="qty[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+                   class="selected-qty" value="{{ $totalQty }}">
+            <input type="hidden" name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+                   class="selected-dosage" value="{{ $d->dosageperha }}">
+            <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+                   class="selected-unit" value="{{ $d->unit }}">
+            <input type="hidden" name="itemcodelist[{{ $d->lkhno }}][]"
+                   class="selected-itemcode" value="{{ $d->itemcode }}">
+        </td>
 
-                                <span class="print-label text-xs">
-                                    Herbisida {{ $d->herbisidagroupid }} - {{ $d->itemcode }} - {{ $d->itemname ?? '[Nama Item]' }} - {{ $d->dosageperha }} ({{ $d->unit }}) ({{ $luas }})
-                                </span>
-                    
-                                {{-- keep current values for submit --}}
-                                <input type="hidden" name="qty[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-qty" value="{{ $d->qty }}">
-                                <input type="hidden" name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-dosage" value="{{ $d->dosageperha }}">
-                                <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                                       class="selected-unit" value="{{ $d->unit }}">
-                                <input type="hidden" name="itemcodelist[{{ $d->lkhno }}][]"
-                                       class="selected-itemcode" value="{{ $d->itemcode }}">
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center text-right">
-                                <span class="labeldosage">{{ $d->dosageperha }} {{ $d->dosageunit }}</span>
-                            </td>
-                    
-                    
-                            <td class="py-2 px-2 text-center text-right">
-                                <span class="labelqty">{{ $d->qty }}</span>
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center text-right">
-                                {{ $d->qtyretur ?? 0 }}
-                            </td>
+        <td class="py-2 px-2 text-center text-right">
+            <span class="labeldosage">{{ $d->dosageperha }} {{ $d->unit }}</span>
+        </td>
 
-                            <td class="py-2 px-2 text-center">
-                                {{ $d->lkhno }}
-                            </td>
-                    
-                            <td class="py-2 px-2 text-center">
-                                @if (empty($d->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE')
-                                    <a href="{{ route('input.gudang.retur', [
-                                            'retur' => $d->qtyretur,
-                                            'itemcode' => $d->itemcode,
-                                            'rkhno' => $details[0]->rkhno,
-                                            'herbisidagroupid' => $d->herbisidagroupid
-                                        ]) }}"
-                                       class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition no-print"
-                                       onclick="return confirm('Proses Retur Barang ini ?')">
-                                        Retur ?
-                                    </a>
-                                @else
-                                    {{ $d->noretur ?? '-' }}
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
+        <td class="py-2 px-2 text-center text-right">
+            <span class="labelqty">{{ number_format($totalQty, 3) }}</span>
+        </td>
+
+        <td class="py-2 px-2 text-center text-right">
+            {{ $d->qtyretur ?? 0 }}
+        </td>
+
+        <td class="py-2 px-2 text-center">
+            {{ $d->lkhno }}
+        </td>
+
+        <td class="py-2 px-2 text-center">
+            @if (empty($d->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE')
+                <a href="{{ route('input.gudang.retur', [
+                        'retur' => $d->qtyretur,
+                        'itemcode' => $d->itemcode,
+                        'rkhno' => $details[0]->rkhno,
+                        'herbisidagroupid' => $d->herbisidagroupid
+                    ]) }}"
+                   class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition no-print"
+                   onclick="return confirm('Proses Retur Barang ini ?')">
+                    Retur ?
+                </a>
+            @else
+                {{ $d->noretur ?? '-' }}
+            @endif
+        </td>
+
+    </tr>
+@endforeach
                     </tbody>
                     
             </table>
@@ -240,47 +245,58 @@ table th, table td {
     
     </x-layout>
     
-    <script>
-        $(document).ready(function() {
-            $('.item-select').each(function() {
-                const selected = $(this).find('option:selected');
-                const dosage = selected.data('dosage');
-                const luasArea = $(this).data('luas');
-                const qty = (dosage * luasArea).toFixed(3); // Max 3 angka belakang koma
-                
-                const row = $(this).closest('tr');
-                row.find('.labelqty').text(qty);
-                row.find('.selected-qty').val(qty); // Update nilai input hidden juga
-            });
-        });
-        
-        $('.item-select').on('change', function () {
-            const selected = $(this).find('option:selected');
-            const dosage = selected.data('dosage');
-            const luasArea = $(this).data('luas');
-            const qty = (dosage * luasArea).toFixed(3); // Max 3 angka belakang koma
-            const newItemcode = selected.val();
-        
-            // Ambil lkhno dari name attribute select
-            const selectName = $(this).attr('name');
-            const lkhno = selectName.match(/\[(.*?)\]/)[1];
-        
-            const row = $(this).closest('tr');
-            
-            // Update values
-            row.find('.selected-dosage').val(dosage);
-            row.find('.selected-qty').val(qty);
-            
-            // Update name attribute dengan itemcode baru
-            row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}]`);
-            row.find('.selected-qty').attr('name', `qty[${lkhno}][${newItemcode}]`);
-            row.find('.selected-unit').attr('name', `unit[${lkhno}][${newItemcode}]`);
-            $(this).attr('name', `itemcode[${lkhno}][${newItemcode}]`);
-            
-            // Update display
-            row.find('.labeldosage').text(dosage);
-            row.find('.labelqty').text(qty);
+<script>
+// Data luas per lkhno untuk JavaScript
+const luasPerLkhno = @json($plots->groupBy('lkhno')->map(function($group) { 
+    return $group->sum('luasrkh'); 
+}));
 
-            row.find('.selected-itemcode').val(selected.val());
-        });
-        </script>
+$(document).ready(function() {
+    $('.item-select').each(function() {
+        calculateQtyForItem(this);
+    });
+});
+
+$('.item-select').on('change', function () {
+    const selected = $(this).find('option:selected');
+    const dosage = selected.data('dosage');
+    const newItemcode = selected.val();
+    const selectName = $(this).attr('name');
+    const lkhno = selectName.match(/\[(.*?)\]/)[1];
+
+    const row = $(this).closest('tr');
+    
+    // Update values
+    row.find('.selected-dosage').val(dosage);
+    row.find('.selected-itemcode').val(newItemcode);
+    
+    // Update name attributes
+    row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}]`);
+    row.find('.selected-qty').attr('name', `qty[${lkhno}][${newItemcode}]`);
+    row.find('.selected-unit').attr('name', `unit[${lkhno}][${newItemcode}]`);
+    $(this).attr('name', `itemcode[${lkhno}][${newItemcode}]`);
+    
+    // Update display
+    row.find('.labeldosage').text(dosage);
+    
+    // Recalculate qty berdasarkan dosage baru
+    calculateQtyForItem(this);
+});
+
+function calculateQtyForItem(selectElement) {
+    const selected = $(selectElement).find('option:selected');
+    const dosage = parseFloat(selected.data('dosage')) || 0;
+    const lkhno = $(selectElement).data('lkhno') || $(selectElement).attr('name').match(/\[(.*?)\]/)[1];
+    
+    // Ambil total luas untuk lkhno ini
+    const totalLuas = luasPerLkhno[lkhno] || 0;
+    
+    // Hitung total qty
+    const totalQty = dosage * totalLuas;
+    
+    // Update display dan hidden input
+    const row = $(selectElement).closest('tr');
+    row.find('.labelqty').text(totalQty.toFixed(3));
+    row.find('.selected-qty').val(totalQty.toFixed(3));
+}
+</script>
