@@ -118,7 +118,7 @@
             </div>
         </div>
 
-        <!-- Plot Details Section - NEW -->
+        <!-- Plot Details Section -->
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Plot</h3>
@@ -179,7 +179,7 @@
             </div>
         </div>
 
-        <!-- Worker Details Section - UPDATED -->
+        <!-- Worker Details Section -->
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Pekerja</h3>
@@ -291,7 +291,7 @@
             </div>
         </div>
 
-        <!-- Material Details Section - NEW -->
+        <!-- Material Details Section - UPDATED: Consistent with report -->
         <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Detail Material</h3>
@@ -308,11 +308,14 @@
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-12">No</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Plot</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Item Code</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-40">Nama Item</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Diterima</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Sisa</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-24">Qty Digunakan</th>
-                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-20">Satuan</th>
+                            <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Keterangan</th>
                             <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-16">Aksi</th>
                         </tr>
                     </thead>
@@ -321,20 +324,32 @@
                         <tr class="material-row">
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
                             <td class="border border-gray-300 px-3 py-2">
+                                <input type="text" name="materials[{{ $index }}][plot]" value="{{ $material->plot ?? '' }}" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gray-500">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2">
                                 <input type="text" name="materials[{{ $index }}][itemcode]" value="{{ $material->itemcode }}" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gray-500" required>
                             </td>
                             <td class="border border-gray-300 px-3 py-2">
-                                <input type="number" name="materials[{{ $index }}][qtyditerima]" value="{{ $material->qtyditerima }}" step="0.01" 
+                                <input type="text" value="{{ $material->itemname ?? 'Unknown Item' }}" readonly
+                                       class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded cursor-not-allowed">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2">
+                                <input type="number" name="materials[{{ $index }}][qtyditerima]" value="{{ $material->qtyditerima }}" step="0.001" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-diterima">
                             </td>
                             <td class="border border-gray-300 px-3 py-2">
-                                <input type="number" name="materials[{{ $index }}][qtysisa]" value="{{ $material->qtysisa }}" step="0.01" 
+                                <input type="number" name="materials[{{ $index }}][qtysisa]" value="{{ $material->qtysisa }}" step="0.001" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-sisa">
                             </td>
                             <td class="border border-gray-300 px-3 py-2">
-                                <input type="number" value="{{ $material->qtydigunakan }}" step="0.01" readonly
+                                <input type="number" value="{{ $material->qtydigunakan }}" step="0.001" readonly
                                        class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded text-right cursor-not-allowed qty-digunakan">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2">
+                                <input type="text" value="{{ $material->satuan ?? '-' }}" readonly
+                                       class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded text-center cursor-not-allowed">
                             </td>
                             <td class="border border-gray-300 px-3 py-2">
                                 <input type="text" name="materials[{{ $index }}][keterangan]" value="{{ $material->keterangan }}" 
@@ -542,16 +557,25 @@
             tr.innerHTML = `
                 <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">${index + 1}</td>
                 <td class="border border-gray-300 px-3 py-2">
+                    <input type="text" name="materials[${index}][plot]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gray-500">
+                </td>
+                <td class="border border-gray-300 px-3 py-2">
                     <input type="text" name="materials[${index}][itemcode]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gray-500" required>
                 </td>
                 <td class="border border-gray-300 px-3 py-2">
-                    <input type="number" name="materials[${index}][qtyditerima]" step="0.01" class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-diterima">
+                    <input type="text" readonly class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded cursor-not-allowed" placeholder="Auto filled">
                 </td>
                 <td class="border border-gray-300 px-3 py-2">
-                    <input type="number" name="materials[${index}][qtysisa]" step="0.01" class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-sisa">
+                    <input type="number" name="materials[${index}][qtyditerima]" step="0.001" class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-diterima">
                 </td>
                 <td class="border border-gray-300 px-3 py-2">
-                    <input type="number" step="0.01" readonly class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded text-right cursor-not-allowed qty-digunakan">
+                    <input type="number" name="materials[${index}][qtysisa]" step="0.001" class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-right focus:ring-1 focus:ring-gray-500 qty-sisa">
+                </td>
+                <td class="border border-gray-300 px-3 py-2">
+                    <input type="number" step="0.001" readonly class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded text-right cursor-not-allowed qty-digunakan">
+                </td>
+                <td class="border border-gray-300 px-3 py-2">
+                    <input type="text" readonly class="w-full px-2 py-1 text-sm bg-gray-100 border border-gray-300 rounded text-center cursor-not-allowed" placeholder="-">
                 </td>
                 <td class="border border-gray-300 px-3 py-2">
                     <input type="text" name="materials[${index}][keterangan]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gray-500">
@@ -574,7 +598,7 @@
             const diterima = parseFloat(row.querySelector('.qty-diterima').value) || 0;
             const sisa = parseFloat(row.querySelector('.qty-sisa').value) || 0;
             const digunakan = Math.max(0, diterima - sisa);
-            row.querySelector('.qty-digunakan').value = digunakan.toFixed(2);
+            row.querySelector('.qty-digunakan').value = digunakan.toFixed(3);
         }
 
         function submitForm() {

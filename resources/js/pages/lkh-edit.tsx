@@ -1163,7 +1163,7 @@ const LKHEditPage: React.FC<LKHEditProps> = ({
         <div className="flex justify-center gap-4">
           <button
             onClick={goBack}
-            className="flex items-center gap-3 px-8 py-4 bg-neutral-600 text-white rounded-2xl hover:bg-neutral-700 transition-colors text-lg font-medium shadow-lg"
+            className="flex items-center gap-3 px-8 py-4 bg-gray-600 text-white rounded-2xl hover:bg-neutral-700 transition-colors text-lg font-medium shadow-lg"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Batal Edit</span>

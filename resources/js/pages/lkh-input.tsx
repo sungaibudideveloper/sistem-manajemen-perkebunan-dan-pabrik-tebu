@@ -1,4 +1,4 @@
-// resources/js/pages/lkh-input.tsx - COMPLETE: With Per-Plot Material Input
+// resources/js/pages/lkh-input.tsx - COMPACT MATERIAL VERSION
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import {
@@ -552,9 +552,9 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={goBack}
             className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
@@ -563,48 +563,46 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
             <span>Kembali</span>
           </button>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             {app?.logo_url ? (
               <img 
                 src={app.logo_url} 
                 alt={`Logo ${app?.name || 'App'}`} 
-                className="w-10 h-10 object-contain"
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
                 onError={(e) => {
                   console.log('Logo failed to load:', app.logo_url);
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'A'}</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm sm:text-lg">{app?.name?.charAt(0) || 'A'}</span>
               </div>
             )}
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
+              <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-neutral-900 mb-1 sm:mb-2">
                 Input Hasil Pekerjaan
               </h2>
-              <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activitycode} - {lkhData.activityname}</p>
+              <p className="text-sm sm:text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activitycode}</p>
             </div>
           </div>
         </div>
 
         {/* Compact LKH Info */}
-        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 mb-6">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div>
-                  <span className="text-sm text-neutral-500">Tanggal:</span>
-                  <span className="ml-2 font-medium">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</span>
-                </div>
-                <div>
-                  <span className="text-sm text-neutral-500">Plot:</span>
-                  <span className="ml-2 font-medium">{Array.isArray(lkhData.plot) ? lkhData.plot.join(', ') : lkhData.plot}</span>
-                </div>
-                <div>
-                  <span className="text-sm text-neutral-500">Tim:</span>
-                  <span className="ml-2 font-medium">{assignedWorkers.length} pekerja</span>
-                </div>
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 mb-4 sm:mb-6">
+          <div className="p-3 sm:p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div>
+                <span className="text-neutral-500">Tanggal:</span>
+                <span className="ml-2 font-medium">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500">Plot:</span>
+                <span className="ml-2 font-medium">{Array.isArray(lkhData.plot) ? lkhData.plot.join(', ') : lkhData.plot}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500">Tim:</span>
+                <span className="ml-2 font-medium">{assignedWorkers.length} pekerja</span>
               </div>
             </div>
           </div>
@@ -612,56 +610,53 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
 
         {/* Vehicle Time Input Section */}
         {vehicleInputs.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Truck className="w-5 h-5 text-orange-600" />
+          <div className="bg-white rounded-xl shadow-lg border border-neutral-200 mb-6">
+            <div className="border-b bg-neutral-50 rounded-t-xl p-3 sm:p-4">
+              <h3 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                 Waktu Kerja Kendaraan ({vehicleInputs.length} unit)
               </h3>
-              <p className="text-sm text-neutral-600 mt-1">
-                Input jam mulai dan selesai untuk setiap kendaraan.
-              </p>
             </div>
             
-            <div className="p-6">
+            <div className="p-3 sm:p-6">
               <div className="space-y-3">
                 {vehicleInputs.map((vehicle, index) => (
-                  <div key={vehicle.nokendaraan} className="border border-neutral-200 rounded-xl overflow-hidden">
+                  <div key={vehicle.nokendaraan} className="border border-neutral-200 rounded-lg overflow-hidden">
                     <div 
-                      className="p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors"
+                      className="p-3 sm:p-4 bg-orange-50 cursor-pointer hover:bg-orange-100 transition-colors"
                       onClick={() => toggleVehicleExpanded(vehicle.nokendaraan)}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Truck className="w-5 h-5 text-orange-600" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                           <div>
-                            <h4 className="font-semibold text-orange-900">{vehicle.nokendaraan}</h4>
-                            <p className="text-sm text-orange-700">{vehicle.jenis} - {vehicle.operator_nama}</p>
+                            <h4 className="font-semibold text-orange-900 text-sm sm:text-base">{vehicle.nokendaraan}</h4>
+                            <p className="text-xs sm:text-sm text-orange-700">{vehicle.operator_nama}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-4">
-                          <div className="text-center">
-                            <p className="text-sm text-orange-600 font-medium">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          <div className="text-right">
+                            <p className="text-xs sm:text-sm text-orange-600 font-medium">
                               {vehicle.jammulai} - {vehicle.jamselesai}
                             </p>
                             <p className="text-xs text-orange-500">
-                              Plot: {vehicle.plots.join(', ')}
+                              {vehicle.plots.join(', ')}
                             </p>
                           </div>
                           
                           {expandedVehicles.has(vehicle.nokendaraan) ? (
-                            <ChevronUp className="w-5 h-5 text-neutral-500" />
+                            <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-neutral-500" />
+                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500" />
                           )}
                         </div>
                       </div>
                     </div>
 
                     {expandedVehicles.has(vehicle.nokendaraan) && (
-                      <div className="p-4 border-t bg-white">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 sm:p-4 border-t bg-white">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                           <div>
                             <label className="block text-xs font-medium text-neutral-700 mb-1">
                               Jam Mulai
@@ -670,22 +665,22 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                               <button
                                 type="button"
                                 onClick={() => adjustVehicleTime(index, 'jammulai', 'down')}
-                                className="p-1 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
+                                className="p-1 sm:p-2 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
                               >
-                                <Minus className="w-4 h-4" />
+                                <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                               <input
                                 type="text"
                                 value={vehicle.jammulai}
                                 readOnly
-                                className="w-full px-2 py-2 text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
+                                className="w-full px-2 py-1 sm:py-2 text-xs sm:text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
                               />
                               <button
                                 type="button"
                                 onClick={() => adjustVehicleTime(index, 'jammulai', 'up')}
-                                className="p-1 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
+                                className="p-1 sm:p-2 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
                               >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                             </div>
                           </div>
@@ -698,22 +693,22 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                               <button
                                 type="button"
                                 onClick={() => adjustVehicleTime(index, 'jamselesai', 'down')}
-                                className="p-1 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
+                                className="p-1 sm:p-2 border border-neutral-300 rounded-l-lg bg-white hover:bg-neutral-50"
                               >
-                                <Minus className="w-4 h-4" />
+                                <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                               <input
                                 type="text"
                                 value={vehicle.jamselesai}
                                 readOnly
-                                className="w-full px-2 py-2 text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
+                                className="w-full px-2 py-1 sm:py-2 text-xs sm:text-sm text-center border-t border-b border-neutral-300 focus:outline-none bg-white"
                               />
                               <button
                                 type="button"
                                 onClick={() => adjustVehicleTime(index, 'jamselesai', 'up')}
-                                className="p-1 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
+                                className="p-1 sm:p-2 border border-neutral-300 rounded-r-lg bg-white hover:bg-neutral-50"
                               >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                             </div>
                           </div>
@@ -728,62 +723,52 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
         )}
 
         {/* Worker Time Input */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Clock className="w-5 h-5 text-purple-600" />
+        <div className="bg-white rounded-xl shadow-lg border border-neutral-200 mb-6">
+          <div className="border-b bg-neutral-50 rounded-t-xl p-3 sm:p-4">
+            <h3 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
               Waktu Kerja Pekerja ({workerInputs.length} orang)
             </h3>
-            <p className="text-sm text-neutral-600 mt-1">
-              Default: Full Time (07:00-15:00). Klik pekerja untuk mengatur waktu custom.
+            <p className="text-xs sm:text-sm text-neutral-600 mt-1">
+              Default: Full Time (07:00-15:00). Tap untuk custom.
             </p>
           </div>
           
-          <div className="p-6">
-            <div className="space-y-3">
+          <div className="p-3 sm:p-6">
+            <div className="space-y-2 sm:space-y-3">
               {workerInputs.map((worker, index) => (
-                <div key={worker.tenagakerjaid} className="border border-neutral-200 rounded-xl overflow-hidden">
+                <div key={worker.tenagakerjaid} className="border border-neutral-200 rounded-lg overflow-hidden">
                   <div 
-                    className="p-4 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors"
+                    className="p-3 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors"
                     onClick={() => toggleWorkerExpanded(worker.tenagakerjaid)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <User className="w-5 h-5 text-purple-600" />
-                        <div>
-                          <h4 className="font-semibold text-purple-900">{worker.nama}</h4>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-purple-600" />
+                        <h4 className="font-semibold text-purple-900 text-sm">{worker.nama}</h4>
                       </div>
                       
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            worker.isFullTime 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {worker.isFullTime ? 'Full Time' : 'Tidak Full Time'}
-                          </span>
-                          {!worker.isFullTime && (
-                            <p className="text-xs text-neutral-500 mt-1">
-                              {worker.jammasuk}-{worker.jamselesai}
-                              {worker.overtimehours > 0 && ` +${worker.overtimehours}h`}
-                            </p>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          worker.isFullTime 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {worker.isFullTime ? 'Full' : 'Custom'}
+                        </span>
                         
                         {expandedWorkers.has(worker.tenagakerjaid) ? (
-                          <ChevronUp className="w-5 h-5 text-neutral-500" />
+                          <ChevronUp className="w-4 h-4 text-neutral-500" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-neutral-500" />
+                          <ChevronDown className="w-4 h-4 text-neutral-500" />
                         )}
                       </div>
                     </div>
                   </div>
 
                   {expandedWorkers.has(worker.tenagakerjaid) && (
-                    <div className="p-4 border-t bg-white">
-                      <div className="mb-4">
+                    <div className="p-3 border-t bg-white">
+                      <div className="mb-3">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
@@ -791,14 +776,14 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                             onChange={(e) => updateWorkerInput(index, 'isFullTime', e.target.checked)}
                             className="rounded text-purple-600 focus:ring-purple-500"
                           />
-                          <span className="text-sm font-medium">Full Time (07:00-15:00)</span>
+                          <span className="text-xs font-medium">Full Time (07:00-15:00)</span>
                         </label>
                       </div>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
-                            Jam Masuk
+                            Masuk
                           </label>
                           <div className="flex items-center">
                             <button
@@ -811,16 +796,15 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Minus className="w-4 h-4" />
+                              <Minus className="w-3 h-3" />
                             </button>
                             <input
                               type="text"
                               value={worker.jammasuk}
                               readOnly
-                              disabled={worker.isFullTime}
-                              className={`w-full px-2 py-2 text-sm text-center border-t border-b focus:outline-none ${
+                              className={`w-full px-1 py-1 text-xs text-center border-t border-b focus:outline-none ${
                                 worker.isFullTime 
-                                  ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed' 
+                                  ? 'bg-neutral-100 text-neutral-500' 
                                   : 'bg-white border-neutral-300'
                               }`}
                             />
@@ -834,14 +818,14 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Plus className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                         
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
-                            Jam Selesai
+                            Selesai
                           </label>
                           <div className="flex items-center">
                             <button
@@ -854,16 +838,15 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Minus className="w-4 h-4" />
+                              <Minus className="w-3 h-3" />
                             </button>
                             <input
                               type="text"
                               value={worker.jamselesai}
                               readOnly
-                              disabled={worker.isFullTime}
-                              className={`w-full px-2 py-2 text-sm text-center border-t border-b focus:outline-none ${
+                              className={`w-full px-1 py-1 text-xs text-center border-t border-b focus:outline-none ${
                                 worker.isFullTime 
-                                  ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed' 
+                                  ? 'bg-neutral-100 text-neutral-500' 
                                   : 'bg-white border-neutral-300'
                               }`}
                             />
@@ -877,27 +860,23 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Plus className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
                         
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
-                            Total Jam
+                            Total
                           </label>
-                          <div className={`w-full px-2 py-2 text-sm text-center border rounded-lg ${
-                            worker.isFullTime
-                              ? 'bg-neutral-100 text-neutral-500'
-                              : 'bg-neutral-50 text-neutral-600 border-neutral-200'
-                          }`}>
-                            {Math.floor(worker.totaljamkerja)} jam
+                          <div className="px-2 py-1 text-xs text-center border rounded-lg bg-neutral-50 text-neutral-600">
+                            {Math.floor(worker.totaljamkerja)}h
                           </div>
                         </div>
                         
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">
-                            Lembur (jam)
+                            Lembur
                           </label>
                           <div className="flex items-center">
                             <button
@@ -910,16 +889,15 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Minus className="w-4 h-4" />
+                              <Minus className="w-3 h-3" />
                             </button>
                             <input
                               type="text"
                               value={worker.overtimehours}
                               readOnly
-                              disabled={worker.isFullTime}
-                              className={`w-full px-2 py-2 text-sm text-center border-t border-b focus:outline-none ${
+                              className={`w-full px-1 py-1 text-xs text-center border-t border-b focus:outline-none ${
                                 worker.isFullTime 
-                                  ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed' 
+                                  ? 'bg-neutral-100 text-neutral-500' 
                                   : 'bg-white border-neutral-300'
                               }`}
                             />
@@ -933,7 +911,7 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   : 'bg-white border-neutral-300 hover:bg-neutral-50'
                               }`}
                             >
-                              <Plus className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
@@ -1011,54 +989,50 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         </div>
 
-        {/* Material Usage Per Plot */}
+        {/* COMPACT MATERIAL SECTION - Updated to match lkh-edit layout */}
         {materialInputs.length > 0 ? (
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
             <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Package className="w-5 h-5 text-orange-600" />
-                Input Sisa Material per Plot
+                Input Sisa Material per Plot ({materialInputs.length} jenis)
               </h3>
-              <p className="text-sm text-neutral-600 mt-1">
-                Input sisa material untuk setiap plot. Terpakai akan otomatis terhitung.
-              </p>
             </div>
             <div className="p-6">
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {materialInputs.map((material, materialIndex) => (
                   <div key={material.itemcode} className="border border-orange-200 rounded-xl overflow-hidden">
-                    <div className="bg-orange-50 p-4">
-                      <h4 className="font-semibold text-orange-900 text-lg">{material.itemname}</h4>
-                      <p className="text-sm text-orange-700">
-                        Total Rencana: {material.total_planned.toFixed(3)} {material.unit}
-                      </p>
+                    {/* COMPACT Header */}
+                    <div className="bg-orange-50 p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-orange-900">{material.itemname}</h4>
+                          <p className="text-xs text-orange-700">{material.itemcode} • {material.unit}</p>
+                        </div>
+                        <div className="text-right text-xs">
+                          <div className="text-orange-700">Total Rencana: <span className="font-medium">{material.total_planned.toFixed(3)}</span></div>
+                          <div className="text-orange-600">Sisa: <span className="font-medium">{material.total_sisa.toFixed(3)}</span> | Terpakai: <span className="font-medium">{material.total_digunakan.toFixed(3)}</span></div>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className="p-4">
-                      <div className="space-y-4">
+                    {/* COMPACT Plot Input Grid */}
+                    <div className="p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {material.plot_breakdown.map((plotMaterial, plotIndex) => (
                           <div key={plotMaterial.plot} className="p-3 border border-neutral-200 rounded-lg bg-neutral-50">
-                            <div className="flex items-center justify-between mb-3">
-                              <h5 className="font-medium text-neutral-900">Plot {plotMaterial.plot}</h5>
-                              <span className="text-sm text-neutral-600">
-                                Rencana: {plotMaterial.planned_usage.toFixed(3)} {material.unit}
+                            {/* Plot Header */}
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-medium text-sm text-neutral-900">Plot {plotMaterial.plot}</h5>
+                              <span className="text-xs text-neutral-600">
+                                Rencana: {plotMaterial.planned_usage.toFixed(2)}
                               </span>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* Single Row Input */}
+                            <div className="grid grid-cols-2 gap-2 text-xs">
                               <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                                  Rencana Pakai
-                                </label>
-                                <div className="px-2 py-2 text-sm border border-neutral-200 rounded bg-white text-neutral-600">
-                                  {plotMaterial.planned_usage.toFixed(3)} {material.unit}
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                                  Sisa *
-                                </label>
+                                <label className="block font-medium text-neutral-700 mb-1">Sisa *</label>
                                 <input
                                   type="number"
                                   step="0.001"
@@ -1066,49 +1040,52 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
                                   max={plotMaterial.planned_usage}
                                   value={plotMaterial.qtysisa}
                                   onChange={(e) => updateMaterialPlotInput(materialIndex, plotIndex, 'qtysisa', parseFloat(e.target.value) || 0)}
-                                  className="w-full px-2 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                  className="w-full px-2 py-1 text-xs border border-neutral-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
                                   placeholder="0.000"
                                 />
                               </div>
                               
                               <div>
-                                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                                  Terpakai
-                                </label>
-                                <div className={`px-2 py-2 text-sm border rounded ${
+                                <label className="block font-medium text-neutral-700 mb-1">Terpakai</label>
+                                <div className={`px-2 py-1 text-xs border rounded ${
                                   plotMaterial.qtydigunakan > 0 
                                     ? 'border-green-200 bg-green-50 text-green-800' 
-                                    : 'border-neutral-200 bg-neutral-50 text-neutral-600'
+                                    : 'border-neutral-200 bg-white text-neutral-600'
                                 }`}>
-                                  {plotMaterial.qtydigunakan.toFixed(3)} {material.unit}
+                                  {plotMaterial.qtydigunakan.toFixed(3)}
                                 </div>
                               </div>
                             </div>
+                            
+                            {/* Efficiency bar - compact */}
+                            {plotMaterial.planned_usage > 0 && (
+                              <div className="mt-2">
+                                <div className="flex justify-between text-xs text-neutral-500">
+                                  <span>Efisiensi</span>
+                                  <span className={`font-medium ${
+                                    (plotMaterial.qtydigunakan / plotMaterial.planned_usage) <= 1 
+                                      ? 'text-green-600' 
+                                      : 'text-red-600'
+                                  }`}>
+                                    {((plotMaterial.qtydigunakan / plotMaterial.planned_usage) * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-neutral-200 rounded-full h-1 mt-1">
+                                  <div 
+                                    className={`h-1 rounded-full ${
+                                      (plotMaterial.qtydigunakan / plotMaterial.planned_usage) <= 1 
+                                        ? 'bg-green-500' 
+                                        : 'bg-red-500'
+                                    }`}
+                                    style={{ 
+                                      width: `${Math.min(100, (plotMaterial.qtydigunakan / plotMaterial.planned_usage) * 100)}%` 
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
-                      </div>
-                      
-                      <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                          <div>
-                            <p className="text-xs text-orange-600 font-medium">Total Rencana</p>
-                            <p className="text-sm font-semibold text-orange-900">
-                              {material.total_planned.toFixed(3)} {material.unit}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-orange-600 font-medium">Total Sisa</p>
-                            <p className="text-sm font-semibold text-orange-900">
-                              {material.total_sisa.toFixed(3)} {material.unit}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-orange-600 font-medium">Total Terpakai</p>
-                            <p className="text-sm font-semibold text-orange-900">
-                              {material.total_digunakan.toFixed(3)} {material.unit}
-                            </p>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1118,60 +1095,54 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Package className="w-5 h-5 text-neutral-600" />
-                Material
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 text-neutral-600">
-                <AlertCircle className="w-5 h-5" />
-                <span>LKH ini tidak menggunakan material</span>
-              </div>
+            <div className="p-4 flex items-center gap-3 text-neutral-600">
+              <AlertCircle className="w-5 h-5" />
+              <span className="text-sm">LKH ini tidak menggunakan material</span>
             </div>
           </div>
         )}
 
         {/* Summary */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-xl shadow-lg border border-neutral-200 mb-6">
+          <div className="border-b bg-neutral-50 rounded-t-xl p-3 sm:p-4">
+            <h3 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
               Ringkasan Total
             </h3>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-4 bg-blue-50 rounded-xl">
-                <p className="text-sm text-blue-600 font-medium">Luas Rencana</p>
-                <p className="text-2xl font-bold text-blue-900">{totals.totalLuasPlan.toFixed(2)} Ha</p>
+          <div className="p-3 sm:p-6">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6">
+              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-blue-600 font-medium">Rencana</p>
+                <p className="text-lg sm:text-2xl font-bold text-blue-900">{totals.totalLuasPlan.toFixed(2)}</p>
+                <p className="text-xs text-blue-600">Ha</p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-xl">
-                <p className="text-sm text-green-600 font-medium">Total Hasil</p>
-                <p className="text-2xl font-bold text-green-900">{totals.totalHasil.toFixed(2)} Ha</p>
-                <p className="text-xs text-green-600 mt-1">
+              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-green-600 font-medium">Hasil</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-900">{totals.totalHasil.toFixed(2)}</p>
+                <p className="text-xs text-green-600">
                   {totals.totalLuasPlan > 0 ? Math.round((totals.totalHasil / totals.totalLuasPlan) * 100) : 0}% selesai
                 </p>
               </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-xl">
-                <p className="text-sm text-yellow-600 font-medium">Total Sisa</p>
-                <p className="text-2xl font-bold text-yellow-900">{totals.totalSisa.toFixed(2)} Ha</p>
+              <div className="text-center p-3 sm:p-4 bg-yellow-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-yellow-600 font-medium">Sisa</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-900">{totals.totalSisa.toFixed(2)}</p>
+                <p className="text-xs text-yellow-600">Ha</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Keterangan */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <h3 className="font-semibold">Keterangan (Opsional)</h3>
+        <div className="bg-white rounded-xl shadow-lg border border-neutral-200 mb-6">
+          <div className="border-b bg-neutral-50 rounded-t-xl p-3 sm:p-4">
+            <h3 className="font-semibold text-sm sm:text-base">Keterangan (Opsional)</h3>
           </div>
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             <textarea
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
-              className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
               placeholder="Catatan tambahan mengenai pekerjaan hari ini..."
             />
@@ -1183,17 +1154,17 @@ const LKHInputPage: React.FC<LKHInputProps> = ({
           <button
             onClick={saveResults}
             disabled={isLoading}
-            className="flex items-center gap-3 px-8 py-4 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium shadow-lg"
+            className="flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl sm:rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-lg font-medium shadow-lg"
           >
             {isLoading ? (
               <>
-                <Loader className="w-5 h-5 animate-spin" />
+                <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                 <span>Menyimpan...</span>
               </>
             ) : (
               <>
-                <Save className="w-5 h-5" />
-                <span>Simpan Hasil Pekerjaan</span>
+                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Simpan Hasil</span>
               </>
             )}
           </button>

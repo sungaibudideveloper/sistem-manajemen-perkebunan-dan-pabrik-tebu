@@ -17,10 +17,6 @@ class MaterialUsageGeneratorService
 {
     /**
      * Generate material usage data from approved RKH
-     * FIXED: Remove herbisidagroupid from insert operations
-     * 
-     * @param string $rkhno
-     * @return array
      */
     public function generateMaterialUsageFromRkh($rkhno)
     {
@@ -58,7 +54,7 @@ class MaterialUsageGeneratorService
                 throw new \Exception("Tidak ada LKH ditemukan untuk RKH: {$rkhno}. Generate LKH terlebih dahulu.");
             }
             
-            // Get RKH details that use material untuk reference
+            // Get RKH details that use material
             $rkhDetails = DB::table('rkhlst')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkhno)
@@ -99,12 +95,6 @@ class MaterialUsageGeneratorService
                     
                 } catch (\Exception $e) {
                     $errors[] = "Error processing LKH {$lkh->lkhno}: " . $e->getMessage();
-                    Log::error("Error processing LKH material usage", [
-                        'rkhno' => $rkhno,
-                        'lkhno' => $lkh->lkhno,
-                        'activitycode' => $lkh->activitycode,
-                        'error' => $e->getMessage()
-                    ]);
                 }
             }
             
@@ -130,7 +120,6 @@ class MaterialUsageGeneratorService
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error generating material usage for RKH {$rkhno}: " . $e->getMessage());
             
             return [
                 'success' => false,
@@ -142,13 +131,7 @@ class MaterialUsageGeneratorService
     
     /**
      * Process individual LKH to generate material usage items
-     * FIXED: Remove herbisidagroupid from insert data
-     * 
-     * @param object $lkh
-     * @param string $companycode
-     * @param string $rkhno
-     * @param \Illuminate\Support\Collection $rkhDetails
-     * @return int
+     * FIXED: Sum quantities by itemcode regardless of herbisidagroupid
      */
     private function processLkhMaterialUsage($lkh, $companycode, $rkhno, $rkhDetails)
     {
@@ -160,7 +143,7 @@ class MaterialUsageGeneratorService
             return 0;
         }
         
-        // Get plot details for this LKH to calculate total luas
+        // Get plot details for this LKH
         $lkhPlots = DB::table('lkhdetailplot')
             ->where('companycode', $companycode)
             ->where('lkhno', $lkh->lkhno)
@@ -170,31 +153,22 @@ class MaterialUsageGeneratorService
             throw new \Exception("Plot details tidak ditemukan untuk LKH: {$lkh->lkhno}");
         }
         
-        $totalLuasLkh = $lkhPlots->sum('luasrkh');
-        
-        if ($totalLuasLkh <= 0) {
-            Log::warning("Zero or negative area for LKH {$lkh->lkhno}", [
-                'total_luas' => $totalLuasLkh,
-                'plots' => $lkhPlots->toArray()
-            ]);
-            return 0;
-        }
-        
-        $uniqueHerbisidaGroupIds = $matchingRkhDetails
-            ->where('herbisidagroupid', '!=', null)
-            ->pluck('herbisidagroupid')
-            ->unique()
-            ->values();
-        
-        if ($uniqueHerbisidaGroupIds->isEmpty()) {
-            return 0;
-        }
-        
         $mergedItems = [];
         
-        // Process each herbisida group and merge items by itemcode
-        foreach ($uniqueHerbisidaGroupIds as $herbisidaGroupId) {
-            // Get herbisida dosage data for this group
+        // Process each plot
+        foreach ($lkhPlots as $plot) {
+            // Find corresponding RKH detail for this specific plot
+            $rkhForPlot = $matchingRkhDetails->where('blok', $plot->blok)
+                                        ->where('plot', $plot->plot)
+                                        ->first();
+            
+            if (!$rkhForPlot || !$rkhForPlot->herbisidagroupid) {
+                continue;
+            }
+            
+            $plotLuas = (float)$plot->luasrkh;
+            
+            // Get herbisida dosage data for this plot's herbisida group
             $herbisidaDosages = DB::table('herbisidadosage as hd')
                 ->join('herbisidagroup as hg', function($join) {
                     $join->on('hd.herbisidagroupid', '=', 'hg.herbisidagroupid');
@@ -204,55 +178,40 @@ class MaterialUsageGeneratorService
                         ->on('hd.itemcode', '=', 'h.itemcode');
                 })
                 ->where('hd.companycode', $companycode)
-                ->where('hd.herbisidagroupid', $herbisidaGroupId)
+                ->where('hd.herbisidagroupid', $rkhForPlot->herbisidagroupid)
                 ->where('hg.activitycode', $lkh->activitycode)
                 ->select([
                     'hd.itemcode',
                     'hd.dosageperha',
                     'h.itemname',
-                    'h.measure',
-                    'hd.herbisidagroupid'
+                    'h.measure'
                 ])
                 ->get();
                 
             if ($herbisidaDosages->isEmpty()) {
-                Log::warning("Herbisida dosage not found", [
-                    'company' => $companycode,
-                    'herbisidagroupid' => $herbisidaGroupId,
-                    'activitycode' => $lkh->activitycode
-                ]);
                 continue;
             }
             
+            // Calculate quantity for each item in this plot
             foreach ($herbisidaDosages as $dosage) {
-                $qtyForThisGroup = $totalLuasLkh * $dosage->dosageperha;
+                $qtyForThisPlot = $plotLuas * $dosage->dosageperha;
                 
-                // Check if item already exists in merged array
+                // Sum by itemcode regardless of herbisidagroupid
                 if (isset($mergedItems[$dosage->itemcode])) {
-                    $oldQty = $mergedItems[$dosage->itemcode]['qty'];
-                    $mergedItems[$dosage->itemcode]['qty'] += $qtyForThisGroup;
-                    
-                    Log::info("Merged intersect item", [
-                        'itemcode' => $dosage->itemcode,
-                        'old_qty' => $oldQty,
-                        'added_qty' => $qtyForThisGroup,
-                        'new_total_qty' => $mergedItems[$dosage->itemcode]['qty'],
-                        'herbisidagroupid' => $herbisidaGroupId
-                    ]);
+                    $mergedItems[$dosage->itemcode]['qty'] += $qtyForThisPlot;
                 } else {
-                    // FIXED: Removed herbisidagroupid from the item array
                     $mergedItems[$dosage->itemcode] = [
                         'companycode' => $companycode,
                         'rkhno' => $rkhno,
                         'lkhno' => $lkh->lkhno,
                         'itemcode' => $dosage->itemcode,
-                        'qty' => $qtyForThisGroup,
+                        'qty' => $qtyForThisPlot,
                         'qtyretur' => 0,
                         'unit' => $dosage->measure,
                         'nouse' => null,
                         'noretur' => null,
                         'itemname' => $dosage->itemname,
-                        'dosageperha' => $dosage->dosageperha, // Keep this for reference
+                        'dosageperha' => $dosage->dosageperha,
                         'returby' => null,
                         'tglretur' => null,
                         'tglterimaretur' => null,
@@ -263,18 +222,12 @@ class MaterialUsageGeneratorService
             }
         }
         
+        // Insert merged items
         $itemsInserted = 0;
         foreach ($mergedItems as $item) {
             DB::table('usemateriallst')->insert($item);
             $itemsInserted++;
         }
-        
-        Log::info("LKH Material Usage processed", [
-            'lkhno' => $lkh->lkhno,
-            'herbisida_groups_processed' => $uniqueHerbisidaGroupIds->count(),
-            'total_items_inserted' => $itemsInserted,
-            'merged_items' => array_keys($mergedItems)
-        ]);
         
         return $itemsInserted;
     }

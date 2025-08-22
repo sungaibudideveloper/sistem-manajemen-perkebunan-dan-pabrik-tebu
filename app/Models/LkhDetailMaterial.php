@@ -18,6 +18,7 @@ class LkhDetailMaterial extends Model
     protected $fillable = [
         'companycode',
         'lkhno',
+        'plot',
         'itemcode',
         'qtyditerima',
         'qtysisa',
