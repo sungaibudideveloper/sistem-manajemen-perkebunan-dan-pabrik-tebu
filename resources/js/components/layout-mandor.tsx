@@ -1,9 +1,10 @@
-// resources/js/components/layout-mandor.tsx - UPDATED to use generic components
+// resources/js/components/layout-mandor.tsx - UPDATED with Footer
 
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header'; // Generic Header
 import Sidebar from './sidebar'; // Generic Sidebar
+import Footer from './footer'; // NEW: Generic Footer
 import {
   FiGrid, FiCheckCircle, FiClipboard
 } from 'react-icons/fi';
@@ -77,7 +78,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
     };
   }, []);
 
-  // Define menu items specific to Mandor
+  // Define menu items specific to Mandor (used by Sidebar)
   const mandorMenuItems = [
     {
       id: 'dashboard',
@@ -101,6 +102,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Sidebar - Desktop Navigation */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -115,6 +117,7 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         roleLabel="Mandor"
       />
       
+      {/* Header */}
       <Header
         onMenuClick={() => setSidebarOpen(true)}
         user={user}
@@ -126,9 +129,21 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
         subtitle="Sistem Koleksi Data Lapangan"
       />
       
-      <main>
-        {children}
+      {/* Main Content */}
+      <main className="md:ml-64 min-h-screen bg-gray-50">
+        <div className="pb-20 md:pb-0">
+          {children}
+        </div>
       </main>
+      
+      {/* Footer - Mobile Navigation */}
+      <Footer
+        user={user}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        variant="mobile"
+        theme="mandor"
+      />
     </div>
   );
 };
