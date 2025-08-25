@@ -1,8 +1,9 @@
-// resources/js/components/layout-approver.tsx - FIXED to remove attendance_detail dependency
+// resources/js/components/layout-approver.tsx - UPDATED with Footer
 import React, { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Header from './header'; // Generic Header
 import Sidebar from './sidebar'; // Generic Sidebar
+import Footer from './footer'; // NEW: Generic Footer
 import {
   FiHome, FiCheck, FiClock
 } from 'react-icons/fi';
@@ -80,7 +81,7 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
     };
   }, []);
 
-  // Define menu items specific to Approver
+  // Define menu items specific to Approver (used by Sidebar)
   const approverMenuItems = [
     {
       id: 'dashboard',
@@ -104,6 +105,7 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Sidebar - Desktop Navigation */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -117,7 +119,8 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
         subtitle="Sistem Approval"
         roleLabel="Absen Approver"
       />
-     
+      
+      {/* Header */}
       <Header
         onMenuClick={() => setSidebarOpen(true)}
         user={user}
@@ -128,10 +131,22 @@ const LayoutApprover: React.FC<LayoutApproverProps> = ({
         title="SB Tebu Apps"
         subtitle="Sistem Approval Absensi"
       />
-     
-      <main>
-        {children}
+      
+      {/* Main Content */}
+      <main className="md:ml-64 min-h-screen bg-gray-50">
+        <div className="pb-20 md:pb-0">
+          {children}
+        </div>
       </main>
+      
+      {/* Footer - Mobile Navigation */}
+      <Footer
+        user={user}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        variant="mobile"
+        theme="approver"
+      />
     </div>
   );
 };

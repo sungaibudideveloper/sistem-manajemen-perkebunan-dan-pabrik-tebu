@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  FiHome, FiCamera, FiClipboard
+  FiHome, FiCamera, FiClipboard, FiClock, FiCheck
 } from 'react-icons/fi';
 
 interface User {
@@ -35,27 +35,55 @@ const Footer: React.FC<FooterProps> = ({
   variant = 'mobile',
   theme = 'default'
 }) => {
-  const footerMenuItems = [
-    {
-      id: 'absensi',
-      icon: FiCamera,
-      label: 'Absensi',
-      isHero: false
-    },
-    {
-      id: 'dashboard',
-      icon: FiHome,
-      label: '',
-      isHero: true
-    },
-    {
-      id: 'data-collection',
-      icon: FiClipboard,
-      label: 'Koleksi Data',
-      isHero: false
+  // Function to get menu items based on theme/role
+  const getFooterMenuItems = (theme: string) => {
+    if (theme === 'approver') {
+      return [
+        {
+          id: 'approval',
+          icon: FiCheck,
+          label: 'Approval',
+          isHero: false
+        },
+        {
+          id: 'dashboard',
+          icon: FiHome,
+          label: '',
+          isHero: true
+        },
+        {
+          id: 'history',
+          icon: FiClock,
+          label: 'Riwayat',
+          isHero: false
+        }
+      ];
     }
-  ];
+    
+    // Default for mandor or other roles
+    return [
+      {
+        id: 'absensi',
+        icon: FiCamera,
+        label: 'Absensi',
+        isHero: false
+      },
+      {
+        id: 'dashboard',
+        icon: FiHome,
+        label: '',
+        isHero: true
+      },
+      {
+        id: 'data-collection',
+        icon: FiClipboard,
+        label: 'Koleksi Data',
+        isHero: false
+      }
+    ];
+  };
 
+  const footerMenuItems = getFooterMenuItems(theme);
   const heroItem = footerMenuItems.find(item => item.isHero);
   const regularItems = footerMenuItems.filter(item => !item.isHero);
 
@@ -141,6 +169,7 @@ const Footer: React.FC<FooterProps> = ({
                   item={regularItems[0]} 
                   isActive={activeSection === regularItems[0].id}
                   onClick={() => handleItemClick(regularItems[0].id)}
+                  theme={theme}
                 />
               )}
             </div>
@@ -157,6 +186,7 @@ const Footer: React.FC<FooterProps> = ({
                   item={regularItems[1]} 
                   isActive={activeSection === regularItems[1].id}
                   onClick={() => handleItemClick(regularItems[1].id)}
+                  theme={theme}
                 />
               )}
             </div>
@@ -179,9 +209,10 @@ interface FooterMenuItemProps {
   };
   isActive: boolean;
   onClick: () => void;
+  theme?: string;
 }
 
-const FooterMenuItem: React.FC<FooterMenuItemProps> = ({ item, isActive, onClick }) => {
+const FooterMenuItem: React.FC<FooterMenuItemProps> = ({ item, isActive, onClick, theme = 'default' }) => {
   return (
     <motion.button
       onClick={onClick}
