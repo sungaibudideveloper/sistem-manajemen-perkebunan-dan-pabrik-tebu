@@ -520,8 +520,6 @@
   </div>
 </form>
 
-
-
 <script>
 // ===== GLOBAL DATA - SEMUA DI SINI =====
 window.bloksData = @json($bloks ?? []);
@@ -572,14 +570,83 @@ document.addEventListener('alpine:init', () => {
       return this.selected[rowIndex] || null;
     }
   });
+
+  // ===== NEW: UNIQUE COMBINATION STORE =====
+  Alpine.store('uniqueCombinations', {
+    combinations: new Map(), // row -> {blok, plot, activity}
+    
+    // Set combination for specific row
+    setCombination(rowIndex, blok, plot, activity) {
+      if (blok && plot && activity) {
+        this.combinations.set(rowIndex, { blok, plot, activity });
+      } else {
+        this.combinations.delete(rowIndex);
+      }
+    },
+    
+    // Get combination for row
+    getCombination(rowIndex) {
+      return this.combinations.get(rowIndex) || null;
+    },
+    
+    // Check if combination exists in other rows
+    isDuplicate(currentRowIndex, blok, plot, activity) {
+      if (!blok || !plot || !activity) return false;
+      
+      for (const [rowIndex, combo] of this.combinations) {
+        if (rowIndex !== currentRowIndex && 
+            combo.blok === blok && 
+            combo.plot === plot && 
+            combo.activity === activity) {
+          return true;
+        }
+      }
+      return false;
+    },
+    
+    // Get all duplicates
+    getAllDuplicates() {
+      const duplicates = new Map();
+      const combinations = {};
+      
+      for (const [rowIndex, combo] of this.combinations) {
+        const key = `${combo.blok}|${combo.plot}|${combo.activity}`;
+        if (!combinations[key]) {
+          combinations[key] = [];
+        }
+        combinations[key].push(rowIndex);
+      }
+      
+      // Find duplicates
+      for (const [key, rowIndexes] of Object.entries(combinations)) {
+        if (rowIndexes.length > 1) {
+          const [blok, plot, activity] = key.split('|');
+          duplicates.set(key, { blok, plot, activity, rows: rowIndexes });
+        }
+      }
+      
+      return duplicates;
+    },
+    
+    // Clear all combinations
+    clear() {
+      this.combinations.clear();
+    }
+  });
 });
 
 // ===== FORM HANDLER =====
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize calculations
+  // Initialize calculations and validation
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
-  rows.forEach(row => attachListeners(row));
+  rows.forEach((row, index) => {
+    attachListeners(row);
+    attachUniqueValidationListeners(row, index);
+  });
   calculateTotals();
+
+  // Initialize CSS for validation
+  initializeValidationStyles();
 
   // MODERN FORM SUBMISSION with AJAX
   document.getElementById('rkh-form').addEventListener('submit', function(e) {
@@ -588,8 +655,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear previous validation errors
     clearValidationErrors();
     
-    // CLIENT-SIDE VALIDATION
-    const validationResult = validateForm();
+    // CLIENT-SIDE VALIDATION (with unique check)
+    const validationResult = validateFormWithUnique();
     if (!validationResult.isValid) {
       showValidationModal(validationResult.errors);
       return;
@@ -631,8 +698,126 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// ===== VALIDATION FUNCTIONS =====
-function validateForm() {
+// ===== UNIQUE VALIDATION FUNCTIONS =====
+function attachUniqueValidationListeners(row, rowIndex) {
+  const blokInput = row.querySelector('input[name$="[blok]"]');
+  const plotInput = row.querySelector('input[name$="[plot]"]');
+  const activityInput = row.querySelector('input[name$="[nama]"]');
+  
+  const validateUniqueness = debounce(() => {
+    const blok = blokInput?.value || '';
+    const plot = plotInput?.value || '';
+    const activity = activityInput?.value || '';
+    
+    // Update combination store
+    Alpine.store('uniqueCombinations').setCombination(rowIndex, blok, plot, activity);
+    
+    // Clear previous highlights
+    clearDuplicateHighlight(rowIndex);
+    
+    // Check for duplicates if all fields filled
+    if (blok && plot && activity) {
+      const isDuplicate = Alpine.store('uniqueCombinations').isDuplicate(rowIndex, blok, plot, activity);
+      
+      if (isDuplicate) {
+        highlightDuplicateRow(rowIndex);
+        showToast(`Kombinasi Blok "${blok}", Plot "${plot}", Aktivitas "${activity}" sudah digunakan di baris lain`, 'warning');
+      }
+    }
+    
+    // Update all duplicate highlights
+    updateAllDuplicateHighlights();
+  }, 300);
+
+  // Add observers for value changes
+  [blokInput, plotInput, activityInput].forEach(input => {
+    if (input) {
+      // Observer untuk perubahan value attribute
+      const observer = new MutationObserver(validateUniqueness);
+      observer.observe(input, {
+        attributes: true,
+        attributeFilter: ['value']
+      });
+      
+      // Event listener untuk input manual
+      input.addEventListener('change', validateUniqueness);
+      input.addEventListener('input', validateUniqueness);
+      
+      // Store observer untuk cleanup nanti
+      if (!input.uniqueValidationObserver) {
+        input.uniqueValidationObserver = observer;
+      }
+    }
+  });
+}
+
+function updateAllDuplicateHighlights() {
+  // Clear all highlights first
+  const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
+  rows.forEach((row, index) => clearDuplicateHighlight(index));
+  
+  // Highlight duplicates
+  const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
+  
+  for (const [key, duplicateInfo] of duplicates) {
+    duplicateInfo.rows.forEach(rowIndex => {
+      highlightDuplicateRow(rowIndex);
+    });
+  }
+}
+
+function highlightDuplicateRow(rowIndex) {
+  const row = document.querySelector(`#rkh-table tbody tr:nth-child(${rowIndex + 1})`);
+  if (!row) return;
+  
+  const fields = [
+    row.querySelector('input[name$="[blok]"]'),
+    row.querySelector('input[name$="[plot]"]'), 
+    row.querySelector('input[name$="[nama]"]')
+  ].filter(Boolean);
+  
+  fields.forEach(field => {
+    field.classList.add('border-orange-400', 'bg-orange-50');
+    field.classList.remove('border-gray-200');
+  });
+  
+  // Add warning icon if not exists
+  const activityCell = row.querySelector('td:nth-child(4)'); // Activity column
+  if (activityCell && !activityCell.querySelector('.duplicate-warning')) {
+    const icon = document.createElement('div');
+    icon.className = 'duplicate-warning absolute -top-1 -right-1 bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold animate-pulse';
+    icon.innerHTML = '!';
+    icon.title = 'Kombinasi duplikat terdeteksi';
+    
+    activityCell.style.position = 'relative';
+    activityCell.appendChild(icon);
+  }
+}
+
+function clearDuplicateHighlight(rowIndex) {
+  const row = document.querySelector(`#rkh-table tbody tr:nth-child(${rowIndex + 1})`);
+  if (!row) return;
+  
+  const fields = [
+    row.querySelector('input[name$="[blok]"]'),
+    row.querySelector('input[name$="[plot]"]'), 
+    row.querySelector('input[name$="[nama]"]')
+  ].filter(Boolean);
+  
+  fields.forEach(field => {
+    field.classList.remove('border-orange-400', 'bg-orange-50');
+    field.classList.add('border-gray-200');
+  });
+  
+  // Remove warning icon
+  const warningIcon = row.querySelector('.duplicate-warning');
+  if (warningIcon) {
+    warningIcon.remove();
+  }
+}
+
+// ===== VALIDATION FUNCTIONS (UPDATED) =====
+function validateFormWithUnique() {
   const errors = [];
   
   const mandorId = document.querySelector('input[name="mandor_id"]').value;
@@ -643,6 +828,7 @@ function validateForm() {
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
+  // Standard validation per row
   rows.forEach((row, index) => {
     const blokInput = row.querySelector('input[name$="[blok]"]');
     const plotInput = row.querySelector('input[name$="[plot]"]');
@@ -676,16 +862,23 @@ function validateForm() {
         
         if (hasMaterialOptions) {
           const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          const materialValue = materialGroupInput ? materialGroupInput.value : '';
           
           if (!materialGroupInput || !materialGroupInput.value) {
-            const errorMsg = `Baris ${rowNum}: Grup material harus dipilih untuk aktivitas ini`;
-            errors.push(errorMsg);
+            errors.push(`Baris ${rowNum}: Grup material harus dipilih untuk aktivitas ini`);
           }
         }
       }
     }
   });
+
+  // Check for unique combination violations
+  const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
+  if (duplicates.size > 0) {
+    for (const [key, duplicateInfo] of duplicates) {
+      const { blok, plot, activity, rows: duplicateRows } = duplicateInfo;
+      errors.push(`Kombinasi Blok "${blok}", Plot "${plot}", Aktivitas "${activity}" digunakan berulang di baris: ${duplicateRows.map(r => r + 1).join(', ')}`);
+    }
+  }
 
   if (!hasCompleteRow) {
     errors.push('Minimal satu baris harus diisi dengan lengkap');
@@ -709,6 +902,9 @@ function clearValidationErrors() {
     field.classList.remove('border-red-500', 'bg-red-50');
     field.classList.add('border-gray-200');
   });
+  
+  // JANGAN clear duplicate highlights di sini - biarkan tetap terlihat
+  // User perlu melihat mana yang duplikat untuk bisa memperbaikinya
 }
 
 // ===== LOADING STATE FUNCTIONS =====
@@ -780,6 +976,7 @@ function calculateTotals() {
     tenagaSum += laki + perempuan;
     calculateRow(row);
   });
+  
   document.getElementById('total-luas').textContent = `${luasSum.toFixed(2)} ha`;
   document.getElementById('total-laki').textContent = lakiSum;
   document.getElementById('total-perempuan').textContent = perempuanSum;
@@ -800,34 +997,92 @@ window.addEventListener('plot-changed', function(e) {
 });
 
 function updateLuasFromPlot(plotCode, rowIndex) {
-  if (plotCode && window.plotsData) {
-    const plotData = window.plotsData.find(p => p.plot === plotCode);
-    if (plotData && plotData.luasarea) {
+  // Try both plotsData and masterlistData
+  let plotData = null;
+  
+  if (window.plotsData) {
+    plotData = window.plotsData.find(p => p.plot === plotCode);
+  }
+  
+  if (!plotData && window.masterlistData) {
+    plotData = window.masterlistData.find(p => p.plot === plotCode);
+  }
+  
+  if (plotData) {
+    // Check for luasarea field variants
+    const luasValue = plotData.luasarea || plotData.luas_area || plotData.luas || plotData.area;
+    
+    if (luasValue && luasValue > 0) {
       const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
+      
       if (luasInput) {
-        luasInput.value = plotData.luasarea;
-        luasInput.setAttribute('max', plotData.luasarea);
-        luasInput.setAttribute('title', `Maksimal: ${plotData.luasarea} Ha`);
+        // Clear previous validation listener to avoid duplicates
+        const oldListener = luasInput.plotValidationListener;
+        if (oldListener) {
+          luasInput.removeEventListener('input', oldListener);
+        }
         
-        // TAMBAH VALIDASI REAL-TIME
-        luasInput.addEventListener('input', function() {
+        // Set new value with visual feedback
+        luasInput.value = luasValue;
+        luasInput.setAttribute('max', luasValue);
+        luasInput.setAttribute('title', `Maksimal: ${luasValue} Ha`);
+        
+        // Add temporary visual indicator
+        luasInput.style.backgroundColor = '#dcfce7';
+        luasInput.style.borderColor = '#16a34a';
+        
+        setTimeout(() => {
+          luasInput.style.backgroundColor = '';
+          luasInput.style.borderColor = '';
+        }, 1500);
+        
+        // Create new validation listener
+        const newListener = function() {
           const currentValue = parseFloat(this.value);
-          const maxValue = parseFloat(plotData.luasarea);
+          const maxValue = parseFloat(luasValue);
           
           if (currentValue > maxValue) {
-            this.value = maxValue; // Reset ke max value
+            this.value = maxValue;
             this.style.borderColor = '#ef4444';
-            
-            // Show warning toast (optional)
-            showToast(`Luas maksimal untuk plot ${plotCode}: ${maxValue} Ha`);
+            showToast(`Luas maksimal untuk plot ${plotCode}: ${maxValue} Ha`, 'warning');
           } else {
             this.style.borderColor = '';
           }
-        });
+        };
         
+        // Add new listener and store reference
+        luasInput.addEventListener('input', newListener);
+        luasInput.plotValidationListener = newListener;
+        
+        // Trigger recalculation
         luasInput.dispatchEvent(new Event('input'));
+        calculateTotals();
+        
+        showToast(`Luas otomatis diupdate: ${luasValue} Ha`, 'success', 2000);
       }
+    } else {
+      showToast(`Plot ${plotCode} tidak memiliki data luas area`, 'warning');
     }
+  } else {
+    showToast(`Data plot ${plotCode} tidak ditemukan`, 'warning');
+  }
+}
+
+// ===== ALTERNATIVE: DIRECT PLOT UPDATE FUNCTION =====
+function forceUpdateLuasFromPlot(rowIndex) {
+  const plotInput = document.querySelector(`input[name="rows[${rowIndex}][plot]"]`);
+  if (plotInput && plotInput.value) {
+    updateLuasFromPlot(plotInput.value, rowIndex);
+  }
+}
+
+// ===== ALTERNATIVE: DIRECT PLOT UPDATE FUNCTION =====
+// Fungsi alternatif yang bisa dipanggil langsung dari plot picker
+function forceUpdateLuasFromPlot(rowIndex) {
+  const plotInput = document.querySelector(`input[name="rows[${rowIndex}][plot]"]`);
+  if (plotInput && plotInput.value) {
+    console.log(`Force updating luas for row ${rowIndex}, plot: ${plotInput.value}`);
+    updateLuasFromPlot(plotInput.value, rowIndex);
   }
 }
 
@@ -848,9 +1103,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
     document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName} - ${selectedDate}`;
   }
 
-  // ✅ UPDATED: Filter berdasarkan mandorid (bukan mandor_id)
+  // Filter berdasarkan mandorid
   const filteredAbsen = window.absenData.filter(absen => 
-    absen.mandorid === selectedMandorId // Field yang benar dari database baru
+    absen.mandorid === selectedMandorId
   );
 
   let lakiCount = 0;
@@ -1012,7 +1267,144 @@ function materialPicker(rowIndex) {
     }
   }
 }
+
+// ===== UTILITY FUNCTIONS =====
+
+// Debounce function untuk performance
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 4000) {
+  // Remove existing toast
+  const existingToast = document.querySelector('.validation-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = 'validation-toast fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform';
+  
+  // Styling based on type
+  let bgColor, textColor, icon;
+  switch (type) {
+    case 'warning':
+      bgColor = 'bg-orange-500';
+      textColor = 'text-white';
+      icon = '⚠️';
+      break;
+    case 'error':
+      bgColor = 'bg-red-500';
+      textColor = 'text-white';
+      icon = '❌';
+      break;
+    case 'success':
+      bgColor = 'bg-green-500';
+      textColor = 'text-white';
+      icon = '✅';
+      break;
+    default:
+      bgColor = 'bg-blue-500';
+      textColor = 'text-white';
+      icon = 'ℹ️';
+  }
+  
+  toast.classList.add(bgColor, textColor);
+  
+  toast.innerHTML = `
+    <div class="flex items-start">
+      <span class="text-lg mr-3">${icon}</span>
+      <div class="flex-1">
+        <p class="text-sm font-medium">${message}</p>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.style.transform = 'translateX(0)';
+    toast.style.opacity = '1';
+  });
+  
+  // Auto remove
+  if (duration > 0) {
+    setTimeout(() => {
+      toast.style.transform = 'translateX(100%)';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+}
+
+// Initialize validation styles
+function initializeValidationStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .validation-toast {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    
+    .duplicate-warning {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      z-index: 10;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+    
+    .border-orange-400 {
+      border-color: #fb923c !important;
+    }
+    
+    .bg-orange-50 {
+      background-color: #fff7ed !important;
+    }
+  `;
+  
+  if (!document.head.querySelector('#validation-styles')) {
+    style.id = 'validation-styles';
+    document.head.appendChild(style);
+  }
+}
+
+// Cleanup function untuk memory leaks
+function cleanupValidationListeners() {
+  const inputs = document.querySelectorAll('input[uniqueValidationObserver]');
+  inputs.forEach(input => {
+    if (input.uniqueValidationObserver) {
+      input.uniqueValidationObserver.disconnect();
+      delete input.uniqueValidationObserver;
+    }
+  });
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanupValidationListeners);
 </script>
+
 
 
 
