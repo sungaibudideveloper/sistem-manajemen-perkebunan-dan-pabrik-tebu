@@ -13,6 +13,9 @@ table th, table td {
 }
 @media screen {
 .print-label { display: none; }
+table th, table td {
+    border: 1px solid #d1d5db; /* abu Tailwind gray-300 */
+  }
 }
 
 </style>
@@ -34,11 +37,11 @@ table th, table td {
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'DISPATCHED')
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
-                    <i class="bi bi-check-circle me-1"></i>Barang Sudah Diserahan Kepada Mandor.
+                    <i class="bi bi-check-circle me-1"></i>Barang Diserahkan, Menunggu Feedback Mandor.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
-                    <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima. Untuk Retur, Ajukan Dokumen Retur.
+                    <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima Mandor. Untuk Retur, Ajukan Dokumen Retur.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURNED_BY_MANDOR')
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
@@ -119,10 +122,12 @@ table th, table td {
             
 
 
-            <table class='min-w-full md:w-1/3 p-2 bg-white shadow rounded text-xs'>
+            <table class='min-w-full md:w-1/3 p-2 bg-white shadow rounded text-xs no-print'>
                 <thead class="text-gray-700">
                     <tr>
                         <th class="py-2 px-2 border-b text-center">Herbisida - Item</th>
+                        <th class="py-2 px-2 border-b text-center">Plot</th>
+                        <th class="py-2 px-2 border-b text-center">Luas</th>
                         <th class="py-2 px-2 border-b text-center">Dosage (HA)</th>
                         <th class="py-2 px-2 border-b text-center">Qty Disiapkan</th>
                         <th class="py-2 px-2 border-b text-center">Qty Retur</th>
@@ -131,7 +136,7 @@ table th, table td {
                     </tr>
                 </thead>
                 <tbody class="text-gray-600">
-                    @foreach ($detailmaterial as $d)
+    @foreach ($detailmaterial as $d)
     @php
         // Hitung total luas semua blok untuk lkhno ini
         $plotsInLkh = $plots->where('lkhno', $d->lkhno);
@@ -145,7 +150,7 @@ table th, table td {
         <td class="py-2 px-2">
             <select
                 @if (strtoupper($details[0]->flagstatus) != 'ACTIVE') disabled @endif
-                name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+                name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
                 class="item-select w-full border-none bg-yellow-100 text-xs"
                 data-luas="{{ $totalLuas }}"
                 data-lkhno="{{ $d->lkhno }}"
@@ -162,24 +167,33 @@ table th, table td {
             <span class="print-label text-xs">
                 Herbisida {{ $d->herbisidagroupid }} - {{ $d->itemcode }} - {{ $d->itemname ?? '[Nama Item]' }} - {{ $d->dosageperha }} ({{ $d->unit }}) (Total: {{ $totalLuas }} HA)
             </span>
-
-            {{-- Hidden inputs dengan total qty --}}
-            <input type="hidden" name="qty[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                   class="selected-qty" value="{{ $totalQty }}">
-            <input type="hidden" name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}]"
-                   class="selected-dosage" value="{{ $d->dosageperha }}">
-            <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}]"
+            <input type="hidden" name="unit[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
                    class="selected-unit" value="{{ $d->unit }}">
+            <input type="hidden" name="luas[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
+                    class="selected-luas" value="{{ $d->luasrkh }}">
             <input type="hidden" name="itemcodelist[{{ $d->lkhno }}][]"
                    class="selected-itemcode" value="{{ $d->itemcode }}">
         </td>
 
         <td class="py-2 px-2 text-center text-right">
-            <span class="labeldosage">{{ $d->dosageperha }} {{ $d->unit }}</span>
+            <span class="labelplot">{{ $d->plot }}</span>
         </td>
 
         <td class="py-2 px-2 text-center text-right">
-            <span class="labelqty">{{ number_format($totalQty, 3) }}</span>
+            <span class="labelplot">{{ $d->luasrkh }}</span>
+        </td>
+
+        <td class="py-2 px-2">
+            <div class="flex justify-end items-center">
+                <input type="text"name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
+                    value="{{ number_format($d->dosageperha, 3) }}"
+                    class="w-full selected-dosage border-none bg-yellow-100 text-xs text-right w-20">
+                <span class="ml-2 w-8 text-left">{{ $d->unit }}</span>
+            </div>
+        </td>
+
+        <td class="py-2 px-2 text-center text-right">
+            <span class="labelqty">{{ $d->qty }}</span>
         </td>
 
         <td class="py-2 px-2 text-center text-right">
@@ -196,7 +210,8 @@ table th, table td {
                         'retur' => $d->qtyretur,
                         'itemcode' => $d->itemcode,
                         'rkhno' => $details[0]->rkhno,
-                        'herbisidagroupid' => $d->herbisidagroupid
+                        'lkhno' => $details[0]->lkhno,
+                        'plot' => $details[0]->plot
                     ]) }}"
                    class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition no-print"
                    onclick="return confirm('Proses Retur Barang ini ?')">
@@ -212,6 +227,67 @@ table th, table td {
                     </tbody>
                     
             </table>
+
+
+
+
+        @php
+            $itemMeta = collect($itemlist)->keyBy('itemcode');
+        
+            $totals = [];
+            foreach ($detailmaterial as $d) {
+                // langsung ambil luas per plot
+                $luas = (float) $d->luasrkh;
+                $qty  = (float) $d->dosageperha * $luas;
+                $code = $d->itemcode;
+        
+                if (!isset($totals[$code])) {
+                    $meta = $itemMeta->get($code);
+                    $totals[$code] = [
+                        'itemname' => $meta->itemname ?? $d->itemname ?? '-',
+                        'unit'     => $meta->measure  ?? $d->unit     ?? '-',
+                        'qty'      => 0,
+                        'parts'    => [],
+                    ];
+                }
+        
+                $totals[$code]['qty'] += $qty;
+                $totals[$code]['parts'][] = number_format($qty, 3);
+            }
+        @endphp
+        
+        
+        <table class="w-full md:w-2/3 mt-6 bg-white shadow rounded text-xs border border-gray-200">
+            <thead class="bg-gray-100 text-gray-700 uppercase">
+                <tr>
+                    <th class="py-2 px-3 text-left border-b">Itemcode</th>
+                    <th class="py-2 px-3 text-left border-b">Item Name</th>
+                    <th class="py-2 px-3 text-left border-b">Unit</th>
+                    <th class="py-2 px-3 text-right border-b">Total Qty</th>
+                    <th class="py-2 px-3 text-left border-b">Perhitungan</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-700">
+                @foreach($totals as $code => $row)
+                    <tr class="hover:bg-gray-50 align-top">
+                        <td class="py-2 px-3 font-medium">{{ $code }}</td>
+                        <td class="py-2 px-3">{{ $row['itemname'] }}</td>
+                        <td class="py-2 px-3">{{ $row['unit'] }}</td>
+                        <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 3) }}</td>
+                        <td class="py-2 px-3 text-gray-500">
+                            {{ implode(' + ', $row['parts']) }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+
+        </table>
+        
+        
+
+
+
+
     
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
@@ -245,58 +321,44 @@ table th, table td {
     
     </x-layout>
     
-<script>
-// Data luas per lkhno untuk JavaScript
-const luasPerLkhno = @json($plots->groupBy('lkhno')->map(function($group) { 
-    return $group->sum('luasrkh'); 
-}));
-
-$(document).ready(function() {
-    $('.item-select').each(function() {
-        calculateQtyForItem(this);
-    });
-});
-
-$('.item-select').on('change', function () {
-    const selected = $(this).find('option:selected');
-    const dosage = selected.data('dosage');
-    const newItemcode = selected.val();
-    const selectName = $(this).attr('name');
-    const lkhno = selectName.match(/\[(.*?)\]/)[1];
-
-    const row = $(this).closest('tr');
-    
-    // Update values
-    row.find('.selected-dosage').val(dosage);
-    row.find('.selected-itemcode').val(newItemcode);
-    
-    // Update name attributes
-    row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}]`);
-    row.find('.selected-qty').attr('name', `qty[${lkhno}][${newItemcode}]`);
-    row.find('.selected-unit').attr('name', `unit[${lkhno}][${newItemcode}]`);
-    $(this).attr('name', `itemcode[${lkhno}][${newItemcode}]`);
-    
-    // Update display
-    row.find('.labeldosage').text(dosage);
-    
-    // Recalculate qty berdasarkan dosage baru
-    calculateQtyForItem(this);
-});
-
-function calculateQtyForItem(selectElement) {
-    const selected = $(selectElement).find('option:selected');
-    const dosage = parseFloat(selected.data('dosage')) || 0;
-    const lkhno = $(selectElement).data('lkhno') || $(selectElement).attr('name').match(/\[(.*?)\]/)[1];
-    
-    // Ambil total luas untuk lkhno ini
-    const totalLuas = luasPerLkhno[lkhno] || 0;
-    
-    // Hitung total qty
-    const totalQty = dosage * totalLuas;
-    
-    // Update display dan hidden input
-    const row = $(selectElement).closest('tr');
-    row.find('.labelqty').text(totalQty.toFixed(3));
-    row.find('.selected-qty').val(totalQty.toFixed(3));
-}
-</script>
+    <script>
+        function parsePath(name){
+          const m = [...name.matchAll(/\[([^\]]+)\]/g)].map(x=>x[1]);
+          return { lkhno: m[0], itemcode: m[1], plot: m[2] };
+        }
+        
+        function recalcRowQty(row){
+          const dosage = parseFloat(String(row.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
+          const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
+          const qty    = dosage * luas;
+          row.find('.labelqty').text(qty.toFixed(3));
+        }
+        
+        $(document).ready(function(){
+          $('.item-select').each(function(){ recalcRowQty($(this).closest('tr')); });
+        });
+        
+        $('.item-select').on('change', function () {
+          const row = $(this).closest('tr');
+          const selected    = $(this).find('option:selected');
+          const newItemcode = selected.val();
+          const dosage      = selected.data('dosage');
+          const { lkhno, itemcode, plot } = parsePath($(this).attr('name'));
+        
+          row.find('.selected-dosage').val(dosage);
+          row.find('.selected-itemcode').val(newItemcode);
+        
+          $(this).attr('name',                 `itemcode[${lkhno}][${newItemcode}][${plot}]`);
+          row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}][${plot}]`);
+          row.find('.selected-unit').attr('name',   `unit[${lkhno}][${newItemcode}][${plot}]`);
+          row.find('.selected-luas').attr('name',   `luas[${lkhno}][${newItemcode}][${plot}]`);
+        
+          
+          recalcRowQty(row);
+        });
+        
+        $(document).on('input', '.selected-dosage', function(){
+          recalcRowQty($(this).closest('tr'));
+        });
+    </script>
+        

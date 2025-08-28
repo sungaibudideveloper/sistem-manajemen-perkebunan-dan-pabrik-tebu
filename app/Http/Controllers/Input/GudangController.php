@@ -101,16 +101,19 @@ class GudangController extends Controller
         ->get();
             
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno,1));
-        $detailmaterial = collect($usemateriallst->where('rkhno', $request->rkhno)->get());
-            // dd($detailmaterial);
+        $detailmaterial2 = collect($usemateriallst->where('rkhno', $request->rkhno)->orderBy('lkhno')->orderBy('plot')->get()); 
+        $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
+        ->leftJoin('lkhdetailplot', function($join) {
+            $join->on('usemateriallst.lkhno', '=', 'lkhdetailplot.lkhno')
+                ->on('usemateriallst.plot', '=', 'lkhdetailplot.plot');})
+        ->where('rkhno', $request->rkhno)->orderBy('lkhno')->orderBy('plot')->get());
+
         $groupIds = $details->pluck('herbisidagroupid')->unique(); 
         $lst = usemateriallst::where('rkhno', $request->rkhno)->get();
-        //$joinlst = $usemateriallst->joinlst($request->rkhno);
 
         // $header
         $title = "Gudang";
 
-        // dd($details, $detailmaterial);
 
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
@@ -123,45 +126,49 @@ class GudangController extends Controller
     }
 
     public function retur(Request $request)
-    {   return redirect()->back();
+    {   
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
-        $hfirst = $header->where('herbisidagroupid',$request->herbisidagroupid)->first();
-        
-        $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('herbisidagroupid', $hfirst->herbisidagroupid)->where('itemcode', $request->itemcode);
+        $hfirst = $header->first();
+
+        $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
         $first = $details->first();
-
-        if(empty($first->qtyretur)){
-            return redirect()->back()->with('error', 'Cant Retur! Qty Retur Empty');
-        } 
         
+        if(empty($first)){ 
+            return redirect()->back()->with('error', 'Item Tidak ditemukan!');
+        }
+        if($first->qtyretur<=0){
+            return redirect()->back()->with('error', 'Tidak Bisa Retur! Qty Retur Kosong');
+        } 
         if($first->qtyretur>$first->qty){
-            return redirect()->back()->with('error', 'Cant Retur! Qty Retur > Qty Kirim');
+            return redirect()->back()->with('error', 'Tidak Bisa Retur! Qty Retur'.$first->qtyretur.' Lebih Besar Dari Qty Kirim'.$first->qty);
         }
-        if( strtoupper($first->flagstatus) == 'COMPLETED' ){
-            return redirect()->back()->with('error', 'Items Already Completed');
+        if( strtoupper($hfirst->flagstatus) == 'COMPLETED' ){
+            return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
+        } 
+        if( strtoupper($hfirst->flagstatus) == 'ACTIVE' || strtoupper($hfirst->flagstatus) == 'DISPATCHED' ){
+            return redirect()->back()->with('error', 'Barang Belum Diterima Mandor');
         }
-
         if($first->noretur != null){
             return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
         }
-
+        
 
         $isi = collect();
         $isi->push((object)[
             'CompCodeTerima' => $hfirst->companyinv, 
             'FactoryTerima'  => $hfirst->factoryinv,
-            'ItemGrup'       => substr($first->itemcode, 0, 1),
-            'CompItemcode'   => substr($first->itemcode, 1),
+            'ItemGrup'       => substr($first->itemcode, 0, 2),
+            'CompItemcode'   => substr($first->itemcode, 2),
             'prunit'         => $first->unit,
             'itemprice'      =>  0,
             'currcode'       => 'IDR',
-            'itemnote'       => $hfirst->herbisidagroupname,
+            'itemnote'       => $first->itemname,
             'qtybpb'         => $first->qtyretur,
-            'Keterangan'     => $hfirst->herbisidagroupname.' - '.$hfirst->mandorname ?? '',  
+            'Keterangan'     => 'Rkhno: '.$first->rkhno.', Mandor: '.$hfirst->mandorname ?? '',  
             'vehiclenumber'  => '',
-            'flagstatus'     => $hfirst->flagstatus
+            'flagstatus'     => 'ACTIVE'
         ]);
 
         $response = Http::withOptions([
@@ -188,7 +195,7 @@ class GudangController extends Controller
             if($response->status()==200){ 
                 if($response->json()['status']==1){
                 usemateriallst::where('rkhno', $request->rkhno)->where('itemcode', $first->itemcode)
-                ->where('herbisidagroupid',$hfirst->herbisidagroupid)->update(['noretur' => $response->json()['noretur']]);
+                ->where('lkhno',$first->lkhno)->where('plot',$first->plot)->update(['noretur' => $response->json()['noretur']]);
                 }
             }else{
                 dd($response->json(), $response->body(), $response->status());
@@ -198,178 +205,6 @@ class GudangController extends Controller
     }
 
 
-//     public function submit(Request $request)
-// { 
-//     // try {
-//     //    DB::transaction(function() use ($request) {
-//           // Validasi basic
-//           $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
-//           $first = $details->first();
-          
-//           if (strtoupper($first->flagstatus) != 'ACTIVE') {
-//               throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
-//           }
-
-//           // 🔒 SECURITY: Load master data untuk validasi
-//           $herbisidaDosage = HerbisidaDosage::where('companycode', session('companycode'))->get()->keyBy('itemcode');
-//           $validItems = Herbisida::where('companycode', session('companycode'))->pluck('itemcode')->toArray();
-
-//          //cek lkhno
-//          // Validasi: tolak item duplikat dalam LKH yang sama
-//          foreach (($request->itemcodelist ?? []) as $lkhno => $itemsFlat) {
-//             // 🔒 SECURITY: Validasi LKH ownership
-//             if (!$details->contains('lkhno', $lkhno)) {
-//                 return redirect()->back()->withInput()
-//                     ->with('error', "LKH {$lkhno} tidak valid untuk RKH ini");
-//             }
-
-//             $counts = array_count_values($itemsFlat);
-//             foreach ($counts as $itemcode => $cnt) {
-//                 if ($cnt > 1) {
-//                     // throw new \Exception("Tidak Dapat Edit! Item {$itemcode} duplikat di LKH {$lkhno}");
-//                     return redirect()->back()->withInput()
-//                     ->with('error', "Item {$itemcode} duplikat di LKH {$lkhno}");
-//                 }
-//             }
-//          }
-
-//           // Get existing data dengan key lkhno-itemcode
-//           $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
-//               return $item->lkhno . '-' . $item->itemcode;
-//           });
-
-//           // Key details by lkhno untuk lookup
-//           $detailsByLkhno = $details->keyBy('lkhno');
-//           $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
-          
-//           // Delete existing records
-//           usemateriallst::where('rkhno', $request->rkhno)->delete();
-          
-//           $insertData = [];
-//           $apiPayload = [];
-
-//           // Process flat - langsung dari request
-//           foreach ($request->itemcode as $lkhno => $items) {
-//               $detail = $detailsByLkhno[$lkhno];
-              
-//               foreach ($items as $itemcode) {
-//                   // 🔒 SECURITY: Validasi itemcode exists
-//                   if (!in_array($itemcode, $validItems)) {
-//                       return redirect()->back()->withInput()
-//                           ->with('error', "Item {$itemcode} tidak valid");
-//                   }
-
-//                   // 🔒 SECURITY: Gunakan dosage dari database
-//                   if (!isset($herbisidaDosage[$itemcode])) {
-//                       return redirect()->back()->withInput()
-//                           ->with('error', "Dosage untuk item {$itemcode} tidak ditemukan");
-//                   }
-
-//                   $dosageFromDB = $herbisidaDosage[$itemcode]->dosageperha;
-//                   $unit = $herbisidaItems[$itemcode]->measure ?? 'LTR';
-                  
-//                   // 🔒 SECURITY: Recalculate qty dari database
-//                   $luasTotal = $details->where('lkhno', $lkhno)->sum('luasrkh');
-//                   $calculatedQty = round($dosageFromDB * $luasTotal, 3);
-
-//                   $existingKey = $lkhno . '-' . $itemcode;
-//                   $existing = $existingData->get($existingKey);
-                  
-//                   // Insert data
-//                   $insertData[] = [
-//                       'companycode' => session('companycode'),
-//                       'rkhno' => $request->rkhno,
-//                       'lkhno' => $lkhno,
-//                       'itemcode' => $itemcode,
-//                       'qty' => $calculatedQty, // 🔒 Gunakan calculated value
-//                       'unit' => $unit, // 🔒 Gunakan dari database
-//                       'qtyretur' => $existing?->qtyretur ?? 0,
-//                       'itemname' => $herbisidaItems[$itemcode]->itemname,
-//                       'dosageperha' => $dosageFromDB, // 🔒 Gunakan dari database
-//                       'nouse' => $existing?->nouse ?? null
-//                   ];
-                  
-//                     // API payload - group by itemcode only
-//                     if (isset($apiPayload[$itemcode])) {
-//                         $apiPayload[$itemcode]['qtybpb'] += $calculatedQty;
-//                     } else {
-//                         $apiPayload[$itemcode] = [
-//                             'CompCodeTerima' => $detail->companyinv,
-//                             'FactoryTerima' => $detail->factoryinv,
-//                             'ItemGrup' => substr($itemcode, 0, 1),
-//                             'CompItemcode' => substr($itemcode, 1),
-//                             'prunit' => $unit, // 🔒 Gunakan dari database
-//                             'itemprice' => 0,
-//                             'currcode' => 'IDR',
-//                             'itemnote' => $detail->herbisidagroupname,
-//                             'qtybpb' => $calculatedQty, // 🔒 Gunakan calculated value
-//                             'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
-//                             'vehiclenumber' => '',
-//                             'flagstatus' => $detail->flagstatus
-//                         ];
-//                     }
-//               }
-//           }
-
-//           // Bulk insert
-//           usemateriallst::insert($insertData);
-          
-//           // Filter untuk insert atau edit
-//           if($details->whereNotNull('nouse')->count() < 1) {  
-//               // Mode insert
-//               $response = Http::withOptions([
-//                   'headers' => ['Accept' => 'application/json']
-//               ])->asJson()
-//               ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
-//                   'connection' => 'TESTING',
-//                   'company' => $first->companyinv,
-//                   'factory' => $first->factoryinv,
-//                   'isi' => array_values($apiPayload),  
-//                   'userid' => substr(auth()->user()->userid, 0, 15)
-//               ]); 
-//           } else {
-//               // Mode edit
-//               $response = Http::withOptions([
-//                   'headers' => ['Accept' => 'application/json']
-//               ])->asJson()
-//               ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
-//                   'connection' => 'TESTING',
-//                   'nouse' => $first->nouse,
-//                   'company' => $first->companyinv,
-//                   'factory' => $first->factoryinv,
-//                   'isi' => array_values($apiPayload),  
-//                   'userid' => substr(auth()->user()->userid, 0, 15)
-//               ]);
-//           }
-
-//           // Log
-//           if ($response->successful()) {
-//               Log::info('API success:', $response->json());
-//           } else {
-//               Log::error('API error', [
-//                   'status' => $response->status(),
-//                   'body' => $response->body()
-//               ]);
-//           }
-          
-//           // Success update nouse
-//           if($response->status() == 200) { 
-//               if($response->json()['status'] == 1) {
-//                   usemateriallst::where('rkhno', $request->rkhno)->update(['nouse' => $response->json()['noUse']]);
-//                   usematerialhdr::where('rkhno', $request->rkhno)->update(['flagstatus' => 'DISPATCHED']);
-//               }
-//           } else {
-//               dd($response->json(), $response->body(), $response->status());
-//           }
-//     //    });
-      
-//       return redirect()->back()->with('success1', 'Data updated successfully');
-      
-// //    } catch (\Exception $e) {
-// //        Log::error('Submit Error', ['error' => $e->getMessage()]);
-// //        return redirect()->back()->with('error', $e->getMessage());
-// //    }
-// }
 
 
     public function submit(Request $request)
@@ -385,17 +220,23 @@ class GudangController extends Controller
               }
 
              //cek lkhno
-             // Validasi: tolak item duplikat dalam LKH yang sama
-             foreach (($request->itemcodelist ?? []) as $lkhno => $itemsFlat) {
-                $counts = array_count_values($itemsFlat); // duplikat masih terlihat karena [] bukan key
-                foreach ($counts as $itemcode => $cnt) {
-                    if ($cnt > 1) {
-                        // throw new \Exception("Tidak Dapat Edit! Item {$itemcode} duplikat di LKH {$lkhno}");
-                        return redirect()->back()->withInput() // biar form sebelumnya nggak hilang
-                        ->with('error', "Item {$itemcode} duplikat di LKH {$lkhno}");
-                    }
+            // Validasi duplikat: lkhno + itemcode + plot
+            $combinations = [];
+
+            foreach (($request->materials ?? []) as $material) {
+                $lkhno = $material['lkhno'] ?? '';
+                $itemcode = $material['itemcode'] ?? '';
+                $plot = $material['plot'] ?? '';
+                
+                $key = "$lkhno|$itemcode|$plot";
+                
+                if (isset($combinations[$key])) {
+                    return redirect()->back()->withInput()
+                        ->with('error', "Duplikat! Item $itemcode di Plot $plot sudah ada di LKH $lkhno");
                 }
-             }
+                
+                $combinations[$key] = true;
+            }
 
               // Get existing data dengan key lkhno-itemcode
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
@@ -413,55 +254,73 @@ class GudangController extends Controller
               
               $insertData = [];
               $apiPayload = [];
-    
+            //   dd($request);
               // Process flat - langsung dari request
               foreach ($request->itemcode as $lkhno => $items) {
-                  $detail = $detailsByLkhno[$lkhno];
-                  
-                  foreach ($items as $itemcode) {
-                      $dosage = floatval($request->dosage[$lkhno][$itemcode]);
-                      $unit = $request->unit[$lkhno][$itemcode];
-                      $qty = $request->qty[$lkhno][$itemcode];
-                      $existingKey = $lkhno . '-' . $itemcode;
-                      $existing = $existingData->get($existingKey);
-                      
-                      
-                      // Insert data
-                      $insertData[] = [
-                          'companycode' => session('companycode'),
-                          'rkhno' => $request->rkhno,
-                          'lkhno' => $lkhno,
-                          'itemcode' => $itemcode,
-                          'qty' => $qty,
-                          'unit' => $unit,
-                          'qtyretur' => $existing?->qtyretur ?? 0,
-                          'itemname' => $herbisidaItems[$itemcode]->itemname,
-                          'dosageperha' => $dosage,
-                          'nouse' => $existing?->nouse ?? null
-                      ];
-                      
-                        // API payload - group by itemcode only
-                        if (isset($apiPayload[$itemcode])) {
-                            $apiPayload[$itemcode]['qtybpb'] += $qty;
-                        } else {
-                            $apiPayload[$itemcode] = [
-                                'CompCodeTerima' => $detail->companyinv,
-                                'FactoryTerima' => $detail->factoryinv,
-                                'ItemGrup' => substr($itemcode, 0, 1),
-                                'CompItemcode' => substr($itemcode, 1),
-                                'prunit' => $unit,
-                                'itemprice' => 0,
-                                'currcode' => 'IDR',
-                                'itemnote' => $detail->herbisidagroupname,
-                                'qtybpb' => $qty,
-                                'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
-                                'vehiclenumber' => '',
-                                'flagstatus' => $detail->flagstatus
+                $detail = $detailsByLkhno[$lkhno];
+            
+                foreach ($items as $itemcode => $keys) {
+                    foreach ($keys as $key => $val) {
+            
+                        $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
+                        $unit   = $request->unit[$lkhno][$itemcode][$key] ?? null;
+                        $luas   = $request->luas[$lkhno][$itemcode][$key] ?? 0;
+                        $qty    = $luas*$dosage ?? 0;
+                        
+                        $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
+                        $existing    = $existingData->get($existingKey);
+            
+                        $insertData[] = [
+                            'companycode' => session('companycode'),
+                            'rkhno'       => $request->rkhno,
+                            'lkhno'       => $lkhno,
+                            'itemcode'    => $itemcode,
+                            'qty'         => $qty,
+                            'unit'        => $unit,
+                            'qtyretur'    => $existing?->qtyretur ?? 0,
+                            'itemname'    => $herbisidaItems[$itemcode]->itemname ?? '',
+                            'dosageperha' => $dosage,
+                            'nouse'       => $existing?->nouse ?? null,
+                            'plot'        => $key
+                        ];
+
+
+                        // Jumlahkan qty per itemcode
+                        $qtyByItemcode[$itemcode] = ($qtyByItemcode[$itemcode] ?? 0) + $qty;
+                        
+                        // Simpan detail itemcode (ambil yang pertama aja)
+                        if (!isset($itemDetails[$itemcode])) {
+                            $itemDetails[$itemcode] = [
+                                'detail' => $detail,
+                                'unit' => $unit
                             ];
                         }
-                  }
-              }
 
+                    }
+                }
+            }
+            
+            foreach ($qtyByItemcode as $itemcode => $totalQty) {
+                $detail = $itemDetails[$itemcode]['detail'];
+                $unit = $itemDetails[$itemcode]['unit'];
+                
+                $apiPayload[$itemcode] = [
+                    'CompCodeTerima' => $detail->companyinv,
+                    'FactoryTerima'  => $detail->factoryinv,
+                    'ItemGrup'       => substr($itemcode, 0, 1),
+                    'CompItemcode'   => substr($itemcode, 1),
+                    'prunit'         => $unit,
+                    'itemprice'      => 0,
+                    'currcode'       => 'IDR',
+                    'itemnote'       => $detail->herbisidagroupname,
+                    'qtybpb'         => round($totalQty,3), // Total qty yang sudah dijumlah
+                    'Keterangan'     => $detail->herbisidagroupname . ' - ' . $detail->name,
+                    'vehiclenumber'  => '',
+                    'flagstatus'     => $detail->flagstatus
+                ];
+            }
+
+            //   dd($insertData,$apiPayload);
               // Bulk insert
               usemateriallst::insert($insertData);
               
@@ -479,7 +338,7 @@ class GudangController extends Controller
                       'company' => $first->companyinv,
                       'factory' => $first->factoryinv,
                       'isi' => array_values($apiPayload),  
-                      'userid' => auth()->user()->userid 
+                      'userid' => substr(auth()->user()->userid, 0, 10)
                   ]); 
               } else {
                   // Mode edit
@@ -492,7 +351,7 @@ class GudangController extends Controller
                       'company' => $first->companyinv,
                       'factory' => $first->factoryinv,
                       'isi' => array_values($apiPayload),  
-                      'userid' => auth()->user()->userid 
+                      'userid' => substr(auth()->user()->userid, 0, 10)
                   ]);
               }
     
