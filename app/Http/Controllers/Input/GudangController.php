@@ -277,7 +277,7 @@ class GudangController extends Controller
                             'itemcode'    => $itemcode,
                             'qty'         => $qty,
                             'unit'        => $unit,
-                            'qtyretur'    => $existing?->qtyretur ?? 0,
+                            'qtyretur'    => ($existing?->qtyretur ?? 0) ?: throw new Exception("qtyretur cannot be 0"),
                             'itemname'    => $herbisidaItems[$itemcode]->itemname ?? '',
                             'dosageperha' => $dosage,
                             'nouse'       => $existing?->nouse ?? null,
@@ -307,8 +307,8 @@ class GudangController extends Controller
                 $apiPayload[$itemcode] = [
                     'CompCodeTerima' => $detail->companyinv,
                     'FactoryTerima'  => $detail->factoryinv,
-                    'ItemGrup'       => substr($itemcode, 0, 1),
-                    'CompItemcode'   => substr($itemcode, 1),
+                    'ItemGrup'       => substr($itemcode, 0, 2),
+                    'CompItemcode'   => substr($itemcode, 2),
                     'prunit'         => $unit,
                     'itemprice'      => 0,
                     'currcode'       => 'IDR',
@@ -320,12 +320,13 @@ class GudangController extends Controller
                 ];
             }
 
-            //   dd($insertData,$apiPayload);
               // Bulk insert
               usemateriallst::insert($insertData);
-              
+
+                         
               // Filter untuk insert atau edit
               // https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api
+              // https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api
               // http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api
               // http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/edituse_api
               if($details->whereNotNull('nouse')->count() < 1) {  
@@ -333,7 +334,7 @@ class GudangController extends Controller
                   $response = Http::withOptions([
                       'headers' => ['Accept' => 'application/json']
                   ])->asJson()
-                  ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
+                  ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/use_api', [
                       'connection' => 'TESTING',
                       'company' => $first->companyinv,
                       'factory' => $first->factoryinv,
@@ -345,7 +346,7 @@ class GudangController extends Controller
                   $response = Http::withOptions([
                       'headers' => ['Accept' => 'application/json']
                   ])->asJson()
-                  ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
+                  ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/edituse_api', [
                       'connection' => 'TESTING',
                       'nouse' => $first->nouse,
                       'company' => $first->companyinv,

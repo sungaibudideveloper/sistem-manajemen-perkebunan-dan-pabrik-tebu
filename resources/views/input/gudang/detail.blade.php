@@ -59,61 +59,60 @@ table th, table td {
         </div>
     
         <!-- Header Section - Compact -->
-        <div class="flex flex-col md:flex-row gap-3 mb-4">
-            <!-- Box 1: No RKH & Mandor -->
-            <div class="w-full md:w-1/3 p-2 bg-white shadow rounded">
-                <div class="text-gray-600 text-xs font-medium">Company:</div>
-                <div class="text-xs bg-blue-100 px-1 mb-1"><b>{{ $details[0]->companycode }}</b></div>
-                <div class="text-gray-600 text-xs font-medium">No Dokumen:</div>
-                <div class="text-xs  px-1 mb-1">RKH No. <b>{{ $details[0]->rkhno }}</b></div>
-                <div class="text-xs  px-1 mb-2">USE No. <b>{{ $details[0]->nouse }}</b></div>
-                <div class="text-gray-600 text-xs font-medium">Nama Mandor:</div>
-                <div class="text-xs mb-1  px-1 mb-2">{{ $details[0]->name }}</div>
-                <div class="text-gray-600 text-xs font-medium">Tanggal:</div>
-                <div class="text-xs px-1 mb-2">{{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/Y') }}</div>
-            </div>
-    
-            <!-- Box 2: Table of Blok, Plot, Luas, Activity -->
-            <div class="w-full md:w-2/3 p-2 bg-white shadow rounded overflow-x-auto">
-                <table class="w-full text-xs">
-                    <thead class="bg-gray-200 text-gray-700">
-                        <tr>
-                            <th class="py-1 px-2 border-b">LKH</th>
-                            <th class="py-1 px-2 border-b">Blok</th>
-                            <th class="py-1 px-2 border-b">Plot</th>
-                            <th class="py-1 px-2 border-b">Luas (HA)</th>
-                            <th class="py-1 px-2 border-b">Activity</th>
+        <div class="w-full bg-white shadow rounded mb-4">
+            <table class="w-full text-xs">
+                <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th class="py-2 px-2 text-left border-0" colspan="5">
+                            <div class="space-y-1 mb-3">
+                                <div class="grid grid-cols-3 gap-4">
+                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }}</span>
+                                    <span class="text-center"><b>RKH:</b> {{ $details[0]->rkhno }}</span>
+                                    <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <span class="text-left"><b>Mandor:</b> {{ $details[0]->name }}</span>
+                                    <span class="text-center"><b>USE:</b> {{ $details[0]->nouse }}</span>
+                                    <span class="text-right"></span> <!-- Empty but maintains alignment -->
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="py-1 px-2 border-b">LKH</th>
+                        <th class="py-1 px-2 border-b">Blok</th>
+                        <th class="py-1 px-2 border-b">Plot</th>
+                        <th class="py-1 px-2 border-b">Luas (HA)</th>
+                        <th class="py-1 px-2 border-b">Activity</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600">
+                    @php 
+                    $totalLuas = 0; 
+                    $plots = $details->unique(function($item) {
+                        return $item->lkhno . '|' . $item->blok . '|' . $item->plot;
+                    });
+                    @endphp
+                    
+                    @foreach($plots as $d)  
+                        <tr class="border-b">
+                            <td class="py-1 px-2">{{ $d->lkhno }}</td>
+                            <td class="py-1 px-2">{{ $d->blok }}</td>
+                            <td class="py-1 px-2">{{ $d->plot }}</td>
+                            <td class="py-1 px-2 text-right">{{ $d->luasrkh }} HA</td>
+                            <td class="py-1 px-2 bg-green-100">{{ $d->activitycode }} {{ $d->herbisidagroupname }}</td>
                         </tr>
-                    </thead>
-                    <tbody class="text-gray-600">
-                        @php 
-                        $totalLuas = 0; 
-                        // Unique berdasarkan kombinasi lkhno + blok + plot untuk hindari duplikat dari JOIN
-                        $plots = $details->unique(function($item) {
-                            return $item->lkhno . '|' . $item->blok . '|' . $item->plot;
-                        });
-                        @endphp
-                        
-                        @foreach($plots as $d)  
-                            <tr class="border-b hover:bg-gray-50">
-                                <td class="py-1 px-2">{{ $d->lkhno }}</td>
-                                <td class="py-1 px-2">{{ $d->blok }}</td>
-                                <td class="py-1 px-2">{{ $d->plot }}</td>
-                                <td class="py-1 px-2 text-right">{{ $d->luasrkh }} HA</td>
-                                <td class="py-1 px-2 bg-green-100">{{ $d->activitycode }} {{ $d->herbisidagroupname }}</td>
-                            </tr>
-                            @php $totalLuas += floatval($d->luasrkh); @endphp
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr class="bg-gray-200 text-gray-800">
-                            <td colspan="3" class="py-1 px-2 font-semibold text-right text-xs">Total Luas</td>
-                            <td class="py-1 px-2 font-semibold text-right text-xs">{{ $totalLuas }} HA</td>
-                            <td class="py-1 px-2"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                        @php $totalLuas += floatval($d->luasrkh); @endphp
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="text-gray-800 bg-gray-100">
+                        <td colspan="3" class="py-1 px-2 font-semibold text-right border-t">Total Luas</td>
+                        <td class="py-1 px-2 font-semibold text-right border-t">{{ $totalLuas }} HA</td>
+                        <td class="py-1 px-2 border-t"></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     
         <!-- Form -->
@@ -205,13 +204,13 @@ table th, table td {
         </td>
 
         <td class="py-2 px-2 text-center">
-            @if (empty($d->noretur) && strtoupper($details[0]->flagstatus) != 'ACTIVE')
+            @if (empty($d->noretur) && $d->qtyretur>0 && strtoupper($details[0]->flagstatus) != 'ACTIVE')
                 <a href="{{ route('input.gudang.retur', [
                         'retur' => $d->qtyretur,
                         'itemcode' => $d->itemcode,
                         'rkhno' => $details[0]->rkhno,
-                        'lkhno' => $details[0]->lkhno,
-                        'plot' => $details[0]->plot
+                        'lkhno' => $d->lkhno,
+                        'plot' => $d->plot
                     ]) }}"
                    class="inline-block bg-yellow-100 text-gray-800 hover:bg-blue-600 hover:text-white text-xs py-1 px-2 rounded shadow transition no-print"
                    onclick="return confirm('Proses Retur Barang ini ?')">
@@ -257,14 +256,14 @@ table th, table td {
         @endphp
         
         
-        <table class="w-full md:w-2/3 mt-6 bg-white shadow rounded text-xs border border-gray-200">
+        <table class="w-full md:w-2/3 mx-auto mt-6 bg-white shadow rounded text-xs border border-gray-200">
             <thead class="bg-gray-100 text-gray-700 uppercase">
                 <tr>
-                    <th class="py-2 px-3 text-left border-b">Itemcode</th>
-                    <th class="py-2 px-3 text-left border-b">Item Name</th>
-                    <th class="py-2 px-3 text-left border-b">Unit</th>
-                    <th class="py-2 px-3 text-right border-b">Total Qty</th>
-                    <th class="py-2 px-3 text-left border-b">Perhitungan</th>
+                    <th class="py-2 px-3 border-b">Itemcode</th>
+                    <th class="py-2 px-3 border-b">Item Name</th>
+                    <th class="py-2 px-3 border-b">Unit</th>
+                    <th class="py-2 px-3 border-b">Total Qty</th>
+                    <th class="py-2 px-3 border-b">Perhitungan</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 text-gray-700">
@@ -274,13 +273,12 @@ table th, table td {
                         <td class="py-2 px-3">{{ $row['itemname'] }}</td>
                         <td class="py-2 px-3">{{ $row['unit'] }}</td>
                         <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 3) }}</td>
-                        <td class="py-2 px-3 text-gray-500">
+                        <td class="py-2 px-3 text-center text-gray-500">
                             {{ implode(' + ', $row['parts']) }}
                         </td>
                     </tr>
                 @endforeach
             </tbody>
-
         </table>
         
         
