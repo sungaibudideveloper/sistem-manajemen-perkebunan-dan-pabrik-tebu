@@ -7,11 +7,13 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
- * Fixed MaterialUsageGeneratorService
+ * Refactored MaterialUsageGeneratorService
  * 
- * FIXED: Removed herbisidagroupid from usemateriallst inserts
- * - Material items from different groups are merged by itemcode
- * - herbisidagroupid is not stored in usemateriallst table
+ * CHANGES:
+ * - Generate material usage PER PLOT (tidak merge berdasarkan itemcode)
+ * - Setiap plot memiliki herbisidagroup sendiri
+ * - Itemcode yang sama dari plot berbeda TIDAK di-merge
+ * - Primary key: (companycode, lkhno, plot, itemcode)
  */
 class MaterialUsageGeneratorService
 {
@@ -90,7 +92,7 @@ class MaterialUsageGeneratorService
             // Process each LKH
             foreach ($lkhList as $lkh) {
                 try {
-                    $itemsInserted = $this->processLkhMaterialUsage($lkh, $companycode, $rkhno, $rkhDetails);
+                    $itemsInserted = $this->processLkhMaterialUsagePerPlot($lkh, $companycode, $rkhno, $rkhDetails);
                     $totalItemsInserted += $itemsInserted;
                     
                 } catch (\Exception $e) {
@@ -105,7 +107,7 @@ class MaterialUsageGeneratorService
             
             DB::commit();
             
-            $message = "Material usage berhasil di-generate per LKH ({$totalItemsInserted} items)";
+            $message = "Material usage berhasil di-generate per plot ({$totalItemsInserted} items)";
             if (!empty($errors)) {
                 $message .= ". Warnings: " . implode('; ', $errors);
             }
@@ -130,10 +132,10 @@ class MaterialUsageGeneratorService
     }
     
     /**
-     * Process individual LKH to generate material usage items
-     * FIXED: Sum quantities by itemcode regardless of herbisidagroupid
+     * Process individual LKH to generate material usage items PER PLOT
+     * REFACTORED: Generate per plot, tidak merge itemcode
      */
-    private function processLkhMaterialUsage($lkh, $companycode, $rkhno, $rkhDetails)
+    private function processLkhMaterialUsagePerPlot($lkh, $companycode, $rkhno, $rkhDetails)
     {
         // Find matching RKH details for this LKH activity
         $matchingRkhDetails = $rkhDetails->where('activitycode', $lkh->activitycode)
@@ -153,20 +155,20 @@ class MaterialUsageGeneratorService
             throw new \Exception("Plot details tidak ditemukan untuk LKH: {$lkh->lkhno}");
         }
         
-        $mergedItems = [];
+        $itemsInserted = 0;
         
-        // Process each plot
-        foreach ($lkhPlots as $plot) {
+        // Process each plot SEPARATELY (tidak merge)
+        foreach ($lkhPlots as $lkhPlot) {
             // Find corresponding RKH detail for this specific plot
-            $rkhForPlot = $matchingRkhDetails->where('blok', $plot->blok)
-                                        ->where('plot', $plot->plot)
+            $rkhForPlot = $matchingRkhDetails->where('blok', $lkhPlot->blok)
+                                        ->where('plot', $lkhPlot->plot)
                                         ->first();
             
             if (!$rkhForPlot || !$rkhForPlot->herbisidagroupid) {
                 continue;
             }
             
-            $plotLuas = (float)$plot->luasrkh;
+            $plotLuas = (float)$lkhPlot->luasrkh;
             
             // Get herbisida dosage data for this plot's herbisida group
             $herbisidaDosages = DB::table('herbisidadosage as hd')
@@ -192,41 +194,33 @@ class MaterialUsageGeneratorService
                 continue;
             }
             
-            // Calculate quantity for each item in this plot
+            // Insert each item for this specific plot (NO MERGING)
             foreach ($herbisidaDosages as $dosage) {
                 $qtyForThisPlot = $plotLuas * $dosage->dosageperha;
                 
-                // Sum by itemcode regardless of herbisidagroupid
-                if (isset($mergedItems[$dosage->itemcode])) {
-                    $mergedItems[$dosage->itemcode]['qty'] += $qtyForThisPlot;
-                } else {
-                    $mergedItems[$dosage->itemcode] = [
-                        'companycode' => $companycode,
-                        'rkhno' => $rkhno,
-                        'lkhno' => $lkh->lkhno,
-                        'itemcode' => $dosage->itemcode,
-                        'qty' => $qtyForThisPlot,
-                        'qtyretur' => 0,
-                        'unit' => $dosage->measure,
-                        'nouse' => null,
-                        'noretur' => null,
-                        'itemname' => $dosage->itemname,
-                        'dosageperha' => $dosage->dosageperha,
-                        'returby' => null,
-                        'tglretur' => null,
-                        'tglterimaretur' => null,
-                        'terimareturby' => null,
-                        'qtydigunakan' => null
-                    ];
-                }
+                // Insert record per plot
+                DB::table('usemateriallst')->insert([
+                    'companycode' => $companycode,
+                    'rkhno' => $rkhno,
+                    'lkhno' => $lkh->lkhno,
+                    'plot' => $lkhPlot->plot, // PLOT SPECIFIC
+                    'itemcode' => $dosage->itemcode,
+                    'qty' => $qtyForThisPlot,
+                    'qtydigunakan' => null,
+                    'qtyretur' => 0,
+                    'unit' => $dosage->measure,
+                    'nouse' => null,
+                    'noretur' => null,
+                    'itemname' => $dosage->itemname,
+                    'dosageperha' => $dosage->dosageperha,
+                    'returby' => null,
+                    'tglretur' => null,
+                    'tglterimaretur' => null,
+                    'terimareturby' => null
+                ]);
+                
+                $itemsInserted++;
             }
-        }
-        
-        // Insert merged items
-        $itemsInserted = 0;
-        foreach ($mergedItems as $item) {
-            DB::table('usemateriallst')->insert($item);
-            $itemsInserted++;
         }
         
         return $itemsInserted;
@@ -277,7 +271,7 @@ class MaterialUsageGeneratorService
     }
     
     /**
-     * Get material usage summary per LKH
+     * Get material usage summary per LKH (UPDATED untuk per plot)
      * 
      * @param string $lkhno
      * @return array
@@ -296,16 +290,23 @@ class MaterialUsageGeneratorService
                     'h.unitprice',
                     DB::raw('(uml.qty * COALESCE(h.unitprice, 0)) as total_cost')
                 ])
+                ->orderBy('uml.plot')
+                ->orderBy('uml.itemcode')
                 ->get();
-                
+            
+            // Group by plot for better display
+            $materialsByPlot = $materialUsage->groupBy('plot');
+            
             $totalCost = $materialUsage->sum('total_cost');
             $totalQty = $materialUsage->sum('qty');
             
             return [
                 'success' => true,
                 'lkhno' => $lkhno,
-                'materials' => $materialUsage,
+                'materials_by_plot' => $materialsByPlot,
+                'materials_all' => $materialUsage,
                 'total_items' => $materialUsage->count(),
+                'total_plots' => $materialsByPlot->count(),
                 'total_qty' => $totalQty,
                 'total_cost' => $totalCost
             ];
@@ -316,6 +317,58 @@ class MaterialUsageGeneratorService
             return [
                 'success' => false,
                 'message' => 'Error getting material usage summary: ' . $e->getMessage(),
+                'materials_by_plot' => collect(),
+                'materials_all' => collect(),
+                'total_cost' => 0
+            ];
+        }
+    }
+    
+    /**
+     * Get material usage summary per plot untuk specific LKH
+     * NEW METHOD: Specific untuk per plot analysis
+     * 
+     * @param string $lkhno
+     * @param string $plot
+     * @return array
+     */
+    public function getPlotMaterialUsageSummary($lkhno, $plot)
+    {
+        try {
+            $materialUsage = DB::table('usemateriallst as uml')
+                ->leftJoin('herbisida as h', function($join) {
+                    $join->on('uml.companycode', '=', 'h.companycode')
+                         ->on('uml.itemcode', '=', 'h.itemcode');
+                })
+                ->where('uml.lkhno', $lkhno)
+                ->where('uml.plot', $plot)
+                ->select([
+                    'uml.*',
+                    'h.unitprice',
+                    DB::raw('(uml.qty * COALESCE(h.unitprice, 0)) as total_cost')
+                ])
+                ->orderBy('uml.itemcode')
+                ->get();
+            
+            $totalCost = $materialUsage->sum('total_cost');
+            $totalQty = $materialUsage->sum('qty');
+            
+            return [
+                'success' => true,
+                'lkhno' => $lkhno,
+                'plot' => $plot,
+                'materials' => $materialUsage,
+                'total_items' => $materialUsage->count(),
+                'total_qty' => $totalQty,
+                'total_cost' => $totalCost
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Error getting plot material usage summary: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Error getting plot material usage summary: ' . $e->getMessage(),
                 'materials' => collect(),
                 'total_cost' => 0
             ];
@@ -323,7 +376,7 @@ class MaterialUsageGeneratorService
     }
     
     /**
-     * Debug method to check data availability
+     * Debug method to check data availability (UPDATED)
      * 
      * @param string $rkhno
      * @return array
@@ -346,18 +399,26 @@ class MaterialUsageGeneratorService
                 
             $rkhDetailsWithMaterial = $rkhDetails->where('usingmaterial', 1);
             
-            // Check LKH list
+            // Check LKH list and their plots
             $lkhList = DB::table('lkhhdr')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkhno)
                 ->get();
             
-            // Check herbisida groups
+            $lkhPlotDetails = [];
+            foreach ($lkhList as $lkh) {
+                $plots = DB::table('lkhdetailplot')
+                    ->where('companycode', $companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->get();
+                $lkhPlotDetails[$lkh->lkhno] = $plots->toArray();
+            }
+            
+            // Check herbisida groups and dosages
             $herbisidaGroups = DB::table('herbisidagroup')
                 ->where('companycode', $companycode)
                 ->get();
                 
-            // Check herbisida dosages
             $herbisidaDosages = DB::table('herbisidadosage')
                 ->where('companycode', $companycode)
                 ->get();
@@ -369,6 +430,7 @@ class MaterialUsageGeneratorService
                 'rkh_details_with_material_data' => $rkhDetailsWithMaterial->toArray(),
                 'lkh_count' => $lkhList->count(),
                 'lkh_data' => $lkhList->toArray(),
+                'lkh_plot_details' => $lkhPlotDetails,
                 'herbisida_groups_count' => $herbisidaGroups->count(),
                 'herbisida_dosages_count' => $herbisidaDosages->count()
             ];
