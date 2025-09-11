@@ -1,7 +1,8 @@
-// resources/js/pages/lkh-assignment.tsx - UPDATED: With Helper Information Support
+// resources/js/pages/lkh-assignment.tsx - UPDATED: Using Existing LayoutMandor
 
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
+import LayoutMandor from '../components/layout-mandor';
 import {
   ArrowLeft, Users, Truck, Save, Check, Loader, 
   MapPin, ExternalLink, CheckCircle, Info
@@ -21,7 +22,6 @@ interface LKHData {
   mandor_nama: string;
 }
 
-// UPDATED: Support both single and multiple vehicles with helper info
 interface SingleVehicle {
   nokendaraan: string;
   jenis: string;
@@ -59,18 +59,35 @@ interface WorkerAssignment {
   assigned: boolean;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  userid: string;
+  companycode: string;
+  company_name: string;
+}
+
+interface ExtendedRoutes {
+  logout: string;
+  home: string;
+  mandor_index: string;
+  workers: string;
+  attendance_today: string;
+  process_checkin: string;
+  lkh_save_assignment: string;
+  lkh_input: string;
+  lkh_view: string;
+  [key: string]: string;
+}
+
 interface LKHAssignmentProps {
   title: string;
   lkhData: LKHData;
   vehicleInfo?: VehicleInfo;
   availableWorkers: WorkerAssignment[];
   existingAssignments?: string[];
-  routes: {
-    lkh_save_assignment: string;
-    lkh_input: string;
-    lkh_view: string;
-    mandor_index: string;
-  };
+  routes: ExtendedRoutes;
   csrf_token: string;
   flash?: {
     success?: string;
@@ -82,10 +99,14 @@ interface LKHAssignmentProps {
     url: string;
     logo_url: string;
   };
+  user: User;
 }
 
-const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
-  app,
+const LKHAssignmentContent: React.FC<Omit<LKHAssignmentProps, 'user' | 'routes'> & { 
+  routes: ExtendedRoutes;
+  onNavigateToInput: () => void;
+  onGoBack: () => void;
+}> = ({
   title,
   lkhData,
   vehicleInfo,
@@ -93,7 +114,10 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
   existingAssignments = [],
   routes,
   csrf_token,
-  flash
+  flash,
+  app,
+  onNavigateToInput,
+  onGoBack
 }) => {
   const [assignedWorkers, setAssignedWorkers] = useState<WorkerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,7 +127,7 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
   useEffect(() => {
     if (flash?.success) {
       setIsSaved(true);
-      // Create toast notification instead of alert
+      // Create toast notification
       const toast = document.createElement('div');
       toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
       toast.innerHTML = `
@@ -116,17 +140,10 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
       `;
       document.body.appendChild(toast);
       
-      // Animate in
-      setTimeout(() => {
-        toast.classList.remove('translate-x-full');
-      }, 100);
-      
-      // Remove after 3 seconds
+      setTimeout(() => toast.classList.remove('translate-x-full'), 100);
       setTimeout(() => {
         toast.classList.add('translate-x-full');
-        setTimeout(() => {
-          document.body.removeChild(toast);
-        }, 300);
+        setTimeout(() => document.body.removeChild(toast), 300);
       }, 3000);
     }
     if (flash?.error) {
@@ -204,23 +221,10 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
     }
   };
 
-  // Simple navigation using Laravel-generated URLs
-  const navigateToInput = () => {
-    console.log('Navigating to input:', routes.lkh_input);
-    router.get(routes.lkh_input);
-  };
-
-  const goBack = () => {
-    console.log('Navigating back to:', routes.mandor_index);
-    router.get(routes.mandor_index);
-  };
-
-  // Filter out workers that are already assigned in database
   const unassignedWorkers = availableWorkers.filter(w => 
     !existingAssignments.includes(w.tenagakerjaid)
   );
 
-  // UPDATED: Render vehicle info with helper information
   const renderVehicleInfo = () => {
     if (!vehicleInfo) {
       return (
@@ -231,7 +235,6 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
       );
     }
 
-    // Single vehicle
     if (!vehicleInfo.is_multiple) {
       return (
         <div className="grid grid-cols-2 gap-6">
@@ -265,7 +268,6 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
       );
     }
 
-    // Multiple vehicles
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
@@ -316,272 +318,269 @@ const LKHAssignmentPage: React.FC<LKHAssignmentProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={goBack}
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Kembali</span>
-          </button>
-          
+    <div className="max-w-7xl mx-auto p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <button
+          onClick={onGoBack}
+          className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Kembali</span>
+        </button>
+        
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
+            Assignment Pekerja
+          </h2>
+          <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activityname}</p>
+        </div>
+      </div>
+
+      {/* Status Info */}
+      {existingAssignments.length > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Logo with better error handling and fallback */}
-              {app?.logo_url ? (
-                <img 
-                  src={app.logo_url} 
-                  alt={`Logo ${app?.name || 'App'}`} 
-                  className="w-10 h-10 object-contain"
-                  onError={(e) => {
-                    console.log('Logo failed to load, using fallback');
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    // Show fallback
-                    const fallback = target.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              {/* Fallback logo - always present but hidden unless needed */}
-              <div 
-                className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center" 
-                style={{ display: app?.logo_url ? 'none' : 'flex' }}
-              >
-                <span className="text-white font-bold text-lg">{app?.name?.charAt(0) || 'T'}</span>
-              </div>
-              
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
-                  Assignment Pekerja
-                </h2>
-                <p className="text-lg text-neutral-600">{lkhData.lkhno} - {lkhData.activityname}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Info */}
-        {existingAssignments.length > 0 && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-blue-700">
-                <Info className="w-5 h-5" />
-                <span className="font-medium">
-                  Assignment sudah ada: {existingAssignments.length} pekerja sudah ditugaskan untuk LKH ini
-                </span>
-              </div>
-              
-              {/* Input Hasil Button */}
-              <button
-                onClick={navigateToInput}
-                disabled={assignedWorkers.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>Input Hasil</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Input Hasil Button when no existing assignments but workers assigned */}
-        {existingAssignments.length === 0 && assignedWorkers.length > 0 && isSaved && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-green-700">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">
-                  {assignedWorkers.length} pekerja telah disimpan untuk assignment
-                </span>
-              </div>
-              
-              {/* Input Hasil Button */}
-              <button
-                onClick={navigateToInput}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>Input Hasil</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* LKH Info Card */}
-          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
-            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-blue-600" />
-                Informasi LKH
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-sm font-medium text-neutral-500">Tanggal</label>
-                  <p className="text-lg font-semibold">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-neutral-500">Activity</label>
-                  <p className="text-lg font-semibold">{lkhData.activityname}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-neutral-500">Plot</label>
-                  <p className="text-lg font-semibold">{Array.isArray(lkhData.plot) ? lkhData.plot.join(', ') : lkhData.plot}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-neutral-500">Target Luas</label>
-                  <p className="text-lg font-semibold">{lkhData.totalluasplan} Ha</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium text-neutral-500">Jenis Tenaga Kerja</label>
-                  <p className="text-lg font-semibold">{lkhData.jenistenagakerja}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* UPDATED: Vehicle Info Card with helper information */}
-          <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
-            <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Truck className="w-5 h-5 text-orange-600" />
-                Informasi Kendaraan
-                {vehicleInfo?.is_multiple && (
-                  <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
-                    {vehicleInfo.vehicle_count} unit
-                  </span>
-                )}
-              </h3>
-            </div>
-            <div className="p-6">
-              {renderVehicleInfo()}
-            </div>
-          </div>
-        </div>
-
-        {/* Worker Assignment */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                Pilih Pekerja
-              </h3>
-              <div className="text-sm text-neutral-500">
-                <span>Pekerja available: {unassignedWorkers.length}</span>
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
-            {unassignedWorkers.length > 0 ? (
-              <div className="space-y-2">
-                {unassignedWorkers.map((worker) => {
-                  const isAssigned = assignedWorkers.some(w => w.tenagakerjaid === worker.tenagakerjaid);
-                  return (
-                    <div
-                      key={worker.tenagakerjaid}
-                      onClick={() => handleWorkerAssignment(worker)}
-                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
-                        isAssigned 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-neutral-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <span className="font-medium text-neutral-900">{worker.nama}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        isAssigned 
-                          ? 'border-blue-500 bg-blue-500' 
-                          : 'border-neutral-300'
-                      }`}>
-                        {isAssigned && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-green-300 mx-auto mb-4" />
-                <p className="text-green-600 font-medium">
-                  {availableWorkers.length > 0 
-                    ? `Semua ${availableWorkers.length} pekerja sudah ditugaskan`
-                    : 'Tidak ada pekerja yang tersedia'
-                  }
-                </p>
-                {availableWorkers.length === 0 && (
-                  <p className="text-sm text-neutral-400 mt-1">Pastikan ada pekerja yang sudah absen hari ini</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Assigned Workers Summary - Always Show */}
-        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
-          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                Pekerja yang Ditugaskan
-              </h3>
-              <span className="text-sm text-neutral-500">
-                Total: {assignedWorkers.length} pekerja assigned
+            <div className="flex items-center gap-2 text-blue-700">
+              <Info className="w-5 h-5" />
+              <span className="font-medium">
+                Assignment sudah ada: {existingAssignments.length} pekerja sudah ditugaskan untuk LKH ini
               </span>
             </div>
+            
+            <button
+              onClick={onNavigateToInput}
+              disabled={assignedWorkers.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Input Hasil</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Input Hasil Button when no existing assignments but workers assigned */}
+      {existingAssignments.length === 0 && assignedWorkers.length > 0 && isSaved && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">
+                {assignedWorkers.length} pekerja telah disimpan untuk assignment
+              </span>
+            </div>
+            
+            <button
+              onClick={onNavigateToInput}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Input Hasil</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* LKH Info Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
+          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-blue-600" />
+              Informasi LKH
+            </h3>
           </div>
           <div className="p-6">
-            {assignedWorkers.length > 0 ? (
-              <div className="space-y-2">
-                {assignedWorkers.map((worker, index) => (
-                  <div
-                    key={worker.tenagakerjaid}
-                    className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
-                  >
-                    <span className="font-medium text-green-900">
-                      {index + 1}. {worker.nama}
-                    </span>
-                    <span className="text-xs text-green-600">Assigned</span>
-                  </div>
-                ))}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm font-medium text-neutral-500">Tanggal</label>
+                <p className="text-lg font-semibold">{new Date(lkhData.lkhdate).toLocaleDateString('id-ID')}</p>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <CheckCircle className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-                <p className="text-neutral-500">Belum ada pekerja yang ditugaskan</p>
+              <div>
+                <label className="text-sm font-medium text-neutral-500">Activity</label>
+                <p className="text-lg font-semibold">{lkhData.activityname}</p>
               </div>
-            )}
+              <div>
+                <label className="text-sm font-medium text-neutral-500">Plot</label>
+                <p className="text-lg font-semibold">{Array.isArray(lkhData.plot) ? lkhData.plot.join(', ') : lkhData.plot}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-neutral-500">Target Luas</label>
+                <p className="text-lg font-semibold">{lkhData.totalluasplan} Ha</p>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-neutral-500">Jenis Tenaga Kerja</label>
+                <p className="text-lg font-semibold">{lkhData.jenistenagakerja}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={saveAssignments}
-            disabled={isLoading || assignedWorkers.length === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {isLoading ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                <span>Menyimpan...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                <span>Simpan Assignment</span>
-              </>
-            )}
-          </button>
+        {/* Vehicle Info Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-neutral-200">
+          <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Truck className="w-5 h-5 text-orange-600" />
+              Informasi Kendaraan
+              {vehicleInfo?.is_multiple && (
+                <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
+                  {vehicleInfo.vehicle_count} unit
+                </span>
+              )}
+            </h3>
+          </div>
+          <div className="p-6">
+            {renderVehicleInfo()}
+          </div>
         </div>
+      </div>
 
+      {/* Worker Assignment */}
+      <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+        <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Pilih Pekerja
+            </h3>
+            <div className="text-sm text-neutral-500">
+              <span>Pekerja available: {unassignedWorkers.length}</span>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          {unassignedWorkers.length > 0 ? (
+            <div className="space-y-2">
+              {unassignedWorkers.map((worker) => {
+                const isAssigned = assignedWorkers.some(w => w.tenagakerjaid === worker.tenagakerjaid);
+                return (
+                  <div
+                    key={worker.tenagakerjaid}
+                    onClick={() => handleWorkerAssignment(worker)}
+                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
+                      isAssigned 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-neutral-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <span className="font-medium text-neutral-900">{worker.nama}</span>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      isAssigned 
+                        ? 'border-blue-500 bg-blue-500' 
+                        : 'border-neutral-300'
+                    }`}>
+                      {isAssigned && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-green-300 mx-auto mb-4" />
+              <p className="text-green-600 font-medium">
+                {availableWorkers.length > 0 
+                  ? `Semua ${availableWorkers.length} pekerja sudah ditugaskan`
+                  : 'Tidak ada pekerja yang tersedia'
+                }
+              </p>
+              {availableWorkers.length === 0 && (
+                <p className="text-sm text-neutral-400 mt-1">Pastikan ada pekerja yang sudah absen hari ini</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Assigned Workers Summary */}
+      <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 mb-8">
+        <div className="border-b bg-neutral-50 rounded-t-2xl p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Pekerja yang Ditugaskan
+            </h3>
+            <span className="text-sm text-neutral-500">
+              Total: {assignedWorkers.length} pekerja assigned
+            </span>
+          </div>
+        </div>
+        <div className="p-6">
+          {assignedWorkers.length > 0 ? (
+            <div className="space-y-2">
+              {assignedWorkers.map((worker, index) => (
+                <div
+                  key={worker.tenagakerjaid}
+                  className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
+                >
+                  <span className="font-medium text-green-900">
+                    {index + 1}. {worker.nama}
+                  </span>
+                  <span className="text-xs text-green-600">Assigned</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <CheckCircle className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-500">Belum ada pekerja yang ditugaskan</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-center gap-4">
+        <button
+          onClick={saveAssignments}
+          disabled={isLoading || assignedWorkers.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          {isLoading ? (
+            <>
+              <Loader className="w-5 h-5 animate-spin" />
+              <span>Menyimpan...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5" />
+              <span>Simpan Assignment</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
+  );
+};
+
+const LKHAssignmentPage: React.FC<LKHAssignmentProps> = (props) => {
+  const [activeSection, setActiveSection] = useState('data-collection');
+
+  const handleNavigateToInput = () => {
+    console.log('Navigating to input:', props.routes.lkh_input);
+    router.get(props.routes.lkh_input);
+  };
+
+  const handleGoBack = () => {
+    console.log('Navigating back to:', props.routes.mandor_index);
+    router.get(props.routes.mandor_index);
+  };
+
+  return (
+    <LayoutMandor
+      user={props.user}
+      routes={props.routes}
+      csrf_token={props.csrf_token}
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+    >
+      <LKHAssignmentContent
+        {...props}
+        onNavigateToInput={handleNavigateToInput}
+        onGoBack={handleGoBack}
+      />
+    </LayoutMandor>
   );
 };
 
