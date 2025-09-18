@@ -53,4 +53,9 @@ class Activity extends Model
         return $this->belongsTo(JenisTenagaKerja::class, 'jenistenagakerja', 'idjenistenagakerja');
     }
 
+    public function accounting()
+    {
+        return $this->hasOne(Accounting::class, 'activitycode', 'activitycode');
+    }
+
 }

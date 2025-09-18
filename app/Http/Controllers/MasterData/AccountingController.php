@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller; 
+use App\Http\Controllers\Controller;
 use App\Models\Accounting;
+use App\Models\Activity;
 use Illuminate\Support\Facades\Auth;
 
 class AccountingController extends Controller
@@ -14,19 +15,16 @@ class AccountingController extends Controller
         $perPage = (int)$request->input('perPage', 10);
         $search  = $request->input('search');
 
-        $query = Accounting::query();  
+
+        $query = Activity::leftJoin('accounting','activity.activitycode','accounting.activitycode');
         if ($search) {
             $query->where(fn($q) =>
-                $q->where('activitycode', 'like', "%{$search}%")
-                  ->orWhere('jurnalaccno', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
+                $q->where('activity.activitycode', 'like', "%{$search}%")->orWhere('jurnalaccno', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%")
             );
         }
-
-        $accounting = $query
-            ->orderBy('activitycode')
-            ->paginate($perPage)
-            ->appends(compact('perPage', 'search'));
+        $accounting = $query->orderBy('activity.activitycode')
+        ->select('accounting.*','activity.activitycode','activity.activityname')
+        ->paginate($perPage)->appends(compact('perPage', 'search'));
 
         return view('master.accounting.index', [
             'accounting' => $accounting,
@@ -104,10 +102,10 @@ class AccountingController extends Controller
             ['jurnalaccno',   $jurnalaccno],
             ['jurnalacctype', $jurnalacctype],
         ])->update([
-            'activitycode'  => $validated['activitycode'],  
-            'jurnalaccno'   => $validated['jurnalaccno'],   
-            'jurnalacctype' => $validated['jurnalacctype'], 
-            'description'   => $validated['description'],   
+            'activitycode'  => $validated['activitycode'],
+            'jurnalaccno'   => $validated['jurnalaccno'],
+            'jurnalacctype' => $validated['jurnalacctype'],
+            'description'   => $validated['description'],
             'updateby'      => Auth::user()->userid,
             'updatedat'     => now(),
         ]);
