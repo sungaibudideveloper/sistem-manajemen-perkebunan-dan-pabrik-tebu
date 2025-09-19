@@ -22,6 +22,7 @@ use App\Models\Activity;
 use App\Models\Kendaraan;
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
+use App\Models\Upah;
 
 class MandorPageController extends Controller
 {
@@ -2645,70 +2646,165 @@ public function getRejectedAttendance(Request $request)
         }
     }
 
+    /** SECTION PERHITUNGAN UPAH -START-     */
     /**
-     * Calculate worker wage based on LKH type and work hours
+     * Determine day type for wage calculation (weekday/saturday/sunday)
      */
-    private function calculateWorkerWage($lkhInfo, $totalJamKerja, $overtimeHours)
+    private function getDayType($workDate)
     {
-        $wageData = [
-            'premi' => 0, 'upahharian' => 0, 'upahperjam' => 0,
-            'upahlembur' => 0, 'upahborongan' => 0, 'totalupah' => 0
-        ];
+        $dayOfWeek = \Carbon\Carbon::parse($workDate)->dayOfWeek;
         
-        if ($lkhInfo->jenistenagakerja == 1) {
-            // Harian calculation
-            $baseWage = 115722.8;
-            $hourlyWage = 16532;
-            $overtimeWage = 12542;
-            
-            if ($totalJamKerja >= 8) {
-                $wageData['upahharian'] = $baseWage;
-            } else {
-                $wageData['upahperjam'] = $hourlyWage;
-                $wageData['upahharian'] = $totalJamKerja * $hourlyWage;
-            }
-            
-            if ($overtimeHours > 0) {
-                $wageData['upahlembur'] = $overtimeHours * $overtimeWage;
-            }
-            
-            $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'] + $wageData['premi'];
-            
-        } else {
-            // Borongan calculation
-            $costPerHa = $this->calculateCostPerHa($lkhInfo->activitycode);
-            $wageData['upahborongan'] = $costPerHa;
-            $wageData['totalupah'] = $costPerHa;
+        if ($dayOfWeek === \Carbon\Carbon::SATURDAY) {
+            return 'WEEKEND_SATURDAY';
+        } elseif ($dayOfWeek === \Carbon\Carbon::SUNDAY) {
+            return 'WEEKEND_SUNDAY';
         }
         
-        return $wageData;
+        return 'DAILY';
     }
 
     /**
-     * Calculate cost per hectare based on activity
+     * Get activity group from activity code
+     * Helper method to extract activity group (e.g., "V" from "V.1.2.3")
      */
-    private function calculateCostPerHa($activitycode)
+    private function getActivityGroupFromCode($activitycode)
+    {
+        // Extract the Roman numeral part from activity code
+        // Examples: "V.1.2.3" -> "V", "IV.5.1" -> "IV"
+        if (preg_match('/^([IVX]+)/', $activitycode, $matches)) {
+            return $matches[1];
+        }
+        
+        return 'V'; // Default fallback
+    }
+
+    /**
+     * Determine borongan wage type based on activity code
+     */
+    private function getBoronganWageType($activitycode)
+    {
+        // Based on your database structure:
+        // VI = Panen (PER_KG)
+        // IV, V = PER_HECTARE
+        
+        if (strpos($activitycode, 'VI') === 0) {
+            return 'PER_KG'; // Panen - per kilogram
+        }
+        
+        return 'PER_HECTARE'; // Default for IV (Penanaman), V (Perawatan)
+    }
+
+    /**
+     * UPDATED: Calculate worker wage using Upah model from database
+     * Replaces hardcoded values with database-driven wage rates
+     */
+    private function calculateWorkerWage($lkhInfo, $totalJamKerja, $overtimeHours)
     {
         try {
-            // Default costs based on common activity patterns
-            if (strpos($activitycode, 'IV.5') !== false) {
-                return 1977000; // Penanaman
-            } elseif (strpos($activitycode, 'V.') !== false) {
-                return 140000; // Post emergence
-            } elseif (strpos($activitycode, 'VI.') !== false) {
-                return 110000; // Panen
+            $user = auth()->user();
+            $activityGroup = $this->getActivityGroupFromCode($lkhInfo->activitycode);
+            $workDate = $lkhInfo->lkhdate ?? now()->format('Y-m-d');
+            
+            $wageData = [
+                'premi' => 0,
+                'upahharian' => 0,
+                'upahperjam' => 0,
+                'upahlembur' => 0,
+                'upahborongan' => 0,
+                'totalupah' => 0
+            ];
+            
+            if ($lkhInfo->jenistenagakerja == 1) {
+                // ===== HARIAN CALCULATION =====
+                
+                // Determine day type (weekday/saturday/sunday)
+                $dayType = $this->getDayType($workDate);
+                
+                if ($totalJamKerja >= 8) {
+                    // Full time work - use daily/weekend rate from database
+                    $dailyRate = Upah::getCurrentRate(
+                        $user->companycode, 
+                        $activityGroup, 
+                        $dayType,  // DAILY/WEEKEND_SATURDAY/WEEKEND_SUNDAY
+                        $workDate
+                    );
+                    
+                    $wageData['upahharian'] = $dailyRate ?: 115722.8; // Fallback to default if not found
+                    
+                } else {
+                    // Part time work - use hourly rate from database
+                    $hourlyRate = Upah::getCurrentRate(
+                        $user->companycode, 
+                        $activityGroup, 
+                        'HOURLY', 
+                        $workDate
+                    );
+                    
+                    $wageData['upahperjam'] = $hourlyRate ?: 16532; // Fallback to default
+                    $wageData['upahharian'] = $totalJamKerja * $wageData['upahperjam'];
+                }
+                
+                // Overtime calculation
+                if ($overtimeHours > 0) {
+                    $overtimeRate = Upah::getCurrentRate(
+                        $user->companycode, 
+                        $activityGroup, 
+                        'OVERTIME', 
+                        $workDate
+                    );
+                    
+                    $overtimeRateAmount = $overtimeRate ?: 12542; // Fallback to default
+                    $wageData['upahlembur'] = $overtimeHours * $overtimeRateAmount;
+                }
+                
+                // Calculate total for harian
+                $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'] + $wageData['premi'];
+                
+            } else {
+                // ===== BORONGAN CALCULATION =====
+                
+                $wageType = $this->getBoronganWageType($lkhInfo->activitycode);
+                
+                $boronganRate = Upah::getCurrentRate(
+                    $user->companycode, 
+                    $activityGroup, 
+                    $wageType,  // PER_HECTARE or PER_KG
+                    $workDate
+                );
+                
+                // For borongan, the rate calculation depends on work results
+                // This is base rate per unit, actual calculation done later with work results
+                $wageData['upahborongan'] = $boronganRate ?: 140000; // Fallback default
+                $wageData['totalupah'] = $wageData['upahborongan']; // Will be multiplied by area/quantity later
             }
             
-            return 100000; // Default cost per ha
+            return $wageData;
             
         } catch (\Exception $e) {
-            Log::warning('Error calculating cost per ha', [
-                'activitycode' => $activitycode,
-                'error' => $e->getMessage()
+            \Log::error('Error in calculateWorkerWage with database integration', [
+                'message' => $e->getMessage(),
+                'activitycode' => $lkhInfo->activitycode ?? 'unknown',
+                'jenistenagakerja' => $lkhInfo->jenistenagakerja ?? 'unknown',
+                'trace' => $e->getTraceAsString()
             ]);
-            return 100000;
+            
+            // Fallback to hardcoded values if database fails
+            return [
+                'premi' => 0,
+                'upahharian' => $lkhInfo->jenistenagakerja == 1 ? 115722.8 : 0,
+                'upahperjam' => 0,
+                'upahlembur' => 0,
+                'upahborongan' => $lkhInfo->jenistenagakerja == 2 ? 140000 : 0,
+                'totalupah' => $lkhInfo->jenistenagakerja == 1 ? 115722.8 : 140000
+            ];
         }
     }
+    /** SECTION PERHITUNGAN UPAH -END0     */
+
+
+
+
+
 
     /**
      * Get vehicle info for specific LKH - UPDATED: Include Helper Information

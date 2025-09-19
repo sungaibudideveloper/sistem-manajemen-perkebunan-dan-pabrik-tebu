@@ -1,0 +1,15 @@
+POST http://localhost/tebu/public/api/mobile/insert-upah-tenaga-kerja
+Content-Type: application/json
+
+{
+  "companycode": "TBL1",
+  "lkhno": "LKH18090225-4",
+  "tenagakerjaid": "M0021",
+  "tenagakerjaurutan": 1,
+  "activitycode": "V.1.2.3",
+  "jenistenagakerja": 1,
+  "lkhdate": "2025-09-18",
+  "jammulai": "07:00:00",
+  "jamselesai": "15:00:00",
+  "overtimehours": 0
+}
