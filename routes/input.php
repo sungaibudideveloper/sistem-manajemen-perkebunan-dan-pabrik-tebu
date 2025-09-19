@@ -7,6 +7,7 @@ use App\Http\Controllers\Input\GudangController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\GudangBbmController;
+use App\Http\Controllers\Input\PiasController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -131,12 +132,13 @@ Route::middleware('auth')->group(function () {
     Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur')->middleware('permission:Menu Gudang');
 });
 
-// =====================================
-// TEBAR PIAS ROUTES (EXISTING)
-// =====================================
-Route::middleware('auth')->group(function () {
-    Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.index')->middleware('permission:Menu Gudang');
+Route::prefix('input')->group(function () {
+    Route::prefix('gudang/pias')->name('input.pias.')->group(function () {
+        Route::get('/', [PiasController::class,'home'])->name('home')->middleware('permission:Menu Pias');
+        Route::get('/detail', [PiasController::class,'detail'])->name('detail')->middleware('permission:Menu Pias');
+    });
 });
+
 
 // =====================================
 // KENDARAAN BBM SYSTEM ROUTES (EXISTING)
