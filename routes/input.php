@@ -125,10 +125,17 @@ Route::middleware('auth')->group(function () {
 // GUDANG ROUTES (EXISTING)
 // =====================================
 Route::middleware('auth')->group(function () {
-    Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.index');
-    Route::get('input/gudang/detail', [GudangController::class, 'detail'])->name('input.gudang.detail');
-    Route::post('input/gudang/submit', [GudangController::class, 'submit'])->name('input.gudang.submit');
-    Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur');
+    Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.index')->middleware('permission:Menu Gudang');
+    Route::get('input/gudang/detail', [GudangController::class, 'detail'])->name('input.gudang.detail')->middleware('permission:Menu Gudang');
+    Route::post('input/gudang/submit', [GudangController::class, 'submit'])->name('input.gudang.submit')->middleware('permission:Menu Gudang');
+    Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur')->middleware('permission:Menu Gudang');
+});
+
+// =====================================
+// TEBAR PIAS ROUTES (EXISTING)
+// =====================================
+Route::middleware('auth')->group(function () {
+    Route::get('input/gudang', [GudangController::class, 'home'])->name('input.gudang.index')->middleware('permission:Menu Gudang');
 });
 
 // =====================================

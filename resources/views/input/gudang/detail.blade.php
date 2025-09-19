@@ -43,6 +43,10 @@ table th, table td {
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima Mandor. Untuk Retur, Ajukan Dokumen Retur.
                 </div>
+            @elseif(strtoupper($details[0]->flagstatus) == 'UPLOADED')
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
+                    <i class="bi bi-check-circle me-1"></i>Barang Sudah Di Upload Mandor.
+                </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURNED_BY_MANDOR')
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diretur.
