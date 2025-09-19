@@ -31,7 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // CSRF exceptions
         $middleware->validateCsrfTokens(except: [
-            'dashboard/mapsapi',  
+            'dashboard/mapsapi',
+            'api/mobile/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -16,6 +16,8 @@ use App\Http\Controllers\LiveChatController;
 use App\Http\Controllers\React\MandorPageController;
 use App\Http\Controllers\React\ApproverPageController;
 
+use App\Http\Controllers\Api\PerhitunganUpahApiMobile;
+
 // =============================================================================
 // AUTHENTICATION ROUTES
 // =============================================================================
@@ -277,6 +279,12 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             ->name('approver.attendance.history');
     });
 
+});
+
+
+// API ROUTES FOR MOBILE UPLOAD Perhitungan Upah
+Route::middleware('api')->prefix('api/mobile')->group(function () {
+    Route::post('/insert-upah-tenaga-kerja', [App\Http\Controllers\Api\PerhitunganUpahApiMobile::class, 'insertWorkerWage']);
 });
 
 // =============================================================================
