@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Upah;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -17,7 +16,7 @@ class PerhitunganUpahApiMobile extends Controller
      * 
      * POST /api/mobile/insert-worker-wage
      */
-    public function insertWorkerWage(Request $request): JsonResponse
+    public function insertWorkerWage(Request $request)
     {
         try {
             $validated = $request->validate([
@@ -50,9 +49,9 @@ class PerhitunganUpahApiMobile extends Controller
 
             if (!$existingRecord) {
                 return response()->json([
-                    'success' => 0,
+                    'status' => 0,
                     'error' => 'Worker record not found for this LKH',
-                    'message' => 'Please ensure the worker is assigned to this LKH first'
+                    'description' => 'Please ensure the worker is assigned to this LKH first'
                 ], 404);
             }
 
@@ -82,8 +81,8 @@ class PerhitunganUpahApiMobile extends Controller
 
             if ($updated) {
                 return response()->json([
-                    'success' => 1,
-                    'message' => 'Worker wage updated successfully',
+                    'status' => 1,
+                    'description' => 'Worker wage updated successfully',
                     'data' => [
                         'total_upah' => $wageData['totalupah'],
                         'jam_kerja' => $totalJamKerja,
@@ -98,30 +97,30 @@ class PerhitunganUpahApiMobile extends Controller
                 ], 200);
             } else {
                 return response()->json([
-                    'success' => 0,
+                    'status' => 0,
                     'error' => 'Failed to update worker wage',
-                    'message' => 'No changes were made to the record'
+                    'description' => 'No changes were made to the record'
                 ], 400);
             }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'success' => 0,
+                'status' => 0,
                 'error' => 'Validation failed',
                 'details' => $e->errors()
             ], 422);
             
         } catch (\Exception $e) {
             \Log::error('Error in insertWorkerWage API', [
-                'message' => $e->getMessage(),
+                'description' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
             
             return response()->json([
-                'success' => 0,
+                'status' => 0,
                 'error' => 'Update failed',
-                'message' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'description' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
