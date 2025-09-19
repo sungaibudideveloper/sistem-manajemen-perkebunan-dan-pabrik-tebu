@@ -41,16 +41,27 @@ class PerhitunganUpahApiMobile extends Controller
             // Calculate wage
             $wageData = $this->calculateWage($validated, $totalJamKerja);
             
-            // UPSERT to database
-            DB::table('lkhdetailworker')->updateOrInsert(
-                [
-                    // Unique identifier
-                    'companycode' => $validated['companycode'],
-                    'lkhno' => $validated['lkhno'],
-                    'tenagakerjaid' => $validated['tenagakerjaid']
-                ],
-                [
-                    // Data to insert/update
+            // Check if record exists first
+            $existingRecord = DB::table('lkhdetailworker')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->where('tenagakerjaid', $validated['tenagakerjaid'])
+                ->first();
+
+            if (!$existingRecord) {
+                return response()->json([
+                    'success' => 0,
+                    'error' => 'Worker record not found for this LKH',
+                    'message' => 'Please ensure the worker is assigned to this LKH first'
+                ], 404);
+            }
+
+            // Update existing record only
+            $updated = DB::table('lkhdetailworker')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->where('tenagakerjaid', $validated['tenagakerjaid'])
+                ->update([
                     'tenagakerjaurutan' => $validated['tenagakerjaurutan'],
                     'jammasuk' => $validated['jammulai'],
                     'jamselesai' => $validated['jamselesai'],
@@ -66,33 +77,52 @@ class PerhitunganUpahApiMobile extends Controller
                     'totalupah' => $wageData['totalupah'],
                     
                     'keterangan' => $validated['keterangan'] ?? 'Mobile upload',
-                    'createdat' => now(),
                     'updatedat' => now()
-                ]
-            );
-            
-            return response()->json([
-                'success' => 1,
-                'total_upah' => $wageData['totalupah'],
-                'jam_kerja' => $totalJamKerja
-            ]);
+                ]);
+
+            if ($updated) {
+                return response()->json([
+                    'success' => 1,
+                    'message' => 'Worker wage updated successfully',
+                    'data' => [
+                        'total_upah' => $wageData['totalupah'],
+                        'jam_kerja' => $totalJamKerja,
+                        'breakdown' => [
+                            'upah_harian' => $wageData['upahharian'],
+                            'upah_perjam' => $wageData['upahperjam'],
+                            'upah_lembur' => $wageData['upahlembur'],
+                            'upah_borongan' => $wageData['upahborongan'],
+                            'premi' => $wageData['premi']
+                        ]
+                    ]
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => 0,
+                    'error' => 'Failed to update worker wage',
+                    'message' => 'No changes were made to the record'
+                ], 400);
+            }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => 0,
-                'error' => 'Validation failed'
-            ]);
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
             
         } catch (\Exception $e) {
             \Log::error('Error in insertWorkerWage API', [
                 'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
             
             return response()->json([
                 'success' => 0,
-                'error' => 'Insert failed'
-            ]);
+                'error' => 'Update failed',
+                'message' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
         }
     }
     
