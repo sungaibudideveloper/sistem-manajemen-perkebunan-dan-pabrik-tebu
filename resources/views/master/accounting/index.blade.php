@@ -3,7 +3,7 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <div 
+  <div
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
@@ -63,7 +63,7 @@
             <div x-show="open" x-transition class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/accounting') }}/' + form.activitycodeOriginal + '/' + form.jurnalaccnoOriginal + '/' + form.jurnalacctypeOriginal 
+                      ? '{{ url('masterdata/accounting') }}/' + form.activitycodeOriginal + '/' + form.jurnalaccnoOriginal + '/' + form.jurnalacctypeOriginal
                       : '{{ url('masterdata/accounting') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -156,7 +156,7 @@
           <tbody>
             @foreach($accounting as $data)
               <tr class="hover:bg-gray-50">
-                <td class="py-2 px-4 border-b">{{ $data->activitycode }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->activitycode }} - {{ $data->activityname }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->jurnalaccno }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->jurnalacctype }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->description }}</td>
