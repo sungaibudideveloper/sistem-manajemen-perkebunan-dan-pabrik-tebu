@@ -50,8 +50,7 @@ class PerhitunganUpahApiMobile extends Controller
             if (!$existingRecord) {
                 return response()->json([
                     'status' => 0,
-                    'error' => 'Worker record not found for this LKH',
-                    'description' => 'Please ensure the worker is assigned to this LKH first'
+                    'description' => 'Error, Please ensure the worker is assigned to this LKH first'
                 ], 404);
             }
 
@@ -98,16 +97,14 @@ class PerhitunganUpahApiMobile extends Controller
             } else {
                 return response()->json([
                     'status' => 0,
-                    'error' => 'Failed to update worker wage',
-                    'description' => 'No changes were made to the record'
+                    'description' => 'Failed to update worker wage No changes were made to the record'
                 ], 400);
             }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 0,
-                'error' => 'Validation failed',
-                'details' => $e->errors()
+                'description' => $e->errors()
             ], 422);
             
         } catch (\Exception $e) {
@@ -119,8 +116,7 @@ class PerhitunganUpahApiMobile extends Controller
             
             return response()->json([
                 'status' => 0,
-                'error' => 'Update failed',
-                'description' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'description' => 'Update failed: ' . (config('app.debug') ? $e->getMessage() : 'Internal server error')
             ], 500);
         }
     }

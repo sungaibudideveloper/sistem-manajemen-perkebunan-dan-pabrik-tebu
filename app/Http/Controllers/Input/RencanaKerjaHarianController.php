@@ -314,8 +314,8 @@ class RencanaKerjaHarianController extends Controller
             $companycode = Session::get('companycode');
             $rkhno = $request->rkhno;
             
-            // ✅ NEW: Validate LKH completion before allowing status update
-            if ($request->status === 'Completed') { // ✅ CHANGED: Done -> Completed
+            // Validate LKH completion before allowing status update
+            if ($request->status === 'Completed') {
                 $progressStatus = $this->getRkhProgressStatus($rkhno, $companycode);
                 
                 if (!$progressStatus['can_complete']) {
@@ -326,14 +326,16 @@ class RencanaKerjaHarianController extends Controller
                 }
             }
             
+            $updateData = [
+                'status' => $request->status,
+                'updateby' => Auth::user()->userid,
+                'updatedat' => now()
+            ];
+            
             $updated = DB::table('rkhhdr')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $request->rkhno)
-                ->update([
-                    'status' => $request->status,
-                    'updateby' => Auth::user()->userid,
-                    'updatedat' => now()
-                ]);
+                ->update($updateData);
 
             if ($updated) {
                 return response()->json([
@@ -2215,7 +2217,10 @@ public function loadAbsenByDate(Request $request)
                 'app.idjabatanapproval1',
                 'app.idjabatanapproval2',
                 'app.idjabatanapproval3',
+                'r.approvalstatus', // NEW: Include approvalstatus
                 DB::raw('CASE 
+                    WHEN r.approvalstatus = "1" THEN "Approved"
+                    WHEN r.approvalstatus = "0" THEN "Rejected"
                     WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
                     WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting"
                     WHEN r.approval1flag = "0" THEN "Declined"
@@ -2223,9 +2228,6 @@ public function loadAbsenByDate(Request $request)
                     WHEN r.approval2flag = "0" THEN "Declined"
                     WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting"
                     WHEN r.approval3flag = "0" THEN "Declined"
-                    WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
-                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
-                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
                     ELSE "Waiting"
                 END as approval_status'),
                 DB::raw('CASE 
@@ -2450,6 +2452,14 @@ public function loadAbsenByDate(Request $request)
             'rows.*.helperid'        => 'nullable|string',
             'rows.*.material_group_id' => 'nullable|integer',
         ]);
+
+        $plantingErrors = $this->validatePlantingPlots($request->input('rows', []), Session::get('companycode'));
+    
+        if (!empty($plantingErrors)) {
+            throw ValidationException::withMessages([
+                'planting_validation' => $plantingErrors
+            ]);
+        }
     }
 
     /**
@@ -2961,7 +2971,6 @@ public function loadAbsenByDate(Request $request)
         }
 
         try {
-            // FIXED: Start transaction untuk entire approval process
             DB::beginTransaction();
 
             $rkh = DB::table('rkhhdr as r')
@@ -2979,7 +2988,6 @@ public function loadAbsenByDate(Request $request)
                 return ['success' => false, 'message' => 'RKH tidak ditemukan'];
             }
 
-            // Validate approval authority
             $validationResult = $this->validateApprovalAuthority($rkh, $currentUser, $level);
             if (!$validationResult['success']) {
                 DB::rollBack();
@@ -2992,28 +3000,43 @@ public function loadAbsenByDate(Request $request)
             $approvalDateField = "approval{$level}date";
             $approvalUserField = "approval{$level}userid";
             
-            DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update([
+            $updateData = [
                 $approvalField => $approvalValue,
                 $approvalDateField => now(),
                 $approvalUserField => $currentUser->userid,
                 'updateby' => $currentUser->userid,
                 'updatedat' => now()
-            ]);
+            ];
+
+            // NEW: Update approvalstatus based on action
+            if ($action === 'approve') {
+                // Check if this approval makes it fully approved
+                $tempRkh = clone $rkh;
+                $tempRkh->$approvalField = '1';
+                
+                if ($this->isRkhFullyApproved($tempRkh)) {
+                    $updateData['approvalstatus'] = '1';
+                } else {
+                    $updateData['approvalstatus'] = null; // Still in progress
+                }
+            } else {
+                // If rejected at any level
+                $updateData['approvalstatus'] = '0';
+            }
+
+            DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update($updateData);
 
             $responseMessage = 'RKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
 
-            // FIXED: Handle post-approval actions within same transaction
-            if ($action === 'approve') {
+            // Handle post-approval actions within same transaction
+            if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
                 $responseMessage = $this->handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode);
             }
 
-            // FIXED: Commit only if everything successful
             DB::commit();
-
             return ['success' => true, 'message' => $responseMessage];
 
         } catch (\Exception $e) {
-            // FIXED: Rollback on any error
             DB::rollBack();
             
             Log::error("Approval process failed for RKH {$rkhno}: " . $e->getMessage(), [
@@ -3059,7 +3082,6 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Handle post-approval actions within existing transaction
-     * FIXED: All failures are now HARD FAILURES - any error will rollback entire transaction
      */
     private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
     {
@@ -3074,7 +3096,6 @@ public function loadAbsenByDate(Request $request)
         $lkhGenerator = new LkhGeneratorService();
         $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
         
-        // HARD FAILURE: LKH generation must succeed
         if (!$lkhResult['success']) {
             \Log::error("LKH auto-generation failed", [
                 'rkhno' => $rkhno,
@@ -3085,7 +3106,23 @@ public function loadAbsenByDate(Request $request)
         
         $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
         
-        // STEP 2: Check if RKH needs material usage generation
+        // STEP 2: NEW - Handle Planting Activities (Create Batch)
+        if ($this->hasPlantingActivities($rkhno, $companycode)) {
+            try {
+                $createdBatches = $this->handlePlantingActivity($rkhno, $companycode);
+                if (!empty($createdBatches)) {
+                    $responseMessage .= '. Batch penanaman dibuat: ' . implode(', ', $createdBatches);
+                }
+            } catch (\Exception $e) {
+                \Log::error("Batch creation failed", [
+                    'rkhno' => $rkhno,
+                    'error' => $e->getMessage()
+                ]);
+                throw new \Exception('Batch creation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+            }
+        }
+        
+        // STEP 3: Check if RKH needs material usage generation
         $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
         
         if (!$needsMaterialUsage) {
@@ -3093,11 +3130,10 @@ public function loadAbsenByDate(Request $request)
             return $responseMessage;
         }
 
-        // STEP 3: Generate Material Usage (CRITICAL - HARD FAILURE)
+        // STEP 4: Generate Material Usage (CRITICAL - HARD FAILURE)
         $materialUsageGenerator = new MaterialUsageGeneratorService();
         $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
         
-        // HARD FAILURE: Material usage generation must also succeed
         if (!$materialResult['success']) {
             \Log::error("Material usage auto-generation failed", [
                 'rkhno' => $rkhno,
@@ -3106,7 +3142,6 @@ public function loadAbsenByDate(Request $request)
             throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message'] . '. Approval dibatalkan untuk menjaga konsistensi data.');
         }
         
-        // Only add success message if actually created items
         if (($materialResult['total_items'] ?? 0) > 0) {
             $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items created)';
         } else {
@@ -3853,6 +3888,140 @@ public function loadAbsenByDate(Request $request)
         }
         
         return $totalMinutes;
+    }
+
+
+
+
+
+
+    /*     * Section: Planting Activity Batch Creation
+     */
+
+    /**
+     * Handle batch creation for planting activities
+     * NEW METHOD: Add to bottom of controller class
+     */
+    private function handlePlantingActivity($rkhno, $companycode)
+    {
+        $plantingPlots = DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('activitycode', 'IV.5.1')
+            ->get();
+        
+        if ($plantingPlots->isEmpty()) {
+            return [];
+        }
+        
+        $createdBatches = [];
+        
+        foreach ($plantingPlots as $plotData) {
+            try {
+                // Generate batch number
+                $batchNo = $this->generateBatchNo($companycode, $plotData->plot);
+                
+                // Create batch record
+                DB::table('batch')->insert([
+                    'batchno' => $batchNo,
+                    'companycode' => $companycode,
+                    'plot' => $plotData->plot,
+                    'batchdate' => $plotData->rkhdate,
+                    'batcharea' => $plotData->luasarea,
+                    'plantingrkhno' => $rkhno,
+                    'inputby' => Auth::user()->userid,
+                    'createdat' => now()
+                ]);
+                
+                // Update masterlist
+                DB::table('masterlist')->updateOrInsert(
+                    ['companycode' => $companycode, 'plot' => $plotData->plot],
+                    [
+                        'batchno' => $batchNo,
+                        'batchdate' => $plotData->rkhdate,
+                        'batcharea' => $plotData->luasarea,
+                        'kodestatus' => 'PC',
+                        'cyclecount' => DB::raw('COALESCE(cyclecount, 0) + 1'),
+                        'isactive' => 1
+                    ]
+                );
+                
+                $createdBatches[] = $batchNo;
+                
+                \Log::info("Batch created successfully", [
+                    'batchno' => $batchNo,
+                    'plot' => $plotData->plot,
+                    'rkhno' => $rkhno
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error("Failed to create batch for plot {$plotData->plot}: " . $e->getMessage());
+                throw $e;
+            }
+        }
+        
+        return $createdBatches;
+    }
+
+    /**
+     * Generate unique batch number
+     * NEW METHOD: Add to bottom of controller class
+     */
+    private function generateBatchNo($companycode, $plot)
+    {
+        $date = date('dm');
+        $year = date('y');
+        
+        // Get sequence for today
+        $sequence = DB::table('batch')
+            ->where('companycode', $companycode)
+            ->whereDate('batchdate', date('Y-m-d'))
+            ->count() + 1;
+        
+        return "BATCH{$date}{$plot}{$year}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Check if RKH has planting activities
+     * NEW METHOD: Add to bottom of controller class
+     */
+    private function hasPlantingActivities($rkhno, $companycode)
+    {
+        return DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('activitycode', 'IV.5.1')
+            ->exists();
+    }
+
+    /**
+     * NEW: Validate plots for planting activities
+     * Location: Add to bottom of controller class
+     */
+    private function validatePlantingPlots($rows, $companycode)
+    {
+        $errors = [];
+        
+        foreach ($rows as $index => $row) {
+            if (($row['nama'] ?? '') === 'IV.5.1') {
+                $plot = $row['plot'] ?? '';
+                
+                if ($plot) {
+                    // Check if plot already has active batch
+                    $activeBatch = DB::table('batch')
+                        ->where('companycode', $companycode)
+                        ->where('plot', $plot)
+                        ->where('status', 'ACTIVE')
+                        ->exists();
+                    
+                    if ($activeBatch) {
+                        $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} masih memiliki batch aktif. Tidak dapat ditanam ulang.";
+                    }
+                }
+            }
+        }
+        
+        return $errors;
     }
 }
 
