@@ -32,7 +32,7 @@
               @empty
                 <tr>
                   <td colspan="5" class="py-4 text-center text-gray-500">
-                    Tidak ada RKH yang selesai
+                    Tidak ada RKH yang sudah selesai
                   </td>
                 </tr>
               @endforelse
