@@ -19,7 +19,7 @@
             <tbody>
               @forelse($data as $item)
                 <tr>
-                  <td class="py-2 px-4" ><a href="#" onclick="location.href='{{ url('input/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
+                  <td class="py-2 px-4" ><a href="#" onclick="location.href='{{ url('input/pias/detail?rkhno='.$u->rkhno) }}'" class="text-blue-600 hover:underline">
                     {{$item->rkhno}}</a></td>
                   <td class="py-2 px-4">{{ date('d M Y', strtotime($item->created_at)) }}</td>
                   <td class="py-2 px-4">{{ $item->mandorname ?? 'N/A' }}</td>
