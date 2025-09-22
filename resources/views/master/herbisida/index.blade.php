@@ -8,10 +8,20 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      form: { companycode:'TBL1', itemcode: '', itemname: '', measure: '', dosageperha: '' },
+      form: { 
+        companycode:'{{ session('companycode') }}', 
+        itemcode: '', 
+        itemname: '', 
+        measure: 'L'
+      },
       resetForm() {
         this.mode = 'create';
-        this.form = { companycode:'TBL1', itemcode: '', itemname: '', measure: '', dosageperha: '' };
+        this.form = { 
+          companycode:'{{ session('companycode') }}', 
+          itemcode: '', 
+          itemname: '', 
+          measure: 'L'
+        };
         this.open = true;
       }
     }"
@@ -88,15 +98,25 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Herbisida' : 'Create Herbisida'">
                   </h3>
                   <div class="mt-4 space-y-4">
+                    {{-- Company Code - Hidden untuk create, readonly untuk edit --}}
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
-                      <select name="companycode" id="companycode" x-model="form.companycode" x-init="form.companycode = '{{ old('companycode') }}'"
-                        class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="TBL1">TBL1</option>
-                        <option value="TBL2">TBL2</option>
-                        <option value="TBL3">TBL3</option>
-                      </select>
+                      <template x-if="mode === 'create'">
+                        <div class="mt-1 flex items-center">
+                          <input type="hidden" name="companycode" x-model="form.companycode">
+                          <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700 font-medium"
+                               x-text="form.companycode"></div>
+                        </div>
+                      </template>
+                      <template x-if="mode === 'edit'">
+                        <div class="mt-1">
+                          <input type="hidden" name="companycode" x-model="form.companycode">
+                          <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700 font-medium"
+                               x-text="form.companycode"></div>
+                        </div>
+                      </template>
                     </div>
+
                     <div>
                       <label for="itemcode" class="block text-sm font-medium text-gray-700">Kode Item</label>
                       <input type="text" name="itemcode" id="itemcode" x-model="form.itemcode" 
@@ -115,22 +135,14 @@
                             maxlength="50" required>
                     </div>
 
-                    <div class="grid grid-cols-5 gap-4">
-                      <div class="col-span-2">
-                        <label for="dosageperha" class="block text-sm font-medium text-gray-700">Total Dosis</label>
-                        <input type="number" step="0.01" name="dosageperha" id="dosageperha" x-model="form.dosageperha" x-init="form.dosageperha = '{{ old('dosageperha') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              min="0" max="9999.99" required>
-                      </div>
-                      <div class="col-span-2">
-                        <label for="measure" class="block text-sm font-medium text-gray-700">Satuan</label>
-                        <select name="measure" id="measure" x-model="form.measure" x-init="form.measure = '{{ old('measure') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                          <option value="L">L/ha</option>
-                          <option value="gr">gr/ha</option>
-                          <option value="kg">kg/ha</option>
-                        </select>
-                      </div>
+                    <div>
+                      <label for="measure" class="block text-sm font-medium text-gray-700">Satuan</label>
+                      <select name="measure" id="measure" x-model="form.measure" x-init="form.measure = '{{ old('measure') }}'"
+                              class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="L">L</option>
+                        <option value="gr">gr</option>
+                        <option value="kg">kg</option>
+                      </select>
                     </div>
 
                   </div>
@@ -160,11 +172,9 @@
                 <thead>
                     <tr class="bg-gray-100 text-gray-700">
                         <th class="py-2 px-4 border-b">No.</th>
-                        <th class="py-2 px-4 border-b">Kode Company</th>
                         <th class="py-2 px-4 border-b">Kode Item</th>
                         <th class="py-2 px-4 border-b">Nama Item</th>
                         <th class="py-2 px-4 border-b">Satuan</th>
-                        <th class="py-2 px-4 border-b">Dosis per Hektar</th>
                         <th class="py-2 px-4 border-b">Aksi</th>
                     </tr>
                 </thead>
@@ -172,11 +182,9 @@
                     @foreach ($herbisida as $index => $data)
                         <tr class="hover:bg-gray-50">
                         <td class="py-2 px-4 border-b">{{ $herbisida->firstItem() + $index }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->itemcode }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->itemname }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->measure }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->dosageperha }}</td>
                             {{-- Edit Button (Modal)--}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
@@ -190,7 +198,6 @@
                                       form.itemcode = '{{ $data->itemcode }}';
                                       form.itemname = '{{ $data->itemname }}';
                                       form.measure = '{{ $data->measure }}';
-                                      form.dosageperha = {{ $data->dosageperha ?? 0}};
                                       open = true
                                     "
                                     class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm" {{-- Pake class group biar icon bisa ganti pas di hover --}}
@@ -256,7 +263,7 @@
     {{-- Pagination --}}
     <div class="mx-4 my-1">
         @if ($herbisida->hasPages())
-            {{ $herbisida->appends(['perPage' => $herbisida->perPage()])->links() }}
+            {{ $herbisida->appends(request()->query())->links() }}
         @else
             <div class="flex items-center justify-between">
                 <p class="text-sm text-gray-700">

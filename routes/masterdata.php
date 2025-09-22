@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MasterData\ActivityController;
 use App\Http\Controllers\MasterData\BlokController;
+use App\Http\Controllers\MasterData\BatchController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MappingController;
 use App\Http\Controllers\MasterData\MasterListController;
@@ -183,9 +184,22 @@ Route::delete(
     ->name('masterdata.accounting.destroy');
 
 
-//Route::group(['middleware' => ['auth','permission:MasterList']], function() {
-Route::get('masterdata/master-list', [MasterListController::class, 'index'])->name('masterdata.master-list.index');
-//});
+// Master List  
+Route::group(['middleware' => ['auth', 'permission:MasterList']], function () {
+    Route::get('masterdata/master-list', [MasterListController::class, 'index'])->name('masterdata.master-list.index');
+    Route::post('masterdata/master-list', [MasterListController::class, 'store'])->name('masterdata.master-list.store');
+});
+Route::match(['put', 'patch'], 'masterdata/master-list/{companycode}/{plot}', [MasterListController::class, 'update'])->name('masterdata.master-list.update')->middleware(['auth', 'permission:Edit MasterList']);
+Route::delete('masterdata/master-list/{companycode}/{plot}', [MasterListController::class, 'destroy'])->name('masterdata.master-list.destroy')->middleware(['auth', 'permission:Hapus MasterList']);
+
+
+// Batch
+Route::group(['middleware' => ['auth', 'permission:Batch']], function () {
+    Route::get('masterdata/batch', [BatchController::class, 'index'])->name('masterdata.batch.index');
+    Route::post('masterdata/batch', [BatchController::class, 'store'])->name('masterdata.batch.store');
+});
+Route::match(['put', 'patch'], 'masterdata/batch/{batchno}', [BatchController::class, 'update'])->name('masterdata.batch.update')->middleware(['auth', 'permission:Edit Batch']);
+Route::delete('masterdata/batch/{batchno}', [BatchController::class, 'destroy'])->name('masterdata.batch.destroy')->middleware(['auth', 'permission:Hapus Batch']);
 
 
 // Mandor Routes
