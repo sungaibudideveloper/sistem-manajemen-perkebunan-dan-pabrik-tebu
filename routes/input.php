@@ -131,8 +131,9 @@ Route::middleware('auth')->group(function () {
     Route::post('input/gudang/submit', [GudangController::class, 'submit'])->name('input.gudang.submit')->middleware('permission:Menu Gudang');
     Route::any('input/gudang/retur', [GudangController::class, 'retur'])->name('input.gudang.retur')->middleware('permission:Menu Gudang');
 
-    Route::get('input/pias', [PiasController::class,'home'])->name('home')->middleware('permission:Menu Pias');
-    Route::get('input/pias/detail', [PiasController::class,'detail'])->name('detail')->middleware('permission:Menu Pias');
+    Route::get('input/pias', [PiasController::class,'home'])->name('input.pias.home')->middleware('permission:Menu Pias');
+    Route::get('input/pias/detail', [PiasController::class,'detail'])->name('input.pias.detail')->middleware('permission:Menu Pias');
+    Route::get('input/pias/submit', [PiasController::class,'submit'])->name('input.pias.submit')->middleware('permission:Menu Pias');
 });
 
 

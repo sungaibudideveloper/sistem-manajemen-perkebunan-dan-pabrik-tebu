@@ -16,6 +16,8 @@ use App\Models\HerbisidaDosage;
 use App\Models\Herbisida;
 use App\Models\Rkhhdr;
 use App\Models\Rkhlst;
+use App\Models\piashdr;
+use App\Models\piaslst;
 
 class PiasController extends Controller
 {
@@ -39,7 +41,7 @@ class PiasController extends Controller
             'rkhhdr.*', 
             'u.name as mandor_name'
         )
-        ->paginate(15); 
+        ->paginate(15);
         return view('input.pias.home')->with([
             'title'       => 'Pias',
             'data'        => $data
@@ -72,6 +74,7 @@ class PiasController extends Controller
             'lkhdetailplot.plot',
             'lkhdetailplot.luasrkh',
             'masterlist.tanggalulangtahun',
+            'masterlist.kodevarietas',
             'masterlist.kodestatus',
             'masterlist.batchno'
         )
@@ -79,28 +82,19 @@ class PiasController extends Controller
         
         // dd($data);
 
-        return view('input.pias.home')->with([
+        return view('input.pias.detail')->with([
             'title'         => 'Pias',
             'data'        => $data
         ]);
     }
 
-    function hitungPiasBulanan($plot_luas) {
-        $pias_per_bulan = [
-            1 => ['TJ' => 70 * $plot_luas, 'TC' => 30 * $plot_luas],
-            2 => ['TJ' => 70 * $plot_luas, 'TC' => 30 * $plot_luas],
-            3 => ['TJ' => 69 * $plot_luas, 'TC' => 40 * $plot_luas],
-            4 => ['TJ' => 50 * $plot_luas, 'TC' => 50 * $plot_luas],
-            5 => ['TJ' => 40 * $plot_luas, 'TC' => 60 * $plot_luas],
-            6 => ['TJ' => 30 * $plot_luas, 'TC' => 70 * $plot_luas],
-            7 => ['TJ' => 30 * $plot_luas, 'TC' => 70 * $plot_luas],
-            8 => ['TJ' => 30 * $plot_luas, 'TC' => 70 * $plot_luas],
-            9 => ['TJ' => 30 * $plot_luas, 'TC' => 70 * $plot_luas],
-            10 => ['TJ' => 30 * $plot_luas, 'TC' => 70 * $plot_luas]
-        ];
-        
-        return $pias_per_bulan;
+    public function submit(Request $request)
+    {
+        $piashdr = new piashdr;
+        $piaslst = new piaslst;
+
     }
+    
 
 
 }
