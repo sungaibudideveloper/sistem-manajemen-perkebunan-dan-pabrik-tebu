@@ -28,25 +28,24 @@
         open: false,
         mode: 'create',
         editUrl: '',
+        showNotification: false,
+        notificationMessage: '',
+        notificationType: 'success',
         form: {
-            id: '',
-            name: '',
-            nik: '',
-            mandor: '',
-            gender: 'L',
-            jenis: '1',
+            nokendaraan: '',
+            operator: '',
+            jenis: '',
+            hourmeter: '',
             isactive: 1
         },
         resetForm() {
             this.mode = 'create';
             this.editUrl = '';
             this.form = {
-                id: '',
-                name: '',
-                nik: '',
-                mandor: '',
-                gender: 'L',
-                jenis: '1',
+                nokendaraan: '',
+                operator: '',
+                jenis: '',
+                hourmeter: '',
                 isactive: 1
             };
             this.open = true;
@@ -55,17 +54,90 @@
             this.mode = 'edit';
             this.editUrl = url;
             this.form = {
-                id: data.id,
-                name: data.name,
-                nik: data.nik,
-                mandor: data.mandor,
-                gender: data.gender,
+                nokendaraan: data.nokendaraan,
+                operator: data.operator,
                 jenis: data.jenis,
+                hourmeter: data.hourmeter,
                 isactive: data.isactive
             };
             this.open = true;
+        },
+        showAlert(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            setTimeout(() => { this.showNotification = false; }, 5000);
+        },
+        async submitForm() {
+            const form = document.getElementById('kendaraan-form');
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch(this.mode === 'create' ? '{{ route('masterdata.kendaraan.handle') }}' : this.editUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showAlert(data.message, 'success');
+                    this.open = false;
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    this.showAlert(data.message || 'Terjadi kesalahan', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.showAlert('Terjadi kesalahan saat menyimpan data', 'error');
+            }
+        },
+        async deleteRecord(companycode, nokendaraan) {
+            if (!confirm('Yakin ingin menonaktifkan kendaraan ' + nokendaraan + '?')) {
+                return;
+            }
+            
+            try {
+                const deleteRoute = '{{ route('masterdata.kendaraan.destroy', ['companycode' => '__companycode__', 'nokendaraan' => '__nokendaraan__']) }}'
+                    .replace('__companycode__', companycode)
+                    .replace('__nokendaraan__', nokendaraan);
+                    
+                const response = await fetch(deleteRoute, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ _method: 'DELETE' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showAlert(data.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    this.showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.showAlert('Terjadi kesalahan saat menghapus data', 'error');
+            }
         }
     }" class="mx-auto py-4 bg-white rounded-md shadow-md">
+
+        <!-- Dynamic Notification -->
+        <div x-show="showNotification" x-transition
+            :class="notificationType === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'"
+            class="mx-4 mb-4 border px-4 py-3 rounded relative">
+            <strong class="font-bold" x-text="notificationType === 'success' ? 'Berhasil!' : 'Error!'"></strong>
+            <span class="block sm:inline" x-text="notificationMessage"></span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-opacity-20 rounded"
+                @click="showNotification = false">&times;</span>
+        </div>
 
         <!-- Header Controls -->
         <div class="px-4 py-4 border-b border-gray-200">
@@ -78,7 +150,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span class="hidden sm:inline">Tambah Tenaga Kerja</span>
+                        <span class="hidden sm:inline">Tambah Kendaraan</span>
                         <span class="sm:hidden">Tambah</span>
                     </button>
                 </div>
@@ -91,11 +163,11 @@
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
                         <input type="text" name="search" id="search"
                             value="{{ request('search') }}"
-                            placeholder="Nama, NIK, ID, Mandor..."
+                            placeholder="No. Kendaraan, Jenis, Operator..."
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('masterdata.tenagakerja.index') }}" 
+                            <a href="{{ route('masterdata.kendaraan.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -108,7 +180,8 @@
                     </form>
 
                     <!-- Per Page Form -->
-                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                    <form method="POST" action="{{ url()->current() }}" class="flex items-center gap-2">
+                        @csrf
                         <label for="perPage" class="text-xs font-medium text-gray-700 whitespace-nowrap">Per halaman:</label>
                         <select name="perPage" id="perPage" onchange="this.form.submit()"
                             class="text-xs w-20 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 py-2">
@@ -131,12 +204,10 @@
                 <table class="min-w-full bg-white text-sm">
                     <thead>
                         <tr class="bg-gray-50">
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIK</th>
-                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mandor</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Kendaraan</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator</th>
                             <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th class="py-3 px-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hour Meter</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                         </tr>
@@ -144,21 +215,27 @@
                     <tbody class="divide-y divide-gray-200">
                         @forelse ($result as $item)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="py-3 px-3 text-sm font-medium text-gray-900">{{ $item->tenagakerjaid }}</td>
-                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->nama }}</td>
-                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->nik ?: '-' }}</td>
-                            <td class="py-3 px-3 text-center text-sm text-gray-700">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $item->gender == 'L' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800' }}">
-                                    {{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}
-                                </span>
-                            </td>
+                            <td class="py-3 px-3 text-sm font-medium text-gray-900">{{ $item->nokendaraan }}</td>
                             <td class="py-3 px-3 text-sm text-gray-700">
-                                <div class="flex flex-col">
-                                    <span class="font-medium">{{ $item->mandoruserid }}</span>
-                                    <span class="text-xs text-gray-500">{{ $item->mandor_nama ?: 'Tidak ada data' }}</span>
-                                </div>
+                                @if($item->idtenagakerja)
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">{{ $item->idtenagakerja }}</span>
+                                        <span class="text-xs text-gray-500">
+                                            {{ $item->operator_nama ?: 'Nama tidak tersedia' }}
+                                            @if($item->operator_nik)
+                                                ({{ $item->operator_nik }})
+                                            @endif
+                                        </span>
+                                        @if($item->operator_isactive == 0)
+                                            <span class="text-xs text-red-500">Operator Nonaktif</span>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 italic">Belum ada operator</span>
+                                @endif
                             </td>
-                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->jenis_nama ?: 'Unknown' }}</td>
+                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->jenis ?: '-' }}</td>
+                            <td class="py-3 px-3 text-right text-sm text-gray-700 font-mono">{{ number_format($item->hourmeter, 2) }}</td>
                             <td class="py-3 px-3 text-center text-sm">
                                 @if($item->isactive == 1)
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -174,14 +251,12 @@
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
                                     <button @click='editForm({
-                                            id: "{{ $item->tenagakerjaid }}",
-                                            name: "{{ $item->nama }}",
-                                            nik: "{{ $item->nik }}",
-                                            mandor: "{{ $item->mandoruserid }}",
-                                            gender: "{{ $item->gender }}",
-                                            jenis: "{{ $item->jenistenagakerja }}",
+                                            nokendaraan: "{{ $item->nokendaraan }}",
+                                            operator: "{{ $item->idtenagakerja }}",
+                                            jenis: "{{ $item->jenis }}",
+                                            hourmeter: "{{ $item->hourmeter }}",
                                             isactive: {{ $item->isactive ?? 0 }}
-                                        }, "{{ route('masterdata.tenagakerja.update', [$item->companycode, $item->tenagakerjaid]) }}")'
+                                        }, "{{ route('masterdata.kendaraan.update', [$item->companycode, $item->nokendaraan]) }}")'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,30 +265,25 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('masterdata.tenagakerja.destroy', [$item->companycode, $item->tenagakerjaid]) }}" method="POST"
-                                        onsubmit="return confirm('Yakin ingin menonaktifkan {{ $item->nama }}?');" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
-                                            title="Nonaktifkan">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                            </svg>
-                                        </button>
-                                    </form>
+                                    <button @click="deleteRecord('{{ $item->companycode }}', '{{ $item->nokendaraan }}')"
+                                        class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
+                                        title="Nonaktifkan">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="py-8 px-4 text-center text-gray-500">
+                            <td colspan="6" class="py-8 px-4 text-center text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
-                                    <p class="text-lg font-medium">Tidak ada data tenaga kerja</p>
-                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada tenaga kerja yang terdaftar' }}</p>
+                                    <p class="text-lg font-medium">Tidak ada data kendaraan</p>
+                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada kendaraan yang terdaftar' }}</p>
                                 </div>
                             </td>
                         </tr>
@@ -241,7 +311,7 @@
                 
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Tenaga Kerja' : 'Edit Tenaga Kerja'"></h3>
+                    <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Kendaraan' : 'Edit Kendaraan'"></h3>
                     <button @click="open = false"
                         class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,77 +322,74 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('masterdata.tenagakerja.store') }}' : editUrl" method="POST">
+                    <form id="kendaraan-form" @submit.prevent="submitForm()">
                         @csrf
                         <template x-if="mode === 'edit'">
-                            <input type="hidden" name="_method" value="PATCH">
+                            <input type="hidden" name="_method" value="PUT">
                         </template>
 
-                        <!-- ID (Edit only) -->
-                        <template x-if="mode === 'edit'">
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">ID Tenaga Kerja</label>
-                                <input type="text" x-model="form.id" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed" 
-                                    readonly>
-                            </div>
-                        </template>
-
-                        <!-- Nama -->
+                        <!-- No. Kendaraan -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama <span class="text-red-500">*</span></label>
-                            <input type="text" name="name" x-model="form.name"
-                                placeholder="Nama lengkap tenaga kerja"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required maxlength="100">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">No. Kendaraan <span class="text-red-500">*</span></label>
+                            <input type="text" name="nokendaraan" x-model="form.nokendaraan"
+                                placeholder="Contoh: TRK001, EXC002"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+                                required maxlength="10"
+                                @input="form.nokendaraan = $el.value.toUpperCase()">
                         </div>
 
-                        <!-- NIK -->
+                        <!-- Operator -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">NIK</label>
-                            <input type="text" name="nik" x-model="form.nik"
-                                placeholder="Nomor Induk Kependudukan"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                maxlength="16">
-                        </div>
-
-                        <!-- Mandor -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Mandor <span class="text-red-500">*</span></label>
-                            <select name="mandor" x-model="form.mandor" required
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Operator</label>
+                            <select name="operator" x-model="form.operator"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="">-- Pilih Mandor --</option>
-                                @foreach($mandor as $m)
-                                <option value="{{ $m->userid }}">{{ $m->userid }} - {{ $m->name }}</option>
-                                @endforeach
+                                <option value="">-- Pilih Operator --</option>
+                                <!-- Create Mode: Only available operators -->
+                                @if(count($availableOperators) > 0)
+                                    <template x-if="mode === 'create'">
+                                        <optgroup label="Operator Tersedia">
+                                            @foreach($availableOperators as $op)
+                                            <option value="{{ $op->tenagakerjaid }}">{{ $op->tenagakerjaid }} - {{ $op->nama }}@if($op->nik) ({{ $op->nik }})@endif</option>
+                                            @endforeach
+                                        </optgroup>
+                                    </template>
+                                @else
+                                    <template x-if="mode === 'create'">
+                                        <option disabled>Tidak ada operator yang tersedia</option>
+                                    </template>
+                                @endif
+                                
+                                <!-- Edit Mode: All operators -->
+                                <template x-if="mode === 'edit'">
+                                    <optgroup label="Semua Operator">
+                                        @foreach($allOperators as $op)
+                                        <option value="{{ $op->tenagakerjaid }}">{{ $op->tenagakerjaid }} - {{ $op->nama }}@if($op->nik) ({{ $op->nik }})@endif</option>
+                                        @endforeach
+                                    </optgroup>
+                                </template>
                             </select>
+                            <p class="mt-1 text-xs text-gray-500">
+                                <span x-show="mode === 'create'">Hanya operator yang belum memiliki kendaraan</span>
+                                <span x-show="mode === 'edit'">Semua operator aktif (jenistenagakerja = 3)</span>
+                            </p>
                         </div>
 
-                        <!-- Gender -->
+                        <!-- Jenis -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Gender <span class="text-red-500">*</span></label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center">
-                                    <input type="radio" name="gender" value="L" x-model="form.gender" class="mr-2">
-                                    <span>Laki-laki</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="gender" value="P" x-model="form.gender" class="mr-2">
-                                    <span>Perempuan</span>
-                                </label>
-                            </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Kendaraan <span class="text-red-500">*</span></label>
+                            <input type="text" name="jenis" x-model="form.jenis"
+                                placeholder="Contoh: Truk, Excavator, Bulldozer"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                required maxlength="50">
                         </div>
 
-                        <!-- Jenis Tenaga Kerja -->
+                        <!-- Hour Meter -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Tenaga Kerja <span class="text-red-500">*</span></label>
-                            <select name="jenis" x-model="form.jenis" required
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hour Meter</label>
+                            <input type="number" name="hourmeter" x-model="form.hourmeter"
+                                placeholder="0.00" min="0" max="999999.99" step="0.01"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="">-- Pilih Jenis --</option>
-                                @foreach($jenistenagakerja as $jenis)
-                                <option value="{{ $jenis->idjenistenagakerja }}">{{ $jenis->nama }}</option>
-                                @endforeach
-                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Opsional, default 0 jika kosong</p>
                         </div>
 
                         <!-- Status Active (Edit only) -->

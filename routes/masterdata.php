@@ -22,6 +22,7 @@ use App\Http\Controllers\MasterData\Aplikasi\MenuController;
 use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
 use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 use App\Http\Controllers\MasterData\UpahController;
+use App\Http\Controllers\MasterData\KendaraanController;
 
 
 
@@ -251,3 +252,17 @@ Route::put('masterdata/upah/{id}', [UpahController::class, 'update'])
 Route::delete('masterdata/upah/{id}', [UpahController::class, 'destroy'])
     ->middleware(['auth', 'permission:Hapus Upah'])
     ->name('masterdata.upah.destroy');
+
+
+
+// Kendaraan Routes
+Route::group(['middleware' => ['auth', 'permission:Kendaraan']], function () {
+    Route::get('masterdata/kendaraan', [KendaraanController::class, 'index'])->name('masterdata.kendaraan.index');
+    Route::post('masterdata/kendaraan', [KendaraanController::class, 'handle'])->name('masterdata.kendaraan.handle');
+});
+Route::put('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'update'])
+    ->middleware(['auth', 'permission:Edit Kendaraan'])
+    ->name('masterdata.kendaraan.update');
+Route::delete('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'destroy'])
+    ->middleware(['auth', 'permission:Hapus Kendaraan'])
+    ->name('masterdata.kendaraan.destroy');
