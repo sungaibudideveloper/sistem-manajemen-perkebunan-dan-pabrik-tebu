@@ -1,330 +1,361 @@
 <x-layout>
-  <x-slot:title>{{ $title }}</x-slot:title>
-  <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
-  <x-slot:nav>{{ $nav }}</x-slot:nav>
+    <x-slot:title>{{ $title }}</x-slot:title>
+    <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
+    <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <div
-    x-data="{
-      open: @json($errors->any()),
-      mode: @if( old('mandor') ) 'edit' @else 'create' @endif,
-      form: { companycode: '', id: null, name: '', gender: 'L', jenis:1 },
-      resetForm() {
-        this.mode = 'create';
-        this.form = { companycode: '', id: null, name: '', gender: 'L', nik: '', jenis:1 };
-        this.open = true;
-      }
-    }"
-    class="mx-auto py-1 bg-white rounded-md shadow-md"
-  >
-
-    <div class="flex items-center justify-between px-4 py-2">
-      {{-- Create Button --}}
-      {{-- @if(auth()->user() && in_array('Create Tenaga Kerja', json_decode(auth()->user()->permissions ?? '[]'))) --}}
-        <button @click="resetForm()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5" />
-          </svg>
-          New Data
-        </button>
-      {{-- @endif --}}
-
-      {{-- Search Form --}}
-      <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
-        <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
-        <input
-          type="text"
-          name="search"
-          id="search"
-          value="{{ request('search') }}"
-          class="text-xs mt-1 block w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          onkeydown="if(event.key==='Enter') this.form.submit()"
-        />
-      </form>
-
-      {{-- Items per page --}}
-      <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
-        <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
-        <select
-          name="perPage"
-          id="perPage"
-          onchange="this.form.submit()"
-          class="text-xs mt-1 block w-20 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="10" {{ (int)request('perPage', $perPage) === 10 ? 'selected' : '' }}>10</option>
-          <option value="20" {{ (int)request('perPage', $perPage) === 20 ? 'selected' : '' }}>20</option>
-          <option value="50" {{ (int)request('perPage', $perPage) === 50 ? 'selected' : '' }}>50</option>
-        </select>
-      </form>
-
-      {{-- Modal Form --}}
-
-      <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div x-show="open" x-transition.opacity class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
-        <div class="fixed inset-0 z-10 overflow-y-auto">
-          <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div
-              x-show="open"
-              x-transition:enter="ease-out duration-300"
-              x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-              x-transition:leave="ease-in duration-200"
-              x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-              x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg"
-            >
-            <button
-              @click="open = false"
-              type="button"
-              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors"
-            >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-              <form method="POST"
-                    :action="mode === 'edit'
-                      ? '{{ url('masterdata/tenagakerja') }}/{{$companycode}}/' + form.id
-                      : '{{ url('masterdata/tenagakerja') }}'"
-                    class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
-                @csrf
-                <template x-if="mode === 'edit'">
-                  <input type="hidden" name="_method" value="PATCH">
-                </template>
-
-                <div class="text-center sm:text-left">
-                  <h3
-                    class="text-lg font-medium text-gray-900"
-                    id="modal-title"
-                    x-text="mode === 'edit' ? 'Edit Tenaga Kerja' : 'Create Tenaga Kerja'"
-                  ></h3>
-                  @include('errorfile')
-                  <div class="mt-4 space-y-4">
-                  <template x-if="mode === 'edit'">
-                    <div>
-                      <label for="id" class="block text-sm font-medium text-gray-700">ID</label>
-                      <input
-                        type="text"
-                        name="id"
-                        id="id"
-                        x-model="form.id"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled"
-                        required
-                        value="{{ old('id') }}"
-                        readonly
-                      >
-                      @error('id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
-                  </template>
-                    <div x-data="{ selectedMandor: '' }" style="max-width: 400px;">
-                      <label for="mandor" style="display: block; margin-bottom: 10px;">Pilih Mandor :</label>
-                      <select name="mandor" id="mandor" x-model="selectedMandor" style="padding: 8px; margin-bottom: 10px; width: 300px;">
-                        @foreach( $mandor as $data )
-                        <option value="{{ $data->userid }}"
-                          @if( old('mandor') )
-                            @if( $data->userid == old('mandor') ) selected @endif
-                          @endif >{{ $data->userid }} - {{ $data->name }}</option>
-                        @endforeach
-                      </select>
-                    </div>
-                    <div>
-                      <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
-                      <input
-                        type="text"
-                        name="nik"
-                        id="nik"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        maxlength="50"
-                        required
-                        x-model="form.nik"
-                        x-init="form.nik = '{{ old('nik') }}'"
-                      >
-                      @error('name')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
-                    <div>
-                      <label for="name" class="block text-sm font-medium text-gray-700">Nama</label>
-                      <input
-                        type="text"
-                        name="name"
-                        id="name"
-                        x-model="form.name"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        maxlength="50"
-                        required
-                        x-init="form.name = '{{ old('name') }}'"
-                      >
-                      @error('name')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
-                    <div style="display: flex; gap: 20px; max-width: 600px;">
-                      <div x-data="{ form.gender: 'L' }" style="max-width: 150px;">
-                        <label for="gender" style="display: block; margin-bottom: 10px;">Pilih Gender :</label>
-                        <select id="gender" name="gender" x-model="form.gender" style="padding: 8px; margin-bottom: 10px; width: 150px;">
-                          <option value="L">Laki - Laki</option>
-                          <option value="P">Perempuan</option>
-                        </select>
-                      </div>
-                      <div x-data="{ selectedJenis: '1' }" style="max-width: 400px;">
-                        <label for="jenis" style="display: block; margin-bottom: 10px;">Jenis :</label>
-                        <select id="jenis" name="jenis" x-model="selectedJenis" style="padding: 8px; margin-bottom: 10px; width: 200px;">
-                          <option value="1">Tenaga Kerja Harian</option>
-                          <option value="2">Borongan</option>
-                          <option value="3">Operator</option>
-                          <option value="4">Helper</option>
-                        </select>
-                      </div>
-                    </div>
-                    <template x-if="mode === 'edit'">
-                      <div>
-                        <label for="id" class="block text-sm font-medium text-gray-700">Active</label>
-                        <input
-                          type="checkbox"
-                          name="isactive"
-                          id="isactive"
-                          :checked="form.isactive == 1"
-                          class="mt-1  border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled"
-                          value="1"
-                        >
-                        @error('id')
-                          <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                      </div>
-                    </template>
-                  </div>
-                </div>
-
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                  <button
-                    type="submit"
-                    class="inline-flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-white text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto"
-                    x-text="mode === 'edit' ? 'Update' : 'Create'"
-                  >
-                    Save
-                  </button>
-                  <button
-                    @click.prevent="open = false"
-                    type="button"
-                    class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-700 text-sm font-medium shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Success/Error Notifications -->
+    @if (session('success'))
+    <div x-data="{ show: true }" x-show="show" x-transition
+        class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+        <strong class="font-bold">Berhasil!</strong>
+        <span class="block sm:inline">{{ session('success') }}</span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-green-200 rounded"
+            @click="show = false">&times;</span>
     </div>
-
-    {{-- Table --}}
-    <div class="mx-auto px-4 py-2">
-      <div class="overflow-x-auto border border-gray-300 rounded-md">
-        <table class="table-fixed w-full bg-white text-sm text-center">
-            <thead>
-                <tr class="bg-gray-100 text-gray-700">
-                    <th class="w-2/12 py-2 px-4 border-b">Company</th>
-                    <th class="w-1/12 py-2 px-4 border-b">ID</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Nama Mandor</th>
-                    <th class="w-6/12 py-2 px-4 border-b">NIK</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Nama</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Gender</th>
-                    <th class="w-3/12 py-2 px-4 border-b">Jenis</th>
-                    <th class="w-3/12 py-2 px-4 border-b">Active</th>
-                    <th class="w-3/12 py-2 px-4 border-b"></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach($result as $data)
-              <tr class="hover:bg-gray-50">
-                <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->tenagakerjaid }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->name }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->nik }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->nama }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->gender }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->jenis }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->isactive == 1 ? 'Aktif' : 'Tidak Aktif' }}</td>
-                <td class="py-2 px-4 border-b">
-                  <div class="flex items-center justify-center space-x-2">
-                    {{-- Edit --}}
-                    {{-- @if(auth()->user() && in_array('Edit Mandor', json_decode(auth()->user()->permissions ?? '[]'))) --}}
-                      <button
-                        @click="
-                          mode = 'edit';
-                          form.id = '{{ $data->tenagakerjaid }}';
-                          form.companycode = '{{ $data->companycode }}';
-                          form.name = '{{ $data->nama }}';
-                          form.nik = '{{ $data->nik }}';
-                          form.gender = '{{ $data->gender }}';
-                          form.jenis = '{{ $data->jenis }}';
-                          form.isactive = {{ $data->isactive ?? 0 }} == 1 ? 1 : 0;
-                          open = true
-                        "
-                        class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                      >
-                        <svg class="w-6 h-6 text-blue-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <use xlink:href="#icon-edit-outline"/>
-                        </svg>
-                        <svg class="w-6 h-6 text-blue-500 hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                          <use xlink:href="#icon-edit-solid"/> <use xlink:href="#icon-edit-solid2" />
-                        </svg>
-                      </button>
-                    {{-- @endif --}}
-
-                    {{-- Delete --}}
-                    {{--@if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))--}}
-                      <form
-                        action="{{ url("masterdata/tenagakerja/{$data->companycode}/{$data->tenagakerjaid}") }}"
-                        method="POST"
-                        onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                        class="inline"
-                      >
-                        @csrf
-                        @method('DELETE')
-                        <button
-                          type="submit"
-                          class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
-                        >
-                          <svg class="w-6 h-6 text-red-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <use xlink:href="#icon-trash-outline"/>
-                          </svg>
-                          <svg class="w-6 h-6 text-red-500 hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                            <use xlink:href="#icon-trash-solid"/>
-                          </svg>
-                        </button>
-                      </form>
-                  {{--@endif--}}
-                  </div>
-                </td>
-              </tr>
-            @endforeach
-            </tbody>
-        </table>
-      </div>
-    </div>
-
-    {{-- Pagination --}}
-    <div class="mx-4 my-1">
-      @if($result->hasPages())
-        {{ $result->appends(['perPage' => $result->perPage(), 'search' => $search])->links() }}
-      @else
-        <div class="flex items-center justify-between">
-          <p class="text-sm text-gray-700">
-            Showing <span class="font-medium">{{ $result->count() }}</span> of <span class="font-medium">{{ $result->total() }}</span> results
-          </p>
-        </div>
-      @endif
-    </div>
-
-    {{-- Toast --}}
-    @if(session('success'))
-      <div x-data x-init="alert('{{ session('success') }}')"></div>
     @endif
 
-  </div>
+    @if (session('error'))
+    <div x-data="{ show: true }" x-show="show" x-transition
+        class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline">{{ session('error') }}</span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-red-200 rounded"
+            @click="show = false">&times;</span>
+    </div>
+    @endif
+
+    <div x-data="{
+        open: false,
+        mode: 'create',
+        editUrl: '',
+        form: {
+            id: '',
+            name: '',
+            nik: '',
+            mandor: '',
+            gender: 'L',
+            jenis: '1',
+            isactive: 1
+        },
+        resetForm() {
+            this.mode = 'create';
+            this.editUrl = '';
+            this.form = {
+                id: '',
+                name: '',
+                nik: '',
+                mandor: '',
+                gender: 'L',
+                jenis: '1',
+                isactive: 1
+            };
+            this.open = true;
+        },
+        editForm(data, url) {
+            this.mode = 'edit';
+            this.editUrl = url;
+            this.form = {
+                id: data.id,
+                name: data.name,
+                nik: data.nik,
+                mandor: data.mandor,
+                gender: data.gender,
+                jenis: data.jenis,
+                isactive: data.isactive
+            };
+            this.open = true;
+        }
+    }" class="mx-auto py-4 bg-white rounded-md shadow-md">
+
+        <!-- Header Controls -->
+        <div class="px-4 py-4 border-b border-gray-200">
+            <div class="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                
+                <!-- Tambah Data Button -->
+                <div class="flex justify-start">
+                    <button @click="resetForm()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Tambah Tenaga Kerja</span>
+                        <span class="sm:hidden">Tambah</span>
+                    </button>
+                </div>
+
+                <!-- Search and Controls -->
+                <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+                    
+                    <!-- Search Form -->
+                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                        <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
+                        <input type="text" name="search" id="search"
+                            value="{{ request('search') }}"
+                            placeholder="Nama, NIK, ID, Mandor..."
+                            class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                            onkeydown="if(event.key==='Enter') this.form.submit()" />
+                        @if(request('search'))
+                            <a href="{{ route('masterdata.tenagakerja.index') }}" 
+                               class="text-gray-500 hover:text-gray-700 px-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </a>
+                        @endif
+                        @if(request('perPage'))
+                            <input type="hidden" name="perPage" value="{{ request('perPage') }}">
+                        @endif
+                    </form>
+
+                    <!-- Per Page Form -->
+                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                        <label for="perPage" class="text-xs font-medium text-gray-700 whitespace-nowrap">Per halaman:</label>
+                        <select name="perPage" id="perPage" onchange="this.form.submit()"
+                            class="text-xs w-20 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 py-2">
+                            <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
+                            <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>
+                            <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="px-4 py-4">
+            <div class="overflow-x-auto rounded-md border border-gray-300">
+                <table class="min-w-full bg-white text-sm">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIK</th>
+                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mandor</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse ($result as $item)
+                        <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <td class="py-3 px-3 text-sm font-medium text-gray-900">{{ $item->tenagakerjaid }}</td>
+                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->nama }}</td>
+                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->nik ?: '-' }}</td>
+                            <td class="py-3 px-3 text-center text-sm text-gray-700">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $item->gender == 'L' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800' }}">
+                                    {{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 text-sm text-gray-700">
+                                <div class="flex flex-col">
+                                    <span class="font-medium">{{ $item->mandoruserid }}</span>
+                                    <span class="text-xs text-gray-500">{{ $item->mandor_nama ?: 'Tidak ada data' }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->jenis_nama ?: 'Unknown' }}</td>
+                            <td class="py-3 px-3 text-center text-sm">
+                                @if($item->isactive == 1)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Aktif
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Nonaktif
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <!-- Edit Button -->
+                                    <button @click='editForm({
+                                            id: "{{ $item->tenagakerjaid }}",
+                                            name: "{{ $item->nama }}",
+                                            nik: "{{ $item->nik }}",
+                                            mandor: "{{ $item->mandoruserid }}",
+                                            gender: "{{ $item->gender }}",
+                                            jenis: "{{ $item->jenistenagakerja }}",
+                                            isactive: {{ $item->isactive ?? 0 }}
+                                        }, "{{ route('masterdata.tenagakerja.update', [$item->companycode, $item->tenagakerjaid]) }}")'
+                                        class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
+                                        title="Edit">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+
+                                    <!-- Delete Button -->
+                                    <form action="{{ route('masterdata.tenagakerja.destroy', [$item->companycode, $item->tenagakerjaid]) }}" method="POST"
+                                        onsubmit="return confirm('Yakin ingin menonaktifkan {{ $item->nama }}?');" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
+                                            title="Nonaktifkan">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="8" class="py-8 px-4 text-center text-gray-500">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    <p class="text-lg font-medium">Tidak ada data tenaga kerja</p>
+                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada tenaga kerja yang terdaftar' }}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if ($result->hasPages())
+            <div class="mt-6">
+                {{ $result->appends(request()->query())->links() }}
+            </div>
+            @else
+            <div class="mt-4 flex items-center justify-between text-sm text-gray-700">
+                <p>Menampilkan <span class="font-medium">{{ $result->count() }}</span> dari <span class="font-medium">{{ $result->total() }}</span> data</p>
+            </div>
+            @endif
+        </div>
+
+        <!-- Modal -->
+        <div x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
+            @keydown.window.escape="open = false">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Tenaga Kerja' : 'Edit Tenaga Kerja'"></h3>
+                    <button @click="open = false"
+                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6">
+                    <form :action="mode === 'create' ? '{{ route('masterdata.tenagakerja.store') }}' : editUrl" method="POST">
+                        @csrf
+                        <template x-if="mode === 'edit'">
+                            <input type="hidden" name="_method" value="PATCH">
+                        </template>
+
+                        <!-- ID (Edit only) -->
+                        <template x-if="mode === 'edit'">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ID Tenaga Kerja</label>
+                                <input type="text" x-model="form.id" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed" 
+                                    readonly>
+                            </div>
+                        </template>
+
+                        <!-- Nama -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama <span class="text-red-500">*</span></label>
+                            <input type="text" name="name" x-model="form.name"
+                                placeholder="Nama lengkap tenaga kerja"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                required maxlength="100">
+                        </div>
+
+                        <!-- NIK -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">NIK</label>
+                            <input type="text" name="nik" x-model="form.nik"
+                                placeholder="Nomor Induk Kependudukan"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                maxlength="16">
+                        </div>
+
+                        <!-- Mandor -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Mandor <span class="text-red-500">*</span></label>
+                            <select name="mandor" x-model="form.mandor" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">-- Pilih Mandor --</option>
+                                @foreach($mandor as $m)
+                                <option value="{{ $m->userid }}">{{ $m->userid }} - {{ $m->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gender <span class="text-red-500">*</span></label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="gender" value="L" x-model="form.gender" class="mr-2">
+                                    <span>Laki-laki</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="gender" value="P" x-model="form.gender" class="mr-2">
+                                    <span>Perempuan</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Jenis Tenaga Kerja -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Tenaga Kerja <span class="text-red-500">*</span></label>
+                            <select name="jenis" x-model="form.jenis" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">-- Pilih Jenis --</option>
+                                @foreach($jenistenagakerja as $jenis)
+                                <option value="{{ $jenis->idjenistenagakerja }}">{{ $jenis->nama }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Status Active (Edit only) -->
+                        <template x-if="mode === 'edit'">
+                            <div class="mb-6">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="isactive" 
+                                           :checked="form.isactive == 1" 
+                                           value="1" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-700">Status Aktif</span>
+                                </label>
+                            </div>
+                        </template>
+
+                        <!-- Modal Actions -->
+                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+                            <button type="button" @click="open = false"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                                <span x-text="mode === 'create' ? 'Simpan' : 'Perbarui'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
 </x-layout>

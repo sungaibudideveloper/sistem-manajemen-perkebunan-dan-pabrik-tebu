@@ -1,5 +1,5 @@
 <x-layout>
-    <x-slot:title>{{ $title }}</x-slot>
+    <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
@@ -32,21 +32,21 @@
         notificationMessage: '',
         notificationType: 'success',
         form: {
-            plot: '',
-            luasarea: '',
-            jaraktanam: '',
-            status: '',
-            companycode: '{{ session('companycode') }}'
+            nokendaraan: '',
+            operator: '',
+            jenis: '',
+            hourmeter: '',
+            isactive: 1
         },
         resetForm() {
             this.mode = 'create';
             this.editUrl = '';
             this.form = {
-                plot: '',
-                luasarea: '',
-                jaraktanam: '',
-                status: '',
-                companycode: '{{ session('companycode') }}'
+                nokendaraan: '',
+                operator: '',
+                jenis: '',
+                hourmeter: '',
+                isactive: 1
             };
             this.open = true;
         },
@@ -54,11 +54,11 @@
             this.mode = 'edit';
             this.editUrl = url;
             this.form = {
-                plot: data.plot,
-                luasarea: data.luasarea,
-                jaraktanam: data.jaraktanam,
-                status: data.status,
-                companycode: data.companycode
+                nokendaraan: data.nokendaraan,
+                operator: data.operator,
+                jenis: data.jenis,
+                hourmeter: data.hourmeter,
+                isactive: data.isactive
             };
             this.open = true;
         },
@@ -68,43 +68,42 @@
             this.showNotification = true;
             setTimeout(() => { this.showNotification = false; }, 5000);
         },
-        async addToMasterlist(plot, companycode) {
-            if (!confirm('Tambahkan plot ' + plot + ' ke masterlist?\n\nPlot akan menjadi aktif dan bisa digunakan untuk membuat RKH.')) {
-                return;
-            }
+        async submitForm() {
+            const form = document.getElementById('kendaraan-form');
+            const formData = new FormData(form);
             
             try {
-                const response = await fetch('{{ route('masterdata.plotting.addToMasterlist') }}', {
+                const response = await fetch(this.mode === 'create' ? '{{ route('masterdata.kendaraan.handle') }}' : this.editUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
                     },
-                    body: JSON.stringify({ plot, companycode })
+                    body: formData
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
                     this.showAlert(data.message, 'success');
+                    this.open = false;
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    this.showAlert(data.message || 'Gagal menambahkan ke masterlist', 'error');
+                    this.showAlert(data.message || 'Terjadi kesalahan', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                this.showAlert('Terjadi kesalahan saat menambahkan ke masterlist', 'error');
+                this.showAlert('Terjadi kesalahan saat menyimpan data', 'error');
             }
         },
-        async deleteRecord(plot, companycode) {
-            if (!confirm('Yakin ingin menghapus plot ' + plot + '?')) {
+        async deleteRecord(companycode, nokendaraan) {
+            if (!confirm('Yakin ingin menonaktifkan kendaraan ' + nokendaraan + '?')) {
                 return;
             }
             
             try {
-                const deleteRoute = '{{ route('masterdata.plotting.destroy', ['plot' => '__plot__', 'companycode' => '__companycode__']) }}'
-                    .replace('__plot__', plot)
-                    .replace('__companycode__', companycode);
+                const deleteRoute = '{{ route('masterdata.kendaraan.destroy', ['companycode' => '__companycode__', 'nokendaraan' => '__nokendaraan__']) }}'
+                    .replace('__companycode__', companycode)
+                    .replace('__nokendaraan__', nokendaraan);
                     
                 const response = await fetch(deleteRoute, {
                     method: 'POST',
@@ -146,56 +145,34 @@
                 
                 <!-- Tambah Data Button -->
                 <div class="flex justify-start">
-                    @if (auth()->user() && in_array('Create Plotting', json_decode(auth()->user()->permissions ?? '[]')))
                     <button @click="resetForm()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span class="hidden sm:inline">Tambah Plot</span>
+                        <span class="hidden sm:inline">Tambah Kendaraan</span>
                         <span class="sm:hidden">Tambah</span>
                     </button>
-                    @endif
                 </div>
 
                 <!-- Search and Controls -->
                 <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-                    
-                    <!-- Masterlist Status Filter -->
-                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
-                        <label for="masterlist_filter" class="text-xs font-medium text-gray-700 whitespace-nowrap">Masterlist:</label>
-                        <select name="masterlist_filter" id="masterlist_filter" onchange="this.form.submit()"
-                            class="text-xs w-28 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 py-2">
-                            <option value="">Semua</option>
-                            <option value="active" {{ request('masterlist_filter') === 'active' ? 'selected' : '' }}>Aktif</option>
-                            <option value="inactive" {{ request('masterlist_filter') === 'inactive' ? 'selected' : '' }}>Belum Aktif</option>
-                        </select>
-                        @if(request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
-                        @endif
-                        @if(request('perPage'))
-                            <input type="hidden" name="perPage" value="{{ request('perPage') }}">
-                        @endif
-                    </form>
                     
                     <!-- Search Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
                         <input type="text" name="search" id="search"
                             value="{{ request('search') }}"
-                            placeholder="Cari plot, status, blok..."
+                            placeholder="No. Kendaraan, Jenis, Operator..."
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('masterdata.plotting.index') }}" 
+                            <a href="{{ route('masterdata.kendaraan.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </a>
-                        @endif
-                        @if(request('masterlist_filter'))
-                            <input type="hidden" name="masterlist_filter" value="{{ request('masterlist_filter') }}">
                         @endif
                         @if(request('perPage'))
                             <input type="hidden" name="perPage" value="{{ request('perPage') }}">
@@ -216,9 +193,6 @@
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
-                        @if(request('masterlist_filter'))
-                            <input type="hidden" name="masterlist_filter" value="{{ request('masterlist_filter') }}">
-                        @endif
                     </form>
                 </div>
             </div>
@@ -230,92 +204,86 @@
                 <table class="min-w-full bg-white text-sm">
                     <thead>
                         <tr class="bg-gray-50">
-                            <th class="py-3 px-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">No</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plot</th>
-                            <th class="py-3 px-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Blok</th>
-                            <th class="py-3 px-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Luas Area (Ha)</th>
-                            <th class="py-3 px-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jarak Tanam (cm)</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Kendaraan</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th class="py-3 px-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hour Meter</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Masterlist</th>
-                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Company</th>
-                            @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @forelse ($plotting as $item)
+                        @forelse ($result as $item)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="py-3 px-2 text-center text-sm text-gray-500">{{ $item->no }}</td>
-                            <td class="py-3 px-3 text-sm font-medium text-gray-900">{{ $item->plot }}</td>
-                            <td class="py-3 px-2 text-center text-sm text-gray-700 font-medium">
-                                {{ $item->blok ?? substr($item->plot, 0, 1) }}
+                            <td class="py-3 px-3 text-sm font-medium text-gray-900">{{ $item->nokendaraan }}</td>
+                            <td class="py-3 px-3 text-sm text-gray-700">
+                                @if($item->idtenagakerja)
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">{{ $item->idtenagakerja }}</span>
+                                        <span class="text-xs text-gray-500">
+                                            {{ $item->operator_nama ?: 'Nama tidak tersedia' }}
+                                            @if($item->operator_nik)
+                                                ({{ $item->operator_nik }})
+                                            @endif
+                                        </span>
+                                        @if($item->operator_isactive == 0)
+                                            <span class="text-xs text-red-500">Operator Nonaktif</span>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 italic">Belum ada operator</span>
+                                @endif
                             </td>
-                            <td class="py-3 px-3 text-right text-sm text-gray-700 font-mono">{{ number_format($item->luasarea, 2) }}</td>
-                            <td class="py-3 px-3 text-right text-sm text-gray-700 font-mono">{{ number_format($item->jaraktanam) }}</td>
-                            <td class="py-3 px-3 text-center text-sm text-gray-700 font-medium">
-                                {{ $item->status }}
-                            </td>
+                            <td class="py-3 px-3 text-sm text-gray-700">{{ $item->jenis ?: '-' }}</td>
+                            <td class="py-3 px-3 text-right text-sm text-gray-700 font-mono">{{ number_format($item->hourmeter, 2) }}</td>
                             <td class="py-3 px-3 text-center text-sm">
-                                @if($item->is_in_masterlist)
+                                @if($item->isactive == 1)
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                         Aktif
                                     </span>
                                 @else
-                                    <button @click="addToMasterlist('{{ $item->plot }}', '{{ $item->companycode }}')"
-                                        class="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-150"
-                                        title="Tambah ke masterlist agar plot bisa digunakan di RKH">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        Add to Masterlist
-                                    </button>
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Nonaktif
+                                    </span>
                                 @endif
                             </td>
-                            <td class="py-3 px-3 text-center text-sm text-gray-700 hidden sm:table-cell">
-                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $item->companycode }}</code>
-                            </td>
-                            @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
-                                    @if (auth()->user() && in_array('Edit Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                                    <!-- Edit Button -->
                                     <button @click='editForm({
-                                            plot: "{{ $item->plot }}",
-                                            luasarea: "{{ $item->luasarea }}",
-                                            jaraktanam: "{{ $item->jaraktanam }}",
-                                            status: "{{ $item->status }}",
-                                            companycode: "{{ $item->companycode }}"
-                                        }, "{{ route('masterdata.plotting.update', ['plot' => $item->plot, 'companycode' => $item->companycode]) }}")'
+                                            nokendaraan: "{{ $item->nokendaraan }}",
+                                            operator: "{{ $item->idtenagakerja }}",
+                                            jenis: "{{ $item->jenis }}",
+                                            hourmeter: "{{ $item->hourmeter }}",
+                                            isactive: {{ $item->isactive ?? 0 }}
+                                        }, "{{ route('masterdata.kendaraan.update', [$item->companycode, $item->nokendaraan]) }}")'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
-                                        title="Edit Plot">
+                                        title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                     </button>
-                                    @endif
 
-                                    @if (auth()->user() && in_array('Hapus Plotting', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <button @click="deleteRecord('{{ $item->plot }}', '{{ $item->companycode }}')"
+                                    <!-- Delete Button -->
+                                    <button @click="deleteRecord('{{ $item->companycode }}', '{{ $item->nokendaraan }}')"
                                         class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
-                                        title="Hapus Plot">
+                                        title="Nonaktifkan">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
                                     </button>
-                                    @endif
                                 </div>
                             </td>
-                            @endif
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="py-8 px-4 text-center text-gray-500">
+                            <td colspan="6" class="py-8 px-4 text-center text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
-                                    <p class="text-lg font-medium">Tidak ada data plot</p>
-                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada plot yang terdaftar' }}</p>
+                                    <p class="text-lg font-medium">Tidak ada data kendaraan</p>
+                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada kendaraan yang terdaftar' }}</p>
                                 </div>
                             </td>
                         </tr>
@@ -325,13 +293,13 @@
             </div>
 
             <!-- Pagination -->
-            @if ($plotting->hasPages())
+            @if ($result->hasPages())
             <div class="mt-6">
-                {{ $plotting->appends(request()->query())->links() }}
+                {{ $result->appends(request()->query())->links() }}
             </div>
             @else
             <div class="mt-4 flex items-center justify-between text-sm text-gray-700">
-                <p>Menampilkan <span class="font-medium">{{ $plotting->count() }}</span> dari <span class="font-medium">{{ $plotting->total() }}</span> data</p>
+                <p>Menampilkan <span class="font-medium">{{ $result->count() }}</span> dari <span class="font-medium">{{ $result->total() }}</span> data</p>
             </div>
             @endif
         </div>
@@ -343,7 +311,7 @@
                 
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Plot Baru' : 'Edit Plot'"></h3>
+                    <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Kendaraan' : 'Edit Kendaraan'"></h3>
                     <button @click="open = false"
                         class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,63 +322,87 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('masterdata.plotting.handle') }}' : editUrl" method="POST">
+                    <form id="kendaraan-form" @submit.prevent="submitForm()">
                         @csrf
                         <template x-if="mode === 'edit'">
                             <input type="hidden" name="_method" value="PUT">
                         </template>
 
-                        <!-- Company Code (Read-only) -->
+                        <!-- No. Kendaraan -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Company Code</label>
-                            <input type="text" name="companycode" x-model="form.companycode" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed" 
-                                readonly>
-                            <p class="mt-1 text-xs text-gray-500">Company code otomatis dari session</p>
-                        </div>
-
-                        <!-- Plot Code -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Kode Plot <span class="text-red-500">*</span></label>
-                            <input type="text" name="plot" x-model="form.plot"
-                                placeholder="Contoh: A0101, B0202" maxlength="5"
+                            <label class="block text-sm font-medium text-gray-700 mb-2">No. Kendaraan <span class="text-red-500">*</span></label>
+                            <input type="text" name="nokendaraan" x-model="form.nokendaraan"
+                                placeholder="Contoh: TRK001, EXC002"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
-                                pattern="^[A-Z][0-9]{3,4}$" required
-                                @input="form.plot = $el.value.toUpperCase()">
-                            <p class="mt-1 text-xs text-gray-500">Format: 1 huruf diikuti 3-4 angka (A001 atau A0001)</p>
+                                required maxlength="10"
+                                @input="form.nokendaraan = $el.value.toUpperCase()">
                         </div>
 
-                        <!-- Status -->
+                        <!-- Operator -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Status <span class="text-red-500">*</span></label>
-                            <select name="status" x-model="form.status" required
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Operator</label>
+                            <select name="operator" x-model="form.operator"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="">-- Pilih Status --</option>
-                                @foreach($statusOptions as $key => $label)
-                                <option value="{{ $key }}">{{ $key }} - {{ $label }}</option>
-                                @endforeach
+                                <option value="">-- Pilih Operator --</option>
+                                <!-- Create Mode: Only available operators -->
+                                @if(count($availableOperators) > 0)
+                                    <template x-if="mode === 'create'">
+                                        <optgroup label="Operator Tersedia">
+                                            @foreach($availableOperators as $op)
+                                            <option value="{{ $op->tenagakerjaid }}">{{ $op->tenagakerjaid }} - {{ $op->nama }}@if($op->nik) ({{ $op->nik }})@endif</option>
+                                            @endforeach
+                                        </optgroup>
+                                    </template>
+                                @else
+                                    <template x-if="mode === 'create'">
+                                        <option disabled>Tidak ada operator yang tersedia</option>
+                                    </template>
+                                @endif
+                                
+                                <!-- Edit Mode: All operators -->
+                                <template x-if="mode === 'edit'">
+                                    <optgroup label="Semua Operator">
+                                        @foreach($allOperators as $op)
+                                        <option value="{{ $op->tenagakerjaid }}">{{ $op->tenagakerjaid }} - {{ $op->nama }}@if($op->nik) ({{ $op->nik }})@endif</option>
+                                        @endforeach
+                                    </optgroup>
+                                </template>
                             </select>
+                            <p class="mt-1 text-xs text-gray-500">
+                                <span x-show="mode === 'create'">Hanya operator yang belum memiliki kendaraan</span>
+                                <span x-show="mode === 'edit'">Semua operator aktif (jenistenagakerja = 3)</span>
+                            </p>
                         </div>
 
-                        <!-- Luas Area -->
+                        <!-- Jenis -->
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Luas Area (Ha) <span class="text-red-500">*</span></label>
-                            <input type="number" name="luasarea" x-model="form.luasarea"
-                                placeholder="0.00" min="0" max="999.99" step="0.01"
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Kendaraan <span class="text-red-500">*</span></label>
+                            <input type="text" name="jenis" x-model="form.jenis"
+                                placeholder="Contoh: Truk, Excavator, Bulldozer"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required>
-                            <p class="mt-1 text-xs text-gray-500">Maksimal 999.99 hektar dengan 2 desimal</p>
+                                required maxlength="50">
                         </div>
 
-                        <!-- Jarak Tanam -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Jarak Tanam (cm) <span class="text-red-500">*</span></label>
-                            <input type="number" name="jaraktanam" x-model="form.jaraktanam"
-                                placeholder="150" min="0" max="999"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required>
-                            <p class="mt-1 text-xs text-gray-500">Jarak tanam dalam centimeter, maksimal 999 cm</p>
+                        <!-- Hour Meter -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hour Meter</label>
+                            <input type="number" name="hourmeter" x-model="form.hourmeter"
+                                placeholder="0.00" min="0" max="999999.99" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Opsional, default 0 jika kosong</p>
                         </div>
+
+                        <!-- Status Active (Edit only) -->
+                        <template x-if="mode === 'edit'">
+                            <div class="mb-6">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="isactive" 
+                                           :checked="form.isactive == 1" 
+                                           value="1" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-700">Status Aktif</span>
+                                </label>
+                            </div>
+                        </template>
 
                         <!-- Modal Actions -->
                         <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
@@ -431,8 +423,6 @@
 
     <style>
         [x-cloak] { display: none !important; }
-        input[readonly] { background-color: #f9fafb; cursor: not-allowed; }
-        input:focus, select:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
     </style>
 
 </x-layout>

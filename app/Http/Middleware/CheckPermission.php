@@ -18,6 +18,7 @@ class CheckPermission
         $user = Auth::user();
         $permissions = json_decode($user->permissions ?? '[]', true);
         
+        /*
         // Debug logging
         Log::info('Permission Check Debug', [
             'user_id' => $user->id,
@@ -27,6 +28,7 @@ class CheckPermission
             'has_permission' => in_array($permission, $permissions),
             'total_permissions' => count($permissions)
         ]);
+        */
         
         // Log dashboard permissions untuk debug
         $dashboardPerms = array_filter($permissions, function($p) {
