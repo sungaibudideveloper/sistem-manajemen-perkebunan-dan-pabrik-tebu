@@ -4,7 +4,6 @@ use App\Http\Controllers\MasterData\ActivityController;
 use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\BatchController;
 use App\Http\Controllers\MasterData\CompanyController;
-use App\Http\Controllers\MasterData\MappingController;
 use App\Http\Controllers\MasterData\MasterListController;
 use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\UsernameController;
@@ -49,23 +48,12 @@ Route::put('masterdata/blok/{blok}/{companycode}', [BlokController::class, 'upda
 Route::group(['middleware' => ['auth', 'permission:Plotting']], function () {
     Route::post('masterdata/plotting', [PlottingController::class, 'handle'])->name('masterdata.plotting.handle');
     Route::get('masterdata/plotting', [PlottingController::class, 'index'])->name('masterdata.plotting.index');
+    Route::post('masterdata/plotting/add-to-masterlist', [PlottingController::class, 'addToMasterlist'])->name('masterdata.plotting.addToMasterlist');
 });
 Route::delete('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'destroy'])
     ->name('masterdata.plotting.destroy')->middleware('permission:Hapus Plotting');
 Route::put('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'update'])
     ->name('masterdata.plotting.update')->middleware('permission:Edit Plotting');
-
-//Mapping
-Route::group(['middleware' => ['auth', 'permission:Mapping']], function () {
-    Route::post('masterdata/mapping/get-filtered-data', [MappingController::class, 'getFilteredData'])->name('get.filtered.data');
-    Route::post('masterdata/mapping', [MappingController::class, 'handle'])->name('masterdata.mapping.handle');
-    Route::get('masterdata/mapping', [MappingController::class, 'index'])->name('masterdata.mapping.index');
-});
-Route::delete('masterdata/mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'destroy'])
-    ->name('masterdata.mapping.destroy')->middleware('permission:Hapus Mapping');
-Route::put('masterdata/mapping/{plotcodesample}/{blok}/{plot}/{companycode}', [MappingController::class, 'update'])
-    ->name('masterdata.mapping.update')->middleware('permission:Edit Mapping');
-
 
 
 //Kelola User
@@ -248,10 +236,18 @@ Route::group(['middleware' => ['auth', 'permission:Subsubmenu']], function () {
 Route::put('aplikasi/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->middleware(['auth', 'permission:Edit Subsubmenu'])->name('masterdata.subsubmenu.update');
 Route::delete('aplikasi/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Subsubmenu'])->name('masterdata.subsubmenu.destroy');
 
+
+
 // Upah Routes
 Route::group(['middleware' => ['auth', 'permission:Upah']], function () {
     Route::get('masterdata/upah', [UpahController::class, 'index'])->name('masterdata.upah.index');
     Route::post('masterdata/upah', [UpahController::class, 'store'])->name('masterdata.upah.store');
 });
-Route::put('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'update'])->middleware(['auth', 'permission:Edit Upah'])->name('masterdata.upah.update');
-Route::delete('masterdata/upah/{upahid}/{harga}/{tanggalefektif}', [UpahController::class, 'destroy'])->middleware(['auth', 'permission:Hapus Upah'])->name('masterdata.upah.destroy');
+
+Route::put('masterdata/upah/{id}', [UpahController::class, 'update'])
+    ->middleware(['auth', 'permission:Edit Upah'])
+    ->name('masterdata.upah.update');
+
+Route::delete('masterdata/upah/{id}', [UpahController::class, 'destroy'])
+    ->middleware(['auth', 'permission:Hapus Upah'])
+    ->name('masterdata.upah.destroy');

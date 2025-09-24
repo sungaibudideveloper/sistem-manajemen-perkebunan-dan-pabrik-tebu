@@ -2387,13 +2387,13 @@ public function loadAbsenByDate(Request $request)
         return [
             'mandors' => User::getMandorByCompany($companycode),
             'activities' => Activity::with(['group', 'jenistenagakerja'])->orderBy('activitycode')->get(),
-            'bloks' => Blok::orderBy('blok')->get(),
-            'masterlist' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
+            'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(), // ← FIXED: Filter by company
+            'masterlist' => Masterlist::where('companycode', $companycode)->orderBy('plot')->get(), // ← FIXED: Filter by company
             'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
             'absentenagakerja' => $absenModel->getDataAbsenFull($companycode, $targetDate),
             'herbisidagroups' => $herbisidadosages->getFullHerbisidaGroupData($companycode),
-            'bloksData' => Blok::orderBy('blok')->get(),
-            'masterlistData' => Masterlist::orderBy('companycode')->orderBy('plot')->get(),
+            'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(), // ← FIXED: Filter by company
+            'masterlistData' => Masterlist::where('companycode', $companycode)->orderBy('plot')->get(), // ← FIXED: Filter by company
             'plotsData' => DB::table('plot')->where('companycode', $companycode)->get(),
             'operatorsData' => $this->getOperatorsWithVehicles($companycode),
             'helpersData' => TenagaKerja::where('companycode', $companycode)

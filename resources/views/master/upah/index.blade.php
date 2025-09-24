@@ -31,34 +31,40 @@
         open: false,
         mode: 'create',
         editUrl: '',
-        originalUpahId: '',
-        originalKategoriId: '',
+        originalId: '',
         form: { 
-            kategori_id: '', 
-            harga: '', 
-            tanggalefektif: '' 
+            activitygroup: '', 
+            wagetype: '',
+            amount: '', 
+            effectivedate: '',
+            enddate: '',
+            parameter: ''
         },
         resetForm() {
             this.mode = 'create';
             this.editUrl = '';
-            this.originalUpahId = '';
-            this.originalKategoriId = '';
+            this.originalId = '';
             this.form = { 
-                kategori_id: '', 
-                harga: '', 
-                tanggalefektif: '' 
+                activitygroup: '', 
+                wagetype: '',
+                amount: '', 
+                effectivedate: '',
+                enddate: '',
+                parameter: ''
             };
             this.open = true;
         },
         editForm(data, url) {
             this.mode = 'edit';
             this.editUrl = url;
-            this.originalUpahId = data.upahid;
-            this.originalKategoriId = data.kategori_id;
+            this.originalId = data.id;
             this.form = {
-                kategori_id: data.kategori_id,
-                harga: data.harga,
-                tanggalefektif: data.tanggalefektif
+                activitygroup: data.activitygroup,
+                wagetype: data.wagetype,
+                amount: data.amount,
+                effectivedate: data.effectivedate,
+                enddate: data.enddate || '',
+                parameter: data.parameter || ''
             };
             this.open = true;
         }
@@ -66,7 +72,6 @@
 
         <!-- Header Section with Controls -->
         <div class="px-4 py-4 border-b border-gray-200">
-            <!-- Mobile-First Layout -->
             <div class="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
 
                 <!-- New Data Button -->
@@ -83,13 +88,12 @@
 
                 <!-- Search and Per Page Controls -->
                 <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-
                     <!-- Search Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Search:</label>
                         <input type="text" name="search" id="search"
                             value="{{ request('search') }}"
-                            placeholder="Cari jenis upah..."
+                            placeholder="Cari grup aktivitas, jenis upah..."
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         <button type="submit" class="sm:hidden bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition-colors">
@@ -120,60 +124,67 @@
                 <table class="min-w-full bg-white text-sm">
                     <thead>
                         <tr class="bg-gray-50">
+                            <th class="py-3 px-1 sm:px-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                                Grup
+                            </th>
                             <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Jenis Upah
                             </th>
                             <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Company
+                                Nominal
                             </th>
                             <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Harga Upah
+                                Parameter
                             </th>
-                            <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                                Tanggal Efektif
+                            <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                                Tgl Mulai
                             </th>
-                            <th class="py-3 px-2 sm:px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Input BY
-                            </th>
-                            <th class="py-3 px-2 sm:px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Create Date
+                            <th class="py-3 px-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                                Tgl Berakhir
                             </th>
                             <th class="py-3 px-2 sm:px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
+                                Aksi
                             </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @foreach ($data as $d)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="py-3 px-2 sm:px-4 text-sm font-medium text-gray-900">
-                                {{ $d->jenisupah }}
+                            <td class="py-3 px-1 sm:px-2 text-sm font-medium text-gray-900 text-center w-16">
+                                {{ $d->activitygroup }}
                             </td>
                             <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
-                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $d->companycode }}</code>
+                                {{ $wageTypes[$d->wagetype] ?? $d->wagetype }}
                             </td>
                             <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
-                                <div class="font-medium">Rp {{ number_format($d->harga, 0, ',', '.') }}</div>
+                                <div class="font-medium">Rp {{ number_format($d->amount, 0, ',', '.') }}</div>
                             </td>
-                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700 hidden sm:table-cell">
-                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ date('d-m-Y', strtotime($d->tanggalefektif)) }}</code>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700">
+                                {{ $d->parameter ?? '-' }}
                             </td>
-                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700 text-center">
-                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $d->inputby }}</code>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700 hidden lg:table-cell">
+                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ date('d-m-Y', strtotime($d->effectivedate)) }}</code>
                             </td>
-                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700 text-center">
-                                <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ date('d-m-Y', strtotime($d->createdat)) }}</code>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-700 hidden lg:table-cell">
+                                @if($d->enddate)
+                                    <code class="bg-red-100 px-2 py-1 rounded text-xs text-red-800">{{ date('d-m-Y', strtotime($d->enddate)) }}</code>
+                                @else
+                                    <span class="text-green-600 text-xs">Aktif</span>
+                                @endif
                             </td>
                             <td class="py-3 px-2 sm:px-4">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
                                     <button
                                         @click='editForm({
-                                            upahid: "{{ $d->upahid }}",
-                                            kategori_id: "{{ $d->kategori_id }}",
-                                            harga: "{{ $d->harga }}",
-                                            tanggalefektif: "{{ $d->tanggalefektif }}"
-                                        }, "{{ route('masterdata.upah.update', [$d->upahid, $d->harga, $d->tanggalefektif]) }}")'
+                                            id: "{{ $d->id }}",
+                                            activitygroup: "{{ $d->activitygroup }}",
+                                            wagetype: "{{ $d->wagetype }}",
+                                            amount: "{{ $d->amount }}",
+                                            effectivedate: "{{ $d->effectivedate }}",
+                                            enddate: "{{ $d->enddate }}",
+                                            parameter: "{{ $d->parameter }}"
+                                        }, "{{ route('masterdata.upah.update', $d->id) }}")'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4 h-4 fill-current">
@@ -182,8 +193,8 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('masterdata.upah.destroy', [$d->upahid, $d->harga, $d->tanggalefektif]) }}" method="POST"
-                                        onsubmit="return confirm('Yakin ingin menghapus data upah {{ $d->jenisupah }} dengan harga Rp {{ number_format($d->harga, 0, ',', '.') }}?');" class="inline">
+                                    <form action="{{ route('masterdata.upah.destroy', $d->id) }}" method="POST"
+                                        onsubmit="return confirm('Yakin ingin menghapus data upah {{ $d->activitygroup }} - {{ $wageTypes[$d->wagetype] ?? $d->wagetype }}?');" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -208,7 +219,7 @@
             </div>
         </div>
 
-        <!-- Responsive Modal -->
+        <!-- Modal -->
         <div x-show="open" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" x-cloak
             @keydown.window.escape="open = false">
             <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto max-h-[90vh] overflow-y-auto">
@@ -225,50 +236,69 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('masterdata.upah.store') }}' : editUrl"
-                        method="POST"
-                        @submit="if(mode === 'edit') { $el.querySelector('#original_upahid').value = originalUpahId; }">
+                    <form :action="mode === 'create' ? '{{ route('masterdata.upah.store') }}' : editUrl" method="POST">
                         @csrf
                         <template x-if="mode === 'edit'">
-                            <div>
-                                <input type="hidden" name="_method" value="PUT">
-                                <input type="hidden" id="original_upahid" name="original_upahid" :value="originalUpahId">
-                            </div>
+                            <input type="hidden" name="_method" value="PUT">
                         </template>
 
+                        <!-- Grup Aktivitas -->
+                        <div class="mb-4">
+                            <label for="activitygroup" class="block text-sm font-medium text-gray-700 mb-2">Grup Aktivitas</label>
+                            <select id="activitygroup" name="activitygroup" x-model="form.activitygroup" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">-- Pilih Grup Aktivitas --</option>
+                                @foreach($activityGroups as $group)
+                                <option value="{{ $group }}">{{ $group }}</option>
+                                @endforeach
+                                <option value="NEW">+ Tambah Baru</option>
+                            </select>
+                        </div>
+
                         <!-- Jenis Upah -->
-                        <div class="mb-6">
-                            <label for="kategori_id" class="block text-sm font-medium text-gray-700 mb-2">Jenis Upah</label>
-                            <select id="kategori_id" name="kategori_id" x-model="form.kategori_id" required
+                        <div class="mb-4">
+                            <label for="wagetype" class="block text-sm font-medium text-gray-700 mb-2">Jenis Upah</label>
+                            <select id="wagetype" name="wagetype" x-model="form.wagetype" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <option value="">-- Pilih Jenis Upah --</option>
-                                @foreach($pilihanupah as $upah)
-                                <option value="{{ $upah->id }}">
-                                    {{ $upah->jenisupah }}
-                                </option>
+                                @foreach($wageTypes as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">Pilih kategori jenis upah</p>
                         </div>
 
-                        <!-- Harga Upah -->
-                        <div class="mb-6">
-                            <label for="harga" class="block text-sm font-medium text-gray-700 mb-2">Harga Upah</label>
+                        <!-- Nominal -->
+                        <div class="mb-4">
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Nominal</label>
                             <div class="relative">
                                 <span class="absolute left-3 top-2 text-gray-500">Rp</span>
-                                <input type="number" id="harga" name="harga" x-model="form.harga" required
+                                <input type="number" id="amount" name="amount" x-model="form.amount" required
                                     class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="0" min="0" step="1" />
+                                    placeholder="0" min="0" step="0.01" />
                             </div>
-                            <p class="mt-1 text-xs text-gray-500">Masukkan harga dalam rupiah</p>
                         </div>
 
-                        <!-- Tanggal Efektif -->
-                        <div class="mb-6">
-                            <label for="tanggalefektif" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Efektif</label>
-                            <input type="date" id="tanggalefektif" name="tanggalefektif" x-model="form.tanggalefektif" required
+                        <!-- Parameter -->
+                        <div class="mb-4">
+                            <label for="parameter" class="block text-sm font-medium text-gray-700 mb-2">Parameter</label>
+                            <input type="text" id="parameter" name="parameter" x-model="form.parameter"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Opsional, contoh: HARVEST, TRANSPORT" />
+                        </div>
+
+                        <!-- Tanggal Mulai Berlaku -->
+                        <div class="mb-4">
+                            <label for="effectivedate" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai Berlaku</label>
+                            <input type="date" id="effectivedate" name="effectivedate" x-model="form.effectivedate" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                            <p class="mt-1 text-xs text-gray-500">Tanggal mulai berlakunya harga upah ini</p>
+                        </div>
+
+                        <!-- Tanggal Berakhir -->
+                        <div class="mb-6">
+                            <label for="enddate" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Berakhir</label>
+                            <input type="date" id="enddate" name="enddate" x-model="form.enddate"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            <p class="mt-1 text-xs text-gray-500">Kosongkan jika upah masih berlaku sampai sekarang</p>
                         </div>
 
                         <!-- Modal Actions -->
@@ -288,40 +318,9 @@
         </div>
     </div>
 
-    <!-- Custom Styles -->
     <style>
         [x-cloak] {
             display: none !important;
-        }
-
-        /* Custom scrollbar for modal */
-        .overflow-y-auto::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        /* Mobile-friendly focus styles */
-        @media (max-width: 768px) {
-
-            input:focus,
-            select:focus,
-            button:focus {
-                outline: 2px solid #3b82f6;
-                outline-offset: 2px;
-            }
         }
     </style>
 
