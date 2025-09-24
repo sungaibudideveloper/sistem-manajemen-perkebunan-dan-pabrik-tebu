@@ -32,13 +32,17 @@ class PiasController extends Controller
     public function home(Request $request)
     {   
         $rkhhdr = new rkhhdr;
-        $data = $rkhhdr->where('status','done')->get();
-
-        
+        $data = $rkhhdr
+        ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
+        ->where('approvalstatus', 1)
+        ->select(
+            'rkhhdr.*', 
+            'u.name as mandor_name'
+        )
+        ->paginate(15); 
         return view('input.pias.home')->with([
-            'title'         => 'Pias',
-            'usehdr'        => $usehdr,
-            'perPage'       => $perPage
+            'title'       => 'Pias',
+            'data'        => $data
         ]);
     }
 
@@ -49,20 +53,35 @@ class PiasController extends Controller
         $lkhhdr = new rkhhdr;
         $lkhlst = new rkhlst;
 
-        $rkhdata = $rkhhdr
-        ->leftJoin('rkh_lst', function($join) {
-            $join->on('rkh_hdr.rkhno', '=', 'rkh_lst.rkhno')
-                ->on('rkh_hdr.companycode', '=', 'rkh_lst.companycode');
-        })->where('rkh_hdr.status', 'done')->where('rkhno', $request->rkhno)
-        ->select('rkh_hdr.*', 'rkh_lst.blok', 'rkh_lst.plot', 'rkh_lst.luasarea')
+        $data = $rkhhdr
+        ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
+        ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+        ->leftJoin('lkhdetailplot','lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+        ->leftJoin('masterlist', function($join) {
+            $join->on('masterlist.companycode', '=', 'rkhhdr.companycode')
+                 ->on('masterlist.blok', '=', 'lkhdetailplot.blok')
+                 ->on('masterlist.plot', '=', 'lkhdetailplot.plot');
+        })
+        ->where('rkhhdr.rkhno', $request->input('rkhno'))
+        ->where('approvalstatus', 1)
+        ->select(
+            'rkhhdr.*', 
+            'u.name as mandor_name',
+            'lkhhdr.lkhno',
+            'lkhdetailplot.blok',
+            'lkhdetailplot.plot',
+            'lkhdetailplot.luasrkh',
+            'masterlist.tanggalulangtahun',
+            'masterlist.kodestatus',
+            'masterlist.batchno'
+        )
         ->get();
-
-        $request->rkhno
         
+        // dd($data);
+
         return view('input.pias.home')->with([
             'title'         => 'Pias',
-            'usehdr'        => $usehdr,
-            'perPage'       => $perPage
+            'data'        => $data
         ]);
     }
 
