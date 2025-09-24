@@ -43,6 +43,6 @@ class HomeController extends Controller
 
         $this->h_flash('Company berhasil dipilih', 'success');
 
-        return redirect()->route('home');
+        return url()->previous() ? redirect()->back() : redirect()->route('home');
     }
 }
