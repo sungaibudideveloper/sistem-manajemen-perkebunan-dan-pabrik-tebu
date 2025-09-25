@@ -23,6 +23,7 @@ use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
 use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 use App\Http\Controllers\MasterData\UpahController;
 use App\Http\Controllers\MasterData\KendaraanController;
+use App\Http\Controllers\MasterData\UserManagementController;
 
 
 
@@ -266,3 +267,110 @@ Route::put('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanControl
 Route::delete('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'destroy'])
     ->middleware(['auth', 'permission:Hapus Kendaraan'])
     ->name('masterdata.kendaraan.destroy');
+
+
+
+
+
+
+// =============================================================================
+// USER MANAGEMENT ROUTES - New Permission System
+// =============================================================================
+
+// Main User Management Routes
+Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
+    
+    // User CRUD - Main user management
+    Route::get('usermanagement/user', [UserManagementController::class, 'userIndex'])
+        ->name('usermanagement.user.index');
+    Route::post('usermanagement/user', [UserManagementController::class, 'userStore'])
+        ->name('usermanagement.user.store');
+    Route::get('usermanagement/user/create', [UserManagementController::class, 'userCreate'])
+        ->name('usermanagement.user.create');
+    
+    // User Company Access Management
+    Route::get('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyIndex'])
+        ->name('usermanagement.usercompany.index');
+    Route::post('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyStore'])
+        ->name('usermanagement.usercompany.store');
+    Route::post('usermanagement/user-company-permissions/assign', [UserManagementController::class, 'userCompanyAssign'])
+        ->name('usermanagement.usercompany.assign-companies');
+        
+    // User Specific Permission Overrides
+    Route::get('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionIndex'])
+        ->name('usermanagement.userpermission.index');
+    Route::post('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionStore'])
+        ->name('usermanagement.userpermission.store');
+});
+
+// User Edit/Update - dengan permission khusus
+Route::group(['middleware' => ['auth', 'permission:Edit User']], function () {
+    Route::get('usermanagement/user/{userid}/edit', [UserManagementController::class, 'userEdit'])
+        ->name('usermanagement.user.edit');
+    Route::put('usermanagement/user/{userid}', [UserManagementController::class, 'userUpdate'])
+        ->name('usermanagement.user.update');
+        
+    // ✅ ADDED: User Company Access Delete
+    Route::delete('usermanagement/user-company/{userid}/{companycode}', [UserManagementController::class, 'userCompanyDestroy'])
+        ->name('usermanagement.usercompany.destroy');
+});
+
+// User Delete - dengan permission khusus  
+Route::delete('usermanagement/user/{userid}', [UserManagementController::class, 'userDestroy'])
+    ->name('usermanagement.user.destroy')
+    ->middleware('permission:Hapus User');
+
+// ✅ ADDED: User Permission Override Delete
+Route::delete('usermanagement/user-permission/{userid}/{companycode}/{permission}', [UserManagementController::class, 'userPermissionDestroy'])
+    ->name('usermanagement.userpermission.destroy')
+    ->middleware('permission:Edit User');
+
+// Permission Master Data Routes
+Route::group(['middleware' => ['auth', 'permission:Master']], function () {
+    
+    // Permission Master CRUD
+    Route::get('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionIndex'])
+        ->name('usermanagement.permission.index');
+    Route::post('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionStore'])
+        ->name('usermanagement.permission.store');
+    Route::put('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionUpdate'])
+        ->name('usermanagement.permission.update');
+    Route::delete('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionDestroy'])
+        ->name('usermanagement.permission.destroy');
+});
+
+// Jabatan Permission Management Routes
+Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
+    
+    // Jabatan Permission Management
+    Route::get('usermanagement/jabatan', [UserManagementController::class, 'jabatanPermissionIndex'])
+        ->name('usermanagement.jabatan.index');
+    Route::post('usermanagement/jabatan/assign-permission', [UserManagementController::class, 'jabatanPermissionStore'])
+        ->name('usermanagement.jabatan.assign-permission');
+    Route::delete('usermanagement/jabatan/remove-permission', [UserManagementController::class, 'jabatanPermissionDestroy'])
+        ->name('usermanagement.jabatan.remove-permission');
+});
+
+// =============================================================================
+// API ROUTES - untuk AJAX calls dan datatables
+// =============================================================================
+Route::middleware(['auth'])->prefix('api/usermanagement')->group(function () {
+    // Get jabatan permissions - untuk form jabatan
+    Route::get('/jabatan/{idjabatan}/permissions', [App\Http\Controllers\MasterData\UserManagementController::class, 'getJabatanPermissions'])
+        ->name('api.usermanagement.jabatan.permissions');
+});
+
+// =============================================================================
+// PERMISSION API ROUTES - untuk modal permission
+// =============================================================================
+Route::get('usermanagement/user/{userid}/permissions-api', [UserManagementController::class, 'getUserPermissionsSimple'])
+    ->middleware('auth')
+    ->name('usermanagement.user.permissions-api');
+
+// =============================================================================
+// PERMISSION CHECKING UTILITY ROUTES - untuk testing dan debug
+// =============================================================================
+Route::group(['middleware' => ['auth', 'permission:Master']], function () {
+    Route::get('usermanagement/test-permission/{userid}/{permission}', [UserManagementController::class, 'testUserPermission'])
+        ->name('usermanagement.test-permission');
+});

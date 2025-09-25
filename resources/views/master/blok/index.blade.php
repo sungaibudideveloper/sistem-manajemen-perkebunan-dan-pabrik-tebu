@@ -5,7 +5,7 @@
 
     <div class="mx-auto py-4 bg-white shadow-md rounded-md">
         <div class="flex items-center justify-between mx-4 gap-2">
-            @if (auth()->user() && in_array('Create Blok', json_decode(auth()->user()->permissions ?? '[]')))
+            @if(hasPermission('Create Blok'))
                 <button onclick="openCreateModal()"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -36,8 +36,7 @@
                             </th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode
                                 Company</th>
-                            @if (auth()->user() &&
-                                    collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
+                            @if (hasPermission('Edit Blok') || hasPermission('Hapus Blok'))
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Aksi
                                 </th>
                             @endif
@@ -53,11 +52,10 @@
                                     {{ $item->blok }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companycode }}</td>
-                                @if (auth()->user() &&
-                                        collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
+                                @if (hasPermission('Edit Blok') || hasPermission('Hapus Blok'))
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                         <div class="flex items-center justify-center">
-                                            @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                            @if (hasPermission('Edit Blok'))
                                                 <button
                                                     onclick="openEditModal('{{ $item->blok }}', '{{ $item->companycode }}')"
                                                     class="group flex items-center edit-button"><svg
@@ -83,7 +81,7 @@
                                                     <span class="w-0.5"></span>
                                                 </button>
                                             @endif
-                                            @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                                            @if (hasPermission('Hapus Blok'))
                                                 <form class="inline">
                                                     @csrf
                                                     @method('DELETE')

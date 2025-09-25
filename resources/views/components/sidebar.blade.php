@@ -8,7 +8,10 @@
     $userPermissions = $userPermissions ?? [];
     $compName = $companyName ?? session('company_name', 'Default Company');
     
-    // Generate route otomatis berdasarkan pattern (sama seperti navbar)
+    // Initialize NavigationComposer instance for permission checking
+    $navComposer = app(\App\View\Composers\NavigationComposer::class);
+    
+    // Generate route otomatis berdasarkan pattern
     $getRoute = function($menuSlug, $submenuSlug) {
         // Clean slug - remove spaces and convert to lowercase
         $submenuSlug = str_replace(' ', '-', strtolower($submenuSlug));
@@ -113,6 +116,33 @@
                 return '#';
             }
         }
+
+        // User Management routes
+        if ($menuSlug === 'usermanagement') {
+            $specialUserManagement = [
+                'user' => 'usermanagement.user.index',
+                'user-company-permissions' => 'usermanagement.usercompany.index', 
+                'user-permissions' => 'usermanagement.userpermission.index',
+                'permissions-masterdata' => 'usermanagement.permission.index',
+                'jabatan' => 'usermanagement.jabatan.index',
+            ];
+            
+            if (isset($specialUserManagement[$submenuSlug])) {
+                try {
+                    return route($specialUserManagement[$submenuSlug]);
+                } catch (\Exception $e) {
+                    \Log::error("Route error for usermanagement.{$submenuSlug}: " . $e->getMessage());
+                    return '#';
+                }
+            }
+            
+            // Fallback - coba pattern default dulu
+            try {
+                return route("usermanagement.{$submenuSlug}.index");
+            } catch (\Exception $e) {
+                return '#';
+            }
+        }
         
         // Default fallback
         try {
@@ -129,8 +159,19 @@
                request()->routeIs('*.' . $slug . '*');
     };
     
+    // NEW: Check if user has permission for menu/submenu
+    $hasPermission = function($menuSlug, $submenuSlug = null) use ($navComposer) {
+        $permission = $navComposer->getPermissionName($menuSlug, $submenuSlug);
+        return $navComposer->hasPermission($permission);
+    };
+    
     // Helper function untuk render submenu items
-    $renderSubmenuItem = function($item, $menu, $getRoute, $isActive, $level = 1) {
+    $renderSubmenuItem = function($item, $menu, $getRoute, $isActive, $hasPermission, $level = 1) {
+        // Check permission untuk item ini
+        if (!$hasPermission($menu->slug, $item->slug)) {
+            return '';
+        }
+        
         $baseClasses = "group flex items-center w-full rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-100 hover:text-gray-900";
         $paddingClass = $level === 1 ? "pl-8 pr-4 py-2.5" : "pl-12 pr-4 py-2.5";
         $textColor = $isActive($item->slug) ? "text-gray-900 bg-gray-100 font-semibold" : "text-gray-600";
@@ -183,35 +224,48 @@
          :class="$store.sidebar.isMinimized ? 'px-2' : 'px-4'">
         @foreach ($navigationMenus as $menu)
             @php
+                // NEW: Check permission untuk menu utama
+                if (!$hasPermission($menu->slug)) {
+                    continue; // Skip menu jika user tidak ada permission
+                }
+                
                 // Get submenus for this menu
                 $menuSubmenus = $allSubmenus->where('menuid', $menu->menuid);
                 $headers = $menuSubmenus->whereNull('parentid')->whereNull('slug');                 
-                $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug')->whereIn('name', $userPermissions);
+                $directItems = $menuSubmenus->whereNull('parentid')->whereNotNull('slug');
                 
-                // Check if menu has any visible items
+                // Check if menu has any visible items (WITH PERMISSION CHECK)
                 $hasVisibleItems = false;
                 
                 // Check headers
                 foreach ($headers as $header) {
-                    $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
-                    if ($children->isNotEmpty()) {
-                        $hasVisibleItems = true;
-                        break;
+                    $children = $menuSubmenus->where('parentid', $header->submenuid);
+                    foreach ($children as $child) {
+                        if ($hasPermission($menu->slug, $child->slug)) {
+                            $hasVisibleItems = true;
+                            break 2; // Break both loops
+                        }
                     }
                 }
                 
                 // Check direct items
-                if (!$hasVisibleItems && $directItems->isNotEmpty()) {
-                    $hasVisibleItems = true;
+                if (!$hasVisibleItems) {
+                    foreach ($directItems as $item) {
+                        if ($hasPermission($menu->slug, $item->slug)) {
+                            $hasVisibleItems = true;
+                            break;
+                        }
+                    }
                 }
 
-                // Get menu icon - Updated dengan icon yang lebih sesuai
+                // Get menu icon
                 $menuIcons = [
                     'dashboard' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>',
                     'masterdata' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>',
                     'input-data' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>',
                     'process' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>',
-                    'report' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>'
+                    'report' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
+                    'usermanagement' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0v1H4v-1z" />'
                 ];
                 $icon = $menuIcons[$menu->slug] ?? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
             @endphp
@@ -266,13 +320,18 @@
                         {{-- Render headers with children --}}
                         @foreach ($headers as $header)
                             @php
-                                $children = $menuSubmenus->where('parentid', $header->submenuid)->whereIn('name', $userPermissions);
-                                $isDuplicate = $children->contains(function($child) use ($header) {
+                                $children = $menuSubmenus->where('parentid', $header->submenuid);
+                                // Filter children based on permission
+                                $visibleChildren = $children->filter(function($child) use ($hasPermission, $menu) {
+                                    return $hasPermission($menu->slug, $child->slug);
+                                });
+                                
+                                $isDuplicate = $visibleChildren->contains(function($child) use ($header) {
                                     return strtolower($child->name) === strtolower($header->name);
                                 });
                             @endphp
                             
-                            @if ($children->isNotEmpty())
+                            @if ($visibleChildren->isNotEmpty())
                                 @if (!$isDuplicate)
                                     {{-- Header with children --}}
                                     <div x-data="{ subOpen: false }" class="space-y-1">
@@ -286,19 +345,19 @@
                                         </button>
                                         
                                         <div x-show="subOpen" x-transition class="space-y-0.5 ml-2">
-                                            @foreach ($children as $child)
-                                                {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, 2) !!}
+                                            @foreach ($visibleChildren as $child)
+                                                {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, $hasPermission, 2) !!}
                                             @endforeach
                                         </div>
                                     </div>
                                 @else
                                     {{-- Duplicate case - just show children without header --}}
-                                    @foreach ($children as $child)
-                                        {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, 1) !!}
+                                    @foreach ($visibleChildren as $child)
+                                        {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, $hasPermission, 1) !!}
                                     @endforeach
                                 @endif
                                 
-                                @if (!$loop->last || $directItems->isNotEmpty())
+                                @if (!$loop->last || $directItems->filter(function($item) use ($hasPermission, $menu) { return $hasPermission($menu->slug, $item->slug); })->isNotEmpty())
                                     <div class="my-2 h-px bg-gray-200"></div>
                                 @endif
                             @endif
@@ -307,8 +366,17 @@
                         {{-- Render direct items --}}
                         @foreach ($directItems as $item)
                             @php
-                                $itemChildren = $menuSubmenus->where('parentid', $item->submenuid)->whereIn('name', $userPermissions);
-                                $hasChildren = $itemChildren->isNotEmpty();
+                                // Check permission untuk direct item
+                                if (!$hasPermission($menu->slug, $item->slug)) {
+                                    continue;
+                                }
+                                
+                                $itemChildren = $menuSubmenus->where('parentid', $item->submenuid);
+                                // Filter children based on permission
+                                $visibleItemChildren = $itemChildren->filter(function($child) use ($hasPermission, $menu) {
+                                    return $hasPermission($menu->slug, $child->slug);
+                                });
+                                $hasChildren = $visibleItemChildren->isNotEmpty();
                             @endphp
                             
                             @if ($hasChildren)
@@ -338,14 +406,14 @@
                                         <div class="my-1 h-px bg-gray-200"></div>
                                         
                                         {{-- Children --}}
-                                        @foreach ($itemChildren as $child)
-                                            {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, 2) !!}
+                                        @foreach ($visibleItemChildren as $child)
+                                            {!! $renderSubmenuItem($child, $menu, $getRoute, $isActive, $hasPermission, 2) !!}
                                         @endforeach
                                     </div>
                                 </div>
                             @else
                                 {{-- Item without children --}}
-                                {!! $renderSubmenuItem($item, $menu, $getRoute, $isActive, 1) !!}
+                                {!! $renderSubmenuItem($item, $menu, $getRoute, $isActive, $hasPermission, 1) !!}
                             @endif
                         @endforeach
                     </div>
@@ -354,7 +422,7 @@
         @endforeach
     </nav>
 
-    <!-- NEW: Bottom Collapse Button -->
+    <!-- Bottom Collapse Button -->
     <div class="bg-green-50 border-t border-gray-200 p-3">
         <button @click="toggleSidebar()" 
                 class="flex items-center justify-center w-full p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all duration-200 group"

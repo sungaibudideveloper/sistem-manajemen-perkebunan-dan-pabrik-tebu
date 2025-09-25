@@ -1,5 +1,5 @@
 // public/sw.js - FIXED VERSION
-const CACHE_VERSION = 'v7'; // Increment this on every deployment
+const CACHE_VERSION = 'v8'; // Increment this on every deployment
 const CACHE_NAME = `sb-tebu-${CACHE_VERSION}`;
 const STATIC_CACHE = `sb-tebu-static-${CACHE_VERSION}`;
 
@@ -101,18 +101,19 @@ function shouldNeverCache(url, method) {
         
         // Laravel specific patterns to skip
         const skipPatterns = [
-            /\/api\//,
-            /\/ajax\//,
-            /\/livewire\//,
-            /\/broadcasting\//,
-            /\/storage\//,
-            /\/build\/manifest\.json$/,
-            /\/@vite\//,
-            /\/__vite_ping/,
-            /\/hot$/,
-            /\/build\/.*\.js$/, // CRITICAL: Skip all build JS files
-            /\/build\/.*\.css$/ // Also skip build CSS files in case of issues
-        ];
+        /\/api\//,
+        /\/ajax\//,
+        /\/livewire\//,
+        /\/broadcasting\//,
+        /\/storage\//,
+        /\/build\/manifest\.json$/,
+        /\/@vite\//,
+        /\/__vite_ping/,
+        /\/hot$/,
+        /\/build\/.*\.js$/,
+        /\/build\/.*\.css$/,
+        /\/usermanagement\/jabatan\/assign-permission/ // Tambah baris ini
+    ];
         
         return skipPatterns.some(pattern => pattern.test(pathname));
         
