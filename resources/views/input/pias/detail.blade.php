@@ -3,6 +3,9 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
+  <!-- Form -->
+  <form action="{{ route('input.pias.submit', ['rkhno' => $data[0]->rkhno]) }}" method="POST">
+    @csrf
   <div class="w-full p-4">
     <!-- Container full width tanpa center alignment -->
     <div class="w-full mb-4">
@@ -13,11 +16,11 @@
           <div class="space-y-3">
             <div>
               <label class="block mb-1 text-sm">Total TJ (stok opsional)</label>
-              <input type="number" id="inputTJ" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TJ" onchange="render()">
+              <input type="number" name="inputTJ" id="inputTJ" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TJ" onchange="render()">
             </div>
             <div>
               <label class="block mb-1 text-sm">Total TC (stok opsional)</label>
-              <input type="number" id="inputTC" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TC" onchange="render()">
+              <input type="number" name="inputTC" id="inputTC" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TC" onchange="render()">
             </div>
           </div>
         </div>
@@ -73,6 +76,7 @@
         <h3 class="text-lg font-bold">Detail Plot</h3>
       </div>
       <div class="overflow-x-auto">
+
         <table class="w-full text-center">
           <thead>
             <tr class="bg-gray-50">
@@ -114,61 +118,60 @@
             @endforeach
           </tbody>
         </table>
+        <div class="flex justify-center mt-4 mb-4">
+          <button
+              type="submit"
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+          >
+              Generate
+          </button>
+        </div>
+
       </div>
     </div>
   </div>
-
+</form>
   <script>
-    function render() {
+    document.addEventListener('DOMContentLoaded', function () {
       const inputTJ = document.getElementById('inputTJ');
       const inputTC = document.getElementById('inputTC');
       const plotTable = document.getElementById('plotTable');
+    
       const totalTJEl = document.getElementById('totalTJ');
       const totalTCEl = document.getElementById('totalTC');
-      const stokTJEl = document.getElementById('stokTJ');
-      const stokTCEl = document.getElementById('stokTC');
-      const sisaTJEl = document.getElementById('sisaTJ');
-      const sisaTCEl = document.getElementById('sisaTC');
-      const statusTJ = document.getElementById('statusTJ');
-      const statusTC = document.getElementById('statusTC');
+      const stokTJEl  = document.getElementById('stokTJ');
+      const stokTCEl  = document.getElementById('stokTC');
+      const sisaTJEl  = document.getElementById('sisaTJ');
+      const sisaTCEl  = document.getElementById('sisaTC');
+      const summary   = document.getElementById('summaryCard');
+      const statusTJ  = document.getElementById('statusTJ');
+      const statusTC  = document.getElementById('statusTC');
     
-      // Format input ke 3 desimal
-      inputTJ.value = parseFloat(inputTJ.value || 0).toFixed(3);
-      inputTC.value = parseFloat(inputTC.value || 0).toFixed(3);
-      
-      const stokTJ = parseFloat(inputTJ.value) || 0;
-      const stokTC = parseFloat(inputTC.value) || 0;
-    
-      // Validasi: KEDUA input harus > 0
-      if (stokTJ <= 0 || stokTC <= 0) {
-        kosongkanTabel();
-        // Reset summary values ke kosong
-        totalTJEl.textContent = '0';
-        totalTCEl.textContent = '0';
-        stokTJEl.textContent = '0';
-        stokTCEl.textContent = '0';
-        sisaTJEl.textContent = '0';
-        sisaTCEl.textContent = '0';
-        statusTJ.textContent = '';
-        statusTC.textContent = '';
-        statusTJ.className = 'text-center text-xs font-medium rounded-md py-1';
-        statusTC.className = 'text-center text-xs font-medium rounded-md py-1';
-        return;
-      }
-    
-      const persentases = [
-        {tj: 0.7, tc: 0.3}, {tj: 0.7, tc: 0.3}, {tj: 0.69, tc: 0.4},
-        {tj: 0.5, tc: 0.5}, {tj: 0.4, tc: 0.6}, {tj: 0.3, tc: 0.7},
-        {tj: 0.3, tc: 0.7}, {tj: 0.3, tc: 0.7}, {tj: 0.3, tc: 0.7}, {tj: 0.3, tc: 0.7}
+      const pcts = [
+        {tj:0.7,tc:0.3},{tj:0.7,tc:0.3},{tj:0.69,tc:0.4},
+        {tj:0.5,tc:0.5},{tj:0.4,tc:0.6},{tj:0.3,tc:0.7},
+        {tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7}
       ];
     
-      function hitungPias(luas, umur) {
-        const bulan = Math.max(1, Math.ceil(umur / 30));
-        const idx = Math.min(bulan, 10) - 1;
-        const p = persentases[idx] || {tj: 0.5, tc: 0.5};
+      const hasBoth = () => {
+        const tj = parseFloat(inputTJ.value), tc = parseFloat(inputTC.value);
+        return tj > 0 && !Number.isNaN(tj) && tc > 0 && !Number.isNaN(tc);
+      };
+    
+      // format tampilan: truncate ke 3 desimal (tanpa pengaruh ke nilai asli)
+      function fmt3(x) {
+        if (!Number.isFinite(x)) return '0';
+        const t = Math.trunc(x * 1000) / 1000;
+        return t.toLocaleString('id-ID', {maximumFractionDigits: 3, minimumFractionDigits: 0});
+      }
+    
+      function kebutuhan(luas, umur){
+        const bulan = Math.max(1, Math.ceil(umur/30));
+        const p = pcts[Math.min(bulan,10)-1] || {tj:0.5,tc:0.5};
         const total = luas * 25;
         return {
-          bulan, total,
+          bulan,
+          total,
           needTJ: total * p.tj,
           needTC: total * p.tc,
           persenTJ: (p.tj*100).toFixed(0),
@@ -176,90 +179,123 @@
         };
       }
     
-      function allocateSmartly(needs, stock) {
-        const plotCount = needs.length;
-        if (plotCount === 0 || stock === 0) return needs.map(() => 0);
-        
-        const stockLimited = stock;
-        const totalNeed = Math.ceil(needs.reduce((a, b) => a + b, 0) * 10) / 10;
-        
-        if (stockLimited >= totalNeed) {
-          return needs.map(need => Math.round(need * 100) / 100);
+      // alokasi sama-rata tanpa pembulatan (continuous water-filling)
+      function allocateEqualNoRound(needs, stock){
+        const n = needs.length;
+        const alloc = new Array(n).fill(0);
+        const idx = needs.map((v,i)=> v>0 ? i : null).filter(i=>i!==null);
+        let remain = stock;
+        if (remain <= 0 || idx.length === 0) return alloc;
+    
+        const totalNeed = needs.reduce((a,b)=>a+b,0);
+        if (remain >= totalNeed) return needs.slice(); // penuhi semua
+    
+        let active = idx.slice();
+        while (active.length > 0 && remain > 0){
+          const share = remain / active.length;
+          const still = [];
+          for (const i of active){
+            const gap = needs[i] - alloc[i];
+            if (gap <= share + 1e-12){
+              alloc[i] += gap;
+              remain   -= gap;
+            } else {
+              alloc[i] += share;
+              remain   -= share;
+              still.push(i);
+            }
+          }
+          if (still.length === active.length) break; // semua dapat share sama; stok habis
+          active = still;
         }
-        
-        const evenShare = Math.floor((stockLimited / plotCount) * 100) / 100;
-        return new Array(plotCount).fill(evenShare);
+        return alloc;
       }
     
-      function kosongkanTabel() {
-        plotTable.querySelectorAll('tr').forEach(r => {
-          const tjCell = r.querySelector('.tj-result');
-          const tcCell = r.querySelector('.tc-result');
-          const rumus = r.querySelector('.pias-formula');
-          if (tjCell) tjCell.textContent = '';
-          if (tcCell) tcCell.textContent = '';
-          if (rumus) rumus.textContent = '';
+      function resetUI(){
+        [...plotTable.querySelectorAll('tr')].forEach(r=>{
+          const h=r.querySelector('.pias-results');
+          const f=r.querySelector('.pias-formula');
+          if(h) h.textContent='';
+          if(f) f.textContent='';
         });
+        summary.classList.add('hidden');
       }
     
-      const rows = Array.from(plotTable.querySelectorAll('tr'));
-      const needsTJ = [];
-      const needsTC = [];
-      const meta = [];
+      function render(){
+        if(!hasBoth()){ resetUI(); return; }
     
-      rows.forEach(row => {
-        const luas = parseFloat(row.dataset.luas) || 0;
-        const umur = parseInt(row.dataset.umur) || 0;
-        const res = hitungPias(luas, umur);
-        needsTJ.push(res.needTJ);
-        needsTC.push(res.needTC);
-        meta.push({row, res});
+        const stokTJ = parseFloat(inputTJ.value) || 0;
+        const stokTC = parseFloat(inputTC.value) || 0;
+    
+        const rows = [...plotTable.querySelectorAll('tr')];
+        const needsTJ=[], needsTC=[], meta=[];
+    
+        rows.forEach(r=>{
+          const luas = parseFloat(r.dataset.luas) || 0;
+          const umur = parseInt(r.dataset.umur) || 0;
+          const k = kebutuhan(luas, umur);
+          needsTJ.push(k.needTJ);
+          needsTC.push(k.needTC);
+          meta.push({row:r,res:k});
+        });
+    
+        const allocTJ = allocateEqualNoRound(needsTJ, stokTJ);
+        const allocTC = allocateEqualNoRound(needsTC, stokTC);
+    
+        let sumNeedTJ=0, sumNeedTC=0, sumAllocTJ=0, sumAllocTC=0;
+    
+        meta.forEach((m,i)=>{
+          const h = m.row.querySelector('.pias-results');
+          const f = m.row.querySelector('.pias-formula');
+          sumNeedTJ  += needsTJ[i];
+          sumNeedTC  += needsTC[i];
+          sumAllocTJ += allocTJ[i];
+          sumAllocTC += allocTC[i];
+    
+          if (h) h.textContent = `B${m.res.bulan}: TJ ${fmt3(allocTJ[i])}, TC ${fmt3(allocTC[i])}`;
+          if (f) f.innerHTML =
+            `Total=${fmt3(m.res.total)} lbr<br>`+
+            `Persen B${m.res.bulan}: TJ ${m.res.persenTJ}% / TC ${m.res.persenTC}%<br>`+
+            `Kebutuhan: TJ ${fmt3(needsTJ[i])}, TC ${fmt3(needsTC[i])}<br>`+
+            `Alokasi: TJ ${fmt3(allocTJ[i])}, TC ${fmt3(allocTC[i])}`;
+        });
+    
+        totalTJEl.textContent = fmt3(sumNeedTJ);
+        totalTCEl.textContent = fmt3(sumNeedTC);
+        stokTJEl.textContent  = fmt3(stokTJ);
+        stokTCEl.textContent  = fmt3(stokTC);
+        sisaTJEl.textContent  = fmt3(stokTJ - sumAllocTJ);
+        sisaTCEl.textContent  = fmt3(stokTC - sumAllocTC);
+    
+        const okTJ = sumAllocTJ + 1e-9 >= sumNeedTJ;
+        const okTC = sumAllocTC + 1e-9 >= sumNeedTC;
+        statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
+        statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
+        statusTJ.className = `text-center text-sm font-medium rounded-md py-2 mb-2 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+        statusTC.className = `text-center text-sm font-medium rounded-md py-2 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+    
+        summary.classList.remove('hidden');
+      }
+    
+      let timer; const IDLE=800;
+      function schedule(){
+        clearTimeout(timer);
+        if(hasBoth()) timer=setTimeout(render,IDLE);
+        else resetUI();
+      }
+      ['input','change','blur'].forEach(evt=>{
+        inputTJ.addEventListener(evt, schedule);
+        inputTC.addEventListener(evt, schedule);
+      });
+      [inputTJ,inputTC].forEach(el=>{
+        el.addEventListener('keydown', e=>{
+          if(e.key==='Enter'){ clearTimeout(timer); hasBoth()?render():resetUI(); }
+        });
       });
     
-      const totalNeedTJ = Math.round(needsTJ.reduce((a,b)=>a+b, 0) * 100) / 100;
-      const totalNeedTC = Math.round(needsTC.reduce((a,b)=>a+b, 0) * 100) / 100;
+      resetUI();
+    });
+    </script>
+      
     
-      const allocTJ = allocateSmartly(needsTJ, stokTJ);
-      const allocTC = allocateSmartly(needsTC, stokTC);
-    
-      meta.forEach((m, i) => {
-        const tjCell = m.row.querySelector('.tj-result');
-        const tcCell = m.row.querySelector('.tc-result');
-        const rumusCell = m.row.querySelector('.pias-formula');
-        const needTJi = Math.round(needsTJ[i]);
-        const needTCi = Math.round(needsTC[i]);
-    
-        if (tjCell) tjCell.textContent = allocTJ[i];
-        if (tcCell) tcCell.textContent = allocTC[i];
-        
-        if (rumusCell) {
-          rumusCell.innerHTML =
-            `<strong>Bulan ke ${m.res.bulan}</strong><br>`+
-            `Total = ${m.res.total} lbr (25 × luas)<br>`+
-            `Persen: TJ ${m.res.persenTJ}% / TC ${m.res.persenTC}%<br>`+
-            `Kebutuhan: TJ <b>${needTJi}</b>, TC <b>${needTCi}</b><br>`+
-            `Alokasi: TJ <b>${allocTJ[i]}</b>, TC <b>${allocTC[i]}</b>`;
-        }
-      });
-    
-      const sumAllocTJ = allocTJ.reduce((a,b)=>a+b,0);
-      const sumAllocTC = allocTC.reduce((a,b)=>a+b,0);
-    
-      totalTJEl.textContent = totalNeedTJ;
-      totalTCEl.textContent = totalNeedTC;
-      stokTJEl.textContent = stokTJ;
-      stokTCEl.textContent = stokTC;
-      sisaTJEl.textContent = Math.max(0, stokTJ - sumAllocTJ);
-      sisaTCEl.textContent = Math.max(0, stokTC - sumAllocTC);
-    
-      const okTJ = sumAllocTJ >= totalNeedTJ;
-      const okTC = sumAllocTC >= totalNeedTC;
-    
-      statusTJ.textContent = okTJ ? 'Stok TJ CUKUP (alokasi memenuhi kebutuhan)' : 'Stok TJ KURANG (alokasi proporsional)';
-      statusTC.textContent = okTC ? 'Stok TC CUKUP (alokasi memenuhi kebutuhan)' : 'Stok TC KURANG (alokasi proporsional)';
-    
-      statusTJ.className = `text-center text-xs font-medium rounded-md py-1 mb-1 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-      statusTC.className = `text-center text-xs font-medium rounded-md py-1 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-    }
-  </script>
 </x-layout>

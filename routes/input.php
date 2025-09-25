@@ -133,7 +133,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('input/pias', [PiasController::class,'home'])->name('input.pias.home')->middleware('permission:Menu Pias');
     Route::get('input/pias/detail', [PiasController::class,'detail'])->name('input.pias.detail')->middleware('permission:Menu Pias');
-    Route::get('input/pias/submit', [PiasController::class,'submit'])->name('input.pias.submit')->middleware('permission:Menu Pias');
+    Route::post('input/pias/submit', [PiasController::class,'submit'])->name('input.pias.submit')->middleware('permission:Menu Pias');
 });
 
 
