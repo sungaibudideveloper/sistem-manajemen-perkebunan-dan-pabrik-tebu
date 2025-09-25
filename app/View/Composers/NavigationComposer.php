@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Middleware\CheckPermission;
 
 class NavigationComposer
 {
@@ -20,8 +21,8 @@ class NavigationComposer
                 'companyName' => $this->getCompanyName(),
                 'user' => $this->getCurrentUserName(),
                 'userCompanies' => $this->getUserCompanies(),
-                'company' => $this->getUserCompanies(), // Tambahkan alias company
-                'period' => $this->getMonitoringPeriod() // Tambahkan period
+                'company' => $this->getUserCompanies(),
+                'period' => $this->getMonitoringPeriod()
             ]);
         }
     }
@@ -58,20 +59,136 @@ class NavigationComposer
     }
 
     /**
-     * Get user permissions
+     * Get user permissions - NEW: menggunakan sistem permission baru
      */
     private function getUserPermissions()
     {
         try {
-            return DB::table('submenu')
-                ->whereNotNull('slug')
-                ->where('slug', '!=', '')
-                ->pluck('name')
-                ->toArray();
+            if (!Auth::check()) {
+                return [];
+            }
+
+            $user = Auth::user();
+            $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
+            
+            // Return array of permission names yang di-grant
+            $grantedPermissions = [];
+            foreach ($effectivePermissions as $permissionName => $details) {
+                if ($details['granted']) {
+                    $grantedPermissions[] = $permissionName;
+                }
+            }
+            
+            return $grantedPermissions;
+            
         } catch (\Exception $e) {
             \Log::error('Error getting user permissions: ' . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Check if user has specific permission
+     */
+    public function hasPermission($permissionName)
+    {
+        try {
+            if (!Auth::check()) {
+                return false;
+            }
+
+            $user = Auth::user();
+            $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
+            
+            return isset($effectivePermissions[$permissionName]) && 
+                   $effectivePermissions[$permissionName]['granted'] === true;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error checking permission: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get permission name for menu/submenu
+     */
+    public function getPermissionName($menuSlug, $submenuSlug = null)
+    {
+        // Mapping berdasarkan data menu/submenu Anda
+        $menuPermissions = [
+            'masterdata' => 'Master',
+            'input-data' => 'Input Data', 
+            'report' => 'Report',
+            'dashboard' => 'Dashboard',
+            'process' => 'Process',
+            'usermanagement' => 'Kelola User'
+        ];
+
+        $submenuPermissions = [
+            // Master Data
+            'company' => 'Company',
+            'master-list' => 'MasterList',
+            'blok' => 'Blok',
+            'plotting' => 'Plotting',
+            'kategori' => 'Kategori',
+            'herbisida' => 'Herbisida',
+            'herbisida-dosage' => 'Dosis Herbisida',
+            'varietas' => 'Varietas',
+            'mandor' => 'Mandor',
+            'tenagakerja' => 'Tenaga Kerja',
+            'jabatan' => 'Jabatan',
+            'username' => 'Kelola User',
+            'approval' => 'Approval',
+            'aktivitas' => 'Aktivitas',
+            'menu' => 'Menu',
+            'submenu' => 'Submenu', 
+            'subsubmenu' => 'Subsubmenu',
+            'kendaraan' => 'Kendaraan',
+            'upah' => 'Upah',
+            'batch' => 'Batch',
+            'accounting' => 'Accounting',
+
+            // Input Data
+            'kerja-harian' => 'Rencana Kerja Harian',
+            'gudang' => 'Gudang',
+            'gudang-bbm' => 'Menu Gudang',
+            'kendaraan-workshop' => 'Kendaraan',
+            'pias' => 'Menu Pias',
+            'agronomi' => 'Agronomi',
+            'hpt' => 'HPT',
+
+            // Dashboard
+            'agronomi-dashboard' => 'Dashboard Agronomi',
+            'hpt-dashboard' => 'Dashboard HPT',
+            'timeline' => 'Timeline',
+            'maps' => 'Maps',
+
+            // Report
+            'agronomi-report' => 'Report Agronomi',
+            'hpt-report' => 'Report HPT',
+
+            // Process
+            'posting' => 'Posting',
+            'unposting' => 'Unposting',
+            'upload gpx file' => 'Upload GPX File',
+            'export kml file' => 'Export KML File', 
+            'closing' => 'Closing',
+
+            // User Management
+            'user' => 'Kelola User',
+            'user-company-permissions' => 'Hak Akses',
+            'user-permissions' => 'Hak Akses', 
+            'permissions-masterdata' => 'Hak Akses',
+            'jabatan' => 'Jabatan'
+        ];
+
+        // Jika ada submenu, return permission submenu
+        if ($submenuSlug && isset($submenuPermissions[$submenuSlug])) {
+            return $submenuPermissions[$submenuSlug];
+        }
+
+        // Return permission menu
+        return $menuPermissions[$menuSlug] ?? $menuSlug;
     }
 
     /**
@@ -85,7 +202,6 @@ class NavigationComposer
                     ->where('companycode', session('companycode'))
                     ->value('name');
                 
-                // Set ke session agar bisa dipanggil di header
                 if ($companyName) {
                     session(['companyname' => $companyName]);
                     return $companyName;
@@ -111,9 +227,7 @@ class NavigationComposer
                     ->where('companycode', session('companycode'))
                     ->value('updatedat');
                 
-                
                 if ($period) {
-                    // Format period menjadi lebih readable
                     return Carbon::parse($period)->format('F Y');
                 }
             }
@@ -143,21 +257,20 @@ class NavigationComposer
     }
 
     /**
-     * Get user companies
+     * Get user companies - FIXED: untuk sistem baru
      */
     private function getUserCompanies()
     {
         try {
             if (Auth::check()) {
-                $companyRaw = DB::table('usercompany')
+                $companies = DB::table('usercompany')
                     ->where('userid', Auth::user()->userid)
-                    ->value('companycode');
+                    ->where('isactive', 1)
+                    ->pluck('companycode')
+                    ->toArray();
                 
-                if ($companyRaw) {
-                    $companies = explode(',', $companyRaw);
-                    sort($companies);
-                    return $companies;
-                }
+                sort($companies);
+                return $companies;
             }
             return [];
         } catch (\Exception $e) {

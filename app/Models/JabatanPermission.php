@@ -1,31 +1,34 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 
-class UserCompany extends Model
+class JabatanPermission extends Model
 {
-    protected $table = 'usercompany';
+    protected $table = 'jabatanpermissions';
     
     // Composite primary key
-    protected $primaryKey = ['userid', 'companycode'];
+    protected $primaryKey = ['idjabatan', 'permissionid'];
     public $incrementing = false;
     protected $keyType = 'array';
     
-    // Timestamps
+    // Custom timestamps
     public $timestamps = true;
     const CREATED_AT = 'createdat';
-    const UPDATED_AT = 'updatedat';
+    const UPDATED_AT = null; // Table tidak punya kolom updatedat
     
     protected $fillable = [
-        'userid',
-        'companycode',
+        'idjabatan',
+        'permissionid', 
         'isactive',
         'grantedby',
         'createdat'
     ];
     
     protected $casts = [
-        'isactive' => 'boolean'
+        'isactive' => 'boolean',
+        'createdat' => 'datetime'
     ];
     
     // Override getKeyName untuk composite key
@@ -63,18 +66,13 @@ class UserCompany extends Model
         return $this->getAttribute($keyName);
     }
 
-    public function user()
+    public function jabatan()
     {
-        return $this->belongsTo(User::class, 'userid');
+        return $this->belongsTo(Jabatan::class, 'idjabatan');
     }
-    
-    public function company()
+
+    public function permission()
     {
-        return $this->belongsTo(Company::class, 'companycode', 'companycode');
-    }
-    
-    protected function serializeDate(\DateTimeInterface $date)
-    {
-        return $date->format('Y-m-d H:i:s');
+        return $this->belongsTo(Permission::class, 'permissionid');
     }
 }
