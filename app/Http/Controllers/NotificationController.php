@@ -36,13 +36,14 @@ class NotificationController extends Controller
         $comp = explode(',', Auth::user()->userComp->companycode);
         $dropdownValue = session('companycode');
 
-        $permissions = json_decode(Auth::user()->permissions, true);
-        $isKepalaKebun = in_array('Kepala Kebun', $permissions);
-        $isAdmin = in_array('Admin', $permissions);
+        // FIXED: Menggunakan helper function untuk permission check
+        $isKepalaKebun = $this->hasJabatan('Kepala Kebun');
+        $isAdmin = hasPermission('Admin');
 
         $notifQuery = DB::table('notification')->join('company', function ($join) {
                 $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
         });
+        
         if ($isAdmin) {
             $notifQuery->where(function ($query) use ($comp) {
                 foreach ($comp as $company) {
@@ -160,13 +161,18 @@ class NotificationController extends Controller
         return response()->json(['message' => 'Notification marked as read'], 200);
     }
 
+    /**
+     * FIXED: Method yang menyebabkan error - line 168
+     * Mengganti sistem permission lama dengan sistem relational baru
+     */
     public function getUnreadCount()
     {
         $currentUser = Auth::user()->usernm;
         $comp = explode(',', Auth::user()->userComp->companycode);
-        $permissions = json_decode(Auth::user()->permissions, true);
-        $isKepalaKebun = in_array('Kepala Kebun', $permissions);
-        $isAdmin = in_array('Admin', $permissions);
+        
+        // FIXED: Menggunakan helper function untuk permission check
+        $isKepalaKebun = $this->hasJabatan('Kepala Kebun');
+        $isAdmin = hasPermission('Admin');
 
         $query = DB::table('notification')
             ->join('company', function ($join) {
@@ -211,6 +217,25 @@ class NotificationController extends Controller
         $unreadCount = $notif->count();
 
         return response()->json(['unread_count' => $unreadCount]);
+    }
+
+    /**
+     * Helper method untuk check jabatan
+     * Mengganti logika permission lama yang menggunakan JSON
+     */
+    private function hasJabatan($jabatanName)
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->idjabatan) {
+            return false;
+        }
+        
+        $jabatan = DB::table('jabatan')
+            ->where('idjabatan', $user->idjabatan)
+            ->first();
+            
+        return $jabatan && $jabatan->namajabatan === $jabatanName;
     }
 
     public function agronomiNotif()

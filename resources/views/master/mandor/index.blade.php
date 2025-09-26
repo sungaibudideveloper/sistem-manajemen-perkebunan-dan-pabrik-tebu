@@ -19,7 +19,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
       {{-- Create Button --}}
-      {{-- @if(auth()->user() && in_array('Create Mandor', json_decode(auth()->user()->permissions ?? '[]'))) --}}
+      @if(hasPermission('Create Mandor'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
           <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,7 +188,7 @@
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
                     {{-- Edit --}}
-                    {{-- @if(auth()->user() && in_array('Edit Mandor', json_decode(auth()->user()->permissions ?? '[]'))) --}}
+                    @if(hasPermission('Edit Mandor'))
                       <button
                         @click="
                           mode = 'edit';
@@ -210,7 +210,7 @@
                     {{-- @endif --}}
 
                     {{-- Delete --}}
-                    {{-- @if(auth()->user() && in_array('Hapus Mandor', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if(hasPermission('Hapus Mandor'))
                       <form
                         action="{{ url("masterdata/mandor/{$data->companycode}/{$data->userid}") }}"
                         method="POST"

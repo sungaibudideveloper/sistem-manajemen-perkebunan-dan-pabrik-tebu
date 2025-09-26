@@ -94,7 +94,6 @@ class UserManagementController extends Controller
                 'inputby' => Auth::user()->userid,
                 'createdat' => now(),
                 'isactive' => $request->isactive ?? 1,
-                'permissions' => null // New system, no JSON
             ]);
 
             // Auto-assign user to primary company
@@ -364,9 +363,9 @@ class UserManagementController extends Controller
                                 ->groupBy('category');
         
         return view('master.usermanagement.jabatan.index', [
-            'title' => 'Role & Permission Management',
+            'title' => 'Jabatan Management',
             'navbar' => 'User Management',
-            'nav' => 'Role Permissions',
+            'nav' => 'Jabatan Permissions',
             'result' => $result,
             'permissions' => $permissions,
             'perPage' => $perPage
@@ -419,6 +418,119 @@ class UserManagementController extends Controller
             
             return redirect()->back()
                         ->with('error', 'Gagal memperbarui permissions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store new jabatan
+     */
+    public function jabatanStore(Request $request)
+    {
+        $request->validate([
+            'namajabatan' => 'required|string|max:30|unique:jabatan,namajabatan',
+        ]);
+
+        try {
+            Jabatan::create([
+                'namajabatan' => $request->namajabatan,
+                'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+            ]);
+
+            return redirect()->route('usermanagement.jabatan.index')
+                        ->with('success', 'Jabatan berhasil ditambahkan');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Gagal menambahkan jabatan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update jabatan
+     */
+    public function jabatanUpdate(Request $request, $idjabatan)
+    {
+        $request->validate([
+            'namajabatan' => 'required|string|max:30|unique:jabatan,namajabatan,' . $idjabatan . ',idjabatan',
+        ]);
+
+        try {
+            $jabatan = Jabatan::find($idjabatan);
+            
+            if (!$jabatan) {
+                return redirect()->route('usermanagement.jabatan.index')
+                            ->with('error', 'Jabatan tidak ditemukan');
+            }
+
+            $jabatan->update([
+                'namajabatan' => $request->namajabatan,
+                'updateby' => Auth::user()->userid,
+                'updatedat' => now()
+            ]);
+
+            return redirect()->route('usermanagement.jabatan.index')
+                        ->with('success', 'Jabatan berhasil diperbarui');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Gagal memperbarui jabatan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete jabatan (soft delete)
+     */
+    public function jabatanDestroy($idjabatan)
+    {
+        try {
+            $jabatan = Jabatan::find($idjabatan);
+            
+            if (!$jabatan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jabatan tidak ditemukan'
+                ], 404);
+            }
+
+            // Check if jabatan is being used by any users
+            $userCount = User::where('idjabatan', $idjabatan)->where('isactive', 1)->count();
+            
+            if ($userCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jabatan sedang digunakan oleh ' . $userCount . ' user dan tidak bisa dihapus'
+                ], 422);
+            }
+
+            // Check if jabatan has any permissions
+            $permissionCount = JabatanPermission::where('idjabatan', $idjabatan)
+                                            ->where('isactive', 1)
+                                            ->count();
+            
+            if ($permissionCount > 0) {
+                // Deactivate all permissions for this jabatan first
+                JabatanPermission::where('idjabatan', $idjabatan)
+                                ->update(['isactive' => 0]);
+            }
+
+            // Delete the jabatan
+            $jabatan->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jabatan berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to delete jabatan:', ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus jabatan: ' . $e->getMessage()
+            ], 500);
         }
     }
 
