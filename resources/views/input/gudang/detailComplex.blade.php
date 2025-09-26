@@ -117,7 +117,6 @@
                             @foreach( $details->where('herbisidagroupid', $groupId) as $d )
                             @php
                                 //$matched = collect($lst)->where('itemcode', $d->itemcode)->where('herbisidagroupid', $d->herbisidagroupid)->first();
-                                
                                 $plot = $plots->where('herbisidagroupid',$d->herbisidagroupid)->first();
 
                             @endphp
