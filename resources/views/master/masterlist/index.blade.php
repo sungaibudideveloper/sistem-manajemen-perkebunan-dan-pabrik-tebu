@@ -54,7 +54,7 @@
     <div class="flex items-center justify-between px-4 py-2">
 
       {{-- Create Button (Modal)--}}
-      @if (auth()->user() && in_array('Create MasterList', json_decode(auth()->user()->permissions ?? '[]')))
+      @if(hasPermission('Create MasterList'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
                 <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -344,7 +344,7 @@
                             {{-- Edit Button (Modal)--}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
-                                  @if (auth()->user() && in_array('Edit MasterList', json_decode(auth()->user()->permissions ?? '[]')))
+                                  @if(hasPermission('Edit MasterList'))
                                   <button
                                     @click="
                                       mode = 'edit';
@@ -389,7 +389,7 @@
                                   </button>
                                   @endif
                                   {{-- Delete Button --}}
-                                  @if (auth()->user() && in_array('Hapus MasterList', json_decode(auth()->user()->permissions ?? '[]')))
+                                  @if(hasPermission('Hapus MasterList'))
                                     <form 
                                       action="{{ url("masterdata/master-list/{$data->companycode}/{$data->plot}") }}" 
                                       method="POST"

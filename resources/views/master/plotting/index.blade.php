@@ -146,7 +146,7 @@
                 
                 <!-- Tambah Data Button -->
                 <div class="flex justify-start">
-                    @if (auth()->user() && in_array('Create Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if (hasPermission('Create Plotting'))
                     <button @click="resetForm()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +238,7 @@
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Masterlist</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Company</th>
-                            @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
+                            @if (hasPermission('Edit Plotting') || hasPermission('Hapus Plotting'))
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                             @endif
                         </tr>
@@ -275,10 +275,10 @@
                             <td class="py-3 px-3 text-center text-sm text-gray-700 hidden sm:table-cell">
                                 <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ $item->companycode }}</code>
                             </td>
-                            @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Plotting', 'Hapus Plotting'])->isNotEmpty())
+                            @if (hasPermission('Edit Plotting') || hasPermission('Hapus Plotting'))
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
-                                    @if (auth()->user() && in_array('Edit Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                                    @if (hasPermission('Edit Plotting'))
                                     <button @click='editForm({
                                             plot: "{{ $item->plot }}",
                                             luasarea: "{{ $item->luasarea }}",
@@ -294,7 +294,7 @@
                                     </button>
                                     @endif
 
-                                    @if (auth()->user() && in_array('Hapus Plotting', json_decode(auth()->user()->permissions ?? '[]')))
+                                    @if (hasPermission('Hapus Plotting'))
                                     <button @click="deleteRecord('{{ $item->plot }}', '{{ $item->companycode }}')"
                                         class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
                                         title="Hapus Plot">
