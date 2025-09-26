@@ -349,6 +349,12 @@ Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
         ->name('usermanagement.jabatan.assign-permission');
     Route::delete('usermanagement/jabatan/remove-permission', [UserManagementController::class, 'jabatanPermissionDestroy'])
         ->name('usermanagement.jabatan.remove-permission');
+    Route::post('/usermanagement/jabatan', [UserManagementController::class, 'jabatanStore'])
+        ->name('usermanagement.jabatan.store');
+    Route::put('/usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanUpdate'])
+        ->name('usermanagement.jabatan.update');
+    Route::delete('/usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanDestroy'])
+        ->name('usermanagement.jabatan.destroy');
 });
 
 // =============================================================================

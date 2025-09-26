@@ -33,6 +33,14 @@
         availablePermissions: @js($permissions),
         isLoadingPermissions: false,
         
+        // TAMBAHAN CRUD VARIABLES
+        crudModal: false,
+        crudMode: 'create',
+        jabatanForm: {
+            idjabatan: null,
+            namajabatan: ''
+        },
+        
         openPermissionModal(jabatan) {
             this.selectedJabatan = jabatan.idjabatan;
             this.selectedJabatanName = jabatan.namajabatan;
@@ -85,6 +93,33 @@
                     this.selectedPermissions.splice(index, 1);
                 }
             });
+        },
+
+        // TAMBAHAN CRUD METHODS
+        openCreateModal() {
+            this.crudMode = 'create';
+            this.jabatanForm = {
+                idjabatan: null,
+                namajabatan: ''
+            };
+            this.crudModal = true;
+        },
+        
+        openEditModal(idjabatan, namajabatan) {
+            this.crudMode = 'edit';
+            this.jabatanForm = {
+                idjabatan: idjabatan,
+                namajabatan: namajabatan
+            };
+            this.crudModal = true;
+        },
+        
+        getFormAction() {
+            if (this.crudMode === 'create') {
+                return '{{ route('usermanagement.jabatan.store') }}';
+            } else {
+                return '/usermanagement/jabatan/' + this.jabatanForm.idjabatan;
+            }
         }
     }" class="mx-auto py-4 bg-white rounded-md shadow-md">
 
@@ -100,6 +135,17 @@
 
                 <!-- Search and Controls -->
                 <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+                    
+                    <!-- TAMBAHAN: Create Button -->
+                    @if (hasPermission('Create Jabatan'))
+                    <button @click="openCreateModal()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 transition-colors duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Tambah Jabatan
+                    </button>
+                    @endif
                     
                     <!-- Search Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
@@ -148,6 +194,7 @@
                             <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Jabatan</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Permissions</th>
+                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kelola Permissions</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                         </tr>
                     </thead>
@@ -163,25 +210,54 @@
                                     {{ $jabatan->jabatan_permissions_count }} permissions
                                 </span>
                             </td>
+                            <td class="py-3 px-3 text-center">
+                                <!-- Manage Permissions Button -->
+                                <button @click="openPermissionModal({
+                                        idjabatan: {{ $jabatan->idjabatan }},
+                                        namajabatan: '{{ $jabatan->namajabatan }}'
+                                    })"
+                                    class="bg-slate-600 text-white px-3 py-2 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 text-xs transition-colors duration-150 inline-flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                    </svg>
+                                    Kelola Permissions
+                                </button>
+                            </td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <!-- Manage Permissions Button -->
-                                    <button @click="openPermissionModal({
-                                            idjabatan: {{ $jabatan->idjabatan }},
-                                            namajabatan: '{{ $jabatan->namajabatan }}'
-                                        })"
-                                        class="bg-slate-600 text-white px-3 py-2 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 text-xs transition-colors duration-150 inline-flex items-center gap-2">
+                                    <!-- TAMBAHAN: Edit Button -->
+                                    @if (hasPermission('Edit Jabatan'))
+                                    <button @click="openEditModal({{ $jabatan->idjabatan }}, '{{ $jabatan->namajabatan }}')"
+                                        class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
+                                        title="Edit Jabatan">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
-                                        Kelola Permissions
                                     </button>
+                                    @endif
+                                    
+                                    <!-- TAMBAHAN: Delete Button -->
+                                    @if (hasPermission('Hapus Jabatan'))
+                                    <form method="POST" action="{{ route('usermanagement.jabatan.destroy', $jabatan->idjabatan) }}" 
+                                          onsubmit="return confirm('Yakin ingin menghapus jabatan: {{ $jabatan->namajabatan }}?')"
+                                          class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                            class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
+                                            title="Hapus Jabatan">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="py-8 px-4 text-center text-gray-500">
+                            <td colspan="5" class="py-8 px-4 text-center text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -208,7 +284,57 @@
             @endif
         </div>
 
-        <!-- Permission Assignment Modal -->
+        <!-- TAMBAHAN: CRUD Modal -->
+        <div x-show="crudModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
+            @keydown.window.escape="crudModal = false">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-900" x-text="crudMode === 'create' ? 'Tambah Jabatan Baru' : 'Edit Jabatan'"></h3>
+                    <button @click="crudModal = false"
+                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6">
+                    <form x-bind:action="getFormAction()" method="POST">
+                        @csrf
+                        <template x-if="crudMode === 'edit'">
+                            <input type="hidden" name="_method" value="PUT">
+                        </template>
+
+                        <!-- Nama Jabatan -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Jabatan <span class="text-red-500">*</span></label>
+                            <input type="text" name="namajabatan" x-model="jabatanForm.namajabatan"
+                                placeholder="Contoh: Manager, Supervisor, Staff"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                maxlength="30" required>
+                            <p class="mt-1 text-xs text-gray-500">Maksimal 30 karakter</p>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+                            <button type="button" @click="crudModal = false"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150">
+                                <span x-text="crudMode === 'create' ? 'Simpan' : 'Perbarui'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permission Assignment Modal - TIDAK DIUBAH SAMA SEKALI -->
         <div x-show="permissionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
             @keydown.window.escape="permissionModal = false">
             <div class="relative bg-white rounded-lg shadow-xl w-[80vw] h-[80vh] flex flex-col">
