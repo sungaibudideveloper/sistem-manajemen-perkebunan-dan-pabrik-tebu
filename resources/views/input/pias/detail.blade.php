@@ -14,13 +14,15 @@
         <div class="flex-1 border rounded-md p-3 bg-white shadow-sm">
           <h3 class="text-base font-bold mb-3">Input TJ & TC</h3>
           <div class="space-y-3">
-            <div>
+            <div>@php //dd($hdr); @endphp
               <label class="block mb-1 text-sm">Total TJ (stok opsional)</label>
-              <input type="number" name="inputTJ" id="inputTJ" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TJ" onchange="render()">
+              <input type="number" name="inputTJ" id="inputTJ" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TJ" 
+              value="{{ old('inputTJ', optional($hdr)->tj) }}" onchange="render()">
             </div>
             <div>
               <label class="block mb-1 text-sm">Total TC (stok opsional)</label>
-              <input type="number" name="inputTC" id="inputTC" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TC" onchange="render()">
+              <input type="number" name="inputTC" id="inputTC" class="w-full border rounded-md p-2 bg-gray-50 text-sm" placeholder="Masukkan Total TC" 
+              value="{{ old('inputTC', optional($hdr)->tc) }}" onchange="render()">
             </div>
           </div>
         </div>
@@ -96,10 +98,15 @@
               @php
                 $hari = abs($item->rkhdate->diffInDays($item->tanggalulangtahun));
                 $bulan = ceil($hari / 30);
+                // cari data existing utk baris ini
+                $exist = $lst->where('blok', $item->blok)->where('plot', $item->plot)->first();
+                // ganti nama kolom sesuai tabel piaslst kamu
+                $existTJ = optional($exist)->tj_alloc ?? optional($exist)->tj ?? null;
+                $existTC = optional($exist)->tc_alloc ?? optional($exist)->tc ?? null;
               @endphp
               <tr class="hover:bg-gray-50"
-                  data-luas="{{ $item->luasrkh }}"
-                  data-umur="{{ $hari }}">
+                  data-luas="{{ $item->luasrkh }}" data-umur="{{ $hari }}" 
+                  data-tj="{{ $existTJ ?? '' }}" data-tc="{{ $existTC ?? '' }}">
                 <td class="p-3 border-b">{{ $item->blok }}</td>
                 <td class="p-3 border-b">{{ $item->plot }}</td>
                 <td class="p-3 border-b">
@@ -111,19 +118,28 @@
                 <td class="p-3 border-b">{{ $item->kodestatus }}</td>
                 <td class="p-3 border-b">{{ $item->kodevarietas }}</td>
                 <td class="p-3 border-b">{{ $item->luasrkh }}</td>
-                <td class="p-3 border-b tj-result bg-blue-50 font-semibold text-blue-800"></td>
-                <td class="p-3 border-b tc-result bg-green-50 font-semibold text-green-800"></td>
+                <td class="p-3 border-b tj-result bg-blue-50 font-semibold text-blue-800">
+                  {{ isset($existTJ) ? number_format($existTJ, 2, ',', '.') : '' }}
+                </td>
+                <td class="p-3 border-b tc-result bg-green-50 font-semibold text-green-800">
+                  {{ isset($existTC) ? number_format($existTC, 2, ',', '.') : '' }}
+                </td>
                 <td class="p-3 border-b pias-formula text-left text-sm"></td>
               </tr>
             @endforeach
           </tbody>
         </table>
-        <div class="flex justify-center mt-4 mb-4">
+        @if($hdr)
+        <div class="flex justify-center mt-2 text-sm text-blue-700">
+          Sudah generated ({{ \Carbon\Carbon::parse($hdr->generateddate)->format('d M Y H:i') }})
+        </div>
+        @endif
+        <div class="flex justify-center mt-2 mb-4">
           <button
               type="submit"
               class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
           >
-              Generate
+            {{ $hdr ? 'Edit Data' : 'Generate' }}
           </button>
         </div>
 
@@ -131,171 +147,185 @@
     </div>
   </div>
 </form>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const inputTJ = document.getElementById('inputTJ');
-      const inputTC = document.getElementById('inputTC');
-      const plotTable = document.getElementById('plotTable');
-    
-      const totalTJEl = document.getElementById('totalTJ');
-      const totalTCEl = document.getElementById('totalTC');
-      const stokTJEl  = document.getElementById('stokTJ');
-      const stokTCEl  = document.getElementById('stokTC');
-      const sisaTJEl  = document.getElementById('sisaTJ');
-      const sisaTCEl  = document.getElementById('sisaTC');
-      const summary   = document.getElementById('summaryCard');
-      const statusTJ  = document.getElementById('statusTJ');
-      const statusTC  = document.getElementById('statusTC');
-    
-      const pcts = [
-        {tj:0.7,tc:0.3},{tj:0.7,tc:0.3},{tj:0.69,tc:0.4},
-        {tj:0.5,tc:0.5},{tj:0.4,tc:0.6},{tj:0.3,tc:0.7},
-        {tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7}
-      ];
-    
-      const hasBoth = () => {
-        const tj = parseFloat(inputTJ.value), tc = parseFloat(inputTC.value);
-        return tj > 0 && !Number.isNaN(tj) && tc > 0 && !Number.isNaN(tc);
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const inputTJ = document.getElementById('inputTJ');
+    const inputTC = document.getElementById('inputTC');
+    const plotTable = document.getElementById('plotTable');
+  
+    const totalTJEl = document.getElementById('totalTJ');
+    const totalTCEl = document.getElementById('totalTC');
+    const stokTJEl  = document.getElementById('stokTJ');
+    const stokTCEl  = document.getElementById('stokTC');
+    const sisaTJEl  = document.getElementById('sisaTJ');
+    const sisaTCEl  = document.getElementById('sisaTC');
+    const summary   = document.getElementById('summaryCard');
+    const statusTJ  = document.getElementById('statusTJ');
+    const statusTC  = document.getElementById('statusTC');
+  
+    const pcts = [
+      {tj:0.7,tc:0.3},{tj:0.7,tc:0.3},{tj:0.69,tc:0.4},
+      {tj:0.5,tc:0.5},{tj:0.4,tc:0.6},{tj:0.3,tc:0.7},
+      {tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7}
+    ];
+  
+    const hasBoth = () => {
+      const tj = parseFloat(inputTJ.value), tc = parseFloat(inputTC.value);
+      return tj > 0 && !Number.isNaN(tj) && tc > 0 && !Number.isNaN(tc);
+    };
+  
+    // format tampilan: truncate ke 3 desimal (tanpa pengaruh ke nilai asli)
+    function fmt3(x) {
+      if (!Number.isFinite(x)) return '0';
+      const t = Math.trunc(x * 1000) / 1000;
+      return t.toLocaleString('id-ID', {maximumFractionDigits: 3, minimumFractionDigits: 0});
+    }
+  
+    function kebutuhan(luas, umur){
+      const bulan = Math.max(1, Math.ceil(umur/30));
+      const p = pcts[Math.min(bulan,10)-1] || {tj:0.5,tc:0.5};
+      const total = luas * 25;
+      return {
+        bulan,
+        total,
+        needTJ: total * p.tj,
+        needTC: total * p.tc,
+        persenTJ: (p.tj*100).toFixed(0),
+        persenTC: (p.tc*100).toFixed(0)
       };
-    
-      // format tampilan: truncate ke 3 desimal (tanpa pengaruh ke nilai asli)
-      function fmt3(x) {
-        if (!Number.isFinite(x)) return '0';
-        const t = Math.trunc(x * 1000) / 1000;
-        return t.toLocaleString('id-ID', {maximumFractionDigits: 3, minimumFractionDigits: 0});
-      }
-    
-      function kebutuhan(luas, umur){
-        const bulan = Math.max(1, Math.ceil(umur/30));
-        const p = pcts[Math.min(bulan,10)-1] || {tj:0.5,tc:0.5};
-        const total = luas * 25;
-        return {
-          bulan,
-          total,
-          needTJ: total * p.tj,
-          needTC: total * p.tc,
-          persenTJ: (p.tj*100).toFixed(0),
-          persenTC: (p.tc*100).toFixed(0)
-        };
-      }
-    
-      // alokasi sama-rata tanpa pembulatan (continuous water-filling)
-      function allocateEqualNoRound(needs, stock){
-        const n = needs.length;
-        const alloc = new Array(n).fill(0);
-        const idx = needs.map((v,i)=> v>0 ? i : null).filter(i=>i!==null);
-        let remain = stock;
-        if (remain <= 0 || idx.length === 0) return alloc;
-    
-        const totalNeed = needs.reduce((a,b)=>a+b,0);
-        if (remain >= totalNeed) return needs.slice(); // penuhi semua
-    
-        let active = idx.slice();
-        while (active.length > 0 && remain > 0){
-          const share = remain / active.length;
-          const still = [];
-          for (const i of active){
-            const gap = needs[i] - alloc[i];
-            if (gap <= share + 1e-12){
-              alloc[i] += gap;
-              remain   -= gap;
-            } else {
-              alloc[i] += share;
-              remain   -= share;
-              still.push(i);
-            }
+    }
+  
+    // alokasi sama-rata tanpa pembulatan (continuous water-filling)
+    function allocateEqualNoRound(needs, stock){
+      const n = needs.length;
+      const alloc = new Array(n).fill(0);
+      const idx = needs.map((v,i)=> v>0 ? i : null).filter(i=>i!==null);
+      let remain = stock;
+      if (remain <= 0 || idx.length === 0) return alloc;
+  
+      const totalNeed = needs.reduce((a,b)=>a+b,0);
+      if (remain >= totalNeed) return needs.slice(); // penuhi semua
+  
+      let active = idx.slice();
+      while (active.length > 0 && remain > 0){
+        const share = remain / active.length;
+        const still = [];
+        for (const i of active){
+          const gap = needs[i] - alloc[i];
+          if (gap <= share + 1e-12){
+            alloc[i] += gap;
+            remain   -= gap;
+          } else {
+            alloc[i] += share;
+            remain   -= share;
+            still.push(i);
           }
-          if (still.length === active.length) break; // semua dapat share sama; stok habis
-          active = still;
         }
-        return alloc;
+        if (still.length === active.length) break; // semua dapat share sama; stok habis
+        active = still;
       }
-    
-      function resetUI(){
-        [...plotTable.querySelectorAll('tr')].forEach(r=>{
-          const h=r.querySelector('.pias-results');
-          const f=r.querySelector('.pias-formula');
-          if(h) h.textContent='';
-          if(f) f.textContent='';
-        });
-        summary.classList.add('hidden');
-      }
-    
-      function render(){
-        if(!hasBoth()){ resetUI(); return; }
-    
-        const stokTJ = parseFloat(inputTJ.value) || 0;
-        const stokTC = parseFloat(inputTC.value) || 0;
-    
-        const rows = [...plotTable.querySelectorAll('tr')];
-        const needsTJ=[], needsTC=[], meta=[];
-    
-        rows.forEach(r=>{
-          const luas = parseFloat(r.dataset.luas) || 0;
-          const umur = parseInt(r.dataset.umur) || 0;
-          const k = kebutuhan(luas, umur);
-          needsTJ.push(k.needTJ);
-          needsTC.push(k.needTC);
-          meta.push({row:r,res:k});
-        });
-    
-        const allocTJ = allocateEqualNoRound(needsTJ, stokTJ);
-        const allocTC = allocateEqualNoRound(needsTC, stokTC);
-    
-        let sumNeedTJ=0, sumNeedTC=0, sumAllocTJ=0, sumAllocTC=0;
-    
-        meta.forEach((m,i)=>{
-          const h = m.row.querySelector('.pias-results');
-          const f = m.row.querySelector('.pias-formula');
-          sumNeedTJ  += needsTJ[i];
-          sumNeedTC  += needsTC[i];
-          sumAllocTJ += allocTJ[i];
-          sumAllocTC += allocTC[i];
-    
-          if (h) h.textContent = `B${m.res.bulan}: TJ ${fmt3(allocTJ[i])}, TC ${fmt3(allocTC[i])}`;
-          if (f) f.innerHTML =
-            `Total=${fmt3(m.res.total)} lbr<br>`+
-            `Persen B${m.res.bulan}: TJ ${m.res.persenTJ}% / TC ${m.res.persenTC}%<br>`+
-            `Kebutuhan: TJ ${fmt3(needsTJ[i])}, TC ${fmt3(needsTC[i])}<br>`+
-            `Alokasi: TJ ${fmt3(allocTJ[i])}, TC ${fmt3(allocTC[i])}`;
-        });
-    
-        totalTJEl.textContent = fmt3(sumNeedTJ);
-        totalTCEl.textContent = fmt3(sumNeedTC);
-        stokTJEl.textContent  = fmt3(stokTJ);
-        stokTCEl.textContent  = fmt3(stokTC);
-        sisaTJEl.textContent  = fmt3(stokTJ - sumAllocTJ);
-        sisaTCEl.textContent  = fmt3(stokTC - sumAllocTC);
-    
-        const okTJ = sumAllocTJ + 1e-9 >= sumNeedTJ;
-        const okTC = sumAllocTC + 1e-9 >= sumNeedTC;
-        statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
-        statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
-        statusTJ.className = `text-center text-sm font-medium rounded-md py-2 mb-2 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-        statusTC.className = `text-center text-sm font-medium rounded-md py-2 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-    
-        summary.classList.remove('hidden');
-      }
-    
-      let timer; const IDLE=800;
-      function schedule(){
-        clearTimeout(timer);
-        if(hasBoth()) timer=setTimeout(render,IDLE);
-        else resetUI();
-      }
-      ['input','change','blur'].forEach(evt=>{
-        inputTJ.addEventListener(evt, schedule);
-        inputTC.addEventListener(evt, schedule);
+      return alloc;
+    }
+  
+    function resetUI(){
+      [...plotTable.querySelectorAll('tr')].forEach(r=>{
+        const tj = r.querySelector('.tj-result');
+        const tc = r.querySelector('.tc-result');
+        const f  = r.querySelector('.pias-formula');
+        if(tj) tj.textContent = '';
+        if(tc) tc.textContent = '';
+        if(f)  f.textContent  = '';
       });
-      [inputTJ,inputTC].forEach(el=>{
-        el.addEventListener('keydown', e=>{
-          if(e.key==='Enter'){ clearTimeout(timer); hasBoth()?render():resetUI(); }
-        });
+      summary.classList.add('hidden');
+    }
+  
+    function render(){
+      if(!hasBoth()){ resetUI(); return; }
+  
+      const stokTJ = parseFloat(inputTJ.value) || 0;
+      const stokTC = parseFloat(inputTC.value) || 0;
+  
+      const rows = [...plotTable.querySelectorAll('tr')];
+      const needsTJ=[], needsTC=[], meta=[];
+  
+      rows.forEach(r=>{
+        const luas = parseFloat(r.dataset.luas) || 0;
+        const umur = parseInt(r.dataset.umur) || 0;
+        const k = kebutuhan(luas, umur);
+        needsTJ.push(k.needTJ);
+        needsTC.push(k.needTC);
+        meta.push({row:r,res:k});
       });
-    
-      resetUI();
+  
+      const allocTJ = allocateEqualNoRound(needsTJ, stokTJ);
+      const allocTC = allocateEqualNoRound(needsTC, stokTC);
+  
+      let sumNeedTJ=0, sumNeedTC=0, sumAllocTJ=0, sumAllocTC=0;
+  
+      meta.forEach((m,i)=>{
+        const tjEl = m.row.querySelector('.tj-result');
+        const tcEl = m.row.querySelector('.tc-result');
+        const f    = m.row.querySelector('.pias-formula');
+        sumNeedTJ  += needsTJ[i];
+        sumNeedTC  += needsTC[i];
+        sumAllocTJ += allocTJ[i];
+        sumAllocTC += allocTC[i];
+  
+        if (tjEl) tjEl.textContent = fmt3(allocTJ[i]);
+        if (tcEl) tcEl.textContent = fmt3(allocTC[i]);
+        if (f) f.innerHTML =
+          `Total=${fmt3(m.res.total)} lbr<br>`+
+          `Persen B${m.res.bulan}: TJ ${m.res.persenTJ}% / TC ${m.res.persenTC}%<br>`+
+          `Kebutuhan: TJ ${fmt3(needsTJ[i])}, TC ${fmt3(needsTC[i])}<br>`+
+          `Alokasi: TJ ${fmt3(allocTJ[i])}, TC ${fmt3(allocTC[i])}`;
+      });
+  
+      totalTJEl.textContent = fmt3(sumNeedTJ);
+      totalTCEl.textContent = fmt3(sumNeedTC);
+      stokTJEl.textContent  = fmt3(stokTJ);
+      stokTCEl.textContent  = fmt3(stokTC);
+      sisaTJEl.textContent  = fmt3(stokTJ - sumAllocTJ);
+      sisaTCEl.textContent  = fmt3(stokTC - sumAllocTC);
+  
+      const okTJ = sumAllocTJ + 1e-9 >= sumNeedTJ;
+      const okTC = sumAllocTC + 1e-9 >= sumNeedTC;
+      statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
+      statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
+      statusTJ.className = `text-center text-sm font-medium rounded-md py-2 mb-2 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+      statusTC.className = `text-center text-sm font-medium rounded-md py-2 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+  
+      summary.classList.remove('hidden');
+    }
+
+    window.render = render; // ADDED: expose render() agar onchange="render()" di input bisa memanggilnya
+  
+    let timer; const IDLE=800;
+    function schedule(){
+      clearTimeout(timer);
+      if(hasBoth()) timer=setTimeout(render,IDLE);
+      else resetUI();
+    }
+    ['input','change','blur'].forEach(evt=>{
+      inputTJ.addEventListener(evt, schedule);
+      inputTC.addEventListener(evt, schedule);
     });
-    </script>
+    [inputTJ,inputTC].forEach(el=>{
+      el.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){ clearTimeout(timer); hasBoth()?render():resetUI(); }
+      });
+    });
+  
+    // CHANGED: jangan hapus nilai existing saat pertama load; render jika kedua input sudah terisi
+    if (hasBoth()) {
+      render();
+    } else {
+      // biarkan prefill TJ/TC dari Blade tetap terlihat; opsional: sembunyikan summary
+      summary.classList.add('hidden');
+    }
+  });
+</script>
+
       
     
 </x-layout>

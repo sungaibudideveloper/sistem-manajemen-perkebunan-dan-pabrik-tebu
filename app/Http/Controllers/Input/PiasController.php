@@ -53,8 +53,11 @@ class PiasController extends Controller
     {   
         $rkhhdr = new rkhhdr;
         $rkhlst = new rkhlst;
-        $lkhhdr = new rkhhdr;
-        $lkhlst = new rkhlst;
+        $piashdr = new piashdr;
+        $piaslst = new piaslst;
+
+        $hdr = $piashdr->where('rkhno', $request->input('rkhno'))->first();
+        $lst = $piaslst->where('rkhno', $request->input('rkhno'))->get();
 
         $data = $rkhhdr
         ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
@@ -80,17 +83,16 @@ class PiasController extends Controller
             'masterlist.batchno'
         )
         ->get();
-        
-        // dd($data);
 
         return view('input.pias.detail')->with([
-            'title'         => 'Pias',
-            'data'        => $data
+            'title' => 'Pias',
+            'data'  => $data,
+            'hdr'   => $hdr,
+            'lst'   => $lst
         ]);
     }
 
     
-
 
     public function submit(Request $request)
 {
@@ -187,45 +189,63 @@ class PiasController extends Controller
     // Status pakai truncate 3 desimal (tanpa rounding)
     $tjOk = $this->floor3($sumAllocTJ) >= $this->floor3($sumNeedTJ);
     $tcOk = $this->floor3($sumAllocTC) >= $this->floor3($sumNeedTC);
-    //dd($allocTJ, $allocTC, $sumNeedTJ, $sumNeedTC, $sumAllocTJ, $sumAllocTC, $tjOk, $tcOk, $rows);
-    // DB::beginTransaction();
-    // try {
-        // refresh detail sesuai skema piaslst (hanya field yang ada)
-        piaslst::where('companycode', $companycode)->where('rkhno', $rkhno)->delete();
 
-        foreach ($rows as $i => $r) {
-            piaslst::create([
-                'companycode' => $r['companycode'],
-                'rkhno'       => $r['rkhno'],
-                'lkhno'       => $r['lkhno'],
-                'blok'        => $r['blok'],
-                'plot'        => $r['plot'],
-                'tj'          => $allocTJ[$i],   // alokasi TJ untuk plot ini
-                'tc'          => $allocTC[$i],   // alokasi TC untuk plot ini
-            ]);
-        }
+    // ===================== SIMPAN DATA =====================
 
-        // header sesuai skema piashdr (stok + status)
-        piashdr::updateOrCreate(
-            ['companycode'=>$companycode, 'rkhno'=>$rkhno],
-            [
-                'generateddate' => now(),
-                'tj'            => $stokTJ,     // stok input TJ
-                'tc'            => $stokTC,     // stok input TC
-                'tjstatus'      => $tjOk ? 1 : 0,
-                'tcstatus'      => $tcOk ? 1 : 0,
-                'inputby'       => auth()->user()->name ?? 'System',
-                'updateby'      => auth()->user()->name ?? 'System',
-            ]
-        );
-
-        // DB::commit();
-        return back()->with('success','Data pias berhasil disimpan');
-    // } catch (\Throwable $e) {
-    //     DB::rollBack();
-    //     return back()->withErrors(['server'=>'Gagal menyimpan data: '.$e->getMessage()])->withInput();
+    // REMOVED: hapus pola delete-all + create per baris (tidak efisien & riskan)
+    // piaslst::where('companycode', $companycode)->where('rkhno', $rkhno)->delete();
+    // foreach ($rows as $i => $r) {
+    //     piaslst::create([
+    //         'companycode' => $r['companycode'],
+    //         'rkhno'       => $r['rkhno'],
+    //         'lkhno'       => $r['lkhno'],
+    //         'blok'        => $r['blok'],
+    //         'plot'        => $r['plot'],
+    //         'tj'          => $allocTJ[$i],
+    //         'tc'          => $allocTC[$i],
+    //     ]);
     // }
+
+    // ADDED: siapkan payload upsert untuk piaslst (batch sekali jalan)
+    $rowsUpsert = [];
+    foreach ($rows as $i => $r) {
+        $rowsUpsert[] = [
+            'companycode' => $r['companycode'],
+            'rkhno'       => $r['rkhno'],
+            'lkhno'       => $r['lkhno'],
+            'blok'        => $r['blok'],
+            'plot'        => $r['plot'],
+            'tj'          => $allocTJ[$i],   // ADDED: alokasi TJ untuk plot ini
+            'tc'          => $allocTC[$i],   // ADDED: alokasi TC untuk plot ini
+        ];
+    }
+
+    // ADDED: upsert pakai composite key (sesuai PK piaslst: companycode,rkhno,lkhno,blok,plot)
+    piaslst::upsert(
+        $rowsUpsert,
+        ['companycode','rkhno','lkhno','blok','plot'],   // kunci unik (composite)
+        ['tj','tc']                                      // kolom yang di-update
+    );
+
+    // CHANGED: header pakai updateOrInsert (karena PK composite di piashdr)
+    DB::table('piashdr')->updateOrInsert(
+        ['companycode' => $companycode, 'rkhno' => $rkhno],
+        [
+            'generateddate' => now(),                        // NOTE: pastikan ejaan kolom tepat
+            'tj'            => $stokTJ,
+            'tc'            => $stokTC,
+            'tjstatus'      => $tjOk ? 1 : 0,
+            'tcstatus'      => $tcOk ? 1 : 0,
+            'inputby'       => auth()->user()->name ?? 'System',
+            'updateby'      => auth()->user()->name ?? 'System',
+        ]
+    );
+
+    return back()->with('success','Data pias berhasil disimpan');
 }
+
+
+    
 
 /** truncate 3 desimal tanpa pembulatan */
 private function floor3(float $v): float

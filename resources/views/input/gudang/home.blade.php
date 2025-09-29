@@ -316,11 +316,11 @@
 				</td>
 				<td class="py-2 px-4 border-b border-gray-300">${newData.blok}</td>
 				<td class="py-2 px-4 border-b border-gray-300">${newData.companycode}</td>
-                @if (auth()->user() && collect(json_decode(auth()->user()->permissions ?? '[]'))->intersect(['Edit Blok', 'Hapus Blok'])->isNotEmpty())
+                @if (hasPermission(['Edit Blok', 'Hapus Blok']))
                 
 				<td class="py-2 px-4 border-b border-gray-300">
 					<div class="flex items-center justify-center">
-                        @if (auth()->user() && in_array('Edit Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                        @if (hasPermission('Edit Blok'))
                         
 						<button class="group flex items-center edit-button" onclick="openEditModal('${newData.blok}','${newData.companycode}')">
 							<svg
@@ -349,7 +349,7 @@
                         @endif
                         
 						<span class="w-0.5"></span>
-                        @if (auth()->user() && in_array('Hapus Blok', json_decode(auth()->user()->permissions ?? '[]')))
+                        @if (hasPermission('Hapus Blok'))
                         
 						<button class="group flex delete-button" data-blok="${newData.blok}" data-companycode="${newData.companycode}">
 							<svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
