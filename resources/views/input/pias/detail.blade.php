@@ -205,6 +205,7 @@
     </div>
   </div>
 </form>
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const inputTJ = document.getElementById('inputTJ');
@@ -232,10 +233,8 @@
       return tj > 0 && Number.isFinite(tj) && tc > 0 && Number.isFinite(tc);
     };
 
-    const fmt0 = (x) => {
-      const v = Math.round(x || 0);
-      return v.toLocaleString('id-ID', {maximumFractionDigits: 0});
-    };
+    const NF0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+    const fmt0 = (x) => NF0.format(Math.round(x || 0));
 
     // ====== PRECOMPUTE SEKALI: baris, needs, elemen DOM ======
     const rows = Array.from(plotTable.rows); // <tr> di tbody
@@ -372,7 +371,15 @@
     // Jangan render otomatis saat load; render setelah user ubah nilai
     // Jika mau auto-render, aktifkan baris di bawah (non-blocking):
     // setTimeout(()=>{ if (hasBoth()) render(); }, 0);
-    requestAnimationFrame(() => { if (hasBoth()) render(); });
+    function scheduleFirstRender(){
+      if (!hasBoth()) return;
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => render(), { timeout: 1200 });
+      } else {
+        setTimeout(render, 200); // let first paint happen
+      }
+    }
+    scheduleFirstRender();
     // Cetak: render sekali sebelum print saja
     window.onbeforeprint = function(){ if (hasBoth()) render(); };
     if (window.matchMedia) {
