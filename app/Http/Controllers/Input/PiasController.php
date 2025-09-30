@@ -83,7 +83,7 @@ class PiasController extends Controller
             'masterlist.batchno'
         )
         ->get();
-
+            
         return view('input.pias.detail')->with([
             'title' => 'Pias',
             'data'  => $data,
@@ -112,239 +112,241 @@ class PiasController extends Controller
     $stokTJ = (float) $data['inputTJ'];
     $stokTC = (float) $data['inputTC'];
 
-    // Ambil plot2 dari DB (banyak baris per RKH)
-    $rowsDb = DB::table('rkhhdr')
-        ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
-        ->leftJoin('lkhdetailplot','lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
-        ->leftJoin('masterlist', function($join) {
-            $join->on('masterlist.companycode', '=', 'rkhhdr.companycode')
-                 ->on('masterlist.blok', '=', 'lkhdetailplot.blok')
-                 ->on('masterlist.plot', '=', 'lkhdetailplot.plot');
-        })
-        ->where('rkhhdr.rkhno', $rkhno)
-        ->where('approvalstatus', 1)
-        ->select(
-            'rkhhdr.companycode',
-            'rkhhdr.rkhdate',
-            'lkhhdr.lkhno',
-            'lkhdetailplot.blok',
-            'lkhdetailplot.plot',
-            'lkhdetailplot.luasrkh',
-            'masterlist.tanggalulangtahun'
-        )
-        ->get();
+    try {
+        return DB::transaction(function () use ($rkhno, $stokTJ, $stokTC) {
 
-    if ($rowsDb->isEmpty()) {
-        return back()->withErrors(['data' => 'Data plot untuk RKH ini tidak ditemukan / belum di-approve.'])->withInput();
+            // --- QUERY PLOT ---
+            $rowsDb = DB::table('rkhhdr')
+                ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+                ->leftJoin('lkhdetailplot','lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                ->leftJoin('masterlist', function($join) {
+                    $join->on('masterlist.companycode', '=', 'rkhhdr.companycode')
+                         ->on('masterlist.blok', '=', 'lkhdetailplot.blok')
+                         ->on('masterlist.plot', '=', 'lkhdetailplot.plot');
+                })
+                ->where('rkhhdr.rkhno', $rkhno)
+                ->where('approvalstatus', 1)
+                ->select(
+                    'rkhhdr.companycode',
+                    'rkhhdr.rkhdate',
+                    'lkhhdr.lkhno',
+                    'lkhdetailplot.blok',
+                    'lkhdetailplot.plot',
+                    'lkhdetailplot.luasrkh',
+                    'masterlist.tanggalulangtahun'
+                )
+                ->orderBy('lkhdetailplot.blok')
+                ->orderBy('lkhdetailplot.plot')
+                ->get();
+
+            if ($rowsDb->isEmpty()) {
+                return back()->withErrors(['data' => 'Data plot untuk RKH ini tidak ditemukan / belum di-approve.'])->withInput();
+            }
+
+            $companycode = $rowsDb->first()->companycode ?? (auth()->user()->companycode ?? 'DEFAULT');
+
+            // --- HITUNG KEBUTUHAN ---
+            $pcts = [
+                1=>['tj'=>0.70,'tc'=>0.30], 2=>['tj'=>0.70,'tc'=>0.30], 3=>['tj'=>0.69,'tc'=>0.40],
+                4=>['tj'=>0.50,'tc'=>0.50], 5=>['tj'=>0.40,'tc'=>0.60], 6=>['tj'=>0.30,'tc'=>0.70],
+                7=>['tj'=>0.30,'tc'=>0.70], 8=>['tj'=>0.30,'tc'=>0.70], 9=>['tj'=>0.30,'tc'=>0.70],
+                10=>['tj'=>0.30,'tc'=>0.70],
+            ];
+
+            $rows = [];
+            foreach ($rowsDb as $row) {
+                $luas  = (float) ($row->luasrkh ?? 0);
+                $hari  = (int) ($row->hari ?? 0);
+                $bulan = max(1, min(10, (int) ($row->bulan_sql ?? 1)));
+                $p     = $pcts[$bulan] ?? ['tj'=>0.5,'tc'=>0.5];
+
+                $total  = $luas * 25;
+                $rows[] = [
+                    'companycode' => $companycode,
+                    'rkhno'       => $rkhno,
+                    'lkhno'       => $row->lkhno,
+                    'blok'        => $row->blok,
+                    'plot'        => $row->plot,
+                    'needTJ'      => $total * $p['tj'],
+                    'needTC'      => $total * $p['tc'],
+                ];
+            }
+
+            $needsTJ = array_column($rows, 'needTJ');
+            $needsTC = array_column($rows, 'needTC');
+
+            // --- ALOKASI (pakai function-mu Hamilton) ---
+            $allocTJ  = $this->allocateInt($needsTJ, $stokTJ);
+            $allocTC  = $this->allocateInt($needsTC, $stokTC);
+
+            // --- PRE-FLIGHT CHECKS ---
+            if (count($allocTJ) !== count($rows) || count($allocTC) !== count($rows)) {
+                throw new \RuntimeException('Panjang alokasi tidak cocok dengan jumlah plot.');
+            }
+
+            // Jika allocateInt kamu menargetkan total = floor(stok), cek ini:
+            if (array_sum($allocTJ) !== (int)floor($stokTJ) || array_sum($allocTC) !== (int)floor($stokTC)) {
+                throw new \RuntimeException('Total alokasi tidak sama dengan stok.');
+            }
+
+            // --- UPSERT DETAIL ---
+            $rowsInsert = [];
+            foreach ($rows as $i => $r) {
+                $rowsInsert[] = [
+                    'companycode' => $r['companycode'],
+                    'rkhno'       => $r['rkhno'],
+                    'lkhno'       => $r['lkhno'],
+                    'blok'        => $r['blok'],
+                    'plot'        => $r['plot'],
+                    'tj'          => (int)$allocTJ[$i],
+                    'tc'          => (int)$allocTC[$i],
+                ];
+            }
+
+            DB::table('piaslst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->delete();
+          
+          // 2) Bulk insert baris baru
+          if (!empty($rowsInsert)) {
+              DB::table('piaslst')->insert($rowsInsert); // sekali jalan (array of rows)
+          }
+
+            // --- UPDATE/INSERT HEADER (jaga generateddate & inputby) ---
+            $sumNeedTJ  = array_sum($needsTJ);
+            $sumNeedTC  = array_sum($needsTC);
+            $sumAllocTJ = array_sum($allocTJ);
+            $sumAllocTC = array_sum($allocTC);
+
+            $tjOk = $sumAllocTJ >= (int)ceil($sumNeedTJ);
+            $tcOk = $sumAllocTC >= (int)ceil($sumNeedTC);
+
+            $headerKeys = ['companycode' => $companycode, 'rkhno' => $rkhno];
+            $now        = now();
+
+            $exists = DB::table('piashdr')->where($headerKeys)->exists();
+
+            if (!$exists) {
+                // INSERT: set generateddate & inputby saja (jangan set updateddate)
+                DB::table('piashdr')->insert($headerKeys + [
+                    'generateddate' => $now,
+                    'tj'            => $stokTJ,
+                    'tc'            => $stokTC,
+                    'tjstatus'      => $tjOk ? 1 : 0,
+                    'tcstatus'      => $tcOk ? 1 : 0,
+                    'inputby'       => auth()->user()->name ?? 'System',
+                ]);
+            } else {
+                // UPDATE: jangan ubah generateddate & inputby
+                DB::table('piashdr')->where($headerKeys)->update([
+                    'tj'          => $stokTJ,
+                    'tc'          => $stokTC,
+                    'tjstatus'    => $tjOk ? 1 : 0,
+                    'tcstatus'    => $tcOk ? 1 : 0,
+                    'updateby'    => auth()->user()->name ?? 'System',
+                    'updateddate' => $now, // ganti ke 'updated_at' kalau itu nama kolommu
+                ]);
+            }
+
+            // sukses → commit otomatis oleh DB::transaction
+            return back()->with('success', 'Data pias berhasil disimpan');
+        });
+
+    } catch (Throwable $e) {
+        Log::error('PIAS submit failed', [
+            'rkhno' => $rkhno,
+            'msg'   => $e->getMessage(),
+            'trace' => substr($e->getTraceAsString(), 0, 2000),
+        ]);
+        return back()
+            ->withErrors(['save' => 'Gagal menyimpan PIAS: '.$e->getMessage()])
+            ->withInput();
     }
-
-    $companycode = $rowsDb->first()->companycode ?? (auth()->user()->companycode ?? 'DEFAULT');
-
-    // Persentase bulan 1..10
-    $pcts = [
-        1=>['tj'=>0.70,'tc'=>0.30], 2=>['tj'=>0.70,'tc'=>0.30], 3=>['tj'=>0.69,'tc'=>0.40],
-        4=>['tj'=>0.50,'tc'=>0.50], 5=>['tj'=>0.40,'tc'=>0.60], 6=>['tj'=>0.30,'tc'=>0.70],
-        7=>['tj'=>0.30,'tc'=>0.70], 8=>['tj'=>0.30,'tc'=>0.70], 9=>['tj'=>0.30,'tc'=>0.70],
-        10=>['tj'=>0.30,'tc'=>0.70],
-    ];
-
-    $needsTJ = []; $needsTC = []; $rows = [];
-
-    foreach ($rowsDb as $row) {
-        $luas  = (float) ($row->luasrkh ?? 0);
-        $umur  = 0;
-        if ($row->rkhdate && $row->tanggalulangtahun) {
-            $umur = abs(Carbon::parse($row->rkhdate)->diffInDays(Carbon::parse($row->tanggalulangtahun)));
-        }
-        $bulan = max(1, min(10, (int)ceil($umur/30)));
-        $p     = $pcts[$bulan] ?? ['tj'=>0.5,'tc'=>0.5];
-
-        $total  = $luas * 25;
-        $needTJ = $total * $p['tj'];
-        $needTC = $total * $p['tc'];
-
-        $rows[] = [
-            'companycode' => $companycode,
-            'rkhno'       => $rkhno,
-            'lkhno'       => $row->lkhno,
-            'blok'        => $row->blok,
-            'plot'        => $row->plot,
-            'needTJ'      => $needTJ,
-            'needTC'      => $needTC,
-        ];
-
-        $needsTJ[] = $needTJ;
-        $needsTC[] = $needTC;
-    }
-
-    // Alokasi equal-share (stok cukup → equals needs)
-    $allocTJ = $this->allocateEqual($needsTJ, $stokTJ);
-    $allocTC = $this->allocateEqual($needsTC, $stokTC);
-
-    $sumNeedTJ  = array_sum($needsTJ);
-    $sumNeedTC  = array_sum($needsTC);
-    $sumAllocTJ = array_sum($allocTJ);
-    $sumAllocTC = array_sum($allocTC);
-
-    // Status pakai truncate 3 desimal (tanpa rounding)
-    $tjOk = $this->floor3($sumAllocTJ) >= $this->floor3($sumNeedTJ);
-    $tcOk = $this->floor3($sumAllocTC) >= $this->floor3($sumNeedTC);
-
-    // ===================== SIMPAN DATA =====================
-
-    // REMOVED: hapus pola delete-all + create per baris (tidak efisien & riskan)
-    // piaslst::where('companycode', $companycode)->where('rkhno', $rkhno)->delete();
-    // foreach ($rows as $i => $r) {
-    //     piaslst::create([
-    //         'companycode' => $r['companycode'],
-    //         'rkhno'       => $r['rkhno'],
-    //         'lkhno'       => $r['lkhno'],
-    //         'blok'        => $r['blok'],
-    //         'plot'        => $r['plot'],
-    //         'tj'          => $allocTJ[$i],
-    //         'tc'          => $allocTC[$i],
-    //     ]);
-    // }
-
-    // ADDED: siapkan payload upsert untuk piaslst (batch sekali jalan)
-    $rowsUpsert = [];
-    foreach ($rows as $i => $r) {
-        $rowsUpsert[] = [
-            'companycode' => $r['companycode'],
-            'rkhno'       => $r['rkhno'],
-            'lkhno'       => $r['lkhno'],
-            'blok'        => $r['blok'],
-            'plot'        => $r['plot'],
-            'tj'          => $allocTJ[$i],   // ADDED: alokasi TJ untuk plot ini
-            'tc'          => $allocTC[$i],   // ADDED: alokasi TC untuk plot ini
-        ];
-    }
-
-    // ADDED: upsert pakai composite key (sesuai PK piaslst: companycode,rkhno,lkhno,blok,plot)
-    piaslst::upsert(
-        $rowsUpsert,
-        ['companycode','rkhno','lkhno','blok','plot'],   // kunci unik (composite)
-        ['tj','tc']                                      // kolom yang di-update
-    );
-
-    // CHANGED: header pakai updateOrInsert (karena PK composite di piashdr)
-    DB::table('piashdr')->updateOrInsert(
-        ['companycode' => $companycode, 'rkhno' => $rkhno],
-        [
-            'generateddate' => now(),                        // NOTE: pastikan ejaan kolom tepat
-            'tj'            => $stokTJ,
-            'tc'            => $stokTC,
-            'tjstatus'      => $tjOk ? 1 : 0,
-            'tcstatus'      => $tcOk ? 1 : 0,
-            'inputby'       => auth()->user()->name ?? 'System',
-            'updateby'      => auth()->user()->name ?? 'System',
-        ]
-    );
-
-    return back()->with('success','Data pias berhasil disimpan');
 }
 
-
-    
-
-/** truncate 3 desimal tanpa pembulatan */
-private function floor3(float $v): float
-{
-    return floor($v * 1000) / 1000;
-}
-
-/** alokasi stok equal-share; stok cukup → kembalikan needs apa adanya */
-private function allocateEqual(array $needs, float $stock): array
+/** Alokasi integer (Largest Remainder), total pas = target */
+private function allocateInt(array $needs, float $stock): array
 {
     $n = count($needs);
-    if ($n === 0 || $stock <= 0) return array_fill(0, $n, 0.0);
+    if ($n === 0) return [];
 
-    $totalNeed = array_sum($needs);
-    if ($stock >= $totalNeed) return $needs;
-
-    $alloc  = array_fill(0, $n, 0.0);
-    $remain = $stock;
-    $active = array_keys(array_filter($needs, fn($v)=>$v>0));
-
-    while ($remain > 0 && !empty($active)) {
-        $share = $remain / count($active);
-        $next  = [];
-        foreach ($active as $i) {
-            $gap  = $needs[$i] - $alloc[$i];
-            $give = min($gap, $share);
-            $alloc[$i] += $give;
-            $remain    -= $give;
-            if ($needs[$i] - $alloc[$i] > 1e-12) $next[] = $i;
-        }
-        if (count($next) === count($active)) break;
-        $active = $next;
+    $sumNeed = array_sum($needs);
+    if ($stock <= 0 || $sumNeed <= 0) {
+        return array_fill(0, $n, 0);
     }
+
+    // Target unit yang dibagi (integer, tidak melebihi stok maupun kebutuhan)
+    $target = min((int)floor($stock), (int)ceil($sumNeed));
+    if ($target <= 0) return array_fill(0, $n, 0);
+
+    // Kuota proporsional
+    $quotas = [];
+    for ($i = 0; $i < $n; $i++) {
+        $quotas[$i] = ($needs[$i] / $sumNeed) * $target;
+    }
+
+    // Floor dasar
+    $alloc  = array_map('intval', array_map('floor', $quotas));
+    $remain = $target - array_sum($alloc);
+    if ($remain <= 0) return $alloc;
+
+    // Bagi sisa ke pecahan terbesar (tie-break by index biar deterministik)
+    $order = [];
+    for ($i = 0; $i < $n; $i++) {
+        $order[] = ['i' => $i, 'frac' => $quotas[$i] - floor($quotas[$i])];
+    }
+    usort($order, function ($a, $b) {
+        if ($a['frac'] == $b['frac']) return $a['i'] <=> $b['i'];
+        return ($a['frac'] < $b['frac']) ? 1 : -1; // desc
+    });
+
+    for ($k = 0; $k < $remain && $k < $n; $k++) {
+        $alloc[$order[$k]['i']] += 1;
+    }
+
     return $alloc;
 }
 
+    
+
+// /** truncate 3 desimal tanpa pembulatan */
+// private function floor3(float $v): float
+// {
+//     return floor($v * 1000) / 1000;
+// }
+
+// /** alokasi stok equal-share; stok cukup → kembalikan needs apa adanya */
+// private function allocateEqual(array $needs, float $stock): array
+// {
+//     $n = count($needs);
+//     if ($n === 0 || $stock <= 0) return array_fill(0, $n, 0.0);
+
+//     $totalNeed = array_sum($needs);
+//     if ($stock >= $totalNeed) return $needs;
+
+//     $alloc  = array_fill(0, $n, 0.0);
+//     $remain = $stock;
+//     $active = array_keys(array_filter($needs, fn($v)=>$v>0));
+
+//     while ($remain > 0 && !empty($active)) {
+//         $share = $remain / count($active);
+//         $next  = [];
+//         foreach ($active as $i) {
+//             $gap  = $needs[$i] - $alloc[$i];
+//             $give = min($gap, $share);
+//             $alloc[$i] += $give;
+//             $remain    -= $give;
+//             if ($needs[$i] - $alloc[$i] > 1e-12) $next[] = $i;
+//         }
+//         if (count($next) === count($active)) break;
+//         $active = $next;
+//     }
+//     return $alloc;
+// }
 
 
-    // public function submit(Request $request) 
-    // {
-    //     $request->validate([
-    //         'inputTJ' => 'required|numeric|min:0',
-    //         'inputTC' => 'required|numeric|min:0',
-    //         'rkhno' => 'required|string'
-    //     ]);
-    
-    //     // Data yang diterima dari frontend
-    //     $stokTJ = $request->inputTJ;
-    //     $stokTC = $request->inputTC;
-    //     $rkhno = $request->rkhno;
-    //     $allocations = $request->allocations; // Array hasil perhitungan JS
-        
-    //     dd($request);
 
-    //     DB::beginTransaction();
-        
-    //     try {
-    //         // 1. Simpan ke tabel piashdr (header)
-    //         $piashdr = new piashdr();
-    //         $piashdr->rkhno = $rkhno;
-    //         $piashdr->companycode = auth()->user()->companycode ?? 'DEFAULT';
-    //         $piashdr->generateddate = now();
-    //         $piashdr->total_tj = $stokTJ;
-    //         $piashdr->total_tc = $stokTC;
-    //         $piashdr->inputby = auth()->user()->name ?? 'System';
-    //         $piashdr->updateby = auth()->user()->name ?? 'System';
-    //         $piashdr->save();
-    
-    //         // 2. Simpan ke tabel piaslst (detail per plot)
-    //         foreach ($allocations as $allocation) {
-    //             $piaslst = new piaslst();
-    //             $piaslst->rkhno = $rkhno;
-    //             $piaslst->blok = $allocation['blok'];
-    //             $piaslst->plot = $allocation['plot'];
-    //             $piaslst->alokasi_tj = $allocation['tj'];
-    //             $piaslst->alokasi_tc = $allocation['tc'];
-    //             $piaslst->kebutuhan_tj = $allocation['needTJ'];
-    //             $piaslst->kebutuhan_tc = $allocation['needTC'];
-    //             $piaslst->luas = $allocation['luas'];
-    //             $piaslst->umur_hari = $allocation['umur'];
-    //             $piaslst->save();
-    //         }
-    
-    //         DB::commit();
-            
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Data pias berhasil disimpan'
-    //         ]);
-    
-    //     } catch (\Exception $e) {
-    //         DB::rollback();
-            
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Gagal menyimpan data: ' . $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
     
 
 
