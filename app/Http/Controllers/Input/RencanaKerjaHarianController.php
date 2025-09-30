@@ -863,18 +863,18 @@ class RencanaKerjaHarianController extends Controller
             })
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
-            ->where('h.activitycode', 'like', 'V.%') // All Activity V
+            ->where('a.activitygroup', 'III') // All Activity V using activitygroup
             ->select([
                 'h.lkhno',
                 'h.activitycode',
                 'h.totalworkers',
-                'ldp.luashasil as totalhasil', // FIXED: Use per-plot hasil instead of header total
+                'ldp.luashasil as totalhasil',
                 'h.totalupahall',
                 'a.activityname',
-                'ldp.plot', // Just plot, no blok
-                'p.luasarea', // Plot area from plot table
-                'tk.nama as operator_nama', // Operator name (if using vehicle)
-                'rls.usingvehicle' // To check if using vehicle
+                'ldp.plot',
+                'p.luasarea',
+                'tk.nama as operator_nama',
+                'rls.usingvehicle'
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
@@ -884,11 +884,11 @@ class RencanaKerjaHarianController extends Controller
         $result = ['pc' => [], 'rc' => []];
         
         foreach ($perawatanData as $record) {
-            // Determine PC or RC based on activity code pattern
+            // Determine PC or RC based on activity code pattern (without romawi prefix)
             $type = 'pc'; // default
-            if (strpos($record->activitycode, 'V.5.2.') === 0) {
+            if (strpos($record->activitycode, 'III.2.') !== false) {
                 $type = 'rc';
-            } elseif (strpos($record->activitycode, 'V.5.1.') === 0) {
+            } elseif (strpos($record->activitycode, 'III.1.') !== false) {
                 $type = 'pc';
             }
             
@@ -903,11 +903,11 @@ class RencanaKerjaHarianController extends Controller
                 'activitycode' => $record->activitycode,
                 'activityname' => $record->activityname,
                 'totalworkers' => $record->totalworkers,
-                'totalhasil' => $record->totalhasil, // Now this is per-plot hasil
+                'totalhasil' => $record->totalhasil,
                 'totalupahall' => $record->totalupahall,
-                'plot' => $record->plot, // Just plot without blok prefix
-                'luasarea' => $record->luasarea ?: 0, // Plot area
-                'operator_nama' => $record->usingvehicle && $record->operator_nama ? $record->operator_nama : '-', // Show operator only if using vehicle
+                'plot' => $record->plot,
+                'luasarea' => $record->luasarea ?: 0,
+                'operator_nama' => $record->usingvehicle && $record->operator_nama ? $record->operator_nama : '-',
             ];
         }
         
@@ -1878,24 +1878,20 @@ class RencanaKerjaHarianController extends Controller
                 $join->on('h.lkhno', '=', 'ldp.lkhno')
                     ->where('ldp.companycode', '=', $companycode);
             })
-            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // Mandor dari header
+            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
             ->where('h.companycode', $companycode)
             ->whereDate('h.lkhdate', $date)
-            ->where(function($query) {
-                $query->where('h.activitycode', 'like', 'II.%')
-                    ->orWhere('h.activitycode', 'like', 'III.%')
-                    ->orWhere('h.activitycode', 'like', 'IV.%');
-            })
+            ->whereIn('a.activitygroup', ['II', 'III', 'IV']) // ? Pakai activitygroup
             ->select([
                 'h.lkhno',
                 'h.activitycode',
                 'h.totalworkers',
-                'ldp.luashasil as totalhasil', // FIXED: Use per-plot hasil
+                'ldp.luashasil as totalhasil',
                 'h.totalupahall',
-                'u.name as mandor_nama', // Nama mandor dari user table
+                'u.name as mandor_nama',
                 'a.activityname',
-                'ldp.plot'  // FIXED: Just plot, no blok (consistent with Perawatan)
+                'ldp.plot'
             ])
             ->orderBy('h.activitycode')
             ->orderBy('h.lkhno')
@@ -1903,76 +1899,6 @@ class RencanaKerjaHarianController extends Controller
             ->groupBy('activitycode')
             ->toArray();
     }
-
-    /**
- * Get Perawatan Manual PC data - FIXED: Ambil mandor yang benar
- * UPDATED: using lkhdetailplot and proper mandor from header
- */
-private function getPerawatanManualPCData($companycode, $date)
-{
-    return DB::table('lkhhdr as h')
-        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-            $join->on('h.lkhno', '=', 'ldp.lkhno')
-                 ->where('ldp.companycode', '=', $companycode);
-        })
-        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
-        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-        ->where('h.companycode', $companycode)
-        ->whereDate('h.lkhdate', $date)
-        ->where('h.activitycode', 'like', 'V.%')
-        ->where('ldp.blok', 'like', '%PC%') // NOW from lkhdetailplot
-        ->select([
-            'h.lkhno',
-            'h.activitycode',
-            'h.totalworkers',
-            'h.totalhasil',
-            'h.totalupahall', // FIXED: Use totalupahall
-            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
-            'a.activityname',
-            'ldp.blok', // NOW from lkhdetailplot
-            'ldp.plot'  // NOW from lkhdetailplot
-        ])
-        ->orderBy('h.activitycode')
-        ->orderBy('h.lkhno')
-        ->get()
-        ->groupBy('activitycode')
-        ->toArray();
-}
-
-    /**
- * Get Perawatan Manual RC data - FIXED: Ambil mandor yang benar  
- * UPDATED: using lkhdetailplot and proper mandor from header
- */
-private function getPerawatanManualRCData($companycode, $date)
-{
-    return DB::table('lkhhdr as h')
-        ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-            $join->on('h.lkhno', '=', 'ldp.lkhno')
-                 ->where('ldp.companycode', '=', $companycode);
-        })
-        ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid') // ✅ FIXED: Ambil mandor dari header
-        ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-        ->where('h.companycode', $companycode)
-        ->whereDate('h.lkhdate', $date)
-        ->where('h.activitycode', 'like', 'V.%')
-        ->where('ldp.blok', 'like', '%RC%') // NOW from lkhdetailplot
-        ->select([
-            'h.lkhno',
-            'h.activitycode',
-            'h.totalworkers', 
-            'h.totalhasil',
-            'h.totalupahall', // FIXED: Use totalupahall
-            'u.name as mandor_nama', // ✅ FIXED: Nama mandor yang benar dari user table
-            'a.activityname',
-            'ldp.blok', // NOW from lkhdetailplot
-            'ldp.plot'  // NOW from lkhdetailplot
-        ])
-        ->orderBy('h.activitycode')
-        ->orderBy('h.lkhno')
-        ->get()
-        ->groupBy('activitycode')
-        ->toArray();
-}
 
 
     // =====================================
@@ -3907,7 +3833,7 @@ public function loadAbsenByDate(Request $request)
         $plantingPlots = DB::table('rkhlst')
             ->where('companycode', $companycode)
             ->where('rkhno', $rkhno)
-            ->where('activitycode', 'IV.5.1')
+            ->where('activitycode', '2.2.7')
             ->get();
         
         if ($plantingPlots->isEmpty()) {
@@ -3990,7 +3916,7 @@ public function loadAbsenByDate(Request $request)
         return DB::table('rkhlst')
             ->where('companycode', $companycode)
             ->where('rkhno', $rkhno)
-            ->where('activitycode', 'IV.5.1')
+            ->where('activitycode', '2.2.7')
             ->exists();
     }
 
@@ -4003,7 +3929,7 @@ public function loadAbsenByDate(Request $request)
         $errors = [];
         
         foreach ($rows as $index => $row) {
-            if (($row['nama'] ?? '') === 'IV.5.1') {
+            if (($row['nama'] ?? '') === '2.2.7') {
                 $plot = $row['plot'] ?? '';
                 
                 if ($plot) {

@@ -828,7 +828,6 @@ function validateFormWithUnique() {
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
-  // Standard validation per row
   rows.forEach((row, index) => {
     const blokInput = row.querySelector('input[name$="[blok]"]');
     const plotInput = row.querySelector('input[name$="[plot]"]');
@@ -836,6 +835,8 @@ function validateFormWithUnique() {
     const luasInput = row.querySelector('input[name$="[luas]"]');
     const lakiInput = row.querySelector('input[name$="[laki_laki]"]');
     const perempuanInput = row.querySelector('input[name$="[perempuan]"]');
+    const usingVehicleInput = row.querySelector('input[name$="[usingvehicle]"]');
+    const operatorIdInput = row.querySelector('input[name$="[operatorid]"]');
 
     const blok = blokInput.value;
     const plot = plotInput.value;
@@ -843,20 +844,42 @@ function validateFormWithUnique() {
     const luas = luasInput.value;
     const laki = lakiInput.value;
     const perempuan = perempuanInput.value;
+    const usingVehicle = usingVehicleInput ? usingVehicleInput.value : '0';
+    const operatorId = operatorIdInput ? operatorIdInput.value : '';
 
-    // Check if blok is filled (trigger field)
     if (blok) {
       hasCompleteRow = true;
       const rowNum = index + 1;
       
-      // If blok is filled, all required fields must be filled
       if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
       if (!activity) errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
       if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
       if (laki === '' || laki === null) errors.push(`Baris ${rowNum}: Jumlah laki-laki harus diisi`);
       if (perempuan === '' || perempuan === null) errors.push(`Baris ${rowNum}: Jumlah perempuan harus diisi`);
       
-      // Check material requirement
+      // ✅ VALIDASI JENISTENAGAKERJA
+      if (activity) {
+        const activityData = window.activitiesData.find(act => act.activitycode === activity);
+        if (!activityData || activityData.jenistenagakerja === null || activityData.jenistenagakerja === '' || activityData.jenistenagakerja === undefined) {
+          errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja, silakan pilih activity lain`);
+        }
+      }
+      
+      // Validasi operator jika menggunakan kendaraan
+      if (usingVehicle === '1' && !operatorId) {
+        errors.push(`Baris ${rowNum}: Operator harus dipilih karena menggunakan kendaraan`);
+        
+        const kendaraanCell = row.querySelector('td:nth-child(11)');
+        if (kendaraanCell) {
+          const cellDiv = kendaraanCell.querySelector('div[class*="border"]');
+          if (cellDiv) {
+            cellDiv.classList.add('border-red-500', 'bg-red-50');
+            cellDiv.classList.remove('border-gray-200', 'border-green-300', 'bg-white', 'bg-green-25');
+          }
+        }
+      }
+      
+      // Validasi material
       if (activity) {
         const hasMaterialOptions = window.herbisidaData && window.herbisidaData.some(item => item.activitycode === activity);
         
@@ -871,7 +894,6 @@ function validateFormWithUnique() {
     }
   });
 
-  // Check for unique combination violations
   const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
   if (duplicates.size > 0) {
     for (const [key, duplicateInfo] of duplicates) {
