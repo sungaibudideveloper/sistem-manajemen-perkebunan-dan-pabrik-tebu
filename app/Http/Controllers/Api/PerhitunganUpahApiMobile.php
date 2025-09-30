@@ -79,6 +79,9 @@ class PerhitunganUpahApiMobile extends Controller
                 ]);
 
             if ($updated) {
+                // ✅ SYNC HEADER SETELAH UPDATE BERHASIL
+                $this->syncLkhHeaderTotals($validated['companycode'], $validated['lkhno']);
+                
                 return response()->json([
                     'status' => 1,
                     'description' => 'Worker wage updated successfully',
@@ -118,6 +121,61 @@ class PerhitunganUpahApiMobile extends Controller
                 'status' => 0,
                 'description' => 'Update failed: ' . (config('app.debug') ? $e->getMessage() : 'Internal server error')
             ], 500);
+        }
+    }
+
+    /**
+     * ✅ SYNC LKH HEADER TOTALS DENGAN DETAIL DATA
+     * Method baru untuk sinkronisasi header
+     */
+    private function syncLkhHeaderTotals($companycode, $lkhno)
+    {
+        try {
+            // Hitung total dari lkhdetailworker
+            $workerTotals = DB::table('lkhdetailworker')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->selectRaw('COUNT(*) as total_workers, SUM(totalupah) as total_upah')
+                ->first();
+
+            // Hitung total dari lkhdetailplot (hasil dan sisa)
+            $plotTotals = DB::table('lkhdetailplot')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->selectRaw('SUM(luashasil) as total_hasil, SUM(luassisa) as total_sisa')
+                ->first();
+            
+            // Update header lkhhdr
+            $updateResult = DB::table('lkhhdr')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->update([
+                    'totalworkers' => $workerTotals->total_workers ?? 0,
+                    'totalupahall' => $workerTotals->total_upah ?? 0,
+                    'totalhasil' => $plotTotals->total_hasil ?? 0,
+                    'totalsisa' => $plotTotals->total_sisa ?? 0,
+                    'updatedat' => now()
+                ]);
+
+            // Log untuk debugging
+            \Log::info('LKH Header synced via API', [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'totalworkers' => $workerTotals->total_workers ?? 0,
+                'totalupahall' => $workerTotals->total_upah ?? 0,
+                'totalhasil' => $plotTotals->total_hasil ?? 0,
+                'updated_rows' => $updateResult
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error syncing LKH header totals', [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Tidak throw exception agar API tetap return success
+            // karena update worker sudah berhasil
         }
     }
     
