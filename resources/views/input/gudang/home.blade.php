@@ -2,7 +2,7 @@
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
-
+  
   <div class="w-full">
   <div class="flex justify-end items-end gap-2 flex-wrap">
     <div class="flex gap-2 items-end">
@@ -316,11 +316,11 @@
 				</td>
 				<td class="py-2 px-4 border-b border-gray-300">${newData.blok}</td>
 				<td class="py-2 px-4 border-b border-gray-300">${newData.companycode}</td>
-                @if (hasPermission(['Edit Blok', 'Hapus Blok']))
+                {{--@if (hasPermission(['Edit Blok', 'Hapus Blok']))--}}
                 
 				<td class="py-2 px-4 border-b border-gray-300">
 					<div class="flex items-center justify-center">
-                        @if (hasPermission('Edit Blok'))
+                        {{--@if (hasPermission('Edit Blok'))--}}
                         
 						<button class="group flex items-center edit-button" onclick="openEditModal('${newData.blok}','${newData.companycode}')">
 							<svg
@@ -346,10 +346,10 @@
                                     clip-rule="evenodd" />
 							</svg>
 						</button>
-                        @endif
+                        {{--@endif--}}
                         
 						<span class="w-0.5"></span>
-                        @if (hasPermission('Hapus Blok'))
+                       {{--@if (hasPermission('Hapus Blok'))--}}
                         
 						<button class="group flex delete-button" data-blok="${newData.blok}" data-companycode="${newData.companycode}">
 							<svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
@@ -371,11 +371,11 @@
                                     clip-rule="evenodd" />
 							</svg>
 						</button>
-                        @endif
+                        {{--@endif--}}
                     
 					</div>
 				</td>
-                @endif
+                {{--@endif--}}
             `;
       tableBody.prepend(newRow);
       newRow.querySelector(".delete-button").addEventListener("click", function() {

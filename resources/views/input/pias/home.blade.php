@@ -21,8 +21,8 @@
                 <tr>
                   <td class="py-2 px-4" ><a href="#" onclick="location.href='{{ url('input/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
                     {{$item->rkhno}}</a></td>
-                  <td class="py-2 px-4">{{ date('d M Y', strtotime($item->created_at)) }}</td>
-                  <td class="py-2 px-4">{{ $item->mandorname ?? 'N/A' }}</td>
+                  <td class="py-2 px-4">{{ date('d M Y', strtotime($item->rkhdate)) }}</td>
+                  <td class="py-2 px-4">{{ $item->mandor_name ?? 'N/A' }}</td>
                   <td class="py-2 px-4">{{ $item->totalluas ?? 'N/A' }}</td>
                   <td class="py-2 px-4">{{ $item->manpower ?? 'N/A' }}</td>
                 </tr>

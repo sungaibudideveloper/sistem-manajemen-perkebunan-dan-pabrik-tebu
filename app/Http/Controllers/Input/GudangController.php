@@ -66,11 +66,15 @@ class GudangController extends Controller
         ->select('a.*', 'c.name')
         ->orderBy('a.createdat', 'desc')
         ->paginate($perPage);
-        
+
+        // $middleware = new \App\Http\Middleware\CheckPermission();
+        // $hasPermission = $middleware->hasPermission('Edit Blok');
+        // dd($hasPermission);
         return view('input.gudang.home')->with([
             'title'         => 'Gudang',
             'usehdr'        => $usehdr,
             'perPage'       => $perPage
+            //'hasPermission' => $hasPermission
         ]);
     }
 
