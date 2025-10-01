@@ -2,7 +2,7 @@
     <x-slot:title>{{ $title }}</x-slot>
     <x-slot:navbar>{{ $title }}</x-slot:navbar>
 
-    @if (auth()->user() && in_array('Create Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
+    @if(hasPermission('Create Notifikasi'))
         <a href="{{ route('notifications.create') }}"
             class="flex items-center text-sm w-fit bg-blue-500 rounded-md shadow-sm text-white py-2 px-4 font-medium hover:bg-blue-600">
             <svg class="-ml-1 w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -28,15 +28,13 @@
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex gap-2 items-center">
                                 <span class="lg:text-sm text-xs text-gray-500">{{ $item->createdat->diffForHumans() }}</span>
-                                @if (auth()->user() && in_array('Admin', json_decode(auth()->user()->permissions ?? '[]')))
                                     <span class="font-medium text-sm text-gray-500"> - </span>
                                     <div class="text-gray-500 text-xs font-medium">
                                         {{ $item->companycode }}
                                     </div>
-                                @endif
                             </div>
                             <div class="flex items-center gap-1">
-                                @if (auth()->user() && in_array('Edit Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
+                                @if(hasPermission('Edit Notifikasi'))
                                     <a href="{{ route('notifications.edit', $item->id) }}" class="group flex">
                                         <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                             aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
@@ -54,7 +52,7 @@
                                         </svg>
                                     </a>
                                 @endif
-                                @if (auth()->user() && in_array('Hapus Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
+                                @if(hasPermission('Hapus Notifikasi'))
                                     <form action="{{ route('notifications.destroy', $item->id) }}" method="POST">
                                         @csrf
                                         @method('DELETE')

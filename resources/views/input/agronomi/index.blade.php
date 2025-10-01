@@ -5,7 +5,7 @@
     @include('errorfile')
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="flex lg:justify-between items-end mx-4 gap-2 flex-wrap justify-center">
-            @if (auth()->user() && in_array('Create Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+            @if(hasPermission('Create Agronomi'))
                 <a href="{{ route('input.agronomi.create') }}"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -83,7 +83,7 @@
                         </div>
                     </div>
                 </form>
-                @if (auth()->user() && in_array('Excel Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                @if(hasPermission('Excel Agronomi'))
                     <button
                         class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2"
                         onclick="window.location.href='{{ route('input.agronomi.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -172,7 +172,7 @@
                                             </svg>
                                             <span class="w-2"></span>
                                         </button>
-                                        @if (auth()->user() && in_array('Edit Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                        @if(hasPermission('Edit Agronomi'))
                                             @if ($item->status === 'Unposted')
                                                 <a href="{{ route('input.agronomi.edit', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
                                                     class="group flex items-center"><svg
@@ -199,7 +199,7 @@
                                                 </a>
                                             @endif
                                         @endif
-                                        @if (auth()->user() && in_array('Hapus Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                        @if(hasPermission('Hapus Agronomi'))
                                             @if ($item->status === 'Unposted')
                                                 <form
                                                     action="{{ route('input.agronomi.destroy', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
