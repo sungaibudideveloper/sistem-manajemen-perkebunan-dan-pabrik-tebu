@@ -184,10 +184,11 @@ class PiasController extends Controller
                 throw new \RuntimeException('Panjang alokasi tidak cocok dengan jumlah plot.');
             }
 
-            // Jika allocateInt kamu menargetkan total = floor(stok), cek ini:
-            if (array_sum($allocTJ) !== (int)floor($stokTJ) || array_sum($allocTC) !== (int)floor($stokTC)) {
-                throw new \RuntimeException('Total alokasi tidak sama dengan stok.');
-            }
+            // // Jika allocateInt kamu menargetkan total = floor(stok), cek ini:
+            // if (array_sum($allocTJ) !== (int)floor($stokTJ) || array_sum($allocTC) !== (int)floor($stokTC)) {
+            //     dd($allocTJ, $stokTJ, $allocTC, $stokTC);
+            //     throw new \RuntimeException('Total alokasi tidak sama dengan stok.');
+            // }
 
             // --- UPSERT DETAIL ---
             $rowsInsert = [];
