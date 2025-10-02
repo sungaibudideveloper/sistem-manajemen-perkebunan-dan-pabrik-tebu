@@ -13,7 +13,7 @@ class piashdr extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'companycode', 'rkhno', 'generatedate', 'tj', 'tc', 'inputby' , 'updateby', 'tjstatus', 'tcstatus'
+        'companycode', 'rkhno', 'generatedate', 'tj', 'tc', 'inputby' , 'updateby', 'tjstatus', 'tcstatus','sisatj','sisatc'
     ];
     
 

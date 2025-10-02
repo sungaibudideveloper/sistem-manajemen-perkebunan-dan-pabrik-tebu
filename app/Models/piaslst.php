@@ -13,7 +13,7 @@ class piaslst extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'companycode', 'rkhno', 'lkhno', 'blok', 'plot', 'tj', 'tc'
+        'companycode', 'rkhno', 'lkhno', 'blok', 'plot', 'tj', 'tc','needtj','needtc'
     ];
     
 

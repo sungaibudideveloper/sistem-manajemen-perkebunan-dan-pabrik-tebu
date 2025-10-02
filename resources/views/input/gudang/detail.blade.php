@@ -1,4 +1,5 @@
 
+{{-- resources\views\input\gudang\detail.blade.php --}}
 <x-layout>
 @php 
 @endphp
@@ -32,26 +33,32 @@ table th, table td {
         <!-- Status Badge -->
         <div class="flex justify-center mb-3">
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">ACTIVE</div>
                 <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-clock me-1"></i>Apabila Sudah Diperiksa, Klik Button Penyerahan Di Bawah
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'DISPATCHED')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">DISPATCHED</div>
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Diserahkan, Menunggu Feedback Mandor.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RECEIVED_BY_MANDOR')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">RECEIVED BY MANDOR</div>
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diterima Mandor. Untuk Retur, Ajukan Dokumen Retur.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'UPLOADED')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">UPLOADED</div>
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Di Upload Mandor.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURNED_BY_MANDOR')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">RETURNED BY MANDOR</div>
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Sudah Diretur.
                 </div>
             @elseif(strtoupper($details[0]->flagstatus) == 'RETURN_RECEIVED')
+                <div class="bg-green-100 text-green-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">RETURN RECEIVED</div>
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Retur Sudah Diterima.
                 </div>
@@ -290,7 +297,7 @@ table th, table td {
 
 
 
-    
+        @if(hasPermission('Edit Herbisida'))
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
@@ -303,6 +310,7 @@ table th, table td {
             </div>
             @endif
         </form>
+        @endif
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">

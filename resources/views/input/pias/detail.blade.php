@@ -174,6 +174,18 @@
               </tr>
             @endforeach
           </tbody>
+          <tfoot>
+            <tr class="bg-gray-100 font-bold">
+              <td class="p-3 border-t" colspan="6" style="text-align:right">TOTAL</td>
+              <td class="p-3 border-t bg-blue-50 text-right">
+                <span id="sumTJCell">0</span>
+              </td>
+              <td class="p-3 border-t bg-green-50 text-right">
+                <span id="sumTCCell">0</span>
+              </td>
+              <td class="p-3 border-t"></td>
+            </tr>
+          </tfoot>
         </table>
 
         @if($hdr)
@@ -190,7 +202,7 @@
             {{ $hdr ? 'Edit Data' : 'Generate' }}
           </button>
         </div>
-
+        @if($hdr)
         <div class="flex justify-center mt-2 mb-6"> {{-- ADDED: tombol Print --}}
           <button
             type="button"
@@ -200,6 +212,7 @@
             Print
           </button>
         </div>
+        @endif
 
       </div>
     </div>
@@ -221,9 +234,11 @@
     const summary   = document.getElementById('summaryCard');
     const statusTJ  = document.getElementById('statusTJ');
     const statusTC  = document.getElementById('statusTC');
+    const sumTJCell = document.getElementById('sumTJCell');
+    const sumTCCell = document.getElementById('sumTCCell');
 
     const pcts = [
-      {tj:0.7,tc:0.3},{tj:0.7,tc:0.3},{tj:0.69,tc:0.4},
+      {tj:0.7,tc:0.3},{tj:0.7,tc:0.3},{tj:0.6,tc:0.4},
       {tj:0.5,tc:0.5},{tj:0.4,tc:0.6},{tj:0.3,tc:0.7},
       {tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7},{tj:0.3,tc:0.7}
     ];
@@ -261,42 +276,128 @@
           `<span class="inline-block rounded px-2 py-0.5 bg-green-100 font-semibold">TC ${Math.round(p.tc*100)}%</span> dari ${fmt0(total)} lembar. <br>`+
           `Kebutuhan: ` +
           `<span class="inline-block rounded px-2 py-0.5 bg-blue-100 font-semibold">TJ ${needTJ.toFixed(2)}</span>, ` +
-          `<span class="inline-block rounded px-2 py-0.5 bg-green-100 font-semibold">TC ${needTC.toFixed(2)}</span>`
-          ;
+          `<span class="inline-block rounded px-2 py-0.5 bg-green-100 font-semibold">TC ${needTC.toFixed(2)}</span>`;
       }
 
-      meta.push({
-        tjEl, tcEl, fEl,
-        total, bulan, needTJ, needTC
-      });
+      meta.push({ tjEl, tcEl, fEl, total, bulan, needTJ, needTC });
       needsTJ.push(needTJ);
       needsTC.push(needTC);
     }
 
-    // Sum kebutuhan (konstan, tidak perlu dihitung tiap render)
-    const sumNeedTJConst = needsTJ.reduce((a,b)=>a+b,0);
-    const sumNeedTCConst = needsTC.reduce((a,b)=>a+b,0);
+    let initTJ = 0, initTC = 0;
+    for (const r of rows) {
+      initTJ += parseFloat(r.dataset.tj) || 0;
+      initTC += parseFloat(r.dataset.tc) || 0;
+    }
+    if (sumTJCell) sumTJCell.textContent = fmt0(initTJ);
+    if (sumTCCell) sumTCCell.textContent = fmt0(initTC);
 
-    // ====== allocator (Hamilton) tetap ======
-    function allocateIntHamilton(needs, stock) {
+    const stokTJ0 = parseFloat(inputTJ.value) || 0;
+    const stokTC0 = parseFloat(inputTC.value) || 0;
+    if (sisaTJEl) sisaTJEl.textContent = fmt0(Math.floor(stokTJ0) - initTJ);
+    if (sisaTCEl) sisaTCEl.textContent = fmt0(Math.floor(stokTC0) - initTC);
+
+    // Sum kebutuhan INTEGER (supaya sinkron dengan piaslst/controller)
+    const needTJIntArr = needsTJ.map(v => Math.round(v));
+    const needTCIntArr = needsTC.map(v => Math.round(v));
+    const sumNeedTJIntConst = needTJIntArr.reduce((a,b)=>a+b,0);
+    const sumNeedTCIntConst = needTCIntArr.reduce((a,b)=>a+b,0);
+
+    // ================= CRC32 (match PHP) =================
+    const CRC_TABLE = (() => {
+      const t = new Uint32Array(256);
+      for (let n=0;n<256;n++){
+        let c = n;
+        for (let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c >>> 0;
+      }
+      return t;
+    })();
+    function crc32(str){
+      let crc = 0 ^ (-1);
+      for (let i=0;i<str.length;i++){
+        crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ str.charCodeAt(i)) & 0xFF];
+      }
+      return (crc ^ (-1)) >>> 0;
+    }
+
+    // =================== Allocator: Equal-first + Group-fair (CRC32) ===================
+    function allocateInt(needs, stock) {
       const n = needs.length;
       if (n === 0) return [];
-      const sumNeed = needs.reduce((a,b)=>a+b,0);
-      if (stock <= 0 || sumNeed <= 0) return Array(n).fill(0);
+      const sumNeedInt = needs.reduce((a,b)=>a + Math.round(b), 0);                // <— pakai SUM(round)
+      const target     = Math.min(Math.floor(stock || 0), sumNeedInt);             // <— target sinkron
+      if (target <= 0 || sumNeedInt <= 0) return Array(n).fill(0);
 
-      const target = Math.min(Math.floor(stock), Math.ceil(sumNeed));
-      if (target <= 0) return Array(n).fill(0);
+      // seed sama dengan controller: crc32(rkhno)
+      const rkhInput = document.querySelector('input[name="rkhno"]');
+      const seed = crc32(rkhInput?.value || '');
 
-      const quotas = needs.map(v => v / sumNeed * target);
-      const alloc  = quotas.map(q => Math.floor(q));
-      let remain   = target - alloc.reduce((a,b)=>a+b,0);
-      if (remain > 0) {
-        const order = quotas.map((q,i)=>({i, frac: q - Math.floor(q)}))
-                            .sort((a,b)=> b.frac === a.frac ? a.i - b.i : b.frac - a.frac);
-        for (let k=0; k<order.length && remain>0; k++, remain--) {
-          alloc[order[k].i] += 1;
+      // ids stabil: "Blok|Plot" dari data-id kalau ada; fallback teks kolom 0 & 1
+      const trs = Array.from(document.getElementById('plotTable').rows);
+      const ids = trs.map(tr => tr.getAttribute('data-id')?.trim()
+        || `${(tr.cells?.[0]?.textContent||'').trim()}|${(tr.cells?.[1]?.textContent||'').trim()}`);
+
+      // cap = round(need) (selaras controller & DB)
+      const cap    = needs.map(v => Math.round(v));
+
+      // kuota proporsional (prioritas sekunder untuk tie-break)
+      const sumFloat = needs.reduce((a,b)=>a+b, 0);
+      const quotas = needs.map(v => (sumFloat>0 ? v/sumFloat*target : 0));
+      const fracs  = quotas.map(q => q - Math.floor(q));
+
+      // 1) equal-first baseline (clamp cap)
+      const base  = Math.floor(target / n);
+      const alloc = Array(n).fill(0).map((_,i)=> Math.min(base, cap[i]));
+      let remain  = target - alloc.reduce((a,b)=>a+b,0);
+      if (remain <= 0) return alloc;
+
+      // 2) group by rounded need (desc)
+      const needInt = needs.map(v => Math.round(v));
+      const groups  = new Map();
+      for (let i=0;i<n;i++){ (groups.get(needInt[i]) ?? groups.set(needInt[i],[]).get(needInt[i])).push(i); }
+      const groupKeys = Array.from(groups.keys()).sort((a,b)=>b-a);
+
+      // urut anggota grup: (crc32(id)^seed) asc, tie frac desc, tie index asc
+      const orderGroup = idxs => idxs.slice().sort((a,b)=>{
+        const ha = (crc32(ids[a]||'') ^ seed) >>> 0;
+        const hb = (crc32(ids[b]||'') ^ seed) >>> 0;
+        if (ha === hb){
+          if (fracs[a] === fracs[b]) return a - b;
+          return fracs[b] - fracs[a];
         }
+        return ha - hb;
+      });
+
+      // 3) bagi sisa per GRUP need: meratakan dulu; selisih dalam grup ≤ 1
+      while (remain > 0){
+        let progressed = false;
+
+        for (const k of groupKeys){
+          if (remain <= 0) break;
+
+          const all = groups.get(k);
+          const idxs = all.filter(i => alloc[i] < cap[i]);
+          if (idxs.length === 0) continue;
+
+          const ord = orderGroup(idxs);
+
+          if (remain >= ord.length){
+            for (const i of ord) alloc[i] += 1;
+            remain -= ord.length;
+            progressed = true;
+            continue;
+          }
+
+          for (let t=0; t<remain; t++) alloc[ord[t]] += 1;
+          remain = 0;
+          progressed = true;
+          break;
+        }
+
+        if (!progressed) break;
       }
+
       return alloc;
     }
 
@@ -311,8 +412,8 @@
       if (stokTJ === lastTJ && stokTC === lastTC) return; // tidak berubah → skip
       lastTJ = stokTJ; lastTC = stokTC;
 
-      const allocTJ = allocateIntHamilton(needsTJ, stokTJ);
-      const allocTC = allocateIntHamilton(needsTC, stokTC);
+      const allocTJ = allocateInt(needsTJ, stokTJ);
+      const allocTC = allocateInt(needsTC, stokTC);
 
       let sumAllocTJ = 0, sumAllocTC = 0;
 
@@ -326,17 +427,24 @@
         if (m.tcEl) m.tcEl.textContent = fmt0(aTC);
       }
 
-      // Ringkasan (kebutuhan konstan)
-      const needTJInt = Math.ceil(sumNeedTJConst);
-      const needTCInt = Math.ceil(sumNeedTCConst);
+      if (sumTJCell)  sumTJCell.textContent  = fmt0(sumAllocTJ);
+      if (sumTCCell)  sumTCCell.textContent  = fmt0(sumAllocTC);
+
+      // ===== Ringkasan pakai kebutuhan integer & target kebutuhan =====
+      const needTJInt = sumNeedTJIntConst;
+      const needTCInt = sumNeedTCIntConst;
 
       totalTJEl.textContent = needTJInt.toLocaleString('id-ID');
       totalTCEl.textContent = needTCInt.toLocaleString('id-ID');
 
+      // target = min(floor(stok), sumNeedInt)
+      const targetTJ = Math.min(Math.floor(stokTJ), needTJInt);
+      const targetTC = Math.min(Math.floor(stokTC), needTCInt);
+
       stokTJEl.textContent  = fmt0(stokTJ);
       stokTCEl.textContent  = fmt0(stokTC);
-      sisaTJEl.textContent  = fmt0(stokTJ - sumAllocTJ);
-      sisaTCEl.textContent  = fmt0(stokTC - sumAllocTC);
+      sisaTJEl.textContent  = fmt0(Math.floor(stokTJ) - sumAllocTJ);
+      sisaTCEl.textContent  = fmt0(Math.floor(stokTC) - sumAllocTC);
 
       const okTJ = sumAllocTJ >= needTJInt;
       const okTC = sumAllocTC >= needTCInt;
@@ -349,7 +457,6 @@
     }
 
     function resetUI(){
-      // Kosongkan angka saja, jangan rebuild DOM
       for (const m of meta) {
         if (m.tjEl) m.tjEl.textContent = '';
         if (m.tcEl) m.tcEl.textContent = '';
@@ -368,19 +475,18 @@
     inputTJ.addEventListener('change', schedule);
     inputTC.addEventListener('change', schedule);
 
-    // Jangan render otomatis saat load; render setelah user ubah nilai
-    // Jika mau auto-render, aktifkan baris di bawah (non-blocking):
-    // setTimeout(()=>{ if (hasBoth()) render(); }, 0);
+    // Render awal (non-blocking)
     function scheduleFirstRender(){
       if (!hasBoth()) return;
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => render(), { timeout: 1200 });
       } else {
-        setTimeout(render, 200); // let first paint happen
+        setTimeout(render, 200);
       }
     }
     scheduleFirstRender();
-    // Cetak: render sekali sebelum print saja
+
+    // Cetak: render sebelum print
     window.onbeforeprint = function(){ if (hasBoth()) render(); };
     if (window.matchMedia) {
       const mq = window.matchMedia('print');
@@ -388,6 +494,7 @@
     }
   });
 </script>
+
 
 
 </x-layout>
