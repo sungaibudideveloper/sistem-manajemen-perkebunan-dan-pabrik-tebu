@@ -33,19 +33,29 @@ class PiasController extends Controller
     }
 
     public function home(Request $request)
-    {   
-        $rkhhdr = new rkhhdr;
-        $data = $rkhhdr
-        ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
-        ->where('approvalstatus', 1)
-        ->select(
-            'rkhhdr.*', 
-            'u.name as mandor_name'
-        )
-        ->paginate(15);
-        return view('input.pias.home')->with([
-            'title'       => 'Pias',
-            'data'        => $data
+    {
+        $perPage = (int) $request->input('perPage', 15);
+    
+        $q = \App\Models\Rkhhdr::query()
+            ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
+            ->leftJoin('piashdr as ph', function ($join) {
+                $join->on('ph.rkhno', '=', 'rkhhdr.rkhno')
+                     ->on('ph.companycode', '=', 'rkhhdr.companycode'); // hapus baris ini kalau single-company
+            })
+            ->where('rkhhdr.approvalstatus', 1)
+            ->select([
+                'rkhhdr.*',
+                DB::raw('u.name as mandor_name'),
+            ])
+            ->selectRaw('CASE WHEN ph.rkhno IS NULL THEN 0 ELSE 1 END as is_generated')
+            ->orderByDesc('rkhhdr.rkhdate');
+    
+        $data = $q->paginate($perPage)->appends($request->query());
+    
+        return view('input.pias.home', [
+            'title'   => 'Pias',
+            'data'    => $data,
+            'perPage' => $perPage,
         ]);
     }
 
