@@ -45,36 +45,52 @@ class GudangController extends Controller
         ]);
     }
 
-    public function home(Request $request)
-    {   $usematerialhdr = new usematerialhdr; 
-        $usehdr2= $usematerialhdr->selectuse(session('companycode'));
+        public function home(Request $request)
+    {   
+        $usematerialhdr = new usematerialhdr; 
+        $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
         
-        $title = "Gudang";
-
+        // Validasi perPage
         if ($request->isMethod('post')) {
             $request->validate(['perPage' => 'required|integer|min:1']);
             $request->session()->put('perPage', $request->input('perPage'));
         }
 
         $perPage = $request->session()->get('perPage', 10);
+        
+        // Filter parameters
+        $search = $request->input('search');
+        $startDate = $request->input('start_date', now()->subMonths(2)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        // $usehdr = usematerialhdr::where('companycode', session('companycode'))->orderBy('createdat', 'desc')->paginate($perPage);
+        // Query dengan filter
         $usehdr = usematerialhdr::from('usematerialhdr as a')
-        ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
-        ->join('user as c', 'b.mandorid', '=', 'c.userid')
-        ->where('a.companycode', session('companycode'))
-        ->select('a.*', 'c.name')
-        ->orderBy('a.createdat', 'desc')
-        ->paginate($perPage);
+            ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
+            ->join('user as c', 'b.mandorid', '=', 'c.userid')
+            ->where('a.companycode', session('companycode'))
+            ->whereDate('a.createdat', '>=', $startDate)
+            ->whereDate('a.createdat', '<=', $endDate);
+        
+        // Filter search
+        if ($search) {
+            $usehdr->where(function($q) use ($search) {
+                $q->where('a.rkhno', 'like', "%{$search}%")
+                ->orWhere('c.name', 'like', "%{$search}%");
+            });
+        }
+        
+        $usehdr = $usehdr->select('a.*', 'c.name')
+            ->orderBy('a.createdat', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
 
-        // $middleware = new \App\Http\Middleware\CheckPermission();
-        // $hasPermission = $middleware->hasPermission('Edit Blok');
-        // dd($hasPermission);
         return view('input.gudang.home')->with([
-            'title'         => 'Gudang',
-            'usehdr'        => $usehdr,
-            'perPage'       => $perPage
-            //'hasPermission' => $hasPermission
+            'title'     => 'Gudang',
+            'usehdr'    => $usehdr,
+            'perPage'   => $perPage,
+            'search'    => $search,
+            'startDate' => $startDate,
+            'endDate'   => $endDate
         ]);
     }
 

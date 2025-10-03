@@ -5,102 +5,127 @@
 
   <div class="w-full">
     {{-- Filter Bar --}}
+
     <form method="GET" class="mx-auto px-4 pt-4">
-      <div class="flex justify-end items-end gap-2 flex-wrap">
-        <div class="flex gap-2 items-end">
-          {{-- Items per page --}}
-          <div>
-            <label for="perPage" class="text-sm font-medium text-gray-700">Items per page:</label>
+      <div class="max-w-5xl mx-auto bg-gray-50 border border-gray-300 rounded-lg p-4 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          
+          {{-- Search (takes more space) --}}
+          <div class="md:col-span-4 relative">
+            <input
+              type="text"
+              name="search"
+              id="search"
+              value="{{ $search ?? '' }}"
+              placeholder=" "
+              class="peer w-full p-2 pt-5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <label 
+              for="search" 
+              class="absolute left-2 top-1 text-xs text-gray-600 transition-all peer-placeholder-shown:top-2.5 peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-blue-600"
+            >
+              Search RKH / Mandor
+            </label>
+          </div>
+    
+          {{-- Start Date --}}
+          <div class="md:col-span-2 relative">
+            <input
+              type="date"
+              id="start_date"
+              name="start_date"
+              value="{{ $startDate ?? '' }}"
+              placeholder=" "
+              class="peer w-full p-2 pt-5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {{ $startDate ? 'text-black' : 'text-gray-400' }}"
+            />
+            <label 
+              for="start_date" 
+              class="absolute left-2 top-1 text-xs text-gray-600 peer-focus:text-blue-600"
+            >
+              Start Date
+            </label>
+          </div>
+    
+          {{-- End Date --}}
+          <div class="md:col-span-2 relative">
+            <input
+              type="date"
+              id="end_date"
+              name="end_date"
+              value="{{ $endDate ?? '' }}"
+              placeholder=" "
+              class="peer w-full p-2 pt-5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {{ $endDate ? 'text-black' : 'text-gray-400' }}"
+            />
+            <label 
+              for="end_date" 
+              class="absolute left-2 top-1 text-xs text-gray-600 peer-focus:text-blue-600"
+            >
+              End Date
+            </label>
+          </div>
+    
+          {{-- Per Page --}}
+          <div class="md:col-span-1 relative">
             <input
               type="text"
               name="perPage"
               id="perPage"
-              value="{{ $perPage ?? request('perPage', 10) }}"
-              min="1"
-              class="w-12 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              onchange="this.form.submit()"
+              value="{{ $perPage ?? 15 }}"
+              placeholder=" "
+              class="peer w-full p-2 pt-5 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          {{-- Date Filter Dropdown --}}
-          <div class="relative inline-block text-left w-full max-w-xs px-0">
-            <button
-              type="button"
-              class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              id="menu-button"
-              aria-expanded="false"
-              aria-haspopup="true"
-              onclick="toggleDropdown()"
+            <label 
+              for="perPage" 
+              class="absolute left-2 top-1 text-xs text-gray-600 peer-focus:text-blue-600"
             >
-              {{-- icon --}}
-              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="h-4 w-4 mr-2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-              </svg>
-              <span>Date Filter</span>
-              <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            <div class="absolute right-0 z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden" id="menu-dropdown">
-              <div class="py-1 px-4" role="menu" aria-orientation="vertical" aria-labelledby="menu-button">
-                <div class="py-2">
-                  <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
-                  <input
-                    type="date"
-                    id="start_date"
-                    name="start_date"
-                    value="{{ old('start_date', $startDate ?? request('start_date')) }}"
-                    class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm {{ old('start_date', $startDate ?? request('start_date')) ? 'text-black' : 'text-gray-400' }}"
-                    oninput="this.className = this.value ? 'mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                </div>
-                <div class="py-2">
-                  <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
-                  <input
-                    type="date"
-                    id="end_date"
-                    name="end_date"
-                    value="{{ old('end_date', $endDate ?? request('end_date')) }}"
-                    class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm {{ old('end_date', $endDate ?? request('end_date')) ? 'text-black' : 'text-gray-400' }}"
-                    oninput="this.className = this.value ? 'mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                </div>
-                <div class="py-2">
-                  <button
-                    type="submit"
-                    name="filter"
-                    class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Apply
-                  </button>
-                </div>
-              </div>
-            </div>
+              Per page
+            </label>
           </div>
-
-          {{-- Optional tombol reset filter --}}
-          @if(request()->hasAny(['start_date','end_date']))
-            <a href="{{ url()->current() }}" class="inline-flex items-center px-3 py-2 text-sm border rounded-md text-gray-600 hover:bg-gray-50">Reset</a>
-          @endif
+    
+          {{-- Buttons --}}
+          <div class="md:col-span-3 flex gap-2">
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+            >
+              Apply
+            </button>
+            
+            @if(request()->hasAny(['search','start_date','end_date']) || request('perPage') != 15)
+              <a 
+                href="{{ url()->current() }}" 
+                class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium text-center"
+              >
+                Reset
+              </a>
+            @endif
+          </div>
+          
         </div>
       </div>
     </form>
 
+
     {{-- Tabel --}}
     <div class="mx-auto px-4 py-4">
       <div class="overflow-x-auto rounded-md border border-gray-300">
-        <table class="min-w-full bg-white text-sm text-center">
+        <table class="min-w-full bg-white text-sm">
           <thead>
             <tr>
-              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No. RKH</th>
+              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.</th>
+              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">RKH</th>
               <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tanggal</th>
-              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Mandor</th>
               <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Total Luas</th>
               <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Man Power</th>
+              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Mandor</th>
+              <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Approved By</th>
             </tr>
           </thead>
           <tbody>
             @forelse($data as $item)
-              <tr>
-                <td class="py-2 px-4">
+              <tr> 
+                <td class="py-2 px-4 border border-gray-300 text-lg text-center">{{ $loop->iteration }}</td>
+                <td class="py-2 px-4 border border-gray-300">
                   <a href="#" onclick="location.href='{{ url('input/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
                     {{ $item->rkhno }}  
                     @if($item->is_generated)
@@ -109,10 +134,12 @@
                     </span> @endif
                   </a>
                 </td>
-                <td class="py-2 px-4">{{ date('d M Y', strtotime($item->rkhdate)) }}</td>
-                <td class="py-2 px-4">{{ $item->mandor_name ?? 'N/A' }}</td>
-                <td class="py-2 px-4">{{ $item->totalluas ?? 'N/A' }}</td>
-                <td class="py-2 px-4">{{ $item->manpower ?? 'N/A' }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-lg text-center">{{ date('d M Y', strtotime($item->rkhdate)) }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-lg text-right">{{ $item->totalluas ?? 'N/A' }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-lg text-right">{{ $item->manpower ?? 'N/A' }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-lg text-center">{{ $item->mandor_name ?? 'N/A' }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-lg text-center"> @if( $item->{'approval'.$item->jumlahapproval.'flag'} == 1 ) 
+                  {{ strstr($item->{'approval'.$item->jumlahapproval.'userid'},'_',true) }}  @endif </td>
               </tr>
             @empty
               <tr>
@@ -144,12 +171,6 @@
         });
       }
     });
-
-    // Toggle dropdown
-    function toggleDropdown() {
-      const dropdown = document.getElementById('menu-dropdown');
-      dropdown.classList.toggle('hidden');
-    }
 
     // Klik di luar dropdown => tutup
     document.addEventListener("click", function(event) {

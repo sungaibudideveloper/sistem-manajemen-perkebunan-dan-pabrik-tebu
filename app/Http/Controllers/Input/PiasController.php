@@ -35,27 +35,51 @@ class PiasController extends Controller
     public function home(Request $request)
     {
         $perPage = (int) $request->input('perPage', 15);
-    
-        $q = \App\Models\Rkhhdr::query()
+        
+        // Default tanggal: 2 bulan ke belakang sampai hari ini
+        $startDate = $request->input('start_date', now()->subMonths(2)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        
+        // Search query
+        $search = $request->input('search');
+        
+        $rkhhdr = new Rkhhdr;
+        
+        $selected = $rkhhdr::query()
             ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
             ->leftJoin('piashdr as ph', function ($join) {
                 $join->on('ph.rkhno', '=', 'rkhhdr.rkhno')
-                     ->on('ph.companycode', '=', 'rkhhdr.companycode'); // hapus baris ini kalau single-company
+                     ->on('ph.companycode', '=', 'rkhhdr.companycode');
             })
             ->where('rkhhdr.approvalstatus', 1)
-            ->select([
+            // Filter tanggal
+            ->whereDate('rkhhdr.rkhdate', '>=', $startDate)
+            ->whereDate('rkhhdr.rkhdate', '<=', $endDate);
+        
+        // Filter search
+        if ($search) {
+            $selected->where(function($query) use ($search) {
+                $query->where('rkhhdr.rkhno', 'like', "%{$search}%")
+                      ->orWhere('u.name', 'like', "%{$search}%");
+            });
+        }
+        
+        $selected->select([
                 'rkhhdr.*',
                 DB::raw('u.name as mandor_name'),
             ])
             ->selectRaw('CASE WHEN ph.rkhno IS NULL THEN 0 ELSE 1 END as is_generated')
             ->orderByDesc('rkhhdr.rkhdate');
-    
-        $data = $q->paginate($perPage)->appends($request->query());
-    
+        
+        $data = $selected->paginate($perPage)->appends($request->query());
+        
         return view('input.pias.home', [
-            'title'   => 'Pias',
-            'data'    => $data,
-            'perPage' => $perPage,
+            'title'     => 'Pias',
+            'data'      => $data,
+            'perPage'   => $perPage,
+            'startDate' => $startDate,
+            'endDate'   => $endDate,
+            'search'    => $search,
         ]);
     }
 
