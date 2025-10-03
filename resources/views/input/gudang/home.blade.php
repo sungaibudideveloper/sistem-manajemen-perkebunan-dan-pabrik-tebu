@@ -101,16 +101,20 @@
             </tr>
           </thead>
           <tbody>
-            @foreach($usehdr as $u)
+            @foreach($usehdr as $u) 
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border border-gray-300">
                   <a href="{{ url('input/gudang/detail?rkhno='.$u->rkhno) }}" class="text-blue-600 hover:underline">
-                    {{ $u->rkhno }}
+                    {{ $u->rkhno }} @if($u->nouse)
+                                      <span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">
+                                        Generated
+                                      </span>
+                                    @endif
                   </a>
                 </td>
                 <td class="py-2 px-4 border border-gray-300 text-center">{{ date('d M Y', strtotime($u->createdat)) }}</td>
                 <td class="py-2 px-4 border border-gray-300">Pre Emergence</td>
-                <td class="py-2 px-4 border border-gray-300"></td>
+                <td class="py-2 px-4 border border-gray-300">{{ $u->nouse }}</td>
                 <td class="py-2 px-4 border border-gray-300 text-right">{{ $u->totalluas }}</td>
                 <td class="py-2 px-4 border border-gray-300">{{ $u->name }}</td>
                 <td class="py-2 px-4 border border-gray-300 text-center">

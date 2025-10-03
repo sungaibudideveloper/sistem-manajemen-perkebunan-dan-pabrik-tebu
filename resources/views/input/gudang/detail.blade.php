@@ -72,9 +72,9 @@ table th, table td {
         <!-- Header Section - Compact -->
         <div class="w-full bg-white shadow rounded mb-4">
             <table class="w-full text-xs">
-                <thead class="bg-gray-100 text-gray-700">
+                <thead class="text-gray-700">
                     <tr>
-                        <th class="py-2 px-2 text-left border-0" colspan="5">
+                        <th class="py-1 px-2 text-left border-0" colspan="5">
                             <div class="space-y-1 mb-3">
                                 <div class="grid grid-cols-3 gap-4">
                                     <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }}</span>
@@ -89,12 +89,12 @@ table th, table td {
                             </div>
                         </th>
                     </tr>
-                    <tr>
-                        <th class="py-1 px-2 border-b">LKH</th>
-                        <th class="py-1 px-2 border-b">Blok</th>
-                        <th class="py-1 px-2 border-b">Plot</th>
-                        <th class="py-1 px-2 border-b">Luas (HA)</th>
-                        <th class="py-1 px-2 border-b">Activity</th>
+                    <tr class="border-b">
+                        <th class="py-1 px-2">LKH</th>
+                        <th class="py-1 px-2">Blok</th>
+                        <th class="py-1 px-2">Plot</th>
+                        <th class="py-1 px-2">Luas (HA)</th>
+                        <th class="py-1 px-2">Activity</th>
                     </tr>
                 </thead>
                 <tbody class="text-gray-600">
@@ -169,7 +169,7 @@ table th, table td {
                     <option value="{{ $item->itemcode }}" 
                             {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
                             data-dosage="{{$item->dosageperha}}">
-                        Herbisida {{$item->herbisidagroupid}} - {{ $item->itemcode }} - {{ $item->itemname }} - {{$item->dosageperha}} ({{$item->measure}}) - Total: {{$totalLuas}} HA
+                        Grup {{$item->herbisidagroupid}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
                     </option>
                 @endforeach
             </select>

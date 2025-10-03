@@ -65,11 +65,15 @@ class GudangController extends Controller
 
         // Query dengan filter
         $usehdr = usematerialhdr::from('usematerialhdr as a')
-            ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
-            ->join('user as c', 'b.mandorid', '=', 'c.userid')
-            ->where('a.companycode', session('companycode'))
-            ->whereDate('a.createdat', '>=', $startDate)
-            ->whereDate('a.createdat', '<=', $endDate);
+        ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
+        ->join('user as c', 'b.mandorid', '=', 'c.userid')
+        ->leftJoinSub(
+            usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
+                ->groupBy('rkhno'), 'd', 'a.rkhno', '=', 'd.rkhno'
+        )
+        ->where('a.companycode', session('companycode'))
+        ->whereDate('a.createdat', '>=', $startDate)
+        ->whereDate('a.createdat', '<=', $endDate);
         
         // Filter search
         if ($search) {
@@ -79,7 +83,7 @@ class GudangController extends Controller
             });
         }
         
-        $usehdr = $usehdr->select('a.*', 'c.name')
+        $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse')
             ->orderBy('a.createdat', 'desc')
             ->paginate($perPage)
             ->appends($request->query());
@@ -107,17 +111,20 @@ class GudangController extends Controller
 
         $itemlist = DB::table('herbisidaDosage as d')
         ->join('herbisida as h', function ($join) {
-        $join->on('d.itemcode', '=', 'h.itemcode')
-                ->on('d.companycode', '=', 'h.companycode');
+            $join->on('d.itemcode', '=', 'h.itemcode')
+                 ->on('d.companycode', '=', 'h.companycode');
         })
         ->where('d.companycode', session('companycode'))
         ->select(
-        'd.herbisidagroupid',
-        'd.itemcode',
-        'd.dosageperha',
-        'h.itemname',
-        'h.measure'
+            'd.itemcode',
+            'd.dosageperha',
+            'h.itemname',
+            'h.measure',
+            DB::raw('MIN(d.herbisidagroupid) as herbisidagroupid') // Ambil group ID pertama jika ada duplikat
         )
+        ->groupBy('d.itemcode', 'd.dosageperha', 'h.itemname', 'h.measure')
+        ->orderBy('d.itemcode')
+        ->orderBy('d.dosageperha')
         ->get();
             
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno,1));
@@ -229,8 +236,7 @@ class GudangController extends Controller
 
     public function submit(Request $request)
     { 
-        // try {
-        //    DB::transaction(function() use ($request) {
+
               // Validasi basic
               $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
               $first = $details->first();
@@ -274,7 +280,7 @@ class GudangController extends Controller
               
               $insertData = [];
               $apiPayload = [];
-            //   dd($request);
+
               // Process flat - langsung dari request
               foreach ($request->itemcode as $lkhno => $items) {
                 $detail = $detailsByLkhno[$lkhno];
@@ -297,7 +303,7 @@ class GudangController extends Controller
                             'itemcode'    => $itemcode,
                             'qty'         => $qty,
                             'unit'        => $unit,
-                            'qtyretur'    => ($existing?->qtyretur ?? 0) ?: throw new Exception("qtyretur cannot be 0"),
+                            'qtyretur'    => $existing?->qtyretur ?? 0,
                             'itemname'    => $herbisidaItems[$itemcode]->itemname ?? '',
                             'dosageperha' => $dosage,
                             'nouse'       => $existing?->nouse ?? null,
@@ -395,14 +401,10 @@ class GudangController extends Controller
               } else {
                   dd($response->json(), $response->body(), $response->status());
               }
-        //    });
+
           
           return redirect()->back()->with('success1', 'Data updated successfully');
-          
-    //    } catch (\Exception $e) {
-    //        Log::error('Submit Error', ['error' => $e->getMessage()]);
-    //        return redirect()->back()->with('error', $e->getMessage());
-    //    }
+        
     }
 
 
