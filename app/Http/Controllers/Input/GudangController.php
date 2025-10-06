@@ -388,7 +388,8 @@ class GudangController extends Controller
               } else {
                   Log::error('API error', [
                       'status' => $response->status(),
-                      'body' => $response->body()
+                      'body' => $response->body(),
+                      'isi' => $first
                   ]);
               }
               
