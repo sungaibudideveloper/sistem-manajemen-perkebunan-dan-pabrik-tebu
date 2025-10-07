@@ -168,7 +168,8 @@ table th, table td {
                 @foreach ($itemlist as $item)
                     <option value="{{ $item->itemcode }}" 
                             {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
-                            data-dosage="{{$item->dosageperha}}">
+                            data-dosage="{{$item->dosageperha}}" 
+                            data-measure="{{ $item->measure }}" data-itemname="{{ $item->itemname }}">
                         Grup {{$item->herbisidagroupid}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
                     </option>
                 @endforeach
@@ -277,7 +278,7 @@ table th, table td {
                     <th class="py-2 px-3 border-b">Perhitungan</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 text-gray-700">
+            <tbody id="totals-body" class="divide-y divide-gray-200 text-gray-700">
                 @foreach($totals as $code => $row)
                     <tr class="hover:bg-gray-50 align-top">
                         <td class="py-2 px-3 font-medium">{{ $code }}</td>
@@ -332,6 +333,83 @@ table th, table td {
     </x-layout>
     
     <script>
+        // recalculate total
+        const fmt3 = n => (Number(n)||0).toFixed(3);
+
+function recalcTotals(){
+  const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
+
+  $('.item-select').each(function(){
+    const $tr      = $(this).closest('tr');
+    const $opt     = $(this).find('option:selected');
+
+    const code     = $tr.find('.selected-itemcode').val() || $(this).val();
+    const name     = $opt.data('itemname') || '';
+    const unit     = $tr.find('.selected-unit').val() || $opt.data('measure') || '';
+
+    const dosage   = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
+    const luas     = parseFloat($tr.find('.selected-luas').val()) || 0;
+    const qty      = dosage * luas;
+
+    (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
+    totals[code].qty   += qty;
+    totals[code].parts.push(fmt3(qty));
+  });
+
+  // render ulang tbody totals (pakai id yg ditambah di atas)
+  $('#totals-body').html(
+    Object.entries(totals).map(([code, r]) => `
+      <tr class="hover:bg-gray-50 align-top">
+        <td class="py-2 px-3 font-medium">${code}</td>
+        <td class="py-2 px-3">${r.itemname || '-'}</td>
+        <td class="py-2 px-3">${r.unit || '-'}</td>
+        <td class="py-2 px-3 text-right">${fmt3(r.qty)}</td>
+        <td class="py-2 px-3 text-center text-gray-500">${r.parts.join(' + ')}</td>
+      </tr>
+    `).join('')
+  );
+}
+
+// panggil sekali saat load
+$(document).ready(function(){
+  $('.item-select').each(function(){ recalcRowQty($(this).closest('tr')); });
+  recalcTotals();
+});
+
+// NEBENG handler yang sudah ada → cukup tambahkan recalcTotals()
+$('.item-select').on('change', function () {
+  const row = $(this).closest('tr');
+  const sel = $(this).find('option:selected');
+
+  // (punya kamu) update dosage/itemcode/unit/name attr...
+  const newItemcode = sel.val();
+  const dosage      = sel.data('dosage');
+  const measure     = sel.data('measure');
+
+  const { lkhno, itemcode, plot } = (function(name){
+    const m = [...name.matchAll(/\[([^\]]+)\]/g)].map(x=>x[1]);
+    return { lkhno: m[0], itemcode: m[1], plot: m[2] };
+  })($(this).attr('name'));
+
+  row.find('.selected-dosage').val(dosage);
+  row.find('.selected-itemcode').val(newItemcode);
+  row.find('.selected-unit').val(measure);
+
+  $(this).attr('name',                 `itemcode[${lkhno}][${newItemcode}][${plot}]`);
+  row.find('.selected-dosage').attr('name', `dosage[${lkhno}][${newItemcode}][${plot}]`);
+  row.find('.selected-unit').attr('name',   `unit[${lkhno}][${newItemcode}][${plot}]`);
+  row.find('.selected-luas').attr('name',   `luas[${lkhno}][${newItemcode}][${plot}]`);
+
+  recalcRowQty(row);
+  recalcTotals(); // <<< cukup tambahkan ini
+});
+
+$(document).on('input', '.selected-dosage', function(){
+  recalcRowQty($(this).closest('tr'));
+  recalcTotals(); // <<< dan ini
+});
+        // tutup recalculate total 
+
         function parsePath(name){
           const m = [...name.matchAll(/\[([^\]]+)\]/g)].map(x=>x[1]);
           return { lkhno: m[0], itemcode: m[1], plot: m[2] };
