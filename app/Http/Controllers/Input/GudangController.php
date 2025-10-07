@@ -245,24 +245,23 @@ class GudangController extends Controller
                   throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
               }
 
-             //cek lkhno
-            // Validasi duplikat: lkhno + itemcode + plot
-            $combinations = [];
-
-            foreach (($request->materials ?? []) as $material) {
-                $lkhno = $material['lkhno'] ?? '';
-                $itemcode = $material['itemcode'] ?? '';
-                $plot = $material['plot'] ?? '';
+            //cek lkhno
+            // Validasi duplikat: lkhno + itemcode
+            foreach ($request->itemcodelist as $lkhno => $itemcodes) {
+                // Cek apakah ada duplikat di array
+                $uniqueItems = array_unique($itemcodes);
                 
-                $key = "$lkhno|$itemcode|$plot";
-                
-                if (isset($combinations[$key])) {
+                if (count($itemcodes) !== count($uniqueItems)) {
+                    // Ada duplikat! Cari item mana yang duplikat
+                    $duplicates = array_diff_assoc($itemcodes, $uniqueItems);
+                    $duplicateItem = reset($duplicates);
+                    
                     return redirect()->back()->withInput()
-                        ->with('error', "Duplikat! Item $itemcode di Plot $plot sudah ada di LKH $lkhno");
+                        ->with('error', "Duplikat! LKH $lkhno dengan Item $duplicateItem tidak boleh diinput lebih dari 1 kali.");
                 }
-                
-                $combinations[$key] = true;
             }
+
+
             dd($request);
               // Get existing data dengan key lkhno-itemcode
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
