@@ -248,7 +248,7 @@ class GudangController extends Controller
              //cek lkhno
             // Validasi duplikat: lkhno + itemcode + plot
             $combinations = [];
-
+dd($request);
             foreach (($request->materials ?? []) as $material) {
                 $lkhno = $material['lkhno'] ?? '';
                 $itemcode = $material['itemcode'] ?? '';
