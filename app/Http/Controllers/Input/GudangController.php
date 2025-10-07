@@ -182,7 +182,7 @@ class GudangController extends Controller
         if($first->noretur != null){
             return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
         }
-        dd($hfirst->status);
+        
 
         $isi = collect();
         $isi->push((object)[
