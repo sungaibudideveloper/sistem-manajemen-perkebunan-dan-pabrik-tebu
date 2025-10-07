@@ -248,7 +248,7 @@ class GudangController extends Controller
              //cek lkhno
             // Validasi duplikat: lkhno + itemcode + plot
             $combinations = [];
-dd($request);
+
             foreach (($request->materials ?? []) as $material) {
                 $lkhno = $material['lkhno'] ?? '';
                 $itemcode = $material['itemcode'] ?? '';
@@ -263,7 +263,7 @@ dd($request);
                 
                 $combinations[$key] = true;
             }
-
+            dd($request);
               // Get existing data dengan key lkhno-itemcode
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
                   return $item->lkhno . '-' . $item->itemcode;
