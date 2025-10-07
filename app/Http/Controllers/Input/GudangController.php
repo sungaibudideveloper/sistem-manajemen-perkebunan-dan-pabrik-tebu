@@ -261,8 +261,6 @@ class GudangController extends Controller
                 }
             }
 
-
-            dd($request);
               // Get existing data dengan key lkhno-itemcode
               $existingData = usemateriallst::where('rkhno', $request->rkhno)->get()->keyBy(function($item) {
                   return $item->lkhno . '-' . $item->itemcode;
