@@ -162,6 +162,14 @@ class GudangController extends Controller
         $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
         $first = $details->first();
         
+        if( strtoupper($hfirst->flagstatus) == 'COMPLETED' ){
+            return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
+        } 
+        // Validasi status HARUS salah satu dari ini untuk bisa retur
+        $allowedStatuses = ['RECEIVED_BY_MANDOR', 'RETURNED_BY_MANDOR', 'RETURN_RECEIVED'];
+        if (!in_array(strtoupper($hfirst->flagstatus), $allowedStatuses)) {
+            return redirect()->back()->with('error', 'Tidak Bisa Retur! Status harus RECEIVED_BY_MANDOR, RETURNED_BY_MANDOR, atau RETURN_RECEIVED. Status sekarang: ' . $hfirst->flagstatus);
+        }
         if(empty($first)){ 
             return redirect()->back()->with('error', 'Item Tidak ditemukan!');
         }
@@ -171,16 +179,10 @@ class GudangController extends Controller
         if($first->qtyretur>$first->qty){
             return redirect()->back()->with('error', 'Tidak Bisa Retur! Qty Retur'.$first->qtyretur.' Lebih Besar Dari Qty Kirim'.$first->qty);
         }
-        if( strtoupper($hfirst->flagstatus) == 'COMPLETED' ){
-            return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
-        } 
-        if( strtoupper($hfirst->flagstatus) == 'ACTIVE' || strtoupper($hfirst->flagstatus) == 'DISPATCHED' ){
-            return redirect()->back()->with('error', 'Barang Belum Diterima Mandor');
-        }
         if($first->noretur != null){
             return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
         }
-        
+        dd($hfirst->status);
 
         $isi = collect();
         $isi->push((object)[
@@ -201,7 +203,7 @@ class GudangController extends Controller
         $response = Http::withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
-        ->post('http://localhost/sbwebapp/public/app/im-purchasing/purchasing/bpb/returuse_api', [
+        ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
             'connection' => 'TESTING',
             'company' => $hfirst->companyinv,
             'factory' => $hfirst->factoryinv,
