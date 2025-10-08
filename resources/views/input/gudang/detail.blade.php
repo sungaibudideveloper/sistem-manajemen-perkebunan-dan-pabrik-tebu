@@ -301,7 +301,7 @@ table th, table td {
 
 
 
-        @if(hasPermission('Edit Herbisida'))
+        @if(hasPermission('Menu Gudang'))
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
