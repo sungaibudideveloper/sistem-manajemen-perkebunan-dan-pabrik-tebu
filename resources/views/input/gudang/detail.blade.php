@@ -1,6 +1,9 @@
 
 {{-- resources\views\input\gudang\detail.blade.php --}}
 <x-layout>
+<x-slot:title>{{ $title }}</x-slot:title>
+<x-slot:navbar>{{ $navbar }}</x-slot:navbar>
+<x-slot:nav>{{ $nav }}</x-slot:nav>   
 @php 
 @endphp
 
