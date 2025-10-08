@@ -208,7 +208,8 @@ class GudangController extends Controller
             'company' => $hfirst->companyinv,
             'factory' => $hfirst->factoryinv,
             'isi' => $isi,  
-            'userid' => auth::user()->userid 
+            'userid' => auth::user()->userid,
+            'nouse' => $first->nouse 
         ]); 
 
         //log
