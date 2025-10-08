@@ -160,8 +160,8 @@ class GudangController extends Controller
         $hfirst = $header->first();
 
         $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
-        $first = $details->first();
-        
+
+
         if( strtoupper($hfirst->flagstatus) == 'COMPLETED' ){
             return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
         } 
@@ -173,6 +173,9 @@ class GudangController extends Controller
         if(empty($first)){ 
             return redirect()->back()->with('error', 'Item Tidak ditemukan!');
         }
+        if (!filled($first->nouse)) {
+            return back()->with('error', 'Tidak bisa retur: Nomor USE (nouse) kosong.');
+        }
         if($first->qtyretur<=0){
             return redirect()->back()->with('error', 'Tidak Bisa Retur! Qty Retur Kosong');
         } 
@@ -183,6 +186,7 @@ class GudangController extends Controller
             return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
         }
         
+        $first = $details->first();
 
         $isi = collect();
         $isi->push((object)[
