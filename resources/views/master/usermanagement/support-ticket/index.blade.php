@@ -49,86 +49,82 @@
         },
         getStatusBadge(status) {
             const badges = {
-                'open': 'bg-blue-100 text-blue-800',
-                'in_progress': 'bg-yellow-100 text-yellow-800',
-                'resolved': 'bg-green-100 text-green-800',
-                'closed': 'bg-gray-100 text-gray-800'
+                'open': 'bg-blue-100 text-blue-800 border border-blue-200',
+                'in_progress': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+                'resolved': 'bg-green-100 text-green-800 border border-green-200',
+                'closed': 'bg-gray-100 text-gray-800 border border-gray-200'
             };
             return badges[status] || 'bg-gray-100 text-gray-800';
-        },
-        getCategoryBadge(category) {
-            const badges = {
-                'forgot_password': 'bg-red-100 text-red-800',
-                'bug_report': 'bg-orange-100 text-orange-800',
-                'support': 'bg-blue-100 text-blue-800',
-                'other': 'bg-gray-100 text-gray-800'
-            };
-            return badges[category] || 'bg-gray-100 text-gray-800';
-        },
-        getPriorityBadge(priority) {
-            const badges = {
-                'low': 'bg-gray-100 text-gray-600',
-                'medium': 'bg-blue-100 text-blue-700',
-                'high': 'bg-red-100 text-red-700'
-            };
-            return badges[priority] || 'bg-gray-100 text-gray-800';
         }
     }" class="mx-auto py-4 bg-white rounded-md shadow-md">
 
-        <!-- Statistics Cards -->
-        <div class="px-4 py-4 border-b border-gray-200">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Statistics Cards - Minimalist Gray/Black/White -->
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <!-- Open Tickets -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="bg-white border border-gray-300 rounded-md p-3 hover:shadow-sm transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-blue-600">Open Tickets</p>
-                            <p class="text-2xl font-bold text-blue-900">{{ $stats['open'] }}</p>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Open</p>
+                            <p class="text-xl font-bold text-gray-900 mt-1">{{ $stats['open'] }}</p>
                         </div>
-                        <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
+                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
 
                 <!-- In Progress -->
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="bg-white border border-gray-300 rounded-md p-3 hover:shadow-sm transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-yellow-600">In Progress</p>
-                            <p class="text-2xl font-bold text-yellow-900">{{ $stats['in_progress'] }}</p>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">In Progress</p>
+                            <p class="text-xl font-bold text-gray-900 mt-1">{{ $stats['in_progress'] }}</p>
                         </div>
-                        <svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Resolved -->
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="bg-white border border-gray-300 rounded-md p-3 hover:shadow-sm transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-green-600">Resolved</p>
-                            <p class="text-2xl font-bold text-green-900">{{ $stats['resolved'] }}</p>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Resolved</p>
+                            <p class="text-xl font-bold text-gray-900 mt-1">{{ $stats['resolved'] }}</p>
                         </div>
-                        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Total Tickets -->
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div class="bg-white border border-gray-300 rounded-md p-3 hover:shadow-sm transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-purple-600">Total Tickets</p>
-                            <p class="text-2xl font-bold text-purple-900">{{ $stats['total'] }}</p>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
+                            <p class="text-xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
                         </div>
-                        <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                        </svg>
+                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Company Filter Info -->
+            <div class="mt-3 text-xs text-gray-600 bg-white border border-gray-200 rounded px-3 py-2">
+                <span class="font-medium">Company Filter:</span> {{ $companycode }} - {{ $companies->firstWhere('companycode', $companycode)->name ?? 'Unknown' }}
             </div>
         </div>
 
@@ -245,11 +241,12 @@
                     <thead>
                         <tr class="bg-gray-50">
                             <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket #</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Info</th>
-                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                            <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Info</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In Progress</th>
+                            <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resolved</th>
                             <th class="py-3 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                             <th class="py-3 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                         </tr>
@@ -257,7 +254,7 @@
                     <tbody class="divide-y divide-gray-200">
                         @forelse ($result as $ticket)
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="py-3 px-3 text-sm font-medium text-blue-600">
+                            <td class="py-3 px-3 text-sm font-medium">
                                 <button @click="showDetail({{ json_encode([
                                     'ticket_id' => $ticket->ticket_id,
                                     'ticket_number' => $ticket->ticket_number,
@@ -270,12 +267,20 @@
                                     'company_name' => $ticket->company->name ?? '',
                                     'description' => $ticket->description,
                                     'resolution_notes' => $ticket->resolution_notes,
+                                    'inprogress_by' => $ticket->inprogress_by,
+                                    'inprogress_at' => $ticket->inprogress_at ? $ticket->inprogress_at->format('d M Y H:i') : null,
                                     'resolved_by' => $ticket->resolved_by,
                                     'resolved_at' => $ticket->resolved_at ? $ticket->resolved_at->format('d M Y H:i') : null,
                                     'createdat' => $ticket->createdat->format('d M Y H:i')
-                                ]) }})" class="hover:underline">
+                                ]) }})" class="text-blue-600 hover:underline">
                                     {{ $ticket->ticket_number }}
                                 </button>
+                            </td>
+                            <td class="py-3 px-3 text-center text-sm">
+                                <span :class="getStatusBadge('{{ $ticket->status }}')" 
+                                      class="inline-flex items-center px-2 py-1 rounded text-xs font-medium">
+                                    {{ ucfirst(str_replace('_', ' ', $ticket->status)) }}
+                                </span>
                             </td>
                             <td class="py-3 px-3 text-sm text-gray-700">
                                 <div class="flex flex-col">
@@ -284,28 +289,30 @@
                                 </div>
                             </td>
                             <td class="py-3 px-3 text-sm text-gray-700">
-                                <div class="flex flex-col">
-                                    <span class="font-medium">{{ $ticket->companycode }}</span>
-                                    <span class="text-xs text-gray-500">{{ $ticket->company->name ?? '-' }}</span>
-                                </div>
+                                {{ ucfirst(str_replace('_', ' ', $ticket->category)) }}
                             </td>
-                            <td class="py-3 px-3 text-center text-sm">
-                                <span :class="getCategoryBadge('{{ $ticket->category }}')" 
-                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
-                                    {{ ucfirst(str_replace('_', ' ', $ticket->category)) }}
-                                </span>
+                            <td class="py-3 px-3 text-sm text-gray-700">
+                                {{ ucfirst($ticket->priority) }}
                             </td>
-                            <td class="py-3 px-3 text-center text-sm">
-                                <span :class="getPriorityBadge('{{ $ticket->priority }}')" 
-                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
-                                    {{ ucfirst($ticket->priority) }}
-                                </span>
+                            <td class="py-3 px-3 text-sm text-gray-600">
+                                @if($ticket->inprogress_by)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-medium">{{ $ticket->inprogress_by }}</span>
+                                        <span class="text-xs text-gray-500">{{ $ticket->inprogress_at ? $ticket->inprogress_at->format('d M Y H:i') : '-' }}</span>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
                             </td>
-                            <td class="py-3 px-3 text-center text-sm">
-                                <span :class="getStatusBadge('{{ $ticket->status }}')" 
-                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
-                                    {{ ucfirst(str_replace('_', ' ', $ticket->status)) }}
-                                </span>
+                            <td class="py-3 px-3 text-sm text-gray-600">
+                                @if($ticket->resolved_by)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-medium">{{ $ticket->resolved_by }}</span>
+                                        <span class="text-xs text-gray-500">{{ $ticket->resolved_at ? $ticket->resolved_at->format('d M Y H:i') : '-' }}</span>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
                             </td>
                             <td class="py-3 px-3 text-sm text-gray-700">
                                 <div class="flex flex-col">
@@ -328,6 +335,8 @@
                                         'company_name' => $ticket->company->name ?? '',
                                         'description' => $ticket->description,
                                         'resolution_notes' => $ticket->resolution_notes,
+                                        'inprogress_by' => $ticket->inprogress_by,
+                                        'inprogress_at' => $ticket->inprogress_at ? $ticket->inprogress_at->format('d M Y H:i') : null,
                                         'resolved_by' => $ticket->resolved_by,
                                         'resolved_at' => $ticket->resolved_at ? $ticket->resolved_at->format('d M Y H:i') : null,
                                         'createdat' => $ticket->createdat->format('d M Y H:i')
@@ -373,7 +382,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="py-8 px-4 text-center text-gray-500">
+                            <td colspan="9" class="py-8 px-4 text-center text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -427,7 +436,7 @@
                 <!-- Modal Body -->
                 <div class="p-6 space-y-4" x-show="selectedTicket">
                     <!-- User Info -->
-                    <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">User Information</h4>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
@@ -450,32 +459,49 @@
                     </div>
 
                     <!-- Ticket Info -->
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-4 gap-4">
                         <div>
                             <p class="text-xs text-gray-500 mb-1">Category</p>
-                            <span x-text="selectedTicket ? selectedTicket.category.replace('_', ' ').toUpperCase() : ''" 
-                                  :class="getCategoryBadge(selectedTicket?.category)"
-                                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"></span>
+                            <p class="text-sm font-medium text-gray-700" x-text="selectedTicket ? selectedTicket.category.replace('_', ' ').toUpperCase() : ''"></p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 mb-1">Priority</p>
-                            <span x-text="selectedTicket ? selectedTicket.priority.toUpperCase() : ''" 
-                                  :class="getPriorityBadge(selectedTicket?.priority)"
-                                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"></span>
+                            <p class="text-sm font-medium text-gray-700" x-text="selectedTicket ? selectedTicket.priority.toUpperCase() : ''"></p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 mb-1">Status</p>
                             <span x-text="selectedTicket ? selectedTicket.status.replace('_', ' ').toUpperCase() : ''" 
                                   :class="getStatusBadge(selectedTicket?.status)"
-                                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"></span>
+                                  class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">Created</p>
+                            <p class="text-sm font-medium text-gray-700" x-text="selectedTicket?.createdat"></p>
                         </div>
                     </div>
 
                     <!-- Description -->
                     <div>
                         <p class="text-xs text-gray-500 mb-2">Description</p>
-                        <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-700" x-text="selectedTicket?.description || '-'"></div>
+                        <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 border border-gray-200" x-text="selectedTicket?.description || '-'"></div>
                     </div>
+
+                    <!-- In Progress Info -->
+                    <template x-if="selectedTicket?.inprogress_by">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h4 class="text-sm font-semibold text-yellow-800 mb-2">In Progress Information</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p class="text-xs text-yellow-700">Handler</p>
+                                    <p class="text-sm font-medium text-yellow-900" x-text="selectedTicket.inprogress_by"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-yellow-700">Started At</p>
+                                    <p class="text-sm font-medium text-yellow-900" x-text="selectedTicket.inprogress_at"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
 
                     <!-- Resolution Notes -->
                     <template x-if="selectedTicket?.resolution_notes">
@@ -487,25 +513,20 @@
 
                     <!-- Resolved Info -->
                     <template x-if="selectedTicket?.resolved_by">
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h4 class="text-sm font-semibold text-blue-700 mb-2">Resolution Information</h4>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h4 class="text-sm font-semibold text-green-800 mb-2">Resolution Information</h4>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <p class="text-xs text-blue-600">Resolved By</p>
-                                    <p class="text-sm font-medium text-blue-900" x-text="selectedTicket.resolved_by"></p>
+                                    <p class="text-xs text-green-700">Resolved By</p>
+                                    <p class="text-sm font-medium text-green-900" x-text="selectedTicket.resolved_by"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-blue-600">Resolved At</p>
-                                    <p class="text-sm font-medium text-blue-900" x-text="selectedTicket.resolved_at"></p>
+                                    <p class="text-xs text-green-700">Resolved At</p>
+                                    <p class="text-sm font-medium text-green-900" x-text="selectedTicket.resolved_at"></p>
                                 </div>
                             </div>
                         </div>
                     </template>
-
-                    <!-- Created At -->
-                    <div class="text-xs text-gray-500">
-                        <p>Created: <span x-text="selectedTicket?.createdat"></span></p>
-                    </div>
                 </div>
 
                 <!-- Modal Footer -->
@@ -578,7 +599,7 @@
                         </div>
 
                         <!-- Modal Actions -->
-                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 mt-6">
                             <button type="button" @click="updateModal = false"
                                 class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
                                 Batal

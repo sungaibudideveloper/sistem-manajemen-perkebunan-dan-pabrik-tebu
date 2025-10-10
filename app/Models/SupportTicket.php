@@ -22,6 +22,8 @@ class SupportTicket extends Model
         'companycode',
         'description',
         'resolution_notes',
+        'inprogress_by',
+        'inprogress_at',
         'resolved_by',
         'resolved_at'
     ];
@@ -29,6 +31,7 @@ class SupportTicket extends Model
     protected $casts = [
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
+        'inprogress_at' => 'datetime',
         'resolved_at' => 'datetime',
     ];
 
@@ -39,12 +42,12 @@ class SupportTicket extends Model
     }
 
     // Generate ticket number
-    public static function generateTicketNumber()
+    public static function generateTicketNumber($companycode)
     {
         $year = date('Y');
-        $lastTicket = self::where('ticket_number', 'like', "TKT-{$year}-%")
-                         ->orderBy('ticket_id', 'desc')
-                         ->first();
+        $lastTicket = self::where('ticket_number', 'like', "TKT-{$companycode}-{$year}-%")
+                        ->orderBy('ticket_id', 'desc')
+                        ->first();
         
         if ($lastTicket) {
             $lastNumber = (int) substr($lastTicket->ticket_number, -4);
@@ -53,7 +56,7 @@ class SupportTicket extends Model
             $newNumber = '0001';
         }
         
-        return "TKT-{$year}-{$newNumber}";
+        return "TKT-{$companycode}-{$year}-{$newNumber}";
     }
 
     // Scope untuk filter

@@ -898,13 +898,14 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 15);
         $statusFilter = request('status');
         $categoryFilter = request('category');
+        $companycode = session('companycode'); // Filter by session company
         
         $result = SupportTicket::with('company')
+            ->where('companycode', $companycode) // FILTER BY COMPANY
             ->when($search, function($query, $search) {
                 return $query->where('ticket_number', 'like', "%{$search}%")
                             ->orWhere('fullname', 'like', "%{$search}%")
-                            ->orWhere('username', 'like', "%{$search}%")
-                            ->orWhere('companycode', 'like', "%{$search}%");
+                            ->orWhere('username', 'like', "%{$search}%");
             })
             ->when($statusFilter, function($query, $status) {
                 return $query->where('status', $status);
@@ -917,12 +918,12 @@ class UserManagementController extends Controller
 
         $companies = Company::orderBy('name')->get();
         
-        // Get statistics
+        // Get statistics - filtered by company
         $stats = [
-            'open' => SupportTicket::where('status', 'open')->count(),
-            'in_progress' => SupportTicket::where('status', 'in_progress')->count(),
-            'resolved' => SupportTicket::where('status', 'resolved')->count(),
-            'total' => SupportTicket::count(),
+            'open' => SupportTicket::where('companycode', $companycode)->where('status', 'open')->count(),
+            'in_progress' => SupportTicket::where('companycode', $companycode)->where('status', 'in_progress')->count(),
+            'resolved' => SupportTicket::where('companycode', $companycode)->where('status', 'resolved')->count(),
+            'total' => SupportTicket::where('companycode', $companycode)->count(),
         ];
         
         return view('master.usermanagement.support-ticket.index', [
@@ -932,7 +933,8 @@ class UserManagementController extends Controller
             'result' => $result,
             'companies' => $companies,
             'stats' => $stats,
-            'perPage' => $perPage
+            'perPage' => $perPage,
+            'companycode' => $companycode
         ]);
     }
 
@@ -948,7 +950,7 @@ class UserManagementController extends Controller
 
         try {
             SupportTicket::create([
-                'ticket_number' => SupportTicket::generateTicketNumber(),
+                'ticket_number' => SupportTicket::generateTicketNumber($request->companycode), // WITH COMPANY CODE
                 'category' => $request->category,
                 'status' => 'open',
                 'priority' => 'medium',
@@ -959,14 +961,14 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->back()
-                           ->with('success', 'Ticket berhasil dibuat. Admin akan segera menghubungi Anda.');
+                        ->with('success', 'Ticket berhasil dibuat. Admin akan segera menghubungi Anda.');
 
         } catch (\Exception $e) {
             Log::error('Failed to create ticket:', ['error' => $e->getMessage()]);
             
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal membuat ticket: ' . $e->getMessage());
+                        ->withInput()
+                        ->with('error', 'Gagal membuat ticket: ' . $e->getMessage());
         }
     }
 
@@ -990,7 +992,13 @@ class UserManagementController extends Controller
                 $updateData['resolution_notes'] = $request->resolution_notes;
             }
 
-            // If status changed to resolved/closed, record resolver info
+            // Track in_progress status change
+            if ($request->status === 'in_progress' && $ticket->status !== 'in_progress') {
+                $updateData['inprogress_by'] = Auth::user()->userid;
+                $updateData['inprogress_at'] = now();
+            }
+
+            // Track resolved/closed status change
             if (in_array($request->status, ['resolved', 'closed']) && 
                 !in_array($ticket->status, ['resolved', 'closed'])) {
                 $updateData['resolved_by'] = Auth::user()->userid;
@@ -1000,13 +1008,13 @@ class UserManagementController extends Controller
             $ticket->update($updateData);
 
             return redirect()->back()
-                           ->with('success', 'Ticket berhasil diperbarui');
+                        ->with('success', 'Ticket berhasil diperbarui');
 
         } catch (\Exception $e) {
             Log::error('Failed to update ticket:', ['error' => $e->getMessage()]);
             
             return redirect()->back()
-                           ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
+                        ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
         }
     }
 
