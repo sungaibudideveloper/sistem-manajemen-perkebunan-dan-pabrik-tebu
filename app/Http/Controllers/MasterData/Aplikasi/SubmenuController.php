@@ -106,13 +106,13 @@ class SubmenuController extends Controller
 
         Parent::h_flash('Data Berhasil Disimpan!.', 'success');
 
-        return redirect()->route('masterdata.submenu.index')->with('success', 'Submenu berhasil diupdate');
+        return redirect()->route('usermanagement.submenu.index')->with('success', 'Submenu berhasil diupdate');
     }
 
     public function destroy($submenuid, $name)
     {
         DB::table('submenu')->where('submenuid', $submenuid)->where('name', $name)->delete();
 
-        return redirect()->route('masterdata.submenu.index')->with('success', 'Data Submenu berhasil dihapus.');
+        return redirect()->route('usermanagement.submenu.index')->with('success', 'Data Submenu berhasil dihapus.');
     }
 }

@@ -27,7 +27,7 @@
           </svg>
           New Data
         </button>
-      {{-- @endif --}}
+      @endif
 
       {{-- Search Form --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
@@ -207,7 +207,7 @@
                           <use xlink:href="#icon-edit-solid"/> <use xlink:href="#icon-edit-solid2" />
                         </svg>
                       </button>
-                    {{-- @endif --}}
+                    @endif
 
                     {{-- Delete --}}
                     @if(hasPermission('Hapus Mandor'))
@@ -231,7 +231,7 @@
                           </svg>
                         </button>
                       </form>
-                  @endif --}}
+                    @endif
                   </div>
                 </td>
               </tr>

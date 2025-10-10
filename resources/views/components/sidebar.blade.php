@@ -11,156 +11,101 @@
     // Initialize NavigationComposer instance for permission checking
     $navComposer = app(\App\View\Composers\NavigationComposer::class);
     
-    // Generate route otomatis berdasarkan pattern
+    /**
+     * ✨ NEW: Convention-Based Route Generator
+     * 
+     * CONVENTION:
+     * Route Name Pattern: {menu_slug}.{submenu_slug}.index
+     * 
+     * Examples:
+     * - masterdata + company → masterdata.company.index
+     * - usermanagement + support-ticket → usermanagement.support-ticket.index
+     * - dashboard + timeline → dashboard.timeline.index
+     * 
+     * SPECIAL CASES yang tidak ikut pattern disimpan di $routeOverrides
+     */
     $getRoute = function($menuSlug, $submenuSlug) {
-        // Clean slug - remove spaces and convert to lowercase
-        $submenuSlug = str_replace(' ', '-', strtolower($submenuSlug));
+        // Clean slug - remove extra spaces and convert to lowercase
+        $submenuSlug = trim(str_replace(' ', '-', strtolower($submenuSlug)));
         
-        // Special routes yang tidak ikut pattern  
-        $specialRoutes = [
-            'closing' => 'closing',
-            'upload-gpx' => 'upload.gpx.view',
-            'upload-gpx-file' => 'upload.gpx.view',
-            'export-kml' => 'export.kml.view',
-            'export-kml-file' => 'export.kml.view',
-            'kerja-harian' => 'input.rencanakerjaharian.index',
-            'kendaraan-workshop' => 'input.kendaraan.index',
-            'gudang-bbm' => 'input.gudang.bbm.index',
+        // ============================================
+        // ROUTE OVERRIDES
+        // Hanya untuk route yang TIDAK BISA ikut convention
+        // ============================================
+        $routeOverrides = [
+            // Process - special single-word routes (legacy)
+            'process.closing' => 'closing',
+            'process.upload-gpx-file' => 'upload.gpx.view',
+            'process.export-kml-file' => 'export.kml.view',
+            
+            // Input Data - abbreviated namespace 'input' instead of 'input-data'
+            'input-data.kerja-harian' => 'input.rencanakerjaharian.index',
+            'input-data.kendaraan-workshop' => 'input.kendaraan.index',
+            'input-data.gudang-bbm' => 'input.gudang.bbm.index',
+            'input-data.gudang' => 'input.gudang.index',
+            'input-data.pias' => 'input.pias.index',
+            'input-data.agronomi' => 'input.agronomi.index',
+            'input-data.hpt' => 'input.hpt.index',
+            
+            // Dashboard - remove '-dashboard' suffix
+            'dashboard.agronomi-dashboard' => 'dashboard.agronomi',
+            'dashboard.hpt-dashboard' => 'dashboard.hpt',
+            
+            // Report - remove '-report' suffix  
+            'report.agronomi-report' => 'report.agronomi.index',
+            'report.hpt-report' => 'report.hpt.index',
         ];
         
-        if (isset($specialRoutes[$submenuSlug])) {
+        // ============================================
+        // LOGIC: Check Override → Convention → Fallback
+        // ============================================
+        
+        // 1. Check: Ada override untuk kombinasi menu+submenu ini?
+        $overrideKey = "{$menuSlug}.{$submenuSlug}";
+        if (isset($routeOverrides[$overrideKey])) {
             try {
-                return route($specialRoutes[$submenuSlug]);
+                return route($routeOverrides[$overrideKey]);
             } catch (\Exception $e) {
+                \Log::warning("Override route not found: {$routeOverrides[$overrideKey]}", [
+                    'menu' => $menuSlug,
+                    'submenu' => $submenuSlug
+                ]);
                 return '#';
             }
         }
         
-        // Dashboard routes
-        if ($menuSlug === 'dashboard') {
-            $specialDashboard = [
-                'agronomi-dashboard' => 'dashboard.agronomi',
-                'hpt-dashboard' => 'dashboard.hpt',
-            ];
-            
-            if (isset($specialDashboard[$submenuSlug])) {
-                try {
-                    return route($specialDashboard[$submenuSlug]);
-                } catch (\Exception $e) {
-                    return '#';
-                }
-            }
-            
-            try {
-                return route("dashboard.{$submenuSlug}");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
+        // 2. Convention: Generate route name berdasarkan pattern
+        //    Pattern: {menu_slug}.{submenu_slug}.index
+        $conventionRouteName = "{$menuSlug}.{$submenuSlug}.index";
         
-        // Process routes
-        if ($menuSlug === 'process') {
-            try {
-                return route("process.{$submenuSlug}");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
-        
-        // Master routes
-        if ($menuSlug === 'master') {
-            // Aplikasi submenu
-            if (in_array($submenuSlug, ['menu', 'submenu', 'subsubmenu'])) {
-                try {
-                    return route("aplikasi.{$submenuSlug}.index");
-                } catch (\Exception $e) {
-                    return '#';
-                }
-            }
-            
-            // Default master routes
-            try {
-                return route("masterdata.{$submenuSlug}.index");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
-        
-        // Input routes
-        if ($menuSlug === 'input-data') {
-            try {
-                return route("input.{$submenuSlug}.index");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
-        
-        // Report routes
-        if ($menuSlug === 'report') {
-            $specialReport = [
-                'agronomi-report' => 'report.agronomi.index',
-                'hpt-report' => 'report.hpt.index',
-            ];
-            
-            if (isset($specialReport[$submenuSlug])) {
-                try {
-                    return route($specialReport[$submenuSlug]);
-                } catch (\Exception $e) {
-                    return '#';
-                }
-            }
-            
-            try {
-                return route("report.{$submenuSlug}.index");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
-
-        // User Management routes
-        if ($menuSlug === 'usermanagement') {
-            $specialUserManagement = [
-                'user' => 'usermanagement.user.index',
-                'user-company-permissions' => 'usermanagement.usercompany.index', 
-                'user-permissions' => 'usermanagement.userpermission.index',
-                'permissions-masterdata' => 'usermanagement.permission.index',
-                'jabatan' => 'usermanagement.jabatan.index',
-                'support-ticket' => 'usermanagement.ticket.index',
-            ];
-            
-            if (isset($specialUserManagement[$submenuSlug])) {
-                try {
-                    return route($specialUserManagement[$submenuSlug]);
-                } catch (\Exception $e) {
-                    \Log::error("Route error for usermanagement.{$submenuSlug}: " . $e->getMessage());
-                    return '#';
-                }
-            }
-            
-            // Fallback - coba pattern default dulu
-            try {
-                return route("usermanagement.{$submenuSlug}.index");
-            } catch (\Exception $e) {
-                return '#';
-            }
-        }
-        
-        // Default fallback
         try {
-            return route("{$menuSlug}.{$submenuSlug}.index");
+            return route($conventionRouteName);
         } catch (\Exception $e) {
-            return '#';
+            // 3. Fallback: Try without .index suffix (untuk route khusus)
+            try {
+                $fallbackRouteName = "{$menuSlug}.{$submenuSlug}";
+                return route($fallbackRouteName);
+            } catch (\Exception $e2) {
+                // Log untuk debugging - route tidak ditemukan
+                \Log::debug("Route not found for menu item", [
+                    'menu_slug' => $menuSlug,
+                    'submenu_slug' => $submenuSlug,
+                    'tried_routes' => [$conventionRouteName, $fallbackRouteName],
+                    'suggestion' => "Create route: Route::get('{$menuSlug}/{$submenuSlug}', ...)->name('{$conventionRouteName}');"
+                ]);
+                return '#';
+            }
         }
     };
     
-    // Check active
+    // Check active route
     $isActive = function($slug) {
         return request()->is($slug . '*') || 
                request()->is('*/' . $slug . '*') ||
                request()->routeIs('*.' . $slug . '*');
     };
     
-    // NEW: Check if user has permission for menu/submenu
+    // Check if user has permission for menu/submenu
     $hasPermission = function($menuSlug, $submenuSlug = null) use ($navComposer) {
         $permission = $navComposer->getPermissionName($menuSlug, $submenuSlug);
         return $navComposer->hasPermission($permission);
@@ -225,7 +170,7 @@
          :class="$store.sidebar.isMinimized ? 'px-2' : 'px-4'">
         @foreach ($navigationMenus as $menu)
             @php
-                // NEW: Check permission untuk menu utama
+                // Check permission untuk menu utama
                 if (!$hasPermission($menu->slug)) {
                     continue; // Skip menu jika user tidak ada permission
                 }
@@ -266,7 +211,7 @@
                     'input-data' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>',
                     'process' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>',
                     'report' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-                    'usermanagement' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0v1H4v-1z" />'
+                    'usermanagement' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0v1H4v-1z" />'
                 ];
                 $icon = $menuIcons[$menu->slug] ?? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
             @endphp

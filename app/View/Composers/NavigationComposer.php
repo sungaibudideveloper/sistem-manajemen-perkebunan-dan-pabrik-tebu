@@ -110,11 +110,20 @@ class NavigationComposer
     }
 
     /**
-     * Get permission name for menu/submenu
+     * ✨ NEW: Convention-based permission mapping
+     * Maps submenu slug to permission name
+     * 
+     * DEFAULT BEHAVIOR:
+     * - Returns titleized slug as permission name
+     * - Example: 'support-ticket' → 'Support Ticket'
+     * 
+     * OVERRIDE untuk special cases yang tidak mengikuti convention
      */
     public function getPermissionName($menuSlug, $submenuSlug = null)
     {
-        // Mapping berdasarkan data menu/submenu Anda
+        // ============================================
+        // MENU-LEVEL PERMISSIONS
+        // ============================================
         $menuPermissions = [
             'masterdata' => 'Master',
             'input-data' => 'Input Data', 
@@ -124,72 +133,78 @@ class NavigationComposer
             'usermanagement' => 'Kelola User'
         ];
 
-        $submenuPermissions = [
-            // Master Data
-            'company' => 'Company',
+        // ============================================
+        // SUBMENU-LEVEL PERMISSION OVERRIDES
+        // Hanya untuk yang TIDAK mengikuti convention
+        // ============================================
+        $submenuPermissionOverrides = [
+            // Master Data - yang tidak standard
             'master-list' => 'MasterList',
-            'blok' => 'Blok',
-            'plotting' => 'Plotting',
-            'kategori' => 'Kategori',
-            'herbisida' => 'Herbisida',
             'herbisida-dosage' => 'Dosis Herbisida',
-            'varietas' => 'Varietas',
-            'mandor' => 'Mandor',
             'tenagakerja' => 'Tenaga Kerja',
-            'jabatan' => 'Jabatan',
-            'username' => 'Kelola User',
-            'approval' => 'Approval',
-            'aktivitas' => 'Aktivitas',
-            'menu' => 'Menu',
-            'submenu' => 'Submenu', 
-            'subsubmenu' => 'Subsubmenu',
-            'kendaraan' => 'Kendaraan',
-            'upah' => 'Upah',
-            'batch' => 'Batch',
-            'accounting' => 'Accounting',
-
-            // Input Data
+            
+            // Input Data - yang tidak standard
             'kerja-harian' => 'Rencana Kerja Harian',
-            'gudang' => 'Gudang',
             'gudang-bbm' => 'Menu Gudang',
             'kendaraan-workshop' => 'Kendaraan',
             'pias' => 'Menu Pias',
-            'agronomi' => 'Agronomi',
-            'hpt' => 'HPT',
 
-            // Dashboard
+            // Dashboard - yang tidak standard
             'agronomi-dashboard' => 'Dashboard Agronomi',
             'hpt-dashboard' => 'Dashboard HPT',
-            'timeline' => 'Timeline',
-            'maps' => 'Maps',
 
-            // Report
+            // Report - yang tidak standard
             'agronomi-report' => 'Report Agronomi',
             'hpt-report' => 'Report HPT',
 
-            // Process
-            'posting' => 'Posting',
-            'unposting' => 'Unposting',
-            'upload gpx file' => 'Upload GPX File',
-            'export kml file' => 'Export KML File', 
-            'closing' => 'Closing',
+            // Process - yang tidak standard
+            'upload-gpx-file' => 'Upload GPX File',
+            'export-kml-file' => 'Export KML File',
 
-            // User Management
-            'user' => 'Kelola User',
+            // User Management - yang tidak standard
             'user-company-permissions' => 'Hak Akses',
             'user-permissions' => 'Hak Akses', 
             'permissions-masterdata' => 'Hak Akses',
-            'jabatan' => 'Jabatan',
-            'support-ticket' => 'Support Ticket'
         ];
 
-        // Jika ada submenu, return permission submenu
-        if ($submenuSlug && isset($submenuPermissions[$submenuSlug])) {
-            return $submenuPermissions[$submenuSlug];
+        // ============================================
+        // LOGIC: Convention Over Configuration
+        // ============================================
+        
+        // Jika ada submenu
+        if ($submenuSlug) {
+            // 1. Check: Ada override untuk slug ini?
+            if (isset($submenuPermissionOverrides[$submenuSlug])) {
+                return $submenuPermissionOverrides[$submenuSlug];
+            }
+            
+            // 2. Convention: Titleize slug → permission name
+            // Example: 'support-ticket' → 'Support Ticket'
+            //          'company' → 'Company'
+            //          'jabatan' → 'Jabatan'
+            return $this->slugToPermissionName($submenuSlug);
         }
 
-        // Return permission menu
-        return $menuPermissions[$menuSlug] ?? $menuSlug;
+        // Return menu-level permission
+        return $menuPermissions[$menuSlug] ?? $this->slugToPermissionName($menuSlug);
+    }
+
+    /**
+     * ✨ NEW: Convert slug to Permission Name (Title Case)
+     * 
+     * Examples:
+     * - 'support-ticket' → 'Support Ticket'
+     * - 'user' → 'User'
+     * - 'company' → 'Company'
+     * - 'herbisida' → 'Herbisida'
+     */
+    private function slugToPermissionName($slug)
+    {
+        // Replace hyphens/underscores with spaces
+        $name = str_replace(['-', '_'], ' ', $slug);
+        
+        // Title case
+        return ucwords($name);
     }
 
     /**

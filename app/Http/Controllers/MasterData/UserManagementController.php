@@ -264,7 +264,7 @@ class UserManagementController extends Controller
                 'isactive' => $request->has('isactive') ? 1 : 0
             ]);
 
-            return redirect()->route('usermanagement.permission.index')
+            return redirect()->route('usermanagement.permissions-masterdata.index')
                            ->with('success', 'Permission berhasil ditambahkan');
 
         } catch (\Exception $e) {
@@ -287,7 +287,7 @@ class UserManagementController extends Controller
             $permission = Permission::find($permissionid);
             
             if (!$permission) {
-                return redirect()->route('usermanagement.permission.index')
+                return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission tidak ditemukan');
             }
 
@@ -298,7 +298,7 @@ class UserManagementController extends Controller
                 'isactive' => $request->has('isactive') ? 1 : 0
             ]);
 
-            return redirect()->route('usermanagement.permission.index')
+            return redirect()->route('usermanagement.permissions-masterdata.index')
                            ->with('success', 'Permission berhasil diperbarui');
 
         } catch (\Exception $e) {
@@ -314,7 +314,7 @@ class UserManagementController extends Controller
             $permission = Permission::find($permissionid);
             
             if (!$permission) {
-                return redirect()->route('usermanagement.permission.index')
+                return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission tidak ditemukan');
             }
 
@@ -323,18 +323,18 @@ class UserManagementController extends Controller
             $userUsageCount = UserPermission::where('permissionid', $permissionid)->where('isactive', 1)->count();
             
             if ($usageCount > 0 || $userUsageCount > 0) {
-                return redirect()->route('usermanagement.permission.index')
+                return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission sedang digunakan dan tidak bisa dihapus');
             }
 
             // Soft delete by setting isactive = 0
             $permission->update(['isactive' => 0]);
 
-            return redirect()->route('usermanagement.permission.index')
+            return redirect()->route('usermanagement.permissions-masterdata.index')
                            ->with('success', 'Permission berhasil dinonaktifkan');
 
         } catch (\Exception $e) {
-            return redirect()->route('usermanagement.permission.index')
+            return redirect()->route('usermanagement.permissions-masterdata.index')
                            ->with('error', 'Gagal menonaktifkan permission: ' . $e->getMessage());
         }
     }
@@ -611,7 +611,7 @@ class UserManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('usermanagement.usercompany.index')
+            return redirect()->route('usermanagement.user-company-permissions.index')
                            ->with('success', 'Company access berhasil ditambahkan');
 
         } catch (\Exception $e) {
@@ -632,10 +632,10 @@ class UserManagementController extends Controller
                            'updatedat' => now()
                        ]);
 
-            return redirect()->route('usermanagement.usercompany.index')
+            return redirect()->route('usermanagement.user-company-permissions.index')
                            ->with('success', 'Company access berhasil dihapus');
         } catch (\Exception $e) {
-            return redirect()->route('usermanagement.usercompany.index')
+            return redirect()->route('usermanagement.user-company-permissions.index')
                            ->with('error', 'Gagal menghapus company access');
         }
     }
@@ -671,7 +671,7 @@ class UserManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('usermanagement.usercompany.index')
+            return redirect()->route('usermanagement.user-company-permissions.index')
                         ->with('success', 'Company access berhasil diperbarui untuk user');
 
         } catch (\Exception $e) {
@@ -759,7 +759,7 @@ class UserManagementController extends Controller
                 'createdat' => now()
             ]);
 
-            return redirect()->route('usermanagement.userpermission.index')
+            return redirect()->route('usermanagement.user-permissions.index')
                            ->with('success', 'Permission override berhasil ditambahkan');
 
         } catch (\Exception $e) {
@@ -780,10 +780,10 @@ class UserManagementController extends Controller
                              'updatedat' => now()
                          ]);
 
-            return redirect()->route('usermanagement.userpermission.index')
+            return redirect()->route('usermanagement.user-permissions.index')
                            ->with('success', 'Permission override berhasil dihapus');
         } catch (\Exception $e) {
-            return redirect()->route('usermanagement.userpermission.index')
+            return redirect()->route('usermanagement.user-permissions.index')
                            ->with('error', 'Gagal menghapus permission override');
         }
     }

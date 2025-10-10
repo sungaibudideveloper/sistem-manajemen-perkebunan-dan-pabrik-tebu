@@ -181,7 +181,7 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('masterdata.menu.store') }}' :  '{{ url('aplikasi/menu') }}/' + form.menuid" method="POST">
+                    <form :action="mode === 'create' ? '{{ route('usermanagement.menu.store') }}' :  '{{ url('aplikasi/menu') }}/' + form.menuid" method="POST">
                         @csrf
                         <template x-if="mode === 'edit'">
                             @method('PUT')
