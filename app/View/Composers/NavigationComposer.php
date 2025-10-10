@@ -179,7 +179,8 @@ class NavigationComposer
             'user-company-permissions' => 'Hak Akses',
             'user-permissions' => 'Hak Akses', 
             'permissions-masterdata' => 'Hak Akses',
-            'jabatan' => 'Jabatan'
+            'jabatan' => 'Jabatan',
+            'support-ticket' => 'Support Ticket'
         ];
 
         // Jika ada submenu, return permission submenu

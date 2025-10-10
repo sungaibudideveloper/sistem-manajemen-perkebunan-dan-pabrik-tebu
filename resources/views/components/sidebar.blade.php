@@ -125,6 +125,7 @@
                 'user-permissions' => 'usermanagement.userpermission.index',
                 'permissions-masterdata' => 'usermanagement.permission.index',
                 'jabatan' => 'usermanagement.jabatan.index',
+                'support-ticket' => 'usermanagement.ticket.index',
             ];
             
             if (isset($specialUserManagement[$submenuSlug])) {
