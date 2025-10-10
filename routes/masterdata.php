@@ -380,3 +380,22 @@ Route::group(['middleware' => ['auth', 'permission:Master']], function () {
     Route::get('usermanagement/test-permission/{userid}/{permission}', [UserManagementController::class, 'testUserPermission'])
         ->name('usermanagement.test-permission');
 });
+
+// =============================================================================
+// SUPPORT TICKET ROUTES
+// =============================================================================
+
+Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
+    
+    // Ticket Management (Admin)
+    Route::get('usermanagement/support-ticket', [UserManagementController::class, 'ticketIndex'])
+        ->name('usermanagement.ticket.index');
+    Route::put('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketUpdate'])
+        ->name('usermanagement.ticket.update');
+    Route::delete('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketDestroy'])
+        ->name('usermanagement.ticket.destroy');
+});
+
+// Public ticket submission (no auth required - for forgot password)
+Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
+    ->name('support.ticket.submit');

@@ -16,6 +16,7 @@ use App\Models\JabatanPermission;
 use App\Models\UserPermission;
 use App\Models\UserCompany;
 use App\Models\Company;
+use App\Models\SupportTicket;
 
 class UserManagementController extends Controller
 {
@@ -885,5 +886,142 @@ class UserManagementController extends Controller
             'has_permission' => $hasPermission,
             'effective_permissions' => $this->getUserEffectivePermissions($userid)
         ]);
+    }
+
+    // =============================================================================
+    // SUPPORT TICKET METHODS
+    // =============================================================================
+
+    public function ticketIndex()
+    {
+        $search = request('search');
+        $perPage = request('perPage', 15);
+        $statusFilter = request('status');
+        $categoryFilter = request('category');
+        
+        $result = SupportTicket::with('company')
+            ->when($search, function($query, $search) {
+                return $query->where('ticket_number', 'like', "%{$search}%")
+                            ->orWhere('fullname', 'like', "%{$search}%")
+                            ->orWhere('username', 'like', "%{$search}%")
+                            ->orWhere('companycode', 'like', "%{$search}%");
+            })
+            ->when($statusFilter, function($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->when($categoryFilter, function($query, $category) {
+                return $query->where('category', $category);
+            })
+            ->orderBy('createdat', 'desc')
+            ->paginate($perPage);
+
+        $companies = Company::orderBy('name')->get();
+        
+        // Get statistics
+        $stats = [
+            'open' => SupportTicket::where('status', 'open')->count(),
+            'in_progress' => SupportTicket::where('status', 'in_progress')->count(),
+            'resolved' => SupportTicket::where('status', 'resolved')->count(),
+            'total' => SupportTicket::count(),
+        ];
+        
+        return view('master.usermanagement.support-ticket.index', [
+            'title' => 'Support Tickets',
+            'navbar' => 'User Management',
+            'nav' => 'Support Tickets',
+            'result' => $result,
+            'companies' => $companies,
+            'stats' => $stats,
+            'perPage' => $perPage
+        ]);
+    }
+
+    public function ticketStore(Request $request)
+    {
+        $request->validate([
+            'fullname' => 'required|string|max:100',
+            'username' => 'required|string|max:50',
+            'companycode' => 'required|string|max:4|exists:company,companycode',
+            'category' => 'required|in:forgot_password,bug_report,support,other',
+            'description' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            SupportTicket::create([
+                'ticket_number' => SupportTicket::generateTicketNumber(),
+                'category' => $request->category,
+                'status' => 'open',
+                'priority' => 'medium',
+                'fullname' => $request->fullname,
+                'username' => $request->username,
+                'companycode' => $request->companycode,
+                'description' => $request->description
+            ]);
+
+            return redirect()->back()
+                           ->with('success', 'Ticket berhasil dibuat. Admin akan segera menghubungi Anda.');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create ticket:', ['error' => $e->getMessage()]);
+            
+            return redirect()->back()
+                           ->withInput()
+                           ->with('error', 'Gagal membuat ticket: ' . $e->getMessage());
+        }
+    }
+
+    public function ticketUpdate(Request $request, $ticket_id)
+    {
+        $request->validate([
+            'status' => 'required|in:open,in_progress,resolved,closed',
+            'priority' => 'nullable|in:low,medium,high',
+            'resolution_notes' => 'nullable|string'
+        ]);
+
+        try {
+            $ticket = SupportTicket::findOrFail($ticket_id);
+            
+            $updateData = [
+                'status' => $request->status,
+                'priority' => $request->priority ?? $ticket->priority
+            ];
+
+            if ($request->filled('resolution_notes')) {
+                $updateData['resolution_notes'] = $request->resolution_notes;
+            }
+
+            // If status changed to resolved/closed, record resolver info
+            if (in_array($request->status, ['resolved', 'closed']) && 
+                !in_array($ticket->status, ['resolved', 'closed'])) {
+                $updateData['resolved_by'] = Auth::user()->userid;
+                $updateData['resolved_at'] = now();
+            }
+
+            $ticket->update($updateData);
+
+            return redirect()->back()
+                           ->with('success', 'Ticket berhasil diperbarui');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update ticket:', ['error' => $e->getMessage()]);
+            
+            return redirect()->back()
+                           ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
+        }
+    }
+
+    public function ticketDestroy($ticket_id)
+    {
+        try {
+            $ticket = SupportTicket::findOrFail($ticket_id);
+            $ticket->delete();
+
+            return redirect()->back()
+                           ->with('success', 'Ticket berhasil dihapus');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                           ->with('error', 'Gagal menghapus ticket: ' . $e->getMessage());
+        }
     }
 }

@@ -16,6 +16,9 @@
     <!-- Custom Login CSS -->
     @vite(['resources/css/login.css'])
     
+    <!-- Alpine.js for modal -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
     <style>
         /* Fix untuk mobile - pastikan full height tanpa overflow */
         html, body {
@@ -81,7 +84,8 @@
         /* Fix input zoom di iOS */
         @media screen and (max-width: 768px) {
             input[type="text"],
-            input[type="password"] {
+            input[type="password"],
+            select {
                 font-size: 16px !important; /* Prevent iOS zoom */
             }
         }
@@ -175,11 +179,13 @@
                 background: rgb(5, 122, 85);
             }
         }
+
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 
 <body class="h-full bg-gray-50">
-    <div class="login-container min-h-screen flex">
+    <div class="login-container min-h-screen flex" x-data="{ forgotPasswordModal: false }">
         <!-- Left Side - Brand/Visual -->
         <div class="hidden lg:flex lg:w-1/2 gradient-bg relative overflow-hidden">
             <!-- Floating Elements -->
@@ -263,6 +269,20 @@
                                 </div>
                             </div>
                         @endif
+
+                        <!-- Success Message for Ticket Submission -->
+                        @if (session('success'))
+                            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-2xl">
+                                <div class="flex items-start">
+                                    <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <div class="text-green-700 text-xs sm:text-sm">
+                                        {{ session('success') }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     
                     <form class="space-y-4 sm:space-y-6" action="{{ route('login') }}" method="POST">
                         @csrf
@@ -322,9 +342,10 @@
                                 <input type="checkbox" name="remember" class="cursor-pointer">
                                 <span class="text-sm text-gray-600">Remember me</span>
                             </label>
-                            <a href="#" class="text-sm text-green-600 hover:text-green-500 transition-colors inline-block py-2">
+                            <button type="button" @click="forgotPasswordModal = true" 
+                                class="text-sm text-green-600 hover:text-green-500 transition-colors inline-block py-2">
                                 Forgot password?
-                            </a>
+                            </button>
                         </div>
                         
                         <!-- Login Button -->
@@ -348,6 +369,107 @@
                             Sugarcane Management System
                         </p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forgot Password Modal -->
+        <div x-show="forgotPasswordModal" 
+             class="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4" 
+             x-cloak
+             @keydown.window.escape="forgotPasswordModal = false"
+             style="margin: 0 !important;">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                        </svg>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900">Forgot Password</h3>
+                            <p class="text-sm text-gray-600">Submit a support request</p>
+                        </div>
+                    </div>
+                    <button @click="forgotPasswordModal = false"
+                        class="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6">
+                    <!-- Information Alert -->
+                    <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex">
+                            <svg class="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="text-sm text-blue-700">
+                                <p class="font-medium mb-1">Need help with your password?</p>
+                                <p>Fill out this form and our admin team will contact you shortly to reset your password.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form action="{{ route('support.ticket.submit') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="category" value="forgot_password">
+
+                        <!-- Full Name -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="fullname" 
+                                value="{{ old('fullname') }}"
+                                required 
+                                maxlength="100"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="Enter your full name">
+                        </div>
+
+                        <!-- Username -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username <span class="text-red-500">*</span></label>
+                            <input type="text" name="username" 
+                                value="{{ old('username') }}"
+                                required 
+                                maxlength="50"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="Enter your username">
+                        </div>
+
+                        <!-- Company -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Company <span class="text-red-500">*</span></label>
+                            <select name="companycode" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                <option value="">-- Select Company --</option>
+                                <option value="SB">SB - Sungai Budi</option>
+                                <option value="TBL1">TBL1 - Tunas Baru Lampung 1</option>
+                                <option value="TBL2">TBL2 - Tunas Baru Lampung 2</option>
+                                <option value="TBL3">TBL3 - Tunas Baru Lampung Divisi 3</option>
+                                <option value="TBL4">TBL4 - TBL TEST</option>
+                            </select>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 mt-6">
+                            <button type="button" @click="forgotPasswordModal = false"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 flex items-center justify-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                <span>Submit Request</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
