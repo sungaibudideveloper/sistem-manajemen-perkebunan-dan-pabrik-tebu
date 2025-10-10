@@ -949,8 +949,11 @@ class UserManagementController extends Controller
         ]);
 
         try {
-            SupportTicket::create([
-                'ticket_number' => SupportTicket::generateTicketNumber($request->companycode), // WITH COMPANY CODE
+            DB::beginTransaction();
+
+            // Create support ticket
+            $ticket = \App\Models\SupportTicket::create([
+                'ticket_number' => \App\Models\SupportTicket::generateTicketNumber($request->companycode),
                 'category' => $request->category,
                 'status' => 'open',
                 'priority' => 'medium',
@@ -960,10 +963,17 @@ class UserManagementController extends Controller
                 'description' => $request->description
             ]);
 
+            // ✅ CREATE NOTIFICATION untuk admin
+            \App\Http\Controllers\NotificationController::notifyNewSupportTicket($ticket);
+
+            DB::commit();
+
             return redirect()->back()
                         ->with('success', 'Ticket berhasil dibuat. Admin akan segera menghubungi Anda.');
 
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             Log::error('Failed to create ticket:', ['error' => $e->getMessage()]);
             
             return redirect()->back()

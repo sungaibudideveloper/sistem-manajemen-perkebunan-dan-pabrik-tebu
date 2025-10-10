@@ -192,7 +192,7 @@
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('usermanagement.ticket.index') }}" 
+                            <a href="{{ route('usermanagement.support-ticket.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -365,7 +365,7 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('usermanagement.ticket.destroy', $ticket->ticket_id) }}" method="POST"
+                                    <form action="{{ route('usermanagement.support-ticket.destroy', $ticket->ticket_id) }}" method="POST"
                                         onsubmit="return confirm('Yakin ingin menghapus ticket {{ $ticket->ticket_number }}?');" class="inline">
                                         @csrf
                                         @method('DELETE')
