@@ -5,14 +5,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Favicon - sama seperti layout utama -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/icon-sb-tebu-circle.png') }}">
+    
     <title>Login - Sungai Budi Group Sugarcane Management System</title>
     
     <!-- Custom Login CSS -->
     @vite(['resources/css/login.css'])
+    
+    <style>
+        /* Fix untuk mobile - pastikan full height tanpa overflow */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+        
+        /* Prevent pull-to-refresh di mobile */
+        body {
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Fix untuk container utama */
+        .login-container {
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height untuk mobile */
+            overflow: hidden;
+        }
+        
+        /* Fix untuk right side scroll dengan safe area */
+        .login-right-side {
+            height: 100vh;
+            height: 100dvh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            /* Safe area untuk notch/camera cutout */
+            padding-top: max(80px, env(safe-area-inset-top));
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        }
+        
+        /* Mobile scaling - 75% dari ukuran original */
+        @media (max-width: 640px) {
+            .login-right-side {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+            
+            .mobile-scale {
+                transform: scale(0.75);
+                transform-origin: top center;
+                width: 133.33%; /* 100 / 0.75 */
+                margin-left: -16.665%;
+            }
+            
+            /* Adjust spacing untuk scaled content */
+            .login-content-wrapper {
+                padding-top: 0.5rem;
+                padding-bottom: 1rem;
+            }
+        }
+        
+        /* Smooth scroll behavior */
+        @media (max-width: 1023px) {
+            .login-right-side {
+                scroll-behavior: smooth;
+            }
+        }
+        
+        /* Fix input zoom di iOS */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="password"] {
+                font-size: 16px !important; /* Prevent iOS zoom */
+            }
+        }
+        
+        /* Ensure glass effect works on all browsers */
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* FIX CHECKBOX - Override styling untuk real device */
+        input[type="checkbox"] {
+            width: 1rem !important;
+            height: 1rem !important;
+            min-width: 1rem !important;
+            min-height: 1rem !important;
+            max-width: 1rem !important;
+            max-height: 1rem !important;
+            flex-shrink: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            border: 2px solid #d1d5db;
+            border-radius: 0.25rem;
+            background-color: white;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        input[type="checkbox"]:checked {
+            background-color: #16a34a;
+            border-color: #16a34a;
+        }
+        
+        input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 0.25rem;
+            top: 0.05rem;
+            width: 0.3rem;
+            height: 0.5rem;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        input[type="checkbox"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+        }
+        
+        /* Better touch targets untuk link dan button saja, BUKAN checkbox */
+        @media (max-width: 640px) {
+            button, a {
+                min-height: 44px;
+            }
+            
+            /* Ensure button content is centered */
+            button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        
+        /* Logo styling */
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            padding: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        @media (max-width: 640px) {
+            .logo-container {
+                width: 64px;
+                height: 64px;
+                background: rgb(5, 122, 85);
+            }
+        }
+    </style>
 </head>
 
-<body class="h-full bg-gray-50 overflow-hidden">
-    <div class="min-h-screen flex">
+<body class="h-full bg-gray-50">
+    <div class="login-container min-h-screen flex">
         <!-- Left Side - Brand/Visual -->
         <div class="hidden lg:flex lg:w-1/2 gradient-bg relative overflow-hidden">
             <!-- Floating Elements -->
@@ -25,12 +192,10 @@
             <!-- Content -->
             <div class="relative z-10 flex flex-col justify-center px-16 py-20">
                 <div class="slide-in-left">
-                    <!-- Logo/Icon -->
+                    <!-- Logo -->
                     <div class="mb-12">
-                        <div class="w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                            <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 3c4.96 0 9 4.04 9 9s-4.04 9-9 9-9-4.04-9-9 4.04-9 9-9zm0 2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                            </svg>
+                        <div class="logo-container">
+                            <img src="{{ asset('img/logo-tebu-white.png') }}" alt="Sungai Budi Group Logo">
                         </div>
                     </div>
                     
@@ -65,43 +230,41 @@
         </div>
         
         <!-- Right Side - Login Form -->
-        <div class="flex-1 flex items-center justify-center px-6 py-12 lg:px-8">
-            <div class="w-full max-w-md fade-in">
-                <!-- Mobile Logo -->
-                <div class="lg:hidden mb-8 text-center">
-                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 3c4.96 0 9 4.04 9 9s-4.04 9-9 9-9-4.04-9-9 4.04-9 9-9zm0 2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                        </svg>
+        <div class="login-right-side flex-1 flex items-start justify-center">
+            <div class="w-full max-w-md login-content-wrapper">
+                <div class="mobile-scale">
+                    <!-- Mobile Logo -->
+                    <div class="lg:hidden mb-8 text-center">
+                        <div class="logo-container mx-auto mb-4">
+                            <img src="{{ asset('img/logo-tebu-white.png') }}" alt="Sungai Budi Group Logo">
+                        </div>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-900">Sungai Budi Group<br>Sugarcane Management System</h2>
-                </div>
                 
-                <!-- Login Header -->
-                <div class="text-center mb-8">
-                    <h3 class="text-3xl font-bold text-gray-900 mb-2">Welcome back</h3>
-                    <p class="text-gray-600">Please sign in to your account</p>
-                </div>
-                
-                <!-- Login Form -->
-                <div class="glass-effect rounded-3xl p-8 shadow-2xl">
-                    <!-- Error Display -->
-                    @if ($errors->any())
-                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                                <div class="text-red-700 text-sm">
-                                    @foreach ($errors->all() as $error)
-                                        <div>{{ $error }}</div>
-                                    @endforeach
+                    <!-- Login Header -->
+                    <div class="text-center mb-6 sm:mb-8">
+                        <h3 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome back</h3>
+                        <p class="text-sm sm:text-base text-gray-600">Please sign in to your account</p>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div class="glass-effect rounded-3xl p-6 sm:p-8 shadow-2xl">
+                        <!-- Error Display -->
+                        @if ($errors->any())
+                            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl">
+                                <div class="flex items-start">
+                                    <svg class="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <div class="text-red-700 text-xs sm:text-sm">
+                                        @foreach ($errors->all() as $error)
+                                            <div>{{ $error }}</div>
+                                        @endforeach
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endif
+                        @endif
                     
-                    <form class="space-y-6" action="{{ route('login') }}" method="POST">
+                    <form class="space-y-4 sm:space-y-6" action="{{ route('login') }}" method="POST">
                         @csrf
                         <!-- Username Field -->
                         <div>
@@ -113,10 +276,11 @@
                                     name="userid" 
                                     value="{{ old('userid') }}"
                                     required 
+                                    autocomplete="username"
                                     class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
                                     placeholder="Enter your username"
                                 >
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                     </svg>
@@ -134,13 +298,15 @@
                                     name="password" 
                                     value="{{ old('password') }}"
                                     required 
-                                    class="input-focus w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
+                                    autocomplete="current-password"
+                                    class="input-focus w-full px-4 py-3 pr-12 rounded-2xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 outline-none transition-all duration-300 {{ $errors->has('login_error') ? 'border-red-500 ring-red-500 focus:ring-red-500' : '' }}"
                                     placeholder="Enter your password"
                                 >
                                 <button 
                                     type="button" 
                                     onclick="togglePasswordVisibility()"
                                     class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                    aria-label="Toggle password visibility"
                                 >
                                     <svg id="eye-icon" class="w-5 h-5 text-gray-400 hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -151,12 +317,12 @@
                         </div>
                         
                         <!-- Remember Me & Forgot Password -->
-                        <div class="flex items-center justify-between">
-                            <label class="flex items-center">
-                                <input type="checkbox" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                                <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" name="remember" class="cursor-pointer">
+                                <span class="text-sm text-gray-600">Remember me</span>
                             </label>
-                            <a href="#" class="text-sm text-green-600 hover:text-green-500 transition-colors">
+                            <a href="#" class="text-sm text-green-600 hover:text-green-500 transition-colors inline-block py-2">
                                 Forgot password?
                             </a>
                         </div>
@@ -164,7 +330,7 @@
                         <!-- Login Button -->
                         <button 
                             type="submit" 
-                            class="btn-hover w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2"
+                            class="btn-hover w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2 active:scale-95"
                         >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
@@ -174,7 +340,7 @@
                     </form>
                     
                     <!-- Footer -->
-                    <div class="mt-8 text-center">
+                    <div class="mt-6 sm:mt-8 text-center pb-4">
                         <p class="text-sm text-gray-500 mb-1">
                             <span class="font-semibold">Sungai Budi Group</span>
                         </p>
@@ -216,6 +382,22 @@
             input.addEventListener('blur', function() {
                 this.parentElement.classList.remove('scale-105');
             });
+        });
+        
+        // Prevent double-tap zoom on buttons (iOS)
+        document.querySelectorAll('button, a').forEach(element => {
+            element.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                this.click();
+            }, { passive: false });
+        });
+        
+        // Smooth scroll to error if exists
+        window.addEventListener('DOMContentLoaded', function() {
+            const errorElement = document.querySelector('.bg-red-50');
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         });
     </script>
 </body>
