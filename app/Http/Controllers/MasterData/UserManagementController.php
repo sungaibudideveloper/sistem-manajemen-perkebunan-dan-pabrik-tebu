@@ -973,17 +973,6 @@ class UserManagementController extends Controller
         ]);
 
         // ========================================
-        // 2. VERIFY RECAPTCHA
-        // ========================================
-        $recaptchaResponse = $request->input('g-recaptcha-response');
-        
-        if (!$this->verifyRecaptcha($recaptchaResponse, $request->ip())) {
-            return back()->withErrors([
-                'error' => 'reCAPTCHA verification failed. Please try again.'
-            ])->withInput();
-        }
-
-        // ========================================
         // 3. RATE LIMITING (Backend)
         // ========================================
         $key = 'support-ticket:' . $request->ip();

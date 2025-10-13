@@ -444,7 +444,9 @@
                             <div class="g-recaptcha" 
                                  data-sitekey="6LcXPugrAAAAAJkru9yNj0fIm9S7c_LzJAm6ie6Y"
                                  data-theme="light"
-                                 data-size="normal"></div>
+                                 data-size="normal"
+                                 data-callback="onRecaptchaSuccess"
+                                 data-expired-callback="onRecaptchaExpired"></div>
                         </div>
 
                         <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 mt-6">
@@ -456,8 +458,8 @@
                             </button>
                             
                             <button type="submit"
-                                    :disabled="loading || isDisabled"
-                                    :class="(loading || isDisabled) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
+                                    :disabled="loading || isDisabled || !recaptchaVerified"
+                                    :class="(loading || isDisabled || !recaptchaVerified) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
                                     class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 flex items-center justify-center space-x-2">
                                 
                                 <svg x-show="loading" 
@@ -468,7 +470,7 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 
-                                <svg x-show="!loading && !isDisabled" 
+                                <svg x-show="!loading && !isDisabled && recaptchaVerified" 
                                      class="w-4 h-4" 
                                      fill="none" 
                                      stroke="currentColor" 
@@ -492,12 +494,22 @@
                 forgotPasswordModal: false,
                 loading: false,
                 isDisabled: false,
+                recaptchaVerified: false, // ? NEW
                 cooldownEnd: null,
                 remainingTime: 0,
                 countdownInterval: null,
                 
                 init() {
                     this.checkCooldown();
+                    
+                    // Setup reCAPTCHA callback
+                    window.onRecaptchaSuccess = () => {
+                        this.recaptchaVerified = true;
+                    };
+                    
+                    window.onRecaptchaExpired = () => {
+                        this.recaptchaVerified = false;
+                    };
                 },
                 
                 checkCooldown() {
@@ -532,6 +544,11 @@
                 handleSubmit(e) {
                     if (this.isDisabled) {
                         alert('Please wait for cooldown to finish');
+                        return;
+                    }
+                    
+                    if (!this.recaptchaVerified) {
+                        alert('Please complete the reCAPTCHA verification');
                         return;
                     }
                     
