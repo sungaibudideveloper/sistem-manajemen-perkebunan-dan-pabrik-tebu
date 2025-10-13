@@ -410,6 +410,10 @@
 
     <x-sprite-svg />
     @stack('scripts')
+
+    <!-- Global Loading Indicator -->
+    <x-global-loader />
+    
 </body>
 <x-script></x-script>
 <x-style></x-style>

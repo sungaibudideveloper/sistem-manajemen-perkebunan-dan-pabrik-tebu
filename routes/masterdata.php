@@ -339,6 +339,7 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
 
 // Public ticket submission (no auth required - for forgot password)
 Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
+    ->middleware('throttle:10,60') // 3 requests per 60 menit per IP
     ->name('support.ticket.submit');
 
 // =============================================================================
