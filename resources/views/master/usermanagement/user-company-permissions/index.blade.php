@@ -113,7 +113,7 @@
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('usermanagement.usercompany.index') }}" 
+                            <a href="{{ route('usermanagement.user-company-permissions.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -246,7 +246,7 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form action="{{ route('usermanagement.usercompany.store') }}" method="POST">
+                    <form action="{{ route('usermanagement.user-company-permissions.store') }}" method="POST">
                         @csrf
 
                         <!-- User Selection -->
@@ -435,7 +435,7 @@
 
                     <!-- Content -->
                     <div x-show="!isLoadingCompanies" class="h-full overflow-y-auto p-6">
-                        <form action="{{ route('usermanagement.usercompany.assign-companies') }}" method="POST" id="companyForm">
+                        <form action="{{ route('usermanagement.user-company-permissions.assign') }}" method="POST" id="companyForm">
                             @csrf
                             <input type="hidden" name="userid" x-model="selectedUser">
 

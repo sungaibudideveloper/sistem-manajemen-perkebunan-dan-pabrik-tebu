@@ -113,7 +113,7 @@
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('usermanagement.permission.index') }}" 
+                            <a href="{{ route('usermanagement.permissions-masterdata.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -244,7 +244,7 @@
                                             category: {{ json_encode($permission->category) }},
                                             description: {{ json_encode($permission->description) }},
                                             isactive: {{ $permission->isactive ?? 0 }}
-                                        }, {{ json_encode(route('usermanagement.permission.update', $permission->permissionid)) }})'
+                                        }, {{ json_encode(route('usermanagement.permissions-masterdata.update', $permission->permissionid)) }})'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,7 +253,7 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('usermanagement.permission.destroy', $permission->permissionid) }}" method="POST"
+                                    <form action="{{ route('usermanagement.permissions-masterdata.destroy', $permission->permissionid) }}" method="POST"
                                         onsubmit="return confirm('Yakin ingin menonaktifkan permission {{ $permission->permissionname }}? Permission ini mungkin sedang digunakan.');" class="inline">
                                         @csrf
                                         @method('DELETE')
@@ -315,7 +315,7 @@
 
                 <!-- Modal Body -->
                 <div class="p-6">
-                    <form :action="mode === 'create' ? '{{ route('usermanagement.permission.store') }}' : editUrl" method="POST">
+                    <form :action="mode === 'create' ? '{{ route('usermanagement.permissions-masterdata.store') }}' : editUrl" method="POST">
                         @csrf
                         <template x-if="mode === 'edit'">
                             <input type="hidden" name="_method" value="PUT">

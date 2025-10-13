@@ -50,24 +50,63 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     // NOTIFICATION ROUTES
     // =============================================================================
     
-    Route::get('/notification', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
-    
-    // Notification Management (with permissions)
-    Route::group(['middleware' => 'permission:Create Notifikasi'], function () {
-        Route::get('/notification/create', [NotificationController::class, 'create'])->name('notifications.create');
-        Route::post('/notification', [NotificationController::class, 'store'])->name('notifications.store');
-    });
-    
-    Route::group(['middleware' => 'permission:Edit Notifikasi'], function () {
-        Route::get('notification/{id}/edit', [NotificationController::class, 'edit'])->name('notifications.edit');
-        Route::put('notification/{id}', [NotificationController::class, 'update'])->name('notifications.update');
-    });
-    
-    Route::delete('notification/{id}', [NotificationController::class, 'destroy'])
-        ->name('notifications.destroy')
-        ->middleware('permission:Hapus Notifikasi');
+    // =============================================================================
+        // USER NOTIFICATION ROUTES (All Users)
+        // =============================================================================
+        
+        // User notification list
+        Route::get('/notifications', [NotificationController::class, 'index'])
+            ->name('notifications.index');
+        
+        // Get dropdown data for header
+        Route::get('/notifications/dropdown-data', [NotificationController::class, 'getDropdownData'])
+            ->name('notifications.dropdown-data');
+        
+        // Get unread count
+        Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])
+            ->name('notifications.unread-count');
+        
+        // Mark single notification as read
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])
+            ->name('notifications.read');
+        
+        // Mark all notifications as read
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])
+            ->name('notifications.mark-all-read');
+        
+        // =============================================================================
+        // ADMIN NOTIFICATION MANAGEMENT ROUTES (With Permissions)
+        // =============================================================================
+        
+        // Admin notification management list
+        Route::get('/notifications/admin', [NotificationController::class, 'adminIndex'])
+            ->name('notifications.admin.index')
+            ->middleware('permission:Admin');
+        
+        // Create notification form
+        Route::get('/notifications/create', [NotificationController::class, 'create'])
+            ->name('notifications.create')
+            ->middleware('permission:Create Notifikasi');
+        
+        // Store new notification
+        Route::post('/notifications', [NotificationController::class, 'store'])
+            ->name('notifications.store')
+            ->middleware('permission:Create Notifikasi');
+        
+        // Edit notification form
+        Route::get('/notifications/{id}/edit', [NotificationController::class, 'edit'])
+            ->name('notifications.edit')
+            ->middleware('permission:Edit Notifikasi');
+        
+        // Update notification
+        Route::put('/notifications/{id}', [NotificationController::class, 'update'])
+            ->name('notifications.update')
+            ->middleware('permission:Edit Notifikasi');
+        
+        // Delete notification
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])
+            ->name('notifications.destroy')
+            ->middleware('permission:Hapus Notifikasi');
 
     // =============================================================================
     // GPX FILE MANAGEMENT ROUTES  

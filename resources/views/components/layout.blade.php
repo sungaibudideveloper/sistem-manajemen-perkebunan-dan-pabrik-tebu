@@ -309,12 +309,11 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Add timestamp to force update in development
-                const swUrl = '{{ asset("sw.js") }}' + 
-                    @if(config('app.env') === 'local')
-                        '?v=' + Date.now();
-                    @else
-                        '?v=6'; // Production version
-                    @endif
+                const swUrl =   @if(config('app.env') === 'local')
+                                    '{{ asset("sw.js") }}' + '?v=' + Date.now();
+                                    @else
+                                    '{{ url("/") }}/sw.js?v=6';
+                                @endif
                 
                 navigator.serviceWorker.register(swUrl)
                     .then(function(registration) {
@@ -411,6 +410,10 @@
 
     <x-sprite-svg />
     @stack('scripts')
+
+    <!-- Global Loading Indicator -->
+    <x-global-loader />
+    
 </body>
 <x-script></x-script>
 <x-style></x-style>

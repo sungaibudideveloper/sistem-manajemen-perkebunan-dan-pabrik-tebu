@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\company;
 use App\Models\Notification;
+use App\Models\Company;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 class NotificationController extends Controller
@@ -21,336 +20,328 @@ class NotificationController extends Controller
         ]);
     }
 
-    protected function requestValidated(): array
-    {
-        return [
-            'companycode' => 'required',
-            'title' => 'required',
-            'body' => 'required',
-        ];
-    }
-
     public function index()
     {
         $title = 'Notifications';
-        $comp = explode(',', Auth::user()->userComp->companycode);
-        $dropdownValue = session('companycode');
-
-        // FIXED: Menggunakan helper function untuk permission check
-        $isKepalaKebun = $this->hasJabatan('Kepala Kebun');
-        $isAdmin = hasPermission('Admin');
-
-        $notifQuery = DB::table('notification')->join('company', function ($join) {
-                $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
-        });
+        $userid = Auth::user()->userid;
         
-        if ($isAdmin) {
-            $notifQuery->where(function ($query) use ($comp) {
-                foreach ($comp as $company) {
-                    $query->orWhereRaw('FIND_IN_SET(?, notification.companycode)', [$company]);
-                }
-            })->distinct();
-        } else {
-            $notifQuery->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('companycode')])->distinct();
-        }
+        $notifications = Notification::getForUser($userid, 1000, false);
+        $notifCount = $notifications->count();
+        $unreadCount = $notifications->where('is_read', false)->count();
 
-        if (!$isKepalaKebun) {
-            $notifQuery->where('notification.inputby', '!=', 'Automatic by System');
-        }
-
-        $notif = $notifQuery->whereBetween('notification.createdat', [DB::raw('company.companyperiod'), now()])
-            ->select('notification.*')
-            ->orderBy('createdat', 'desc')
-            ->get()
-            ->map(function ($item) {
-                $item->createdat = Carbon::parse($item->createdat);
-                return $item;
-            });
-
-        $notifCount = $notif->count();
-
-        return view('notifications.index', compact('title', 'notif', 'notifCount'));
+        return view('notifications.index', compact(
+            'title',
+            'notifications',
+            'notifCount',
+            'unreadCount'
+        ));
     }
 
-    public function create()
+    public function getDropdownData()
     {
-        $title = "Create Data";
-        $notification = new Notification();
-        $company = company::all();
-        $method = 'POST';
-        $buttonSubmit = 'Create';
-        $url = route('notifications.store');
-        return view('notifications.form', compact('title', 'company', 'notification', 'method', 'url', 'buttonSubmit'));
+        $userid = Auth::user()->userid;
+        $notifications = Notification::getForUser($userid, 5, false);
+        $unreadCount = Notification::getUnreadCountForUser($userid);
+
+        return response()->json([
+            'success' => true,
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount
+        ]);
     }
 
-    public function store(Request $request)
+    public function getUnreadCount()
     {
-        $validated = $request->validate($this->requestValidated());
+        $userid = Auth::user()->userid;
+        $unreadCount = Notification::getUnreadCountForUser($userid);
 
-        DB::transaction(function () use ($validated) {
-            $companycode = implode(',', $validated['companycode']);
-            $existingIds = Notification::pluck('id')->toArray();
-            sort($existingIds);
-
-            $nextId = 1;
-            foreach ($existingIds as $id) {
-                if ($id != $nextId) {
-                    break;
-                }
-                $nextId++;
-            }
-
-            Notification::create([
-                'id' => $nextId,
-                'companycode' => $companycode,
-                'title' => $validated['title'],
-                'body' => $validated['body'],
-                'inputby' => Auth::user()->usernm,
-            ]);
-        });
-
-        return redirect()->back()->with('success1', 'Notifikasi Telah ditambahkan.');
-    }
-
-    public function edit($id)
-    {
-        $title = 'Edit Data';
-        $notification = Notification::findOrFail($id);
-        $company = company::all();
-        $method = 'PUT';
-        $buttonSubmit = 'Update';
-        $url = route('notifications.update', $notification);
-        return view('notifications.form', compact('notification', 'company', 'title', 'method', 'url', 'buttonSubmit'));
-    }
-
-    public function update(Request $request, $id)
-    {
-        DB::transaction(function () use ($request, $id) {
-            $notifications = Notification::findOrFail($id);
-            $notifications->update($request->validate($this->requestValidated()));
-        });
-        return redirect()->route('notifications.index');
-    }
-
-    public function destroy($id)
-    {
-        DB::transaction(function () use ($id) {
-            $notifications = Notification::findOrFail($id);
-            $notifications->delete();
-        });
-        return redirect()->route('notifications.index');
+        return response()->json([
+            'success' => true,
+            'unread_count' => $unreadCount
+        ]);
     }
 
     public function markAsRead($id)
     {
-        $notification = Notification::find($id);
+        try {
+            $notification = Notification::findOrFail($id);
+            $userid = Auth::user()->userid;
 
-        if (!$notification) {
-            return response()->json(['error' => 'Notification not found'], 404);
+            $notification->markAsReadBy($userid);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification marked as read'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to mark notification as read', [
+                'notification_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark as read'
+            ], 500);
         }
-
-        $currentUser = Auth::user()->usernm;
-        $readBy = $notification->readby ? json_decode($notification->readby, true) : [];
-
-        if (!in_array($currentUser, $readBy)) {
-            $readBy[] = $currentUser;
-            $notification->readby = json_encode($readBy);
-            $notification->save();
-        }
-
-        return response()->json(['message' => 'Notification marked as read'], 200);
     }
 
-    /**
-     * FIXED: Method yang menyebabkan error - line 168
-     * Mengganti sistem permission lama dengan sistem relational baru
-     */
-    public function getUnreadCount()
+    public function markAllAsRead()
     {
-        $currentUser = Auth::user()->usernm;
-        $comp = explode(',', Auth::user()->userComp->companycode);
-        
-        // FIXED: Menggunakan helper function untuk permission check
-        $isKepalaKebun = $this->hasJabatan('Kepala Kebun');
-        $isAdmin = hasPermission('Admin');
-
-        $query = DB::table('notification')
-            ->join('company', function ($join) {
-                $join->whereRaw('FIND_IN_SET(company.companycode, notification.companycode)');
-            });
-
-        if ($isAdmin) {
-            $query->where(function ($query) use ($comp, $currentUser) {
-                $query->where(function ($query) use ($comp) {
-                    foreach ($comp as $kdComp) {
-                        $query->orWhereRaw('FIND_IN_SET(?, notification.companycode)', [$kdComp]);
-                    }
-                })
-                    ->where(function ($query) use ($currentUser) {
-                        $query->where('notification.readby', '=', '')
-                            ->orWhereRaw('NOT JSON_CONTAINS(notification.readby, ?)', [json_encode($currentUser)]);
-                    });
-            })
-                ->distinct();
-        } else {
-            $query->whereRaw('FIND_IN_SET(?, notification.companycode)', [session('companycode')])
-                ->where(function ($query) use ($currentUser) {
-                    $query->where('notification.readby', '=', '')
-                        ->orWhereRaw('NOT JSON_CONTAINS(notification.readby, ?)', [json_encode($currentUser)]);
-                })
-                ->distinct();
-        }
-
-        if (!$isKepalaKebun) {
-            $query->where('notification.inputby', '!=', 'Automatic by System');
-        }
-
-        $notif = $query->whereBetween('notification.createdat', [DB::raw('company.companyperiod'), now()])
-            ->select('notification.*')
-            ->orderBy('createdat', 'desc')
-            ->get()
-            ->map(function ($item) {
-                $item->createdat = Carbon::parse($item->createdat);
-                return $item;
-            });
-
-        $unreadCount = $notif->count();
-
-        return response()->json(['unread_count' => $unreadCount]);
-    }
-
-    /**
-     * Helper method untuk check jabatan
-     * Mengganti logika permission lama yang menggunakan JSON
-     */
-    private function hasJabatan($jabatanName)
-    {
-        $user = Auth::user();
-        
-        if (!$user || !$user->idjabatan) {
-            return false;
-        }
-        
-        $jabatan = DB::table('jabatan')
-            ->where('idjabatan', $user->idjabatan)
-            ->first();
+        try {
+            $userid = Auth::user()->userid;
+            $user = Auth::user();
             
-        return $jabatan && $jabatan->namajabatan === $jabatanName;
+            $userCompanies = $user->userCompanies;
+            
+            if ($userCompanies->isEmpty()) {
+                $userCompanyArray = $user->companycode ? explode(',', $user->companycode) : [];
+            } else {
+                $userCompanyArray = $userCompanies->pluck('companycode')->toArray();
+            }
+            
+            $userCompanyArray = array_filter($userCompanyArray);
+            $idjabatan = $user->idjabatan;
+
+            $query = Notification::active()
+                                 ->forCompanies($userCompanyArray)
+                                 ->unreadBy($userid);
+
+            if ($idjabatan) {
+                $query->forJabatan($idjabatan);
+            }
+
+            $notifications = $query->get();
+            
+            foreach ($notifications as $notification) {
+                $notification->markAsReadBy($userid);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+                'count' => $notifications->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to mark all notifications as read', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark all as read'
+            ], 500);
+        }
     }
 
-    public function agronomiNotif()
+    public function adminIndex()
     {
-        DB::transaction(function () {
-            $lastCheckedTime = DB::table('notification')
-                ->max('createdat');
+        if (!hasPermission('Admin')) {
+            abort(403, 'Unauthorized action.');
+        }
 
-            if (!$lastCheckedTime) {
-                $lastCheckedTime = '2025-01-01 00:00:00';
-            }
-            $data = DB::table('agrolst')
-                ->select('companycode as comp', 'nosample as sample', 'nourut as urut', 'per_germinasi', 'per_gulma', 'tanggaltanam')
-                ->where('createdat', '>', $lastCheckedTime)
-                ->where(function ($query) {
-                    $query->where('per_germinasi', '<', 0.9)
-                        ->orWhere('per_gulma', '>', 0.25);
-                })
-                ->get();
+        $title = 'Notification Management';
+        $search = request('search');
+        $perPage = request('perPage', 15);
 
-            $existingIds = Notification::orderBy('id')->pluck('id')->toArray();
-            $nextId = 1;
-            foreach ($existingIds as $id) {
-                if ($id != $nextId) {
-                    break;
-                }
-                $nextId++;
-            }
+        $query = Notification::with('supportTicket');
 
-            foreach ($data as $item) {
-                if ($item->tanggaltanam) {
-                    $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
-                } else {
-                    $item->umur_tanam = null;
-                }
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('body', 'like', "%{$search}%")
+                  ->orWhere('companycode', 'like', "%{$search}%");
+            });
+        }
 
-                if ($item->per_germinasi < 0.9 && ceil($item->umur_tanam) == 1.0) {
-                    Notification::create([
-                        'id' => $nextId,
-                        'companycode' => $item->comp,
-                        'title' => 'Agronomi - Persentase Germinasi < 90%',
-                        'body' => 'Persentase Germinasi kurang dari 90% untuk nomor sample ' . $item->sample . ', nomor urut ' . $item->urut . ', berumur ' . ceil($item->umur_tanam) . ' bulan.',
-                        'inputby' => 'Automatic by System',
-                        'createdat'=>now(),
-                        'updatedat'=>now()
-                    ]);
-                    $nextId++;
-                }
+        $result = $query->orderBy('createdat', 'desc')->paginate($perPage);
+        $companies = Company::orderBy('name')->get();
 
-                if ($item->per_gulma > 0.25) {
-                    Notification::create([
-                        'id' => $nextId,
-                        'companycode' => $item->comp,
-                        'title' => 'Agronomi - Persentase Penutupan Gulma > 25%',
-                        'body' => 'Persentase Penutupan Gulma lebih dari 25% untuk nomor sample ' . $item->sample . ', nomor urut ' . $item->urut . '.',
-                        'inputby' => 'Automatic by System',
-                    ]);
-                    $nextId++;
-                }
-            }
-        });
+        return view('notifications.admin.index', compact('title', 'result', 'companies', 'perPage'));
     }
 
-    public function hptNotif()
+    public function create()
     {
-        DB::transaction(function () {
-            $lastCheckedTime = DB::table('notification')
-                ->max('createdat');
+        if (!hasPermission('Create Notifikasi')) {
+            abort(403, 'Unauthorized action.');
+        }
 
-            if (!$lastCheckedTime) {
-                $lastCheckedTime = '2025-01-01 00:00:00';
+        $title = 'Create Notification';
+        $companies = Company::orderBy('name')->get();
+        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+
+        return view('notifications.create', compact('title', 'companies', 'jabatan'));
+    }
+
+    public function store(Request $request)
+    {
+        if (!hasPermission('Create Notifikasi')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'companycodes' => 'required|array',
+            'companycodes.*' => 'exists:company,companycode',
+            'target_jabatan' => 'nullable|array',
+            'target_jabatan.*' => 'integer|exists:jabatan,idjabatan',
+            'title' => 'required|string|max:200',
+            'body' => 'required|string',
+            'priority' => 'required|in:low,medium,high',
+            'action_url' => 'nullable|url'
+        ]);
+
+        try {
+            $notificationData = [
+                'companycodes' => $validated['companycodes'],
+                'title' => $validated['title'],
+                'body' => $validated['body'],
+                'priority' => $validated['priority'],
+                'action_url' => $validated['action_url'] ?? null
+            ];
+
+            if (!empty($validated['target_jabatan'])) {
+                $filteredJabatan = array_filter($validated['target_jabatan']);
+                $notificationData['target_jabatan'] = implode(',', $filteredJabatan);
             }
-            $data = DB::table('hpt_lst')
-                ->select('companycode as comp', 'nosample as sample', 'nourut as urut', 'per_pbt', 'tanggaltanam')
-                ->where('createdat', '>', $lastCheckedTime)
-                ->where(function ($query) {
-                    $query->where('per_pbt', '>', 0.03)
-                        ->orWhere('per_ppt', '>', 0.03);
-                })
-                ->get();
 
-            $existingIds = Notification::orderBy('id')->pluck('id')->toArray();
-            $nextId = 1;
-            foreach ($existingIds as $id) {
-                if ($id != $nextId) {
-                    break;
-                }
-                $nextId++;
+            Notification::createManualNotification($notificationData);
+
+            return redirect()->route('notifications.admin.index')
+                           ->with('success', 'Notification berhasil dibuat dan dikirim');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create notification', [
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                           ->withInput()
+                           ->with('error', 'Gagal membuat notification: ' . $e->getMessage());
+        }
+    }
+
+    public function edit($id)
+    {
+        if (!hasPermission('Edit Notifikasi')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $notification = Notification::findOrFail($id);
+        
+        if ($notification->notification_type !== 'manual') {
+            return redirect()->route('notifications.admin.index')
+                           ->with('error', 'Hanya manual notification yang bisa diedit');
+        }
+
+        $title = 'Edit Notification';
+        $companies = Company::orderBy('name')->get();
+        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+
+        return view('notifications.edit', compact('title', 'notification', 'companies', 'jabatan'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        if (!hasPermission('Edit Notifikasi')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $notification = Notification::findOrFail($id);
+
+        if ($notification->notification_type !== 'manual') {
+            return redirect()->route('notifications.admin.index')
+                           ->with('error', 'Hanya manual notification yang bisa diedit');
+        }
+
+        $validated = $request->validate([
+            'companycodes' => 'required|array',
+            'companycodes.*' => 'exists:company,companycode',
+            'target_jabatan' => 'nullable|array',
+            'target_jabatan.*' => 'integer|exists:jabatan,idjabatan',
+            'title' => 'required|string|max:200',
+            'body' => 'required|string',
+            'priority' => 'required|in:low,medium,high',
+            'action_url' => 'nullable|url'
+        ]);
+
+        try {
+            $updateData = [
+                'companycode' => implode(',', $validated['companycodes']),
+                'title' => $validated['title'],
+                'body' => $validated['body'],
+                'priority' => $validated['priority'],
+                'action_url' => $validated['action_url'] ?? null,
+                'updatedat' => now()
+            ];
+
+            if (!empty($validated['target_jabatan'])) {
+                $updateData['target_jabatan'] = implode(',', $validated['target_jabatan']);
+            } else {
+                $updateData['target_jabatan'] = null;
             }
 
-            foreach ($data as $item) {
-                $item->umur_tanam = $item->tanggaltanam ? Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now()) : null;
-                $umur_tanam = ceil($item->umur_tanam);
+            $notification->update($updateData);
 
-                $notifications = [
-                    ['per' => $item->per_pbt, 'threshold' => 0.03, 'min_age' => 1, 'max_age' => 3, 'title' => 'HPT - Persentase PBT > 3%', 'type' => 'penggerek batang tebu'],
-                    ['per' => $item->per_ppt, 'threshold' => 0.03, 'min_age' => 1, 'max_age' => 3, 'title' => 'HPT - Persentase PPT > 3%', 'type' => 'penggerek pucuk tebu'],
-                    ['per' => $item->per_pbt, 'threshold' => 0.05, 'min_age' => 4, 'max_age' => null, 'title' => 'HPT - Persentase PBT > 5%', 'type' => 'penggerek batang tebu'],
-                    ['per' => $item->per_ppt, 'threshold' => 0.05, 'min_age' => 4, 'max_age' => null, 'title' => 'HPT - Persentase PPT > 5%', 'type' => 'penggerek pucuk tebu']
-                ];
+            return redirect()->route('notifications.admin.index')
+                           ->with('success', 'Notification berhasil diperbarui');
 
-                foreach ($notifications as $notif) {
-                    if ($notif['per'] > $notif['threshold'] && $umur_tanam >= $notif['min_age'] && ($notif['max_age'] === null || $umur_tanam <= $notif['max_age'])) {
-                        Notification::create([
-                            'id' => $nextId++,
-                            'companycode' => $item->comp,
-                            'title' => $notif['title'],
-                            'body' => "Persentase {$notif['type']} lebih dari " . ($notif['threshold'] * 100) . "% untuk nomor sample {$item->sample}, nomor urut {$item->urut}, umur tanaman {$umur_tanam} bulan.",
-                            'inputby' => 'Automatic by System',
-                            'createdat'=>now(),
-                            'updatedat'=>now()
-                        ]);
-                    }
-                }
-            }
-        });
+        } catch (\Exception $e) {
+            Log::error('Failed to update notification', [
+                'notification_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                           ->withInput()
+                           ->with('error', 'Gagal memperbarui notification: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy($id)
+    {
+        if (!hasPermission('Hapus Notifikasi')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $notification = Notification::findOrFail($id);
+
+            $notification->update([
+                'status' => 'deleted',
+                'updatedat' => now()
+            ]);
+
+            return redirect()->route('notifications.admin.index')
+                           ->with('success', 'Notification berhasil dihapus');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to delete notification', [
+                'notification_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->route('notifications.admin.index')
+                           ->with('error', 'Gagal menghapus notification: ' . $e->getMessage());
+        }
+    }
+
+    public static function notifyNewSupportTicket($ticket)
+    {
+        try {
+            Notification::createForSupportTicket($ticket);
+            
+            Log::info('Support ticket notification created', [
+                'ticket_id' => $ticket->ticket_id,
+                'ticket_number' => $ticket->ticket_number
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create support ticket notification', [
+                'ticket_id' => $ticket->ticket_id ?? null,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

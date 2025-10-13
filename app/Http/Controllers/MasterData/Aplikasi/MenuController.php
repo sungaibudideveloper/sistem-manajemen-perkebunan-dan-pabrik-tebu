@@ -73,7 +73,7 @@ class MenuController extends Controller
 
         Parent::h_flash('Data Berhasil Disimpan!.', 'success');
 
-        return redirect()->route('masterdata.menu.index')->with('success', 'Menu berhasil diupdate');
+        return redirect()->route('usermanagement.menu.index')->with('success', 'Menu berhasil diupdate');
     }
 
     public function destroy($menuid, $name)
