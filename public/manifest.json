@@ -5,12 +5,12 @@
   "start_url": "./",
   "scope": "./", 
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#153B50",
+  "background_color": "#057A55",
+  "theme_color": "#057A55",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./img/icon-sb-tebu-circle.png",
+      "src": "./img/icon-1024x1024.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "maskable any"

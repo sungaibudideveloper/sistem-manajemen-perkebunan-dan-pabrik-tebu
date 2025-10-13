@@ -47,6 +47,26 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     Route::get('/chat/messages', [LiveChatController::class, 'getMessages'])->name('chat.messages');
 
     // =============================================================================
+    // APPROVAL (MOBILE VIEW)
+    // =============================================================================
+    Route::middleware('auth')->group(function () {
+        Route::prefix('input/approval')
+            ->name('input.approval.')
+            ->controller(\App\Http\Controllers\Input\ApprovalController::class)
+            ->group(function () {
+                
+                // Main approval page
+                Route::get('/', 'index')->name('index');
+                
+                // RKH approval processing
+                Route::post('/process-rkh', 'processRKHApproval')->name('processRKH');
+                
+                // LKH approval processing
+                Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
+            });
+    });
+
+    // =============================================================================
     // NOTIFICATION ROUTES
     // =============================================================================
     
