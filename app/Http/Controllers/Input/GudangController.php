@@ -402,23 +402,42 @@ class GudangController extends Controller
             if($response->status() == 200 && $response->json()['status'] == 1) {
                 $responseData = $response->json();
                 
-                // Buat mapping itemprice by itemcode
                 $itemPriceMap = [];
-                foreach($responseData['data'] as $item) {
-                    $fullItemCode = $item['ItemGrup'] . $item['CompItemcode'];
-                    $itemPriceMap[$fullItemCode] = $item['itemprice'];
+                foreach ($response->json()['stockitem'] as $row) {
+                    $code = $row['Itemcode'] ?? '';
+                    if ($code !== '') {
+                        $itemPriceMap[$code] = $row['Itemprice'] ?? 0;
+                    }
                 }
-                
-                // Update nouse dan itemprice
-                foreach($itemPriceMap as $itemcode => $itemprice) {
+
+                // update nouse & itemprice
+                foreach ($itemPriceMap as $itemcode => $itemprice) {
                     usemateriallst::where('rkhno', $request->rkhno)
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
                         ->update([
-                            'nouse' => $responseData['noUse'],
-                            'itemprice' => $itemprice
+                            'nouse'     => $responseData['noUse'] ?? null,
+                            'itemprice' => $itemprice,
                         ]);
                 }
+
+                // Buat mapping itemprice by itemcode
+                // $itemPriceMap = [];
+                // foreach($responseData['data'] as $item) {
+                //     $fullItemCode = $item['ItemGrup'] . $item['CompItemcode'];
+                //     $itemPriceMap[$fullItemCode] = $item['itemprice'];
+                // }
+                
+                // // Update nouse dan itemprice
+                // foreach($itemPriceMap as $itemcode => $itemprice) {
+                //     usemateriallst::where('rkhno', $request->rkhno)
+                //         ->where('companycode', session('companycode'))
+                //         ->where('itemcode', $itemcode)
+                //         ->update([
+                //             'nouse' => $responseData['noUse'],
+                //             'itemprice' => $itemprice
+                //         ]);
+                // }
                 
                 // Update header status
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
