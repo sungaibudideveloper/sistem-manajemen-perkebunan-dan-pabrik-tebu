@@ -1,0 +1,31 @@
+<IfModule mod_rewrite.c>
+  <IfModule mod_negotiation.c>
+    Options -MultiViews -Indexes
+  </IfModule>
+
+  RewriteEngine On
+  RewriteBase /tebu-new/
+
+  # Force HTTPS (juga aman jika di belakang proxy/Cloudflare)
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # (Opsional) batasi ke domain tertentu saja
+  #RewriteCond %{HTTP_HOST} !^grow\.sblampung\.com$ [NC]
+  #RewriteRule ^ - [L]
+
+  # Handle Authorization header
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Redirect trailing slash jika bukan folder
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} (.+)/$
+  RewriteRule ^ %1 [L,R=301]
+
+  # Front controller
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>

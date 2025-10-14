@@ -57,11 +57,11 @@
 </script>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         let paginationContainer = document.getElementById("pagination-links");
 
         if (paginationContainer) {
-            paginationContainer.addEventListener("click", function (event) {
+            paginationContainer.addEventListener("click", function(event) {
                 event.preventDefault();
 
                 let target = event.target;
@@ -74,10 +74,10 @@
 
         function fetchData(url) {
             fetch(url, {
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            })
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
                 .then(response => response.text())
                 .then(html => {
                     let parser = new DOMParser();
@@ -90,6 +90,94 @@
                 })
                 .catch(error => console.error("Error fetching data:", error));
         }
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dataContainer = document.getElementById("ajax-data");
+        if (!dataContainer) return;
+
+        const baseUrl = dataContainer.dataset.url;
+        const searchInput = document.getElementById("search");
+        const perPageInput = document.getElementById("perPage");
+        const startDateInput = document.getElementById("start_date");
+        const endDateInput = document.getElementById("end_date");
+        const tables = document.getElementById("tables");
+        const pages = document.getElementById("pagination-links");
+
+        let timeout = null;
+
+        function fetchData(url = baseUrl) {
+            const search = searchInput ? searchInput.value : "";
+            const perPage = perPageInput ? perPageInput.value : 10;
+            const startDate = startDateInput ? startDateInput.value : "";
+            const endDate = endDateInput ? endDateInput.value : "";
+
+            const formData = new FormData();
+            formData.append("_token", document.querySelector('meta[name="csrf-token"]').content);
+            formData.append("search", search);
+            formData.append("perPage", perPage);
+            formData.append("start_date", startDate);
+            formData.append("end_date", endDate);
+
+            fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, "text/html");
+
+                    const newTable = newDoc.querySelector("#tables");
+                    const newPagination = newDoc.querySelector("#pagination-links");
+
+                    if (newTable && newPagination) {
+                        tables.innerHTML = newTable.innerHTML;
+                        pages.innerHTML = newPagination.innerHTML;
+                    }
+                })
+                .catch(error => console.error("AJAX Fetch Error:", error));
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener("input", () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fetchData(), 300);
+            });
+        }
+
+        if (perPageInput) {
+            perPageInput.addEventListener("input", () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fetchData(), 300);
+            });
+        }
+
+        if (startDateInput) {
+            startDateInput.addEventListener("change", function() {
+                fetchData();
+            });
+        }
+
+        if (endDateInput) {
+            endDateInput.addEventListener("change", function() {
+                fetchData();
+            });
+        }
+
+        document.addEventListener("click", function(event) {
+            const target = event.target.closest("#pagination-links a");
+            if (target) {
+                event.preventDefault();
+                const url = target.href;
+                fetchData(url);
+            }
+        });
     });
 </script>
 
@@ -113,22 +201,4 @@
             }
         });
     });
-</script>
-
-<script>
-    window.addEventListener('scroll', function() {
-        const scrollToTopButton = document.getElementById('scrollToTop');
-        if (window.scrollY > 100) {
-            scrollToTopButton.style.display = 'block';
-        } else {
-            scrollToTopButton.style.display = 'none';
-        }
-    });
-
-    function scrollToTop() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    }
 </script>

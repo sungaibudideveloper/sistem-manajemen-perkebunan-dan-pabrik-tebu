@@ -19,7 +19,7 @@ class ActivityController extends Controller
         View::share([
             'navbar' => 'Master',
             'nav' => 'aktivitas',
-            'routeName' => route('master.aktivitas.index'),
+            'routeName' => route('masterdata.aktivitas.index'),
         ]);
     }
 
@@ -151,7 +151,7 @@ class ActivityController extends Controller
 
         });
 
-        return redirect()->route('master.aktivitas.index')->with('success1', 'Data updated successfully.');
+        return redirect()->route('masterdata.aktivitas.index')->with('success1', 'Data updated successfully.');
     }
 
     public function destroy($activityCode)

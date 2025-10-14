@@ -1,5 +1,17 @@
-<footer class="bg-gray-200 py-4 border border-gray-300">
-    <div class="container mx-auto px-6 text-center text-gray-600 text-sm">
-        <p>&copy; PT.Sungai Budi Group. Created by <strong>Lampung IT Team.</strong></p>
+<footer class="bg-white border-t border-gray-200 mt-auto">
+    <div class="px-4 py-3 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between text-sm text-gray-600">
+            <div class="flex items-center space-x-4">
+                <span>&copy; {{ date('Y') }} PT. Sungai Budi Group</span>
+                <span class="hidden sm:inline text-gray-400">•</span>
+                <span class="hidden sm:inline">Created by Jakarta and Lampung IT Team</span>
+            </div>
+            
+            <div class="flex items-center space-x-2 text-xs text-gray-500">
+                <span>v2.1</span>
+                <span>•</span>
+                <span>{{ date('H:i') }}</span>
+            </div>
+        </div>
     </div>
 </footer>

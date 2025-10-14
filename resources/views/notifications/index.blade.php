@@ -1,249 +1,182 @@
+{{-- resources/views/notifications/index.blade.php --}}
 <x-layout>
-    <x-slot:title>{{ $title }}</x-slot>
+    <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $title }}</x-slot:navbar>
 
-    @if (auth()->user() && in_array('Create Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
-        <a href="{{ route('notifications.create') }}"
-            class="flex items-center text-sm w-fit bg-blue-500 rounded-md shadow-sm text-white py-2 px-4 font-medium hover:bg-blue-600">
-            <svg class="-ml-1 w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path
-                    d="M17.133 12.632v-1.8a5.406 5.406 0 0 0-4.154-5.262.955.955 0 0 0 .021-.106V3.1a1 1 0 0 0-2 0v2.364a.955.955 0 0 0 .021.106 5.406 5.406 0 0 0-4.154 5.262v1.8C6.867 15.018 5 15.614 5 16.807 5 17.4 5 18 5.538 18h12.924C19 18 19 17.4 19 16.807c0-1.193-1.867-1.789-1.867-4.175ZM8.823 19a3.453 3.453 0 0 0 6.354 0H8.823Z" />
-            </svg>
-            <span class="ml-2">
-                Add Notification
-            </span>
-        </a>
-    @endif
+    <div x-data="notificationPage()" x-init="init()" class="mx-auto py-4 bg-white rounded-md shadow-md">
+        
+        <!-- Header with Stats -->
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">All Notifications</h2>
+                        <p class="text-sm text-gray-600">{{ $notifCount }} total notifications</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    @if($unreadCount > 0)
+                    <button @click="markAllAsRead()" 
+                            class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                        Mark all as read
+                    </button>
+                    @endif
+                    @if(hasPermission('Admin'))
+                    <a href="{{ route('notifications.admin.index') }}" 
+                       class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors">
+                        Manage Notifications
+                    </a>
+                    @endif
+                </div>
+            </div>
+        </div>
 
-    <div class="py-3">
-        <ol id="data-list">
-            @foreach ($notif as $index => $item)
-                <div class="py-1">
-                    <li
-                        class="p-3 bg-white rounded-md border border-gray-300 shadow-md relative {{ $index >= 5 ? 'hide' : '' }}">
-                        <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500"
-                            id="dot-{{ $item->id }}" data-notif-id="{{ $item->id }}"></span>
-
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex gap-2 items-center">
-                                <span class="lg:text-sm text-xs text-gray-500">{{ $item->createdat->diffForHumans() }}</span>
-                                @if (auth()->user() && in_array('Admin', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <span class="font-medium text-sm text-gray-500"> - </span>
-                                    <div class="text-gray-500 text-xs font-medium">
-                                        {{ $item->companycode }}
-                                    </div>
+        <!-- Notification List -->
+        <div class="px-4 py-4">
+            @if($notifications->isEmpty())
+                <div class="py-12 text-center">
+                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-1">No notifications yet</h3>
+                    <p class="text-sm text-gray-500">You're all caught up!</p>
+                </div>
+            @else
+                <div class="space-y-3">
+                    @foreach($notifications as $notif)
+                    <div @click="handleNotificationClick({{ $notif->notification_id }}, '{{ $notif->action_url }}')"
+                         class="border rounded-lg p-4 transition-all duration-150 cursor-pointer {{ $notif->is_read ? 'bg-white hover:bg-gray-50 border-gray-200' : 'bg-blue-50 hover:bg-blue-100 border-blue-200' }}">
+                        <div class="flex items-start space-x-4">
+                            
+                            <!-- Icon -->
+                            <div class="flex-shrink-0">
+                                @if($notif->icon === 'ticket')
+                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+                                    </svg>
+                                </div>
+                                @else
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                    </svg>
+                                </div>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-1">
-                                @if (auth()->user() && in_array('Edit Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <a href="{{ route('notifications.edit', $item->id) }}" class="group flex">
-                                        <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                            height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
-                                        </svg>
-                                        <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                            height="24" fill="currentColor" viewBox="0 0 24 24">
-                                            <path fill-rule="evenodd"
-                                                d="M19.846 4.318a2.148 2.148 0 0 0-.437-.692 2.014 2.014 0 0 0-.654-.463 1.92 1.92 0 0 0-1.544 0 2.014 2.014 0 0 0-.654.463l-.546.578 2.852 3.02.546-.579a2.14 2.14 0 0 0 .437-.692 2.244 2.244 0 0 0 0-1.635ZM17.45 8.721 14.597 5.7 9.82 10.76a.54.54 0 0 0-.137.27l-.536 2.84c-.07.37.239.696.588.622l2.682-.567a.492.492 0 0 0 .255-.145l4.778-5.06Z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </a>
-                                @endif
-                                @if (auth()->user() && in_array('Hapus Notifikasi', json_decode(auth()->user()->permissions ?? '[]')))
-                                    <form action="{{ route('notifications.destroy', $item->id) }}" method="POST">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            onclick="return confirm('Yakin ingin menghapus notifikasi ini?')"
-                                            class="group flex">
-                                            <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                    stroke-linejoin="round" stroke-width="2"
-                                                    d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
-                                            </svg>
-                                            <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="currentColor" viewBox="0 0 24 24">
-                                                <path fill-rule="evenodd"
-                                                    d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
-                                                    clip-rule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="gap-2">
-                            <div>
-                                <h2 class="lg:text-lg text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                                    {{ $item->title }}</h2>
-                                <div class="flex items-center justify-between">
 
-                                    <div>
-                                        <p class="font-light text-sm text-gray-500 dark:text-gray-400">
-                                            {{ Str::limit($item->body, 100) }}
-                                        </p>
-                                    </div>
-                                    <div class="text-right">
-                                        <button onclick="showModal('{{ $item->id }}')"
-                                            class="inline-flex items-center font-medium text-primary-600 dark:text-primary-500 hover:underline text-xs lg:text-sm">
-                                            Read more
-                                            <svg class="ml-2 lg:w-4 lg:h-4 w-3 h-3" fill="currentColor" viewBox="0 0 20 20"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <path fill-rule="evenodd"
-                                                    d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                                                    clip-rule="evenodd"></path>
-                                            </svg>
-                                        </button>
+                            <!-- Content -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-2">
+                                            <h3 class="text-sm font-semibold text-gray-900">{{ $notif->title }}</h3>
+                                            @if(!$notif->is_read)
+                                            <span class="w-2 h-2 bg-blue-600 rounded-full"></span>
+                                            @endif
+                                        </div>
+                                        <p class="text-sm text-gray-700 mt-1">{{ $notif->body }}</p>
+                                        
+                                        <!-- Meta Info -->
+                                        <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                            <span class="flex items-center">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                {{ $notif->createdat->diffForHumans() }}
+                                            </span>
+                                            
+                                            @if($notif->priority === 'high')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                                High Priority
+                                            </span>
+                                            @elseif($notif->priority === 'medium')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                Medium
+                                            </span>
+                                            @endif
+
+                                            <span class="text-gray-400">•</span>
+                                            <span>{{ $notif->companycode }}</span>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
+                            <!-- Action Arrow -->
+                            <div class="flex-shrink-0">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
                             </div>
                         </div>
-                    </li>
+                    </div>
+                    @endforeach
                 </div>
-            @endforeach
-        </ol>
-    </div>
-    @if ($notifCount > 5)
-        <div class="text-center pb-2">
-            <button id="more-lists-btn" class="text-blue-600 hover:underline">More Notifications
-                &raquo;</button>
-            <button id="less-lists-btn" class="hide pt-4 text-blue-600 hover:underline">Less Notifications
-                &laquo;</button>
-        </div>
-    @endif
-
-    <div id="modal"
-        class="fixed inset-0 z-50 flex top-0 left-0 w-full h-full bg-black bg-opacity-50 invisible items-center justify-center">
-        <div id="modal-content"
-            class="bg-white rounded-lg shadow-lg p-6 w-11/12 md:w-1/2 transform opacity-0 scale-90 transition-all duration-300">
-            <div class="flex justify-between items-center">
-                <h3 id="modal-title" class="text-xl font-semibold"></h3>
-                <button onclick="closeModal()" class="text-gray-600 hover:text-gray-900 text-3xl">&times;</button>
-            </div>
-            <div id="modal-body" class="mt-4 text-gray-600"></div>
-            <div class="mt-6 text-right">
-                <button onclick="closeModal()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                    Close
-                </button>
-            </div>
+            @endif
         </div>
     </div>
-    <style>
-        .hide {
-            display: none;
-        }
-    </style>
 
     <script>
-        function showModal(id) {
-            const notif = @json($notif);
-            const item = notif.find(n => n.id === parseInt(id));
+    function notificationPage() {
+        return {
+            init() {
+                // Any initialization if needed
+            },
 
-            if (item) {
-                document.getElementById('modal-title').innerText = item.title;
-                document.getElementById('modal-body').innerText = item.body;
-
-                const modal = document.getElementById('modal');
-                const modalContent = document.getElementById('modal-content');
-
-                modal.classList.remove('invisible');
-                modal.classList.add('visible');
-
-                setTimeout(() => {
-                    modalContent.classList.add('opacity-100', 'scale-100');
-                    modalContent.classList.remove('opacity-0', 'scale-90');
-                }, 10);
-
-                markAsRead(id);
-            }
-
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
-
-            modalContent.classList.add('opacity-0', 'scale-90');
-            modalContent.classList.remove('opacity-100', 'scale-100');
-
-            setTimeout(() => {
-                modal.classList.add('invisible');
-                modal.classList.remove('visible');
-            }, 300);
-            updateNavbarDot();
-        }
-
-        function markAsRead(id) {
-            const url = `{{ route('notifications.read', ':id') }}`.replace(':id', id);
-
-            fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    },
-                })
-                .then(response => {
-                    if (response.ok) {
-                        const dot = document.querySelector(`[data-notif-id='${id}']`);
-                        if (dot) {
-                            dot.classList.add('hidden');
+            async handleNotificationClick(notificationId, actionUrl) {
+                // Mark as read
+                try {
+                    await fetch(`/notifications/${notificationId}/read`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         }
-                    } else {
-                        console.error('Failed to mark notification as read.');
+                    });
+                } catch (error) {
+                    console.error('Failed to mark notification as read:', error);
+                }
+
+                // Redirect if action_url exists
+                if (actionUrl) {
+                    window.location.href = actionUrl;
+                } else {
+                    // Reload to update read status
+                    window.location.reload();
+                }
+            },
+
+            async markAllAsRead() {
+                if (!confirm('Mark all notifications as read?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/notifications/mark-all-read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
                     }
-                })
-                .catch(error => console.error('Error:', error));
+                } catch (error) {
+                    console.error('Failed to mark all as read:', error);
+                    alert('Failed to mark all notifications as read');
+                }
+            }
         }
-
-        window.addEventListener('load', function() {
-            const currentUser = document.querySelector('meta[name="current-username"]').getAttribute('content');
-
-            document.querySelectorAll('.bg-red-500').forEach(dot => {
-                const notifId = dot.getAttribute('data-notif-id');
-                const notif = @json($notif).find(n => n.id === parseInt(notifId));
-
-                if (notif && notif.readby && JSON.parse(notif.readby).includes(currentUser)) {
-                    dot.classList.add('hidden');
-                }
-            });
-            updateNavbarDot();
-        });
+    }
     </script>
-
-    <script>
-        const moreListsBtn = document.getElementById('more-lists-btn');
-        const lessListsBtn = document.getElementById('less-lists-btn');
-
-        moreListsBtn.addEventListener('click', function() {
-            document.querySelectorAll('#data-list .hide').forEach(function(item) {
-                item.classList.remove('hide');
-            });
-
-            moreListsBtn.style.display = 'none';
-            lessListsBtn.style.display = 'inline-block';
-        });
-
-        lessListsBtn.addEventListener('click', function() {
-            const items = document.querySelectorAll('#data-list li');
-            items.forEach(function(item, index) {
-                if (index >= 5) {
-                    item.classList.add('hide');
-                }
-            });
-
-            moreListsBtn.style.display = 'inline-block';
-            lessListsBtn.style.display = 'none';
-        });
-    </script>
-
 </x-layout>

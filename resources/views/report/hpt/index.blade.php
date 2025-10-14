@@ -11,7 +11,7 @@
         <div class="flex lg:justify-between mx-4 items-center gap-2 justify-center flex-wrap">
             @if ($startDate && $endDate)
                 <div class="flex gap-2 text-sm">
-                    @if (auth()->user() && in_array('Excel HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if(hasPermission('Excel HPT'))
                         <button
                             class="bg-green-600 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-green-500 flex items-center space-x-2"
                             onclick="window.location.href='{{ route('report.hpt.exportExcel', ['company' => old('company', request()->company), 'start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -26,7 +26,7 @@
                         </button>
                     @endif
 
-                    @if (auth()->user() && in_array('Pivot HPT', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if(hasPermission('Pivot HPT'))
                         <a class="bg-blue-700 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-blue-800 flex items-center space-x-2"
                             href="{{ route('pivotTableHPT', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}">
                             <svg class="w-5 h-5 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"

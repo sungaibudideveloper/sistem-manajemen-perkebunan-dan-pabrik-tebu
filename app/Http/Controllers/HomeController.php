@@ -5,25 +5,23 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
     public function index(Request $request)
     {
-        $title = 'Home';
-        $user = DB::table('user')->where('userid', '=', Auth::user()->userid)
-            ->value('name');
-        $companyRaw = DB::table('usercompany')->where('userid', '=', Auth::user()->userid)
-            ->value('companycode');
-        $company = explode(',', $companyRaw);
-        sort($company);
+        // Navigation data sudah otomatis tersedia dari NavigationComposer
+        // $navigationMenus, $allSubmenus, $userPermissions, $companyName, $user, $userCompanies
+        
         $showPopup = !$request->session()->has('companycode');
-        $period = DB::table('company')->where('companycode', '=', session('companycode'))->value('updatedat');
         $now = Carbon::now()->toDateString();
 
-        return view('home', compact('title', 'now', 'period', 'user', 'showPopup', 'company'));
+        return view('home', [
+            'title' => 'Home',
+            'navbar' => '',
+            'now' => $now,
+            'showPopup' => $showPopup
+        ]);
     }
 
     public function setSession(Request $request)
@@ -33,7 +31,18 @@ class HomeController extends Controller
         ]);
 
         session(['companycode' => $request->dropdown_value]);
+        
+        // Set company name ke session
+        $companyName = DB::table('company')
+            ->where('companycode', $request->dropdown_value)
+            ->value('name');
+        
+        if ($companyName) {
+            session(['companyname' => $companyName]);
+        }
 
-        return redirect()->route('home');
+        $this->h_flash('Company berhasil dipilih', 'success');
+
+        return url()->previous() ? redirect()->back() : redirect()->route('home');
     }
 }

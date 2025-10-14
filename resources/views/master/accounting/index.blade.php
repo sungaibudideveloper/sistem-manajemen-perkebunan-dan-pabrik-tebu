@@ -3,7 +3,7 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <div 
+  <div
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
@@ -19,7 +19,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
         {{-- Create Button --}}
-      @if(auth()->user() && in_array('Create Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+      @if(hasPermission('Create Accounting'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
           <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,7 +63,7 @@
             <div x-show="open" x-transition class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/accounting') }}/' + form.activitycodeOriginal + '/' + form.jurnalaccnoOriginal + '/' + form.jurnalacctypeOriginal 
+                      ? '{{ url('masterdata/accounting') }}/' + form.activitycodeOriginal + '/' + form.jurnalaccnoOriginal + '/' + form.jurnalacctypeOriginal
                       : '{{ url('masterdata/accounting') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -156,13 +156,13 @@
           <tbody>
             @foreach($accounting as $data)
               <tr class="hover:bg-gray-50">
-                <td class="py-2 px-4 border-b">{{ $data->activitycode }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->activitycode }} - {{ $data->activityname }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->jurnalaccno }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->jurnalacctype }}</td>
                 <td class="py-2 px-4 border-b">{{ $data->description }}</td>
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
-                    @if(auth()->user() && in_array('Edit Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if(hasPermission('Edit Accounting'))
                       <button @click="
                         mode = 'edit';
                         form.activitycodeOriginal = '{{ $data->activitycode }}';
@@ -184,7 +184,7 @@
                         </svg>
                       </button>
                     @endif
-                    @if(auth()->user() && in_array('Hapus Accounting', json_decode(auth()->user()->permissions ?? '[]')))
+                    @if(hasPermission('Hapus Accounting'))
                       <form action="{{ url("masterdata/accounting/{$data->activitycode}/{$data->jurnalaccno}/{$data->jurnalacctype}") }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="inline">
                         @csrf
                         @method('DELETE')

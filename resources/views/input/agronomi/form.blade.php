@@ -13,8 +13,6 @@
             {{ $message }}</div>
     @enderror
 
-    @include('errorfile')
-
     <form action="{{ $url }}" method="POST">
         @csrf
         @method($method)
@@ -29,35 +27,27 @@
                         required>
                 </div>
                 <div>
-                    <label class="block text-sm">Kode Plot Sample</label>
-                    <select id="idblokplot" name="idblokplot" class="border rounded-md border-gray-300 p-2 w-full"
-                        required>
-                        <option value="" disabled selected class="text-gray">--Pilih Plot Sample--</option>
-                        @foreach ($mapping as $map)
-                            <option value="{{ $map->idblokplot }}"
-                                {{ old('idblokplot', $header->idblokplot ?? '') == $map->idblokplot ? 'selected' : '' }}
-                                class="text-black">
-                                {{ $map->idblokplot }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <label class="block text-sm">Plot Sample</label>
+                    <input type="number" name="idblokplot" id="idblokplot"
+                        class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off" maxlength="5"
+                        value="{{ old('idblokplot', $header->idblokplot ?? '') }}">
                 </div>
 
                 <div>
                     <label class="block text-sm">Kode Company</label>
-                    <input id="companycode" type="text" name="companycode" maxlength="4"
+                    <input id="companycode" type="text" name="companycode" maxlength="6"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
                         value="{{ old('companycode', $header->companycode ?? '') }}" required>
                 </div>
                 <div>
-                    <label class="block text-sm">Kode Blok</label>
+                    <label class="block text-sm">Blok</label>
                     <input id="blok" type="text" name="blok" maxlength="2"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
                         value="{{ old('blok', $header->blok ?? '') }}" required>
                 </div>
                 <div>
-                    <label class="block text-sm">Kode Plot</label>
-                    <input id="plot" type="text" name="plot" maxlength="5"
+                    <label class="block text-sm">Plot</label>
+                    <input id="plot" type="text" name="plot" maxlength="10"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
                         value="{{ old('plot', $header->plot ?? '') }}" required>
                 </div>
@@ -122,83 +112,83 @@
                             <tr>
                                 <td>
                                     <input type="text" name="lists[{{ $index }}][nourut]" min="0"
-                                        value="{{ $list['nourut'] ?? $index + 1 }}"
+                                        value="{{ $list->nourut ?? $index + 1 }}"
                                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                                 </td>
                                 <td>
-                                    <input type="number" name="lists[{{ $index }}][jumlahbatang]" min="0"
-                                        value="{{ $list['jumlahbatang'] ?? '' }}" maxlength="5"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                    <input type="number" name="lists[{{ $index }}][jumlahbatang]"
+                                        min="0" value="{{ $list->jumlahbatang ?? 0 }}" maxlength="5"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][pan_gap]" min="0"
-                                        value="{{ $list['pan_gap'] ?? '' }}" maxlength="5"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->pan_gap ?? 0 }}" maxlength="5"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" step="0.1" name="lists[{{ $index }}][ph_tanah]"
-                                        min="0" value="{{ $list['ph_tanah'] ?? '' }}" max="999.9"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->ph_tanah ?? 0 }}" max="999.9"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][ktk_gulma]"
-                                        min="0" value="{{ $list['ktk_gulma'] ?? '' }}" maxlength="2"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->ktk_gulma ?? 0 }}" maxlength="2"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][t_primer]" min="0"
-                                        value="{{ $list['t_primer'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->t_primer ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][t_sekunder]"
-                                        min="0" value="{{ $list['t_sekunder'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->t_sekunder ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][t_tersier]"
-                                        min="0" value="{{ $list['t_tersier'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->t_tersier ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][t_kuarter]"
-                                        min="0" value="{{ $list['t_kuarter'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->t_kuarter ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
-                                    <input type="number" step="0.1" name="lists[{{ $index }}][d_primer]"
-                                        min="0" value="{{ $list['d_primer'] ?? '' }}" max="999.9"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                    <input type="number" step="any" name="lists[{{ $index }}][d_primer]"
+                                        min="0" value="{{ $list->d_primer ?? 0 }}" max="999.9"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
-                                    <input type="number" step="0.1"
+                                    <input type="number" step="any"
                                         name="lists[{{ $index }}][d_sekunder]" min="0"
-                                        value="{{ $list['d_sekunder'] ?? '' }}" max="999.99"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->d_sekunder ?? 0 }}" max="999.99"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
-                                    <input type="number" step="0.1"
+                                    <input type="number" step="any"
                                         name="lists[{{ $index }}][d_tersier]" min="0"
-                                        value="{{ $list['d_tersier'] ?? '' }}" max="999.999"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->d_tersier ?? 0 }}" max="999.999"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
-                                    <input type="number" step="0.1"
+                                    <input type="number" step="any"
                                         name="lists[{{ $index }}][d_kuarter]" min="0"
-                                        value="{{ $list['d_kuarter'] ?? '' }}" max="999.9999"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->d_kuarter ?? 0 }}" max="999.9999"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <button type="button" class="flex items-center group remove-row">
@@ -291,52 +281,52 @@
                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                 </td>
                 <td>
-                    <input type="number" name="lists[${rowCount}][jumlahbatang]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                    <input type="number" name="lists[${rowCount}][jumlahbatang]" min="0" maxlength="5" value="0"
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][pan_gap]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" step="0.1" name="lists[${rowCount}][ph_tanah]" min="0" max="999.9"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][ktk_gulma]" min="0" maxlength="2"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][t_primer]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][t_sekunder]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][t_tersier]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][t_kuarter]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
-                    <input type="text" step="0.1" name="lists[${rowCount}][d_primer]" min="0" max="999.9"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                    <input type="number" step="0.1" name="lists[${rowCount}][d_primer]" min="0" max="999.9"
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
-                    <input type="text" step="0.1" name="lists[${rowCount}][d_sekunder]" min="0" max="999.99"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                    <input type="number" step="0.1" name="lists[${rowCount}][d_sekunder]" min="0" max="999.99"
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
-                    <input type="text" step="0.1" name="lists[${rowCount}][d_tersier]" min="0" max="999.999"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                    <input type="number" step="0.1" name="lists[${rowCount}][d_tersier]" min="0" max="999.999"
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
-                    <input type="text" step="0.1" name="lists[${rowCount}][d_kuarter]" min="0" max="999.9999"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                    <input type="number" step="0.1" name="lists[${rowCount}][d_kuarter]" min="0" max="999.9999"
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <button type="button" class="flex items-center group remove-row">
@@ -367,6 +357,18 @@
             if (e.target.closest('.remove-row')) {
                 e.target.closest('tr').remove();
                 resetRowNumbers();
+            }
+        });
+
+        document.addEventListener('focusin', function(e) {
+            if (e.target.matches('.auto-clear-zero') && e.target.value === '0') {
+                e.target.value = '';
+            }
+        });
+
+        document.addEventListener('focusout', function(e) {
+            if (e.target.matches('.auto-clear-zero') && e.target.value.trim() === '') {
+                e.target.value = '0';
             }
         });
 
@@ -406,33 +408,48 @@
             });
         });
     </script>
-    <script>
-        document.querySelectorAll('input[name="nosample"], select[name="idblokplot"]').forEach((element) => {
-            element.addEventListener('change', () => {
-                const noSample = document.querySelector('input[name="nosample"]').value;
-                const kdPlotSample = document.querySelector('select[name="idblokplot"]').value;
+    @if (!$isEdit)
+        <script>
+            document.querySelectorAll('input[name="nosample"], input[name="idblokplot"]').forEach((element) => {
+                element.addEventListener('change', () => {
+                    const noSample = document.querySelector('input[name="nosample"]').value;
+                    const kdPlotSample = document.querySelector('input[name="idblokplot"]').value;
 
-                if (noSample && kdPlotSample) {
-                    fetch(
-                            `{{ route('input.agronomi.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
-                        )
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.querySelector('input[name="kat"]').value = data.kat;
-                                document.querySelector('input[name="varietas"]').value = data.varietas;
-                                document.querySelector('input[name="tanggaltanam"]').value = data.tanggaltanam;
-                            } else {
-                                alert("Data tidak ditemukan, silakan isi secara manual.");
-                                document.querySelector('input[name="kat"]').value = '';
-                                document.querySelector('input[name="varietas"]').value = '';
-                                document.querySelector('input[name="tanggaltanam"]').value = '';
-                            }
-                        })
-                        .catch(err => console.error("Terjadi kesalahan:", err));
-                }
+                    if (noSample && kdPlotSample) {
+                        fetch(
+                                `{{ route('input.agronomi.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
+                            )
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    document.querySelector('input[name="kat"]').value = data.kat;
+                                    document.querySelector('input[name="varietas"]').value = data.varietas;
+                                    document.querySelector('input[name="tanggaltanam"]').value = data
+                                        .tanggaltanam;
+                                } else {
+                                    alert("Data tidak ditemukan, silakan isi secara manual.");
+                                    document.querySelector('input[name="kat"]').value = '';
+                                    document.querySelector('input[name="varietas"]').value = '';
+                                    document.querySelector('input[name="tanggaltanam"]').value = '';
+                                }
+                            })
+                            .catch(err => console.error("Terjadi kesalahan:", err));
+                    }
+                });
+            });
+        </script>
+    @endif
+
+    <script>
+        document.querySelectorAll('.auto-clear-zero').forEach(input => {
+            input.addEventListener('focus', function() {
+                if (this.value === '0') this.value = '';
+            });
+            input.addEventListener('blur', function() {
+                if (this.value.trim() === '') this.value = '0';
             });
         });
     </script>
+
 
 </x-layout>

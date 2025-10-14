@@ -5,7 +5,7 @@
     @include('errorfile')
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="flex lg:justify-between items-end mx-4 gap-2 flex-wrap justify-center">
-            @if (auth()->user() && in_array('Create Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+            @if (hasPermission('Create Agronomi'))
                 <a href="{{ route('input.agronomi.create') }}"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -17,73 +17,80 @@
                 </a>
             @endif
             <div class="flex justify-center items-end gap-2 flex-wrap">
-                <form method="POST" action="{{ route('input.agronomi.handle') }}">
-                    @csrf
-                    <div class="flex gap-2 items-end">
-                        <div>
-                            <label for="perPage" class="text-sm font-medium text-gray-700">Items per page:</label>
-                            <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
-                                min="1" onchange="this.form.submit()"
-                                class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-
+                <div class="flex gap-2 items-end flex-wrap justify-center">
+                    <div id="ajax-data" data-url="{{ route('input.agronomi.handle') }}">
+                        <div class="flex items-center gap-2 w-full">
+                            <div>
+                                <label for="perPage" class="text-sm font-medium text-gray-700">Items per
+                                    page:</label>
+                                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
+                                    min="1" autocomplete="off"
+                                    class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
                         </div>
-                        <div>
-                            <div class="relative inline-block text-left w-full">
-                                <div>
-                                    <button type="button"
-                                        class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                        id="menu-button" aria-expanded="false" aria-haspopup="true"
-                                        onclick="toggleDropdown()">
-                                        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-                                            class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                        <span>Date Filter</span>
-                                        <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                </div>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                            </svg>
+                        </div>
+                        <input type="text" id="search" autocomplete="off" name="search"
+                            value="{{ old('search', $search) }}"
+                            class="block w-[350px] p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            placeholder="Search Sample, Plot, Variety, or Category..." />
+                    </div>
+                    <div>
+                        <div class="relative inline-block text-left w-full">
+                            <div>
+                                <button type="button"
+                                    class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                    id="menu-button" aria-expanded="false" aria-haspopup="true"
+                                    onclick="toggleDropdown()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                                        class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Date Filter</span>
+                                    <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
 
-                                <div class="absolute z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
-                                    id="menu-dropdown">
-                                    <div class="py-1 px-4" role="menu" aria-orientation="vertical"
-                                        aria-labelledby="menu-button">
-                                        <div class="py-2">
-                                            <label for="start_date"
-                                                class="block text-sm font-medium text-gray-700">Start Date</label>
-                                            <input type="date" id="start_date" name="start_date"
-                                                value="{{ old('start_date', $startDate ?? '') }}"
-                                                class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                                oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                        </div>
+                            <div class="absolute z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
+                                id="menu-dropdown">
+                                <div class="py-1 px-4" role="menu" aria-orientation="vertical"
+                                    aria-labelledby="menu-button">
+                                    <div class="py-2">
+                                        <label for="start_date" class="block text-sm font-medium text-gray-700">Start
+                                            Date</label>
+                                        <input type="date" id="start_date" name="start_date"
+                                            value="{{ old('start_date', $startDate ?? '') }}"
+                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                    </div>
 
-                                        <div class="py-2">
-                                            <label for="end_date" class="block text-sm font-medium text-gray-700">End
-                                                Date</label>
-                                            <input type="date" id="end_date" name="end_date"
-                                                value="{{ old('end_date', $endDate ?? '') }}"
-                                                class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                                oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                        </div>
-
-                                        <div class="py-2">
-                                            <button type="submit" name="filter"
-                                                class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                                Apply
-                                            </button>
-                                        </div>
+                                    <div class="py-2">
+                                        <label for="end_date" class="block text-sm font-medium text-gray-700">End
+                                            Date</label>
+                                        <input type="date" id="end_date" name="end_date"
+                                            value="{{ old('end_date', $endDate ?? '') }}"
+                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
-                @if (auth()->user() && in_array('Excel Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                </div>
+                @if (hasPermission('Excel Agronomi'))
                     <button
                         class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2"
                         onclick="window.location.href='{{ route('input.agronomi.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -103,14 +110,17 @@
 
         <div class="mx-auto px-4 py-4">
             <div class="overflow-x-auto rounded-md border-gray-300 border">
-                <table class="min-w-full bg-white text-sm text-center">
+                <table class="min-w-full bg-white text-sm text-center" id="tables">
                     <thead>
                         <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Company</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.Sample
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.
                             </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">PlotSample</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
+                                Sample
+                            </th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
+                                Sample</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Varietas
                             </th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kategori
@@ -131,10 +141,9 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->company->companycode }}
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->nosample }}</td>
-                                </td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                    {{ $item->idblokplot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->plot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -146,15 +155,15 @@
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->tanggalpengamatan }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    <span class="{{ $item->status === 'Posted' ? 'bg-green-600' : 'bg-red-600' }} px-2 py-1 rounded-md text-white font-medium shadow-md">
+                                    <span
+                                        class="{{ $item->status === 'Posted' ? 'bg-green-600' : 'bg-red-600' }} px-2 py-1 rounded-md text-white font-medium shadow-md">
                                         {{ $item->status }}
                                     </span>
                                 </td>
-                                <td
-                                    class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
                                     <div class="flex items-center justify-center">
                                         <button class="group flex items-center"
-                                            onclick="showList('{{ $item->nosample }}', '{{ $item->companycode }}', '{{ $item->tanggaltanam }}')"><svg
+                                            onclick="showList('{{ $item->nosample }}', '{{ $item->companycode }}', '{{ $item->tanggalpengamatan }}')"><svg
                                                 class="w-6 h-6 text-gray-500 dark:text-white group-hover:hidden"
                                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
                                                 height="24" fill="none" viewBox="0 0 24 24">
@@ -172,9 +181,9 @@
                                             </svg>
                                             <span class="w-2"></span>
                                         </button>
-                                        @if (auth()->user() && in_array('Edit Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                        @if (hasPermission('Edit Agronomi'))
                                             @if ($item->status === 'Unposted')
-                                                <a href="{{ route('input.agronomi.edit', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
+                                                <a href="{{ route('input.agronomi.edit', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggalpengamatan' => $item->tanggalpengamatan]) }}"
                                                     class="group flex items-center"><svg
                                                         class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -199,10 +208,10 @@
                                                 </a>
                                             @endif
                                         @endif
-                                        @if (auth()->user() && in_array('Hapus Agronomi', json_decode(auth()->user()->permissions ?? '[]')))
+                                        @if (hasPermission('Hapus Agronomi'))
                                             @if ($item->status === 'Unposted')
                                                 <form
-                                                    action="{{ route('input.agronomi.destroy', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggaltanam' => $item->tanggaltanam]) }}"
+                                                    action="{{ route('input.agronomi.destroy', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggalpengamatan' => $item->tanggalpengamatan]) }}"
                                                     method="POST" class="inline">@csrf @method('DELETE')
                                                     <button type="submit" class="group flex"
                                                         onclick="return confirm('Yakin ingin menghapus data ini?')"><svg
@@ -227,17 +236,15 @@
                                                 </form>
                                             @endif
                                         @endif
-
                                     </div>
                                 </td>
-
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="mx-4 my-1">
+        <div class="mx-4 my-1" id="pagination-links">
             @if ($agronomi->hasPages())
                 {{ $agronomi->appends(['perPage' => $agronomi->perPage(), 'start_date' => $startDate, 'end_date' => $endDate])->links() }}
             @else
@@ -250,30 +257,7 @@
             @endif
         </div>
     </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const inputElement = document.getElementById("perPage");
 
-            inputElement.addEventListener("input", (event) => {
-                event.target.value = event.target.value.replace(/[^0-9]/g, '');
-            });
-        });
-    </script>
-    <script>
-        function toggleDropdown() {
-            const dropdown = document.getElementById('menu-dropdown');
-            dropdown.classList.toggle('hidden');
-        }
-
-        document.addEventListener("click", function(event) {
-            const dropdown = document.getElementById("menu-dropdown");
-            const button = document.getElementById("menu-button");
-
-            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                dropdown.classList.add("hidden");
-            }
-        });
-    </script>
     <div id="listModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95"
         style="opacity: 0; transform: scale(0.95);">
@@ -297,7 +281,7 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No. Sample</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kebun</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">block</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Blok</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luas</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Varietas</th>
@@ -346,17 +330,33 @@
     </style>
 
     <script>
-        function showList(nosample, companycode, tanggaltanam) {
+        function toggleDropdown() {
+            const dropdown = document.getElementById('menu-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        document.addEventListener("click", function(event) {
+            const dropdown = document.getElementById("menu-dropdown");
+            const button = document.getElementById("menu-button");
+
+            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add("hidden");
+            }
+        });
+    </script>
+
+    <script>
+        function showList(nosample, companycode, tanggalpengamatan) {
             const modal = document.getElementById('listModal');
             const tableBody = document.getElementById('listTableBody');
 
             tableBody.innerHTML = '';
 
             const url =
-                `{{ route('input.agronomi.show', ['nosample' => '__nosample__', 'companycode' => '__companycode__', 'tanggaltanam' => '__tanggaltanam__']) }}`
+                `{{ route('input.agronomi.show', ['nosample' => '__nosample__', 'companycode' => '__companycode__', 'tanggalpengamatan' => '__tanggalpengamatan__']) }}`
                 .replace('__nosample__', nosample)
                 .replace('__companycode__', companycode)
-                .replace('__tanggaltanam__', tanggaltanam);
+                .replace('__tanggalpengamatan__', tanggalpengamatan);
 
             fetch(url)
                 .then(response => response.json())
@@ -366,11 +366,16 @@
                         const tanggaltanam = new Date(item.tanggaltanam);
                         const now = new Date();
 
-                        const diffInTime = now - tanggaltanam;
-                        const diffInMonths = Math.ceil(diffInTime / (1000 * 3600 * 24 * 30));
+                        let diffInMonths = (now.getFullYear() - tanggaltanam.getFullYear()) * 12;
+                        diffInMonths += now.getMonth() - tanggaltanam.getMonth();
+
+                        if (now.getDate() < tanggaltanam.getDate()) {
+                            diffInMonths--;
+                        }
+
                         const umurTanam = diffInMonths >= 0 ? `${diffInMonths} Bulan` : 'Tunggu Tanggal Tanam';
 
-                        const dateInput = new Date(item.tglamat);
+                        const dateInput = new Date(item.tanggalpengamatan);
                         const month = dateInput.toLocaleString('en-US', {
                             month: 'long'
                         });
@@ -407,7 +412,7 @@
                                 <td class="py-2 px-4 border-b border-gray-300">${item.d_sekunder}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.d_tersier}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.d_kuarter}</td>
-
+                                
                             </tr>
                         `;
                         tableBody.innerHTML += row;
@@ -422,7 +427,7 @@
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
-                    alert('Gagal memuat data list.');
+                    alert('Gagal memuat data list.' + error);
                 });
         }
 

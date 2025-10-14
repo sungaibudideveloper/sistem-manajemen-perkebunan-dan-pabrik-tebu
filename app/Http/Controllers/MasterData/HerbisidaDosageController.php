@@ -16,6 +16,7 @@ class HerbisidaDosageController extends Controller
     {
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
+        $companycode = session('companycode'); // Filter by session company
     
         $qb = DB::table('herbisidadosage as d')
         ->join('herbisida as h', function($join){
@@ -23,19 +24,21 @@ class HerbisidaDosageController extends Controller
                  ->on('d.itemcode',    '=', 'h.itemcode');
         })
         ->join('herbisidagroup as g', 'd.herbisidagroupid', '=', 'g.herbisidagroupid')
-        ->select('d.*', 'h.itemname', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
+        ->where('d.companycode', $companycode) // Filter by company session
+        ->select('d.*', 'h.itemname', 'h.measure', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
 
         if ($search) {
             $qb->where(function($q) use ($search) {
                 $q->where('d.herbisidagroupid', 'like', "%{$search}%")
                 ->orWhere('d.itemcode',     'like', "%{$search}%")
-                ->orWhere('d.companycode',  'like', "%{$search}%");
+                ->orWhere('h.itemname',     'like', "%{$search}%")
+                ->orWhere('g.herbisidagroupname', 'like', "%{$search}%");
             });
         }
 
         $herbisidaDosages = $qb
-            ->orderBy('d.companycode')
             ->orderBy('g.herbisidagroupid')
+            ->orderBy('d.itemcode')
             ->paginate($perPage)
             ->appends(compact('perPage','search'));
 
@@ -52,14 +55,14 @@ class HerbisidaDosageController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'companycode' => 'required|string|max:4',
             'herbisidagroupid' => 'required|string|max:4',
             'itemcode' => 'required|string|max:30',
             'dosageperha' => 'required|numeric',
-            'dosageunit' => 'required|string|max:5',
         ]);
 
-        $exists = HerbisidaDosage::where('companycode', $request->companycode)
+        $companycode = session('companycode'); // Use session company
+
+        $exists = HerbisidaDosage::where('companycode', $companycode)
             ->where('herbisidagroupid', intval($request->herbisidagroupid))
             ->where('itemcode', $request->itemcode)
             ->exists();
@@ -73,11 +76,10 @@ class HerbisidaDosageController extends Controller
         }
        
         HerbisidaDosage::create([
-            'companycode' => $request->input('companycode'),
+            'companycode' => $companycode, // Use session company
             'herbisidagroupid' => intval($request->input('herbisidagroupid')),
             'itemcode' => $request->input('itemcode'),
             'dosageperha' => $request->input('dosageperha'),
-            'dosageunit' => $request->input('dosageunit'),
             'inputby'      => Auth::user()->userid,
             'createdat'    => now(),
         ]);
@@ -87,28 +89,29 @@ class HerbisidaDosageController extends Controller
 
     public function update(Request $request, $companycode, $herbisidagroupid, $itemcode)
     {   
+        // Ensure user can only update data for their session company
+        if ($companycode !== session('companycode')) {
+            return redirect()->back()->withErrors(['error' => 'Unauthorized access to company data']);
+        }
+
         $dosage = HerbisidaDosage::where([
             ['companycode', $companycode],
             ['herbisidagroupid', $herbisidagroupid],
             ['itemcode', $itemcode]
         ])->firstOrFail();
         
-
         $validated= $request->validate([
-            'companycode'  => 'required|string|max:4',
             'herbisidagroupid' => 'required|string|max:4',
             'itemcode'     => 'required|string|max:30',
             'description'  => 'nullable|string|max:100',
             'dosageperha'  => 'required|numeric',
-            'dosageunit'   => 'required|string|max:5',
         ]);
 
-        // Check if the companycode, activitycode, or itemcode has changed
-        if ($request->companycode !== $dosage->companycode ||
-            intval($request->herbisidagroupid) !== $dosage->herbisidagroupid ||
+        // Check if the herbisidagroupid or itemcode has changed
+        if (intval($request->herbisidagroupid) !== $dosage->herbisidagroupid ||
             $request->itemcode !== $dosage->itemcode) {
             
-            $exists = HerbisidaDosage::where('companycode',  $request->companycode)
+            $exists = HerbisidaDosage::where('companycode',  $companycode)
                 ->where('herbisidagroupid', $request->herbisidagroupid)
                 ->where('itemcode', $request->itemcode)
                 ->exists();
@@ -123,17 +126,15 @@ class HerbisidaDosageController extends Controller
             
         } 
         
-        // harus ditulis ulang semua agar mengedit baris yang tepat tidak bisa pake $dosage
         HerbisidaDosage::where([
             ['companycode',   $companycode],
             ['herbisidagroupid',  $herbisidagroupid],
             ['itemcode',      $itemcode],
         ])->update([
-            'companycode'   => $validated['companycode'],
+            'companycode'   => $companycode, // Keep same company
             'herbisidagroupid'  => $validated['herbisidagroupid'],
             'itemcode'      => $validated['itemcode'],
             'dosageperha'   => $validated['dosageperha'],
-            'dosageunit'    => $validated['dosageunit'],
             'updateby'      => Auth::user()->userid,
             'updatedat'     => now(),
         ]);
@@ -141,16 +142,19 @@ class HerbisidaDosageController extends Controller
         return redirect()->back()->with('success', 'Data berhasil diupdate.');
     }
     
-
     public function destroy(Request $request, $companycode, $herbisidagroupid, $itemcode)
     { 
-    HerbisidaDosage::where([
-        ['companycode', $companycode],
-        ['herbisidagroupid', $herbisidagroupid],
-        ['itemcode', $itemcode]
-    ])->delete();
+        // Ensure user can only delete data for their session company
+        if ($companycode !== session('companycode')) {
+            return redirect()->back()->withErrors(['error' => 'Unauthorized access to company data']);
+        }
 
-    return redirect()->back()->with('success','Data berhasil dihapus.');
+        HerbisidaDosage::where([
+            ['companycode', $companycode],
+            ['herbisidagroupid', $herbisidagroupid],
+            ['itemcode', $itemcode]
+        ])->delete();
+
+        return redirect()->back()->with('success','Data berhasil dihapus.');
     }
-
 }

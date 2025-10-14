@@ -1,5 +1,5 @@
 <?php
-
+// app\Models\RKHLst.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,10 +21,13 @@ class Rkhlst extends Model
         'jumlahlaki',
         'jumlahperempuan',
         'jumlahtenagakerja',
+        'jenistenagakerja',
         'usingmaterial',
         'herbisidagroupid',
         'usingvehicle',
-        'description',
+        'operatorid',
+        'usinghelper',
+        'helperid',
     ];
 
     protected $casts = [
@@ -33,6 +36,7 @@ class Rkhlst extends Model
         'jumlahlaki'          => 'integer',
         'jumlahperempuan'     => 'integer',
         'jumlahtenagakerja'   => 'integer',
+        'jenistenagakerja'    => 'integer',
         'usingmaterial'       => 'boolean',
         'usingvehicle'        => 'boolean',
         'herbisidagroupid'    => 'integer',

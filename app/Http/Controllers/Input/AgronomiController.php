@@ -1,14 +1,9 @@
 <?php
 
 namespace App\Http\Controllers\Input;
-use App\Http\Controllers\Controller;
 
 use Carbon\Carbon;
-use App\Models\Mapping;
-use App\Models\company;
-use App\Models\AgronomiList;
 use Illuminate\Http\Request;
-use App\Models\AgronomiHeader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -16,10 +11,12 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Http\Controllers\NotificationController;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\JsonResponse;
 
 class AgronomiController extends Controller
 {
-
     public function __construct()
     {
         View::share([
@@ -36,7 +33,7 @@ class AgronomiController extends Controller
             'companycode' => 'required',
             'blok' => 'required',
             'plot' => 'required',
-            'idblokplot' => 'required|exists:mappingblokplot,idblokplot',
+            'idblokplot' => 'required|exists:mapping,idblokplot',
             'varietas' => 'required',
             'kat' => 'required',
             'tanggaltanam' => 'required',
@@ -50,20 +47,24 @@ class AgronomiController extends Controller
             'lists.*.t_sekunder' => 'required',
             'lists.*.t_tersier' => 'required',
             'lists.*.t_kuarter' => 'required',
-            'lists.*.d_primer' => 'required|numeric',
-            'lists.*.d_sekunder' => 'required|numeric',
-            'lists.*.d_tersier' => 'required|numeric',
-            'lists.*.d_kuarter' => 'required|numeric',
+            'lists.*.d_primer' => 'required',
+            'lists.*.d_sekunder' => 'required',
+            'lists.*.d_tersier' => 'required',
+            'lists.*.d_kuarter' => 'required',
         ];
     }
     public function index(Request $request)
     {
         $title = "Daftar Agronomi";
+        $search = $request->input('search', '');
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->companycode);
-        // dd($company);
+        $userid = Auth::user()->userid;
+        $companycode = DB::table('usercompany')
+            ->where('userid', $userid)
+            ->value('companycode');
+        $companyArray = $companycode ? explode(',', $companycode) : [];
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -75,14 +76,32 @@ class AgronomiController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $agronomi = AgronomiHeader::orderBy('createdat', 'desc')->with('lists', 'company')
-            ->where('companycode', '=', session('companycode'))
+        $agronomi = DB::table('agrohdr')
+            ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
+            ->where('agrohdr.companycode', '=', session('companycode'))
+            ->where('agrohdr.closingperiode', '=', 'F')
             ->when($startDate, function ($query) use ($startDate) {
-                $query->whereDate('createdat', '>=', $startDate);
+                $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
             })
             ->when($endDate, function ($query) use ($endDate) {
-                $query->whereDate('createdat', '<=', $endDate);
-            })
+                $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
+            });
+
+        if (!empty($search)) {
+            $agronomi->where(function ($query) use ($search) {
+                $query->where('agrohdr.idblokplot', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.nosample', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.varietas', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.plot', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.kat', 'like', '%' . $search . '%');
+            });
+
+        }
+        $agronomi = $agronomi->select(
+            'agrohdr.*',
+            'company.name as nama_comp'
+        )
+            ->orderBy('agrohdr.createdat', 'desc')
             ->paginate($perPage);
 
         foreach ($agronomi as $item) {
@@ -93,7 +112,11 @@ class AgronomiController extends Controller
             $item->no = ($agronomi->currentPage() - 1) * $agronomi->perPage() + $index + 1;
         }
 
-        return view('input.agronomi.index', compact('agronomi', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('input.agronomi.index', compact('agronomi', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+
+        return view('input.agronomi.index', compact('agronomi', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 
     public function handle(Request $request)
@@ -108,7 +131,10 @@ class AgronomiController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $mapping = Mapping::where('companycode', '=', session('companycode'))->get();
+        $mapping = DB::table('mapping')
+            ->where('companycode', '=', session('companycode'))
+            ->orderByRaw("CAST(idblokplot AS UNSIGNED)")
+            ->get();
         $method = 'POST';
         $url = route('input.agronomi.handle');
         $buttonSubmit = 'Create';
@@ -118,7 +144,8 @@ class AgronomiController extends Controller
     public function getFieldByMapping(Request $request)
     {
         $idblokplot = $request->input('idblokplot');
-        $mapping = Mapping::where('idblokplot', $idblokplot)->where('companycode', session('companycode'))->first();
+        $mapping = DB::table('mapping')->where('idblokplot', $idblokplot)
+            ->where('companycode', session('companycode'))->first();
 
         if ($mapping) {
             return response()->json([
@@ -161,19 +188,20 @@ class AgronomiController extends Controller
     {
         $validated = $request->validate($this->requestValidated());
         $notifController = new NotificationController();
-        $existsInHeader = AgronomiHeader::where('nosample', $request->nosample)
+
+        $existsInHeader = DB::table('agrohdr')->where('nosample', $request->nosample)
             ->where('companycode', $request->companycode)
-            ->where('tanggaltanam', $request->tanggaltanam)
+            ->where('tanggalpengamatan', $request->tanggalpengamatan)
             ->exists();
 
-        $existsInLists = AgronomiList::where('nosample', $request->nosample)
+        $existsInLists = DB::table('agrolst')->where('nosample', $request->nosample)
             ->where('companycode', $request->companycode)
-            ->where('tanggaltanam', $request->tanggaltanam)
+            ->where('tanggalpengamatan', $request->tanggalpengamatan)
             ->exists();
 
         if ($existsInHeader || $existsInLists) {
-            return back()->withErrors([
-                'duplicate' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
+            return back()->with([
+                'success1' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
             ])->withInput();
         }
 
@@ -181,7 +209,7 @@ class AgronomiController extends Controller
 
         try {
 
-            $header = AgronomiHeader::create([
+            DB::table('agrohdr')->insert([
                 'nosample' => $validated['nosample'],
                 'companycode' => $validated['companycode'],
                 'blok' => $validated['blok'],
@@ -192,26 +220,34 @@ class AgronomiController extends Controller
                 'tanggaltanam' => $validated['tanggaltanam'],
                 'tanggalpengamatan' => $validated['tanggalpengamatan'],
                 'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
+
+            $totalPerGerminasi = 0;
+            $totalPerGulma = 0;
+            $count = count($validated['lists']);
 
             foreach ($validated['lists'] as $list) {
                 $per_gap = $list['pan_gap'] / 1000;
                 $per_germinasi = 1 - $per_gap;
                 $per_gulma = $list['ktk_gulma'] ? $list['ktk_gulma'] / 16 : 0;
 
-                $header->lists()->create([
+                DB::table('agrolst')->insert([
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
+                    'tanggalpengamatan' => $validated['tanggalpengamatan'],
+                    'kat' => $validated['kat'],
                     'nourut' => $list['nourut'],
                     'jumlahbatang' => $list['jumlahbatang'],
                     'pan_gap' => $list['pan_gap'],
                     'per_gap' => $per_gap,
-                    'per_germinasi' => 1 - $per_gap,
+                    'per_germinasi' => $per_germinasi,
                     'ph_tanah' => $list['ph_tanah'],
-                    'populasi' => $list['jumlahbatang'] / 10,
+                    'populasi' => round($list['jumlahbatang'] / 10),
                     'ktk_gulma' => $list['ktk_gulma'],
-                    'per_gulma' => $list['ktk_gulma'] ? $list['ktk_gulma'] / 16 : 0,
+                    'per_gulma' => $per_gulma,
                     't_primer' => $list['t_primer'],
                     't_sekunder' => $list['t_sekunder'],
                     't_tersier' => $list['t_tersier'],
@@ -222,12 +258,18 @@ class AgronomiController extends Controller
                     'd_kuarter' => $list['d_kuarter'],
                     'inputby' => Auth::user()->userid,
                     'createdat' => now(),
-                    'updatedat' => now()
+                    'updatedat' => now(),
                 ]);
 
-                if ($per_germinasi < 0.9 || $per_gulma > 0.25) {
-                    $notifController->agronomiNotif();
-                }
+                $totalPerGerminasi += $per_germinasi;
+                $totalPerGulma += $per_gulma;
+            }
+
+            $avgPerGerminasi = $totalPerGerminasi / $count;
+            $avgPerGulma = $totalPerGulma / $count;
+
+            if ($avgPerGerminasi < 0.9 || $avgPerGulma > 0.25) {
+                $notifController->agronomiNotif();
             }
 
             DB::commit();
@@ -236,20 +278,18 @@ class AgronomiController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
-            dd($e);
             return redirect()->route('input.agronomi.create')
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage())->withInput();
         }
     }
 
-    public function show($nosample, $companycode, $tanggaltanam)
+    public function show($nosample, $companycode, $tanggalpengamatan)
     {
 
         $agronomi = DB::table('agrohdr')
             ->where('companycode', '=', session('companycode'))
             ->where('nosample', $nosample)
-            ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
+            ->where('tanggalpengamatan', $tanggalpengamatan)
             ->first();
 
         if (!$agronomi) {
@@ -260,7 +300,7 @@ class AgronomiController extends Controller
             ->leftJoin('agrohdr', function ($join) {
                 $join->on('agrolst.nosample', '=', 'agrohdr.nosample')
                     ->whereColumn('agrolst.companycode', '=', 'agrohdr.companycode')
-                    ->whereColumn('agrolst.tanggaltanam', '=', 'agrohdr.tanggaltanam');
+                    ->whereColumn('agrolst.tanggalpengamatan', '=', 'agrohdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('agrohdr.companycode', '=', 'company.companycode');
@@ -277,7 +317,7 @@ class AgronomiController extends Controller
                 'agrolst.*',
                 'agrohdr.varietas',
                 'agrohdr.kat',
-                'agrohdr.tanggalpengamatan',
+                'agrohdr.tanggaltanam',
                 'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
@@ -286,8 +326,8 @@ class AgronomiController extends Controller
             )
             ->where('agrolst.nosample', $nosample)
             ->where('agrolst.companycode', $companycode)
-            ->where('agrolst.tanggaltanam', $tanggaltanam)
-            ->orderBy('agrolst.createdat', 'desc')
+            ->where('agrolst.tanggalpengamatan', $tanggalpengamatan)
+            ->orderBy('agrolst.nourut', 'asc')
             ->get();
 
         $now = Carbon::now();
@@ -305,50 +345,45 @@ class AgronomiController extends Controller
         return response()->json($agronomiLists);
     }
 
-    public function edit($nosample, $companycode, $tanggaltanam)
+    public function edit($nosample, $companycode, $tanggalpengamatan)
     {
         $title = 'Edit Data';
-        $header = AgronomiHeader::with(['lists' => function ($query) use ($nosample, $companycode, $tanggaltanam) {
-            $query->where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam);
-        }])
+        $header = DB::table('agrohdr')->where('nosample', $nosample)
+            ->where('companycode', $companycode)
+            ->where('tanggalpengamatan', $tanggalpengamatan)
+            ->first();
+        $lists = DB::table('agrolst')
             ->where('nosample', $nosample)
             ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
-            ->firstOrFail();
-        $list = AgronomiList::where('nosample', $nosample)
-            ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
-            ->firstOrFail();
-        $company = company::all();
-        $mapping = Mapping::all();
+            ->where('tanggalpengamatan', $tanggalpengamatan)
+            ->get();
+        $list = $lists->first();
+        $header->lists = $lists;
+
+        $company = DB::table('company')->get();
+        $mapping = DB::table('mapping')->get();
         $method = 'PUT';
         $buttonSubmit = 'Update';
-        $url = route('input.agronomi.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggaltanam' => $tanggaltanam]);
+        $url = route('input.agronomi.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggalpengamatan' => $tanggalpengamatan]);
 
         if ($header->status === "Posted") {
-            return redirect()->route('input.hpt.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
+            return redirect()->route('input.agronomi.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
         }
 
         return view('input.agronomi.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
     }
 
-    public function update(Request $request, $nosample, $companycode, $tanggaltanam)
+    public function update(Request $request, $nosample, $companycode, $tanggalpengamatan)
     {
         $validated = $request->validate($this->requestValidated());
+
         DB::beginTransaction();
 
         try {
-            $header = AgronomiHeader::where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->firstOrFail();
-
             DB::table('agrohdr')
                 ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
                 ->update([
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
@@ -362,24 +397,29 @@ class AgronomiController extends Controller
                     'updatedat' => now(),
                 ]);
 
-            $existingLists = AgronomiList::where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->get(['nourut', 'inputby', 'createdat'])
-                ->keyBy('nourut');
-
-            DB::table('agrolst')
+            $lists = DB::table('agrolst')
                 ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->delete();
+                ->where('tanggalpengamatan', $tanggalpengamatan);
 
-            $listData = [];
+            $saved = DB::table('agrolst')
+                ->where('nosample', $nosample)
+                ->where('companycode', $companycode)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->first();
+
+            $createdAt = $saved->createdat;
+            $userInput = $saved->inputby;
+
+            $lists->delete();
+
             foreach ($validated['lists'] as $list) {
-                $listData[] = [
+                $data = [
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
+                    'tanggalpengamatan' => $validated['tanggalpengamatan'],
+                    'kat' => $validated['kat'],
                     'nourut' => $list['nourut'],
                     'jumlahbatang' => $list['jumlahbatang'],
                     'pan_gap' => $list['pan_gap'],
@@ -397,38 +437,43 @@ class AgronomiController extends Controller
                     'd_sekunder' => $list['d_sekunder'],
                     'd_tersier' => $list['d_tersier'],
                     'd_kuarter' => $list['d_kuarter'],
-                    'inputby' => $existingLists[$list['nourut']]['inputby'] ?? $header->inputby,
-                    'createdat' => $existingLists[$list['nourut']]['createdat'] ?? $header->createdat,
+                    'inputby' => $userInput,
+                    'createdat' => $createdAt,
                     'updatedat' => now(),
                 ];
+                DB::table('agrolst')
+                    ->where('nosample', $nosample)
+                    ->where('companycode', $companycode)
+                    ->where('tanggalpengamatan', $tanggalpengamatan)
+                    ->where('nourut', $list['nourut'])
+                    ->insert($data);
             }
-
-            DB::table('agrolst')->insert($listData);
 
             DB::commit();
 
             return redirect()->route('input.agronomi.index')
-                ->with('success', 'Data updated successfully.');
+                ->with('success1', 'Data updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->route('input.agronomi.create')
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
 
-    public function destroy($nosample, $companycode, $tanggaltanam)
+    public function destroy($nosample, $companycode, $tanggalpengamatan)
     {
-        DB::transaction(function () use ($nosample, $companycode, $tanggaltanam) {
-            $header = AgronomiHeader::where('nosample', $nosample)
+        DB::transaction(function () use ($nosample, $companycode, $tanggalpengamatan) {
+            DB::table('agrohdr')
+                ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->firstOrFail();
-            $list = AgronomiList::where('nosample', $nosample)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->delete();
+            DB::table('agrolst')
+                ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam);
-
-            $header->delete();
-            $list->delete();
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->delete();
         });
         return redirect()->route('input.agronomi.index')
             ->with('success', 'Data deleted successfully.');
@@ -438,13 +483,12 @@ class AgronomiController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        // dd($comp);
 
         $query = DB::table('agrolst')
             ->leftJoin('agrohdr', function ($join) {
                 $join->on('agrolst.nosample', '=', 'agrohdr.nosample')
                     ->whereColumn('agrolst.companycode', '=', 'agrohdr.companycode')
-                    ->whereColumn('agrolst.tanggaltanam', '=', 'agrohdr.tanggaltanam');
+                    ->whereColumn('agrolst.tanggalpengamatan', '=', 'agrohdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('agrohdr.companycode', '=', 'company.companycode');
@@ -459,28 +503,27 @@ class AgronomiController extends Controller
             })
             ->where('agrolst.companycode', session('companycode'))
             ->where('agrohdr.companycode', session('companycode'))
+            ->where('agrohdr.status', '=', 'Posted')
+            ->where('agrolst.status', '=', 'Posted')
             ->select(
                 'agrolst.*',
                 'agrohdr.varietas',
                 'agrohdr.kat',
-                'agrohdr.tanggalpengamatan',
+                'agrohdr.tanggaltanam',
                 'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
-                'plot.luasarea',
-                'plot.jaraktanam',
+                'plot.luas_area',
+                'plot.jarak_tanam',
             )
-            ->orderBy('agrolst.createdat', 'desc');
+            ->orderBy('agrohdr.tanggalpengamatan', 'desc');
 
 
         if ($startDate) {
-            $query->whereDate('agrolst.createdat', '>=', $startDate);
+            $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('agrolst.createdat', '<=', $endDate);
-        }
-        if (!empty($comp)) {
-            $query->whereIn('agrolst.companycode', $comp);
+            $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
         }
         $agronomi = $query->get();
 
@@ -528,19 +571,19 @@ class AgronomiController extends Controller
             $tanggaltanam = Carbon::parse($list->tanggaltanam);
             $umurTanam = $tanggaltanam->diffInMonths($now);
 
-            $tglAmat = Carbon::parse($list->tanggalpengamatan);
-            $bulanPengamatan = $tglAmat->format('F');
+            $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
+            $bulanPengamatan = $tanggalpengamatan->format('F');
 
             $sheet->setCellValue('A' . $row, $list->nosample);
             $sheet->setCellValue('B' . $row, $list->compName);
             $sheet->setCellValue('C' . $row, $list->blokName);
             $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luasarea);
+            $sheet->setCellValue('E' . $row, $list->luas_area);
             $sheet->setCellValue('F' . $row, $list->varietas);
             $sheet->setCellValue('G' . $row, $list->kat);
             $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
-            $sheet->setCellValue('I' . $row, ceil($umurTanam) . ' Bulan');
-            $sheet->setCellValue('J' . $row, $list->jaraktanam);
+            $sheet->setCellValue('I' . $row, round($umurTanam) . ' Bulan');
+            $sheet->setCellValue('J' . $row, $list->jarak_tanam);
             $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
             $sheet->setCellValue('L' . $row, $bulanPengamatan);
             $sheet->setCellValue('M' . $row, $list->nourut);

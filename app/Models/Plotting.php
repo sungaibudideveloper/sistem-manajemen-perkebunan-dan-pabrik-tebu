@@ -6,32 +6,45 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plot extends Model
 {
-    public $incrementing = false;
     protected $table = 'plot';
     protected $primaryKey = ['plot', 'companycode'];
-    protected $keyType = 'char';
-    protected $fillable = ['plot', 'nama', 'luasarea', 'jaraktanam', 'companycode', 'inputby', 'createdat'];
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = false;
 
-    public function setCreatedAt($value)
+    protected $fillable = [
+        'plot', 
+        'blok',
+        'luasarea', 
+        'jaraktanam', 
+        'status',
+        'companycode', 
+        'inputby', 
+        'createdat',
+        'updatedat'
+    ];
+
+    protected $casts = [
+        'luasarea' => 'decimal:2',
+        'jaraktanam' => 'integer',
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime'
+    ];
+
+    // Accessor untuk format luas area
+    public function getFormattedLuasAreaAttribute()
     {
-        $this->attributes['createdat'] = $value;
+        return number_format($this->luasarea, 2) . ' Ha';
     }
 
-    public function getCreatedAtAttribute()
+    // Accessor untuk status description
+    public function getStatusDescriptionAttribute()
     {
-        return $this->attributes['createdat'];
+        return match($this->status) {
+            'KTG' => 'Kategang',
+            'RPL' => 'Replanting', 
+            'KBD' => 'Kebun Dewasa',
+            default => $this->status
+        };
     }
-
-    // protected function setKeysForSaveQuery($query)
-    // {
-    //     $query->where('plot', $this->getAttribute('plot'))
-    //           ->where('companycode', $this->getAttribute('companycode'));
-
-    //     return $query;
-    // }
-
-    // public function kode()
-    // {
-    //     return $this->belongsTo(company::class, 'companycode');
-    // }
 }
