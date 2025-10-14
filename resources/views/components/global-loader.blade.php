@@ -220,8 +220,10 @@ document.addEventListener('alpine:init', () => {
         const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
         
         // Show loader immediately if navigation was in progress
-        if (Alpine.store('loading')) {
+        if (typeof Alpine !== 'undefined' && Alpine.store && Alpine.store('loading')) {
             Alpine.store('loading').start();
+        } else {
+            window.dispatchEvent(new CustomEvent('loading-start'));
         }
         
         // Wait for page to be fully ready

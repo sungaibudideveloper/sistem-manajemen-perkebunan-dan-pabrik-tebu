@@ -3,9 +3,18 @@
     <div class="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Desktop toggle button + Mobile menu button + Page title -->
         <div class="flex items-center space-x-4">
-            <!-- Desktop Sidebar Toggle Button -->
-            <button @click="toggleSidebar()" 
-                    class="flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
+            <!-- Mobile Sidebar Toggle Button (Hamburger) -->
+            <button @click="$store.sidebar.toggleMobile()" 
+                    class="lg:hidden flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
+                <span class="sr-only">Open sidebar</span>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <!-- Desktop Sidebar Toggle Button (Collapse/Expand) -->
+            <button @click="$store.sidebar.toggle()" 
+                    class="hidden lg:flex p-2 rounded-lg bg-gray-100 text-gray-900 hover:text-gray-900 hover:bg-gray-200 transition-colors">
                 <span class="sr-only">Toggle sidebar</span>
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -35,7 +44,7 @@
         <!-- Right: Notifications + User Profile -->
         <div class="flex items-center space-x-3">
             
-            <!-- ✅ NOTIFICATION DROPDOWN - UPDATED -->
+            <!-- ? NOTIFICATION DROPDOWN - UPDATED -->
             <div x-data="notificationDropdown()" @click.away="open = false" class="relative">
                 <button @click="toggleDropdown()" 
                    class="relative p-2 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
@@ -245,7 +254,7 @@
 </header>
 
 <script>
-// ✅ NOTIFICATION DROPDOWN COMPONENT
+// ? NOTIFICATION DROPDOWN COMPONENT
 function notificationDropdown() {
     return {
         open: false,
@@ -403,13 +412,4 @@ function notificationDropdown() {
         }
     }
 }
-
-// Function untuk toggle sidebar dari header
-function toggleSidebar() {
-    if (Alpine.store('sidebar')) {
-        Alpine.store('sidebar').toggle();
-    }
-}
-
-window.toggleSidebar = toggleSidebar;
 </script>
