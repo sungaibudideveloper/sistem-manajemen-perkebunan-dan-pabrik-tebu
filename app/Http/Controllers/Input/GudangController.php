@@ -412,6 +412,12 @@ class GudangController extends Controller
 
                 // update nouse & itemprice
                 foreach ($itemPriceMap as $itemcode => $itemprice) {
+                    Log::info("Before DB update:", [
+                        'itemcode' => $itemcode, 
+                        'itemprice' => $itemprice,
+                        'type' => gettype($itemprice)
+                    ]);
+
                     usemateriallst::where('rkhno', $request->rkhno)
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
@@ -419,6 +425,18 @@ class GudangController extends Controller
                             'nouse'     => $responseData['noUse'],
                             'itemprice' => $itemprice,
                         ]);
+
+                    // Cek hasil di database
+                    $saved = usemateriallst::where('rkhno', $request->rkhno)
+                        ->where('companycode', session('companycode'))
+                        ->where('itemcode', $itemcode)
+                        ->value('itemprice');
+
+                    Log::info("After DB update:", [
+                        'itemcode' => $itemcode,
+                        'itemprice_saved' => $saved,
+                        'type' => gettype($saved)
+                    ]);
                 }
 
                 // Buat mapping itemprice by itemcode
@@ -438,7 +456,7 @@ class GudangController extends Controller
                 //             'itemprice' => $itemprice
                 //         ]);
                 // }
-                
+                 
                 // Update header status
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
