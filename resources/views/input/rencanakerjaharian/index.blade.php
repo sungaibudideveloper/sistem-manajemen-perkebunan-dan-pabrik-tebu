@@ -376,10 +376,12 @@
                     alert('Silakan pilih tanggal terlebih dahulu');
                     return;
                 }
+                // Buat Munculin Global Loading State
+                Alpine.store('loading').start();
                 window.location.href = `{{ route('input.rencanakerjaharian.create') }}?date=${this.createDate}`;
             },
 
-            // ✅ NEW: Reset report modal
+            // Reset report modal
             resetReportModal() {
                 this.selectedReportType = '';
                 this.selectedOperatorId = '';
@@ -387,7 +389,7 @@
                 this.isLoadingOperators = false;
             },
 
-            // ✅ NEW: Load operators for selected date
+            // Load operators for selected date
             async loadOperatorsForDate() {
                 if (!this.rekapLkhDate) {
                     this.availableOperators = [];
@@ -417,7 +419,7 @@
                 }
             },
 
-            // ✅ NEW: Generate selected report (unified method)
+            // Generate selected report (unified method)
             async generateSelectedReport() {
                 if (!this.canGenerateReport) return;
 
@@ -582,7 +584,7 @@
                 }
             },
 
-            // ✅ UPDATED: Legacy method now uses unified approach
+            // Legacy method now uses unified approach
             async generateRekapLKH() {
                 this.selectedReportType = 'rekap';
                 await this.generateSelectedReport();

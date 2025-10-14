@@ -6,7 +6,6 @@ use App\Http\Controllers\MasterData\BatchController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MasterListController;
 use App\Http\Controllers\MasterData\PlottingController;
-use App\Http\Controllers\MasterData\UsernameController;
 use App\Http\Controllers\MasterData\HerbisidaController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
 use App\Http\Controllers\MasterData\JabatanController;
@@ -219,27 +218,7 @@ Route::delete('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanCont
     ->middleware(['auth', 'permission:Hapus Kendaraan'])
     ->name('masterdata.kendaraan.destroy');
 
-//Kelola User (Legacy under masterdata - will be deprecated)
-Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
-    Route::post('masterdata/username', [UsernameController::class, 'handle'])->name('masterdata.username.handle');
-    Route::get('masterdata/username', [UsernameController::class, 'index'])->name('masterdata.username.index');
-});
-Route::get('masterdata/username/create', [UsernameController::class, 'create'])
-    ->name('master.username.create')->middleware('permission:Create User');
-Route::delete('masterdata/username/{userid}/{companycode}', [UsernameController::class, 'destroy'])
-    ->name('master.username.destroy')->middleware('permission:Hapus User');
-Route::group(['middleware' => ['auth', 'permission:Edit User']], function () {
-    Route::put('masterdata/username/update/{userid}/{companycode}', [UsernameController::class, 'update'])
-        ->name('master.username.update');
-    Route::get('masterdata/username/{userid}/{companycode}/edit', [UsernameController::class, 'edit'])
-        ->name('master.username.edit');
-});
-Route::group(['middleware' => ['auth', 'permission:Hak Akses']], function () {
-    Route::put('masterdata/username/access/{userid}', [UsernameController::class, 'setaccess'])
-        ->name('masterdata.username.setaccess');
-    Route::get('masterdata/username/{userid}/access', [UsernameController::class, 'access'])
-        ->name('masterdata.username.access');
-});
+
 
 // =============================================================================
 // USER MANAGEMENT ROUTES - New Permission System
@@ -339,6 +318,7 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
 
 // Public ticket submission (no auth required - for forgot password)
 Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
+    ->middleware('throttle:10,60') // 3 requests per 60 menit per IP
     ->name('support.ticket.submit');
 
 // =============================================================================

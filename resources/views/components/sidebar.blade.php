@@ -12,15 +12,15 @@
     $navComposer = app(\App\View\Composers\NavigationComposer::class);
     
     /**
-     * ✨ NEW: Convention-Based Route Generator
+     * ? NEW: Convention-Based Route Generator
      * 
      * CONVENTION:
      * Route Name Pattern: {menu_slug}.{submenu_slug}.index
      * 
      * Examples:
-     * - masterdata + company → masterdata.company.index
-     * - usermanagement + support-ticket → usermanagement.support-ticket.index
-     * - dashboard + timeline → dashboard.timeline.index
+     * - masterdata + company ? masterdata.company.index
+     * - usermanagement + support-ticket ? usermanagement.support-ticket.index
+     * - dashboard + timeline ? dashboard.timeline.index
      * 
      * SPECIAL CASES yang tidak ikut pattern disimpan di $routeOverrides
      */
@@ -57,7 +57,7 @@
         ];
         
         // ============================================
-        // LOGIC: Check Override → Convention → Fallback
+        // LOGIC: Check Override ? Convention ? Fallback
         // ============================================
         
         // 1. Check: Ada override untuk kombinasi menu+submenu ini?
@@ -137,10 +137,20 @@
 @endphp
 
 <!-- Sidebar Container -->
-<div class="fixed inset-y-0 left-0 z-50 flex flex-col bg-white border-r border-gray-200 transition-all duration-300" 
+<!-- 
+    ? MOBILE RESPONSIVE CHANGES:
+    - lg:fixed = Fixed on desktop, absolute on mobile
+    - -translate-x-full lg:translate-x-0 = Hidden off-screen on mobile by default
+    - $store.sidebar.mobileOpen controls mobile visibility
+-->
+<div class="fixed lg:fixed inset-y-0 left-0 z-50 flex flex-col bg-white border-r border-gray-200 transition-all duration-300" 
      x-data="sidebarData()" 
      x-init="init()"
-     :class="$store.sidebar.isMinimized ? 'w-16' : 'w-72'">
+     :class="[
+        $store.sidebar.isMinimized ? 'w-16' : 'w-72',
+        // Mobile: slide in/out from left
+        $store.sidebar.mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+     ]">
     
     <!-- Header -->
     <div class="flex h-[94px] shrink-0 items-center justify-between bg-green-50 border-b border-gray-200"
@@ -163,6 +173,14 @@
                 <div class="text-gray-500 text-xs font-medium">Sugarcane Management System</div>
             </div>
         </a>
+        
+        <!-- Mobile Close Button -->
+        <button @click="$store.sidebar.closeMobile()" 
+                class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
     </div>
 
     <!-- Navigation -->
@@ -368,8 +386,8 @@
         @endforeach
     </nav>
 
-    <!-- Bottom Collapse Button -->
-    <div class="bg-green-50 border-t border-gray-200 p-3">
+    <!-- Bottom Collapse Button (Desktop Only) -->
+    <div class="hidden lg:block bg-green-50 border-t border-gray-200 p-3">
         <button @click="toggleSidebar()" 
                 class="flex items-center justify-center w-full p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all duration-200 group"
                 :class="$store.sidebar.isMinimized ? 'px-1.5' : 'px-3'">
@@ -429,6 +447,13 @@ function sidebarData() {
                             }
                         });
                     });
+                }
+            });
+            
+            // Close mobile sidebar when clicking menu item
+            this.$el.addEventListener('click', (e) => {
+                if (e.target.tagName === 'A' && window.innerWidth < 1024) {
+                    this.$store.sidebar.closeMobile();
                 }
             });
         },

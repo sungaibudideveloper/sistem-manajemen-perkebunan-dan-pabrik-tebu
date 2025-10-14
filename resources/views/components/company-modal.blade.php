@@ -37,7 +37,9 @@
             </button>
         </div>
         
-        <form action="{{ route('setSession') }}" method="POST" @submit="handleSubmit()">
+        <form action="{{ route('setSession') }}" 
+            method="POST" 
+            @submit="Alpine.store('loading').start(); handleSubmit()"> <!-- Trigger global loading on submit -->
             @csrf
             <div class="px-6 py-6">
                 <label class="block text-sm font-medium text-slate-700 mb-3">Choose Company</label>

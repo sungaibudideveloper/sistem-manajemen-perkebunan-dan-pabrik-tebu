@@ -29,11 +29,25 @@
         
         /* Base layout styles to prevent flash */
         .layout-container { display: flex; min-height: 100vh; }
-        .sidebar-wrapper {width: 18rem;flex-shrink: 0; transition: width 0.3s ease; }
-        .main-wrapper { flex: 1;margin-left: 0; }
         
-        /* Minimized state */
-        .sidebar-minimized .sidebar-wrapper { width: 4rem; }
+        /* Mobile: No sidebar space reserved */
+        .sidebar-wrapper { 
+            width: 0; 
+            flex-shrink: 0; 
+            transition: width 0.3s ease;
+        }
+        
+        /* Desktop: Reserve sidebar space */
+        @media (min-width: 1024px) {
+            .sidebar-wrapper { 
+                width: 18rem; 
+            }
+            .sidebar-minimized .sidebar-wrapper { 
+                width: 4rem; 
+            }
+        }
+        
+        .main-wrapper { flex: 1; margin-left: 0; }
         
         /* Show body after state determined */
         body.ready { visibility: visible; opacity: 1; transition: opacity 0.15s ease; }
@@ -57,8 +71,8 @@
             const cookieState = document.cookie.match(/sidebar_minimized=([^;]+)/);
             const isMinimized = localState ? localState === 'true' : (cookieState ? cookieState[1] === 'true' : false);
             
-            // Apply state to HTML element
-            if (isMinimized) {
+            // Apply state to HTML element (only affects desktop)
+            if (isMinimized && window.innerWidth >= 1024) {
                 document.documentElement.classList.add('sidebar-minimized');
             }
         })();
@@ -152,15 +166,15 @@
         </div>
 
         <!-- Mobile sidebar overlay -->
-        <div x-show="sidebarOpen" 
+        <div x-show="$store.sidebar.mobileOpen" 
+             @click="$store.sidebar.closeMobile()"
              x-transition:enter="transition-opacity ease-linear duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
              x-transition:leave="transition-opacity ease-linear duration-300"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50 bg-gray-900 bg-opacity-50 lg:hidden"
-             @click="sidebarOpen = false">
+             class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 lg:hidden">
         </div>
     </div>
 
@@ -170,12 +184,9 @@
     @endif
 
     <script>
-        // Show body after everything loads
-        window.addEventListener('DOMContentLoaded', () => {
-            document.body.classList.add('ready');
-        });
-
-        // Cookie helper functions
+        // ============================================
+        // COOKIE HELPER FUNCTIONS
+        // ============================================
         function setCookie(name, value, days = 365) {
             const expires = new Date(Date.now() + days * 864e5).toUTCString();
             document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
@@ -186,83 +197,139 @@
             return match ? match[2] : null;
         }
 
-        // Main layout Alpine component
+        // ============================================
+        // MAIN LAYOUT COMPONENT
+        // ============================================
         function mainLayoutData() {
             return {
-                sidebarOpen: false,
-                sidebarMinimized: false,
-                
                 init() {
-                    // Get initial state from localStorage or cookie
-                    const localState = localStorage.getItem('sidebar-minimized');
-                    const cookieState = getCookie('sidebar_minimized');
-                    
-                    // localStorage takes priority over cookie
-                    this.sidebarMinimized = localState !== null 
-                        ? localState === 'true' 
-                        : (cookieState === 'true');
-                    
-                    // Apply state to HTML
-                    if (this.sidebarMinimized) {
-                        document.documentElement.classList.add('sidebar-minimized');
-                    } else {
-                        document.documentElement.classList.remove('sidebar-minimized');
-                    }
-                    
-                    // Listen for toggle events
-                    window.addEventListener('sidebar-toggle', (e) => {
-                        this.sidebarMinimized = e.detail.minimized;
+                    // Desktop only: Get initial state from localStorage or cookie
+                    if (window.innerWidth >= 1024) {
+                        const localState = localStorage.getItem('sidebar-minimized');
+                        const cookieState = getCookie('sidebar_minimized');
                         
-                        // Update HTML class
-                        if (this.sidebarMinimized) {
+                        const isMinimized = localState !== null 
+                            ? localState === 'true' 
+                            : (cookieState === 'true');
+                        
+                        // Apply state to HTML
+                        if (isMinimized) {
                             document.documentElement.classList.add('sidebar-minimized');
                         } else {
                             document.documentElement.classList.remove('sidebar-minimized');
                         }
-                    });
+                        
+                        // Sync with Alpine store
+                        this.$nextTick(() => {
+                            if (Alpine.store('sidebar')) {
+                                Alpine.store('sidebar').isMinimized = isMinimized;
+                            }
+                        });
+                    }
                     
-                    // Sync with Alpine store
-                    this.$nextTick(() => {
-                        if (Alpine.store('sidebar')) {
-                            Alpine.store('sidebar').isMinimized = this.sidebarMinimized;
+                    // Listen for toggle events
+                    window.addEventListener('sidebar-toggle', (e) => {
+                        if (window.innerWidth >= 1024) {
+                            // Update HTML class
+                            if (e.detail.minimized) {
+                                document.documentElement.classList.add('sidebar-minimized');
+                            } else {
+                                document.documentElement.classList.remove('sidebar-minimized');
+                            }
                         }
                     });
                 }
             }
         }
 
-        // Global Alpine store
+        // ============================================
+        // GLOBAL ALPINE STORE
+        // ============================================
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
                 isMinimized: false,
+                mobileOpen: false,
                 
                 init() {
-                    // Initialize from storage
-                    const localState = localStorage.getItem('sidebar-minimized');
-                    const cookieState = getCookie('sidebar_minimized');
-                    this.isMinimized = localState !== null 
-                        ? localState === 'true' 
-                        : (cookieState === 'true');
-                },
-                
-                toggle() {
-                    this.isMinimized = !this.isMinimized;
-                    
-                    // Save to both localStorage and cookie
-                    localStorage.setItem('sidebar-minimized', this.isMinimized);
-                    setCookie('sidebar_minimized', this.isMinimized);
-                    
-                    // Update HTML class
-                    if (this.isMinimized) {
-                        document.documentElement.classList.add('sidebar-minimized');
-                    } else {
-                        document.documentElement.classList.remove('sidebar-minimized');
+                    // Initialize from storage (desktop only)
+                    if (window.innerWidth >= 1024) {
+                        const localState = localStorage.getItem('sidebar-minimized');
+                        const cookieState = getCookie('sidebar_minimized');
+                        this.isMinimized = localState !== null 
+                            ? localState === 'true' 
+                            : (cookieState === 'true');
                     }
                     
-                    // Dispatch event
-                    window.dispatchEvent(new CustomEvent('sidebar-toggle', {
-                        detail: { minimized: this.isMinimized }
-                    }));
+                    // ============================================
+                    // FIX: RESPONSIVE RESIZE HANDLER
+                    // Reset state saat switch mobile/desktop
+                    // ============================================
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth < 1024) {
+                            // Masuk mobile view: Reset minimized state
+                            this.isMinimized = false;
+                            document.documentElement.classList.remove('sidebar-minimized');
+                        } else {
+                            // Masuk desktop view: Restore state dari storage
+                            const localState = localStorage.getItem('sidebar-minimized');
+                            const cookieState = getCookie('sidebar_minimized');
+                            this.isMinimized = localState !== null 
+                                ? localState === 'true' 
+                                : (cookieState === 'true');
+                            
+                            // Apply ke HTML
+                            if (this.isMinimized) {
+                                document.documentElement.classList.add('sidebar-minimized');
+                            } else {
+                                document.documentElement.classList.remove('sidebar-minimized');
+                            }
+                            
+                            // Close mobile sidebar jika kebetulan terbuka
+                            this.mobileOpen = false;
+                        }
+                    });
+                },
+                
+                // Desktop toggle (collapse/expand)
+                toggle() {
+                    if (window.innerWidth >= 1024) {
+                        this.isMinimized = !this.isMinimized;
+                        
+                        // Save to both localStorage and cookie
+                        localStorage.setItem('sidebar-minimized', this.isMinimized);
+                        setCookie('sidebar_minimized', this.isMinimized);
+                        
+                        // Update HTML class
+                        if (this.isMinimized) {
+                            document.documentElement.classList.add('sidebar-minimized');
+                        } else {
+                            document.documentElement.classList.remove('sidebar-minimized');
+                        }
+                        
+                        // Dispatch event
+                        window.dispatchEvent(new CustomEvent('sidebar-toggle', {
+                            detail: { minimized: this.isMinimized }
+                        }));
+                    }
+                },
+                
+                // Mobile toggle (show/hide)
+                toggleMobile() {
+                    if (window.innerWidth < 1024) {
+                        this.mobileOpen = !this.mobileOpen;
+                    }
+                },
+                
+                // Mobile close
+                closeMobile() {
+                    this.mobileOpen = false;
+                },
+                
+                // Mobile open
+                openMobile() {
+                    if (window.innerWidth < 1024) {
+                        this.mobileOpen = true;
+                    }
                 }
             });
             
@@ -270,7 +337,14 @@
             Alpine.store('sidebar').init();
         });
 
-        // ========== SERVICE WORKER MANAGEMENT ==========
+        // Show body after everything loads
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('ready');
+        });
+
+        // ============================================
+        // SERVICE WORKER MANAGEMENT
+        // ============================================
         
         // Clear cache on logout
         document.addEventListener('DOMContentLoaded', function() {
@@ -309,11 +383,11 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Add timestamp to force update in development
-                const swUrl =   @if(config('app.env') === 'local')
-                                    '{{ asset("sw.js") }}' + '?v=' + Date.now();
-                                    @else
-                                    '{{ url("/") }}/sw.js?v=6';
-                                @endif
+                const swUrl = @if(config('app.env') === 'local')
+                                '{{ asset("sw.js") }}' + '?v=' + Date.now();
+                              @else
+                                '{{ url("/") }}/sw.js?v=6';
+                              @endif
                 
                 navigator.serviceWorker.register(swUrl)
                     .then(function(registration) {
@@ -410,6 +484,10 @@
 
     <x-sprite-svg />
     @stack('scripts')
+
+    <!-- Global Loading Indicator -->
+    <x-global-loader />
+    
 </body>
 <x-script></x-script>
 <x-style></x-style>

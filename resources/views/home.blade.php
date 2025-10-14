@@ -3,9 +3,7 @@
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     
-    <!-- Wrapper div untuk layout sidebar + content -->
     <div class="flex min-h-screen bg-gray-200">
-        <!-- Sidebar -->
         <x-sidebar 
             :navigationMenus="$navigationMenus"
             :allSubmenus="$allSubmenus" 
@@ -13,21 +11,17 @@
             :companyName="$companyName"
         />
 
-        <!-- Main Content Area -->
         <main class="flex-1 transition-all duration-300" 
               x-data="homeData()"
               x-init="init()">
             
-            <!-- Content Container -->
             <div class="p-6">
                 <!-- Modern Hero Section with Green Theme -->
                 <div class="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-900 rounded-2xl shadow-xl mb-8">
-                    <!-- Subtle pattern overlay -->
                     <div class="absolute inset-0 opacity-5">
                         <div class="absolute inset-0 bg-[url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.1"><path d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/></g></g></svg>')] bg-repeat"></div>
                     </div>
                     
-                    <!-- Decorative elements -->
                     <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-full blur-3xl"></div>
                     <div class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-green-500/10 to-emerald-500/10 rounded-full blur-3xl"></div>
                     
@@ -45,19 +39,31 @@
                                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400">{{ $user }}</span>
                             </h1>
                             
-                            <p class="text-xl text-emerald-100 mb-8 max-w-3xl leading-relaxed">
+                            <!-- ✅ UPDATED: Hide on mobile (hidden md:block) -->
+                            <p class="hidden md:block text-xl text-emerald-100 mb-8 max-w-3xl leading-relaxed">
                                 Comprehensive sugarcane plantation management system for Sungai Budi. 
                                 Monitor growth, analyze data, and optimize operations with intelligent insights.
                             </p>
                             
+                            <!-- ✅ UPDATED: Changed from 2 to 3 buttons -->
                             <div class="flex flex-col sm:flex-row gap-4">
                                 <a href="{{ route('input.rencanakerjaharian.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                                     </svg>
-                                    Planning (RKH)
+                                    Planning
                                 </a>
+                                
+                                <!-- ✅ NEW: Approval button -->
+                                <a href="{{ route('input.approval.index') }}" 
+                                   class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
+                                    <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Approval
+                                </a>
+                                
                                 <a href="{{ route('report.agronomi.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

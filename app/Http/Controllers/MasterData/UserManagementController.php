@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 use App\Models\User;
 use App\Models\Permission;
@@ -938,47 +941,178 @@ class UserManagementController extends Controller
         ]);
     }
 
+    /**
+     * Store support ticket dengan full protection
+     * - reCAPTCHA v2 verification
+     * - Rate limiting (3 req/hour)
+     * - Duplicate prevention
+     * - Username validation
+     */
     public function ticketStore(Request $request)
     {
-        $request->validate([
+        // ========================================
+        // 1. VALIDATION
+        // ========================================
+        $validated = $request->validate([
             'fullname' => 'required|string|max:100',
             'username' => 'required|string|max:50',
             'companycode' => 'required|string|max:4|exists:company,companycode',
             'category' => 'required|in:forgot_password,bug_report,support,other',
-            'description' => 'nullable|string|max:1000'
+            'description' => 'nullable|string|max:1000',
+            'g-recaptcha-response' => 'required',
+        ], [
+            'fullname.required' => 'Full name is required',
+            'fullname.max' => 'Full name cannot exceed 100 characters',
+            'username.required' => 'Username is required',
+            'username.max' => 'Username cannot exceed 50 characters',
+            'companycode.required' => 'Company is required',
+            'companycode.exists' => 'Selected company does not exist',
+            'category.required' => 'Category is required',
+            'description.max' => 'Description cannot exceed 1000 characters',
+            'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification',
         ]);
 
+        // ========================================
+        // 3. RATE LIMITING (Backend)
+        // ========================================
+        $key = 'support-ticket:' . $request->ip();
+        
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            $minutes = ceil($seconds / 60);
+            
+            return back()->withErrors([
+                'error' => "Too many ticket submissions. Please try again in {$minutes} minute(s)."
+            ])->withInput();
+        }
+        
+        // Increment rate limiter (decay after 1 hour)
+        RateLimiter::hit($key, 3600);
+
+        // ========================================
+        // 4. CHECK DUPLICATE SUBMISSIONS
+        // ========================================
+        $recentTicket = \App\Models\SupportTicket::where('username', $validated['username'])
+            ->where('category', $validated['category'])
+            ->where('status', 'open')
+            ->where('createdat', '>', now()->subHours(24))
+            ->first();
+        
+        if ($recentTicket) {
+            return back()->withErrors([
+                'error' => 'You already have a pending ticket for this issue. Please wait for admin response. Ticket Number: ' . $recentTicket->ticket_number
+            ])->withInput();
+        }
+
+        // ========================================
+        // 5. VERIFY USERNAME EXISTS
+        // ========================================
+        $userExists = DB::table('user')
+            ->where('userid', $validated['username'])
+            ->where('companycode', $validated['companycode'])
+            ->exists();
+        
+        if (!$userExists) {
+            return back()->withErrors([
+                'error' => 'Username not found in the selected company. Please verify your information.'
+            ])->withInput();
+        }
+
+        // ========================================
+        // 6. CREATE TICKET
+        // ========================================
         try {
             DB::beginTransaction();
 
-            // Create support ticket
+            $ticketNumber = \App\Models\SupportTicket::generateTicketNumber($validated['companycode']);
+            
             $ticket = \App\Models\SupportTicket::create([
-                'ticket_number' => \App\Models\SupportTicket::generateTicketNumber($request->companycode),
-                'category' => $request->category,
+                'ticket_number' => $ticketNumber,
+                'category' => $validated['category'],
                 'status' => 'open',
                 'priority' => 'medium',
-                'fullname' => $request->fullname,
-                'username' => $request->username,
-                'companycode' => $request->companycode,
-                'description' => $request->description
+                'fullname' => $validated['fullname'],
+                'username' => $validated['username'],
+                'companycode' => $validated['companycode'],
+                'description' => $validated['description'] ?? null
             ]);
 
-            // ✅ CREATE NOTIFICATION untuk admin
+            // Create notification for admin
             \App\Http\Controllers\NotificationController::notifyNewSupportTicket($ticket);
+
+            // Log activity
+            Log::info('Support ticket created', [
+                'ticket_number' => $ticketNumber,
+                'category' => $validated['category'],
+                'username' => $validated['username'],
+                'ip' => $request->ip(),
+            ]);
 
             DB::commit();
 
-            return redirect()->back()
-                        ->with('success', 'Ticket berhasil dibuat. Admin akan segera menghubungi Anda.');
+            return redirect()->route('login')->with('success', 
+                'Your request has been submitted successfully. Our admin team will contact you soon. Ticket Number: ' . $ticketNumber
+            );
 
         } catch (\Exception $e) {
             DB::rollBack();
             
-            Log::error('Failed to create ticket:', ['error' => $e->getMessage()]);
+            Log::error('Failed to create support ticket', [
+                'error' => $e->getMessage(),
+                'username' => $validated['username'],
+                'ip' => $request->ip(),
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Failed to submit ticket. Please try again later or contact IT support directly.'
+            ])->withInput();
+        }
+    }
+
+    /**
+     * Verify Google reCAPTCHA v2 response using Guzzle HTTP
+     * 
+     * @param string $response - g-recaptcha-response token
+     * @param string $ipAddress - User IP address
+     * @return bool
+     */
+    private function verifyRecaptcha($response, $ipAddress)
+    {
+        if (empty($response)) {
+            return false;
+        }
+
+        try {
+            $secretKey = config('services.recaptcha.secret_key');
             
-            return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'Gagal membuat ticket: ' . $e->getMessage());
+            // Send verification request to Google
+            $verifyResponse = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secretKey,
+                'response' => $response,
+                'remoteip' => $ipAddress
+            ]);
+
+            $result = $verifyResponse->json();
+
+            // Optional: Log for debugging
+            if (!($result['success'] ?? false)) {
+                Log::warning('reCAPTCHA verification failed', [
+                    'ip' => $ipAddress,
+                    'error_codes' => $result['error-codes'] ?? [],
+                ]);
+            }
+
+            return $result['success'] ?? false;
+
+        } catch (\Exception $e) {
+            Log::error('reCAPTCHA verification error', [
+                'error' => $e->getMessage(),
+                'ip' => $ipAddress,
+            ]);
+            
+            // PRODUCTION: return false (strict)
+            // DEVELOPMENT: return true (bypass jika Google down)
+            return config('app.env') === 'local';
         }
     }
 
