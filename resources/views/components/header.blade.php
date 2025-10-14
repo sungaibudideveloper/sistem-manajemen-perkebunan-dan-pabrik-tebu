@@ -165,12 +165,38 @@
 
             <!-- User Profile Dropdown -->
             <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                <!-- Ngambil Initial Nama untuk Avatar -->
+                @php
+                    $name = Auth::user()->name;
+                    $words = array_filter(explode(' ', trim($name)));
+                    
+                    if (count($words) === 0) {
+                        $initials = '?';
+                    } elseif (count($words) === 1) {
+                        $initials = strtoupper(substr($words[0], 0, 1));
+                    } else {
+                        $initials = strtoupper(substr($words[0], 0, 1)) . 
+                                    strtoupper(substr($words[1], 0, 1));
+                    }
+                    
+                    $colors = [
+                        'bg-slate-600',
+                        'bg-gray-600',
+                        'bg-zinc-600',
+                        'bg-stone-600',
+                        'bg-neutral-600',
+                        'bg-slate-700',
+                        'bg-gray-700',
+                        'bg-zinc-700',
+                    ];
+                    $colorIndex = abs(crc32($name)) % count($colors);
+                    $bgColor = $colors[$colorIndex];
+                @endphp
                 <button @click="open = !open" 
                         class="flex items-center space-x-2 p-1 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
-                    <img class="h-8 w-8 rounded-full ring-2 ring-gray-200"
-                         src="{{ asset('asset/kacamata.avif') }}"
-                         alt="{{ Auth::user()->name }}"
-                         loading="lazy" decoding="async" />
+                    <div class="h-8 w-8 rounded-full ring-2 ring-gray-200 {{ $bgColor }} flex items-center justify-center">
+                        <span class="text-white text-sm font-semibold">{{ $initials }}</span>
+                    </div>
                     <div class="hidden md:block text-left">
                         <div class="text-sm font-medium text-gray-900">{{ Auth::user()->name }}</div>
                     </div>

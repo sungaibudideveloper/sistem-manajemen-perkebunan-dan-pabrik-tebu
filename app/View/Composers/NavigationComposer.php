@@ -241,7 +241,7 @@ class NavigationComposer
             if (session('companycode')) {
                 $period = DB::table('company')
                     ->where('companycode', session('companycode'))
-                    ->value('updatedat');
+                    ->value('companyperiod');
                 
                 if ($period) {
                     return Carbon::parse($period)->format('F Y');
