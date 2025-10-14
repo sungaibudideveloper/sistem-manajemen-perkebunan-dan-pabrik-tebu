@@ -10,16 +10,16 @@ import {
 
 // Dynamic URL Helper Functions
 const getBaseUrl = (): string => {
-  const origin = window.location.origin;
   const pathname = window.location.pathname;
   
-  // Check if we're in development (has /tebu/public) or production
-  if (pathname.includes('/tebu/public')) {
-    return `${origin}/tebu/public`;
+  // Extract base path before /mandor
+  const mandorIndex = pathname.indexOf('/mandor');
+  if (mandorIndex > 0) {
+    return window.location.origin + pathname.substring(0, mandorIndex);
   }
   
-  // Production or other environments
-  return origin;
+  // If no /mandor in path, return origin only
+  return window.location.origin;
 };
 
 const buildMandorUrl = (path: string): string => {
