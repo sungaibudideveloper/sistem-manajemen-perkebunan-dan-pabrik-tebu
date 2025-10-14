@@ -403,8 +403,11 @@ class GudangController extends Controller
                 $responseData = $response->json();
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $itemcode => $row) {
-                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+                foreach ($response->json()['stockitem'] as $row) {
+                    $itemcode = $row['Itemcode'] ?? null;
+                    if ($itemcode) {
+                        $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+                    }
                 }
 
                 // update nouse & itemprice
