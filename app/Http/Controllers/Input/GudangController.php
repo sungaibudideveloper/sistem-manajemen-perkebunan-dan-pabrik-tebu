@@ -251,7 +251,7 @@ class GudangController extends Controller
     if (Cache::has($lockKey)) {
         return redirect()->back()->with('error', 'Sedang memproses request sebelumnya. Mohon tunggu...');
     }
-    Cache::put($lockKey, true, 60);
+    Cache::put($lockKey, true, 10);
         // Validasi basic
         $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
         $first = $details->first();
@@ -403,8 +403,11 @@ class GudangController extends Controller
                 $responseData = $response->json();
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $itemcode => $row) {
-                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+                foreach ($response->json()['stockitem'] as $row) {
+                    $itemcode = $row['Itemcode'] ?? null;
+                    if ($itemcode) {
+                        $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+                    }
                 }
 
                 // update nouse & itemprice
