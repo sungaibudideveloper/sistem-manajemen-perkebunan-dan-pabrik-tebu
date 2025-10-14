@@ -162,10 +162,16 @@ class NavigationComposer
             'export-kml-file' => 'Export KML File',
 
             // User Management - yang tidak standard
-            'user-company-permissions' => 'Hak Akses',
-            'user-permissions' => 'Hak Akses', 
-            'permissions-masterdata' => 'Hak Akses',
-        ];
+            'user' => 'Kelola User',
+            'user-company-permissions' => 'Kelola User',
+            'user-permissions' => 'Kelola User',
+            'permissions-masterdata' => 'Master',
+            'jabatan' => 'Jabatan',
+            'support-ticket' => 'Kelola User',
+            'menu' => 'Menu',
+            'submenu' => 'Submenu',
+            'subsubmenu' => 'Subsubmenu',
+            ];
 
         // ============================================
         // LOGIC: Convention Over Configuration
