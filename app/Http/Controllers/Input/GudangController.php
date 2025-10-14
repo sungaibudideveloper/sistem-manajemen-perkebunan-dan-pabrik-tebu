@@ -403,11 +403,8 @@ class GudangController extends Controller
                 $responseData = $response->json();
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $row) {
-                    $code = $row['Itemcode'] ?? '';
-                    if ($code !== '') {
-                        $itemPriceMap[$code] = $row['Itemprice'] ?? 0;
-                    }
+                foreach ($response->json()['stockitem'] as $itemcode => $row) {
+                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
                 }
 
                 // update nouse & itemprice
@@ -416,7 +413,7 @@ class GudangController extends Controller
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
                         ->update([
-                            'nouse'     => $responseData['noUse'] ?? null,
+                            'nouse'     => $responseData['noUse'],
                             'itemprice' => $itemprice,
                         ]);
                 }
