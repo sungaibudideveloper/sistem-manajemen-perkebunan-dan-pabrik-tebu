@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
+use App\Models\Company;
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
 use App\Models\HerbisidaDosage;
@@ -353,15 +354,15 @@ class GudangController extends Controller
         }
 
         // Gunakan DB Transaction untuk keamanan
-        // DB::beginTransaction();
+        DB::beginTransaction();
         
-        // try {
+        try {
             // Delete existing records
             usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->delete();
-            
+            $companyinv = company::where('companycode', session('companycode'))->first();
             // Bulk insert
             usemateriallst::insert($insertData);
-            $companyinv = company::where('companycode', session('companycode'))->first();
+
             // API Call
             if($details->whereNotNull('nouse')->count() < 1) {  
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
@@ -439,34 +440,16 @@ class GudangController extends Controller
                         'type' => gettype($saved)
                     ]);
                 }
-
-                // Buat mapping itemprice by itemcode
-                // $itemPriceMap = [];
-                // foreach($responseData['data'] as $item) {
-                //     $fullItemCode = $item['ItemGrup'] . $item['CompItemcode'];
-                //     $itemPriceMap[$fullItemCode] = $item['itemprice'];
-                // }
-                
-                // // Update nouse dan itemprice
-                // foreach($itemPriceMap as $itemcode => $itemprice) {
-                //     usemateriallst::where('rkhno', $request->rkhno)
-                //         ->where('companycode', session('companycode'))
-                //         ->where('itemcode', $itemcode)
-                //         ->update([
-                //             'nouse' => $responseData['noUse'],
-                //             'itemprice' => $itemprice
-                //         ]);
-                // }
                  
                 // Update header status
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
-                // DB::commit();
+                DB::commit();
                 
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
-                //DB::rollback();
+                DB::rollback();
                 
                 // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
                 // Development:
@@ -476,16 +459,16 @@ class GudangController extends Controller
                 return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
             }
             
-        // } catch (\Exception $e) {
-        //     DB::rollback();
+        } catch (\Exception $e) {
+            DB::rollback();
             
-        //     Log::error('Submit error', [
-        //         'message' => $e->getMessage(),
-        //         'trace' => $e->getTraceAsString()
-        //     ]);
+            Log::error('Submit error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
-        //     return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
-        // }
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
+        }
     }
 
 
