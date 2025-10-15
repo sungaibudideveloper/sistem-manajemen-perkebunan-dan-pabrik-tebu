@@ -55,7 +55,7 @@ public function selectuse($companycode, $rkhno = 0, $type = 0)
         ->leftJoin('herbisidagroup as e', function ($join) {
             $join->on('g.herbisidagroupid', '=', 'e.herbisidagroupid');
         })
-        ->leftJoin('USER as h', 'f.mandorid', '=', 'h.userid')
+        ->leftJoin('user as h', 'f.mandorid', '=', 'h.userid')
         ->when($type == 1, function ($query) use ($rkhno) {
             $query->where('a.rkhno', $rkhno);
         }, function ($query) use ($companycode) {
@@ -77,7 +77,7 @@ public function selectusematerial($companycode, $rkhno = 0)
     JOIN usemateriallst AS u ON u.rkhno = b.rkhno AND u.itemcode = d.itemcode AND u.companycode = b.companycode
     JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
     JOIN lkhhdr AS l ON u.lkhno = l.lkhno
-    JOIN USER AS us ON us.userid =  l.mandorid
+    JOIN user AS us ON us.userid =  l.mandorid
     JOIN lkhdetailplot AS lk ON lk.lkhno = u.lkhno AND lk.blok = a.blok AND lk.plot = a.plot
     WHERE a.rkhno = ? AND a.companycode = ? AND a.usingmaterial = 1
     ORDER BY a.blok, a.plot, d.itemcode;
