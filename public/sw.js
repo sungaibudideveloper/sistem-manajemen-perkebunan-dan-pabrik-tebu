@@ -1,5 +1,5 @@
 // SW.js - Fixed version untuk production dengan subdirectory
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 const CACHE_NAME = `sb-tebu-${CACHE_VERSION}`;
 const STATIC_CACHE = `sb-tebu-static-${CACHE_VERSION}`;
 
@@ -131,8 +131,23 @@ function shouldNeverCache(url, method) {
     }
 }
 
-// Rest of the service worker remains the same...
-// [Keep all other functions unchanged]
+function fetchWithTimeout(request, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('Request timeout'));
+        }, timeout);
+
+        fetch(request)
+            .then(response => {
+                clearTimeout(timer);
+                resolve(response);
+            })
+            .catch(err => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
 
 // UPDATED fetch handler dengan base path awareness
 self.addEventListener('fetch', event => {
