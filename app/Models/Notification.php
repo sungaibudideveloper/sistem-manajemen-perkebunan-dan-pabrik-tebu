@@ -155,6 +155,41 @@ class Notification extends Model
         ]);
     }
 
+    public static function createForAgronomi(array $data)
+    {
+        $condition = $data['condition'];
+        $avgGerminasi = $condition['germinasi'];
+        $avgGulma = $condition['gulma'];
+        
+        // Tentukan severity
+        $priority = 'medium';
+        $alerts = [];
+        
+        if ($avgGerminasi < 0.9) {
+            $alerts[] = "Germinasi rendah (" . round($avgGerminasi * 100, 1) . "%)";
+            $priority = 'high';
+        }
+        
+        if ($avgGulma > 0.25) {
+            $alerts[] = "Penutupan gulma tinggi (" . round($avgGulma * 100, 1) . "%)";
+            $priority = 'high';
+        }
+        
+        return self::create([
+            'notification_type' => 'agronomi_alert',
+            'reference_type' => 'agronomi',
+            'reference_id' => $data['agronomi_id'],
+            'companycode' => $data['companycode'],
+            'target_jabatan' => '7,10', // Admin/Supervisor
+            'title' => "Agronomi Alert - Sample #{$data['agronomi_id']}",
+            'body' => "Perhatian: " . implode(', ', $alerts) . ". Mohon segera ditindaklanjuti.",
+            'action_url' => route('input.agronomi.index'),
+            'icon' => 'bell',
+            'priority' => $priority,
+            'inputby' => Auth::user()->userid ?? 'system'
+        ]);
+    }
+
     public static function createManualNotification(array $data)
     {
         if (isset($data['companycodes']) && is_array($data['companycodes'])) {
