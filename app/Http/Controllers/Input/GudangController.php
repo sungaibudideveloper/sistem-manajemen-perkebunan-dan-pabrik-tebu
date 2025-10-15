@@ -115,7 +115,7 @@ class GudangController extends Controller
 
         $validItemCodes = HerbisidaDosage::get()->pluck('itemcode')->unique();
 
-        $itemlist = DB::table('herbisidaDosage as d')
+        $itemlist = DB::table('herbisidadosage as d')
         ->join('herbisida as h', function ($join) {
             $join->on('d.itemcode', '=', 'h.itemcode')
                  ->on('d.companycode', '=', 'h.companycode');
