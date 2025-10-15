@@ -152,6 +152,22 @@ document.addEventListener('alpine:init', () => {
     let isNavigating = false;
     const MIN_LOADING_TIME = 500; // Minimal tampil 500ms
     
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0];
+        
+        // Skip loader untuk AJAX endpoints
+        if (typeof url === 'string' && (
+            url.includes('/chat/') || 
+            url.includes('/api/') ||
+            url.includes('/notifications/')
+        )) {
+            return originalFetch.apply(this, args);
+        }
+        
+        return originalFetch.apply(this, args);
+    };
+    
     // Detect link clicks
     document.addEventListener('click', function(e) {
         const link = e.target.closest('a');
