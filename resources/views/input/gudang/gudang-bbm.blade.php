@@ -14,7 +14,7 @@
             </div>
             {{-- Search & Filter --}}
             <div class="flex items-center space-x-2 mt-4 md:mt-0">
-                <form class="flex items-center space-x-2" action="{{ route('input.gudang.bbm.index') }}" method="GET">
+                <form class="flex items-center space-x-2" action="{{ route('input.gudang-bbm.index') }}" method="GET">
                     <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari LKH No, Order No, atau Kendaraan..."
                            class="text-sm border border-gray-300 rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"/>
                     <input type="date" name="filter_date" value="{{ $filterDate ?? '' }}"
@@ -111,7 +111,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm">
                             <div class="flex items-center space-x-2">
-                                <a href="{{ route('input.gudang.bbm.show', $item->ordernumber) }}"
+                                <a href="{{ route('input.gudang-bbm.show', $item->ordernumber) }}"
                                    class="text-gray-600 hover:text-gray-800 p-1" title="Lihat Detail">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>

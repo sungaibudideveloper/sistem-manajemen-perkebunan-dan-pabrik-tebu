@@ -128,7 +128,7 @@ class GudangBbmController extends Controller
                 ->first();
                 
             if (!$orderData) {
-                return redirect()->route('input.gudang.bbm.index')
+                return redirect()->route('input.gudang-bbm.index')
                     ->with('error', 'Order tidak ditemukan atau belum diprint');
             }
             
@@ -147,7 +147,7 @@ class GudangBbmController extends Controller
                 ->first();
                 
             if (!$lkhData) {
-                return redirect()->route('input.gudang.bbm.index')
+                return redirect()->route('input.gudang-bbm.index')
                     ->with('error', 'Data LKH tidak ditemukan atau belum completed');
             }
             
@@ -184,7 +184,7 @@ class GudangBbmController extends Controller
                 ->get();
                 
             if ($vehicleData->isEmpty()) {
-                return redirect()->route('input.gudang.bbm.index')
+                return redirect()->route('input.gudang-bbm.index')
                     ->with('error', 'Tidak ada data kendaraan yang sudah diprint');
             }
             
@@ -218,7 +218,7 @@ class GudangBbmController extends Controller
                 'ordernumber' => $ordernumber
             ]);
             
-            return redirect()->route('input.gudang.bbm.index')
+            return redirect()->route('input.gudang-bbm.index')
                 ->with('error', 'Terjadi kesalahan saat memuat halaman: ' . $e->getMessage());
         }
     }

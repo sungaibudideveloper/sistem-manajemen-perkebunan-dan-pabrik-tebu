@@ -117,7 +117,7 @@ class KendaraanController extends Controller
                 'printed' => $groupedData->where('status', 'PRINTED')->count(),
             ];
             
-            return view('input.kendaraan.index', compact(
+            return view('input.kendaraan-workshop.index', compact(
                 'kendaraanData',
                 'stats', 
                 'search',
@@ -395,7 +395,7 @@ class KendaraanController extends Controller
                 ->first();
                 
             if (!$lkhData) {
-                return redirect()->route('input.kendaraan.index')
+                return redirect()->route('input.kendaraan-workshop.index')
                     ->with('error', 'Data LKH tidak ditemukan atau belum completed');
             }
             
@@ -431,7 +431,7 @@ class KendaraanController extends Controller
                 ->get();
                 
             if ($vehicleData->isEmpty()) {
-                return redirect()->route('input.kendaraan.index')
+                return redirect()->route('input.kendaraan-workshop.index')
                     ->with('error', 'Tidak ada data kendaraan untuk diprint');
             }
             
@@ -447,7 +447,7 @@ class KendaraanController extends Controller
                 ?? 'DRAFT-' . now()->format('YmdHis');
             $printDate = now()->format('d F Y, H:i:s');
             
-            return view('input.kendaraan.show', compact(
+            return view('input.kendaraan-workshop.show', compact(
                 'lkhData',
                 'vehicleData',
                 'totalSolar',
@@ -463,7 +463,7 @@ class KendaraanController extends Controller
                 'lkhno' => $lkhno
             ]);
             
-            return redirect()->route('input.kendaraan.index')
+            return redirect()->route('input.kendaraan-workshop.index')
                 ->with('error', 'Terjadi kesalahan saat memuat halaman print: ' . $e->getMessage());
         }
     }

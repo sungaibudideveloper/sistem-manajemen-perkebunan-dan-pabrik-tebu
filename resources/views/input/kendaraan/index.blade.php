@@ -15,7 +15,7 @@
             
             {{-- Search & Filter --}}
             <div class="flex items-center space-x-2 mt-4 md:mt-0">
-                <form class="flex items-center space-x-2" action="{{ route('input.kendaraan.index') }}" method="GET">
+                <form class="flex items-center space-x-2" action="{{ route('input.kendaraan-workshop.index') }}" method="GET">
                     <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari LKH No atau Kendaraan..."
                            class="text-sm border border-gray-300 rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"/>
                     <input type="date" name="filter_date" value="{{ $filterDate ?? '' }}" 
@@ -143,7 +143,7 @@
                             @if($item->status === 'PRINTED')
                                 <div class="flex items-center space-x-2">
                                     
-                                    <a href="{{ route('input.kendaraan.print', $item->lkhno) }}" target="_blank" 
+                                    <a href="{{ route('input.kendaraan-workshop.print', $item->lkhno) }}" target="_blank" 
                                        class="text-gray-600 hover:text-gray-800 p-1" title="Lihat/Print Ulang">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -380,7 +380,7 @@ function kendaraanData() {
 
             this.isLoading = true;
             try {
-                const response = await fetch('{{ route("input.kendaraan.store") }}', {
+                const response = await fetch('{{ route("input.kendaraan-workshop.store") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -409,7 +409,7 @@ function kendaraanData() {
 
             this.isLoading = true;
             try {
-                const response = await fetch('{{ route("input.kendaraan.update") }}', {
+                const response = await fetch('{{ route("input.kendaraan-workshop.update") }}', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

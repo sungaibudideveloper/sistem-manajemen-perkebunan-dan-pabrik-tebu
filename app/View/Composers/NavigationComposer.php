@@ -126,7 +126,7 @@ class NavigationComposer
         // ============================================
         $menuPermissions = [
             'masterdata' => 'Master',
-            'input-data' => 'Input Data', 
+            'input' => 'Input Data', 
             'report' => 'Report',
             'dashboard' => 'Dashboard',
             'process' => 'Process',
