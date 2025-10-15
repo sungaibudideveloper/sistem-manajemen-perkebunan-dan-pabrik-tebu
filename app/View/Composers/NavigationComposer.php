@@ -126,7 +126,7 @@ class NavigationComposer
         // ============================================
         $menuPermissions = [
             'masterdata' => 'Master',
-            'input-data' => 'Input Data', 
+            'input' => 'Input Data', 
             'report' => 'Report',
             'dashboard' => 'Dashboard',
             'process' => 'Process',
@@ -144,7 +144,7 @@ class NavigationComposer
             'tenagakerja' => 'Tenaga Kerja',
             
             // Input Data - yang tidak standard
-            'kerja-harian' => 'Rencana Kerja Harian',
+            'rencanakerjaharian' => 'Rencana Kerja Harian',
             'gudang-bbm' => 'Menu Gudang',
             'kendaraan-workshop' => 'Kendaraan',
             'pias' => 'Menu Pias',

@@ -36,7 +36,7 @@
 
     {{-- Action Buttons - No Print --}}
     <div class="no-print mb-4 flex justify-between items-center">
-        <a href="{{ route('input.gudang.bbm.index') }}" 
+        <a href="{{ route('input.gudang-bbm.index') }}" 
            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm">
             ← Kembali
         </a>

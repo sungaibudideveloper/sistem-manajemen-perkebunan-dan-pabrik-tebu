@@ -140,21 +140,16 @@ Route::middleware('auth')->group(function () {
 // =====================================
 // KENDARAAN BBM SYSTEM ROUTES (EXISTING)
 // =====================================
-Route::middleware('auth')->prefix('input')->group(function () {
+Route::middleware('auth')->group(function () {
+    // Kendaraan Workshop Routes
+    Route::get('input/kendaraan-workshop', [KendaraanController::class, 'index'])->name('input.kendaraan-workshop.index');
+    Route::post('input/kendaraan-workshop/store', [KendaraanController::class, 'store'])->name('input.kendaraan-workshop.store');
+    Route::put('input/kendaraan-workshop/update', [KendaraanController::class, 'update'])->name('input.kendaraan-workshop.update');
+    Route::post('input/kendaraan-workshop/{lkhno}/mark-printed', [KendaraanController::class, 'markPrinted'])->name('input.kendaraan-workshop.mark-printed');
+    Route::get('input/kendaraan-workshop/{lkhno}/print', [KendaraanController::class, 'print'])->name('input.kendaraan-workshop.print');
 
-    // Admin Kendaraan Routes
-    Route::prefix('kendaraan')->name('input.kendaraan.')->group(function () {
-        Route::get('/', [KendaraanController::class, 'index'])->name('index');
-        Route::post('/store', [KendaraanController::class, 'store'])->name('store');
-        Route::put('/update', [KendaraanController::class, 'update'])->name('update');
-        Route::post('/{lkhno}/mark-printed', [KendaraanController::class, 'markPrinted'])->name('mark-printed');
-        Route::get('/{lkhno}/print', [KendaraanController::class, 'print'])->name('print');
-    });
-
-    // Admin BBM Routes
-    Route::prefix('gudang')->name('input.gudang.')->group(function () {
-        Route::get('/bbm', [GudangBbmController::class, 'index'])->name('bbm.index');
-        Route::get('/bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('bbm.show');
-        Route::post('/bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('bbm.confirm');
-    });
+    // Gudang BBM Routes
+    Route::get('input/gudang-bbm', [GudangBbmController::class, 'index'])->name('input.gudang-bbm.index');
+    Route::get('input/gudang-bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('input.gudang-bbm.show');
+    Route::post('input/gudang-bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('input.gudang-bbm.confirm');
 });
