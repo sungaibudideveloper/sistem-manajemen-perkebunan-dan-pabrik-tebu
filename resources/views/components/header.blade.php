@@ -41,10 +41,13 @@
             </button>
         </div>
 
-        <!-- Right: Notifications + User Profile -->
+        <!-- Right: Chat + Notifications + User Profile -->
         <div class="flex items-center space-x-3">
             
-            <!-- ? NOTIFICATION DROPDOWN - UPDATED -->
+            <!-- ✅ HEADER CHAT COMPONENT - STANDALONE DROPDOWN -->
+            <x-header-chat />
+            
+            <!-- NOTIFICATION DROPDOWN -->
             <div x-data="notificationDropdown()" @click.away="open = false" class="relative">
                 <button @click="toggleDropdown()" 
                    class="relative p-2 rounded-full text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 transition-colors">
@@ -165,7 +168,6 @@
 
             <!-- User Profile Dropdown -->
             <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                <!-- Ngambil Initial Nama untuk Avatar -->
                 @php
                     $name = Auth::user()->name;
                     $words = array_filter(explode(' ', trim($name)));
@@ -180,14 +182,8 @@
                     }
                     
                     $colors = [
-                        'bg-slate-600',
-                        'bg-gray-600',
-                        'bg-zinc-600',
-                        'bg-stone-600',
-                        'bg-neutral-600',
-                        'bg-slate-700',
-                        'bg-gray-700',
-                        'bg-zinc-700',
+                        'bg-slate-600', 'bg-gray-600', 'bg-zinc-600', 'bg-stone-600',
+                        'bg-neutral-600', 'bg-slate-700', 'bg-gray-700', 'bg-zinc-700',
                     ];
                     $colorIndex = abs(crc32($name)) % count($colors);
                     $bgColor = $colors[$colorIndex];
@@ -280,7 +276,9 @@
 </header>
 
 <script>
-// ? NOTIFICATION DROPDOWN COMPONENT
+// ============================================
+// NOTIFICATION DROPDOWN COMPONENT
+// ============================================
 function notificationDropdown() {
     return {
         open: false,
@@ -290,10 +288,7 @@ function notificationDropdown() {
         refreshInterval: null,
 
         init() {
-            // Initial load
             this.loadNotifications();
-            
-            // Auto-refresh every 30 seconds
             this.refreshInterval = setInterval(() => {
                 this.loadUnreadCount();
             }, 30000);
@@ -347,19 +342,15 @@ function notificationDropdown() {
         },
 
         async handleNotificationClick(notif) {
-            // Mark as read
             if (!notif.is_read) {
                 await this.markAsRead(notif.notification_id);
             }
 
-            // Close dropdown
             this.open = false;
 
-            // Redirect if action_url exists
             if (notif.action_url) {
                 window.location.href = notif.action_url;
             } else {
-                // Default: go to notifications page
                 window.location.href = '{{ route("notifications.index") }}';
             }
         },
@@ -377,7 +368,6 @@ function notificationDropdown() {
                 });
                 
                 if (response.ok) {
-                    // Update local state
                     const notif = this.notifications.find(n => n.notification_id === notificationId);
                     if (notif) {
                         notif.is_read = true;
@@ -402,7 +392,6 @@ function notificationDropdown() {
                 });
                 
                 if (response.ok) {
-                    // Update local state
                     this.notifications.forEach(n => n.is_read = true);
                     this.unreadCount = 0;
                 }
