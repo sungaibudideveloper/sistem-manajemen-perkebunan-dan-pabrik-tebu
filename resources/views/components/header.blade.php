@@ -44,8 +44,10 @@
         <!-- Right: Chat + Notifications + User Profile -->
         <div class="flex items-center space-x-3">
             
-            <!-- ✅ HEADER CHAT COMPONENT - STANDALONE DROPDOWN -->
-            <x-header-chat />
+            <!-- ✅ HEADER CHAT - Skip di homepage (sudah ada floating chat) -->
+            @if(!request()->routeIs('home'))
+                <x-header-chat />
+            @endif
             
             <!-- NOTIFICATION DROPDOWN -->
             <div x-data="notificationDropdown()" @click.away="open = false" class="relative">
