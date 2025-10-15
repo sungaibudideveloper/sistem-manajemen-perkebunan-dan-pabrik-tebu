@@ -133,11 +133,13 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         
         start() {
+            // console.log('LOADER START CALLED', new Error().stack); // Trace siapa yang manggil
             this.isLoading = true;
             window.dispatchEvent(new CustomEvent('loading-start'));
         },
         
         stop() {
+            // console.log('LOADER STOP CALLED'); // Trace
             this.isLoading = false;
             window.dispatchEvent(new CustomEvent('loading-stop'));
         }
@@ -160,14 +162,15 @@ document.addEventListener('alpine:init', () => {
         if (typeof url === 'string' && (
             url.includes('/chat/') || 
             url.includes('/api/') ||
-            url.includes('/notifications/')
+            url.includes('/notifications/') ||
+            url.includes('/_debugbar/')
         )) {
             return originalFetch.apply(this, args);
         }
         
         return originalFetch.apply(this, args);
     };
-    
+
     // Detect link clicks
     document.addEventListener('click', function(e) {
         const link = e.target.closest('a');
@@ -201,6 +204,19 @@ document.addEventListener('alpine:init', () => {
         const form = e.target;
         
         if (isNavigating) return;
+        
+        // Skip form yang ada Alpine x-data/x-on (Alpine form)
+        if (form.closest('[x-data]')) {
+            return; // Skip loader untuk Alpine forms
+        }
+        
+        // Skip form dengan action /chat/ atau /api/
+        if (form.action && (
+            form.action.includes('/chat/') ||
+            form.action.includes('/api/')
+        )) {
+            return;
+        }
         
         if (form.method.toLowerCase() === 'get') {
             isNavigating = true;
