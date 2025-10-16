@@ -172,9 +172,9 @@ class GudangController extends Controller
             return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
         } 
         // Validasi status HARUS salah satu dari ini untuk bisa retur
-        $allowedStatuses = ['RECEIVED_BY_MANDOR', 'RETURNED_BY_MANDOR', 'RETURN_RECEIVED'];
+        $allowedStatuses = ['UPLOADED','RECEIVED_BY_MANDOR', 'RETURNED_BY_MANDOR', 'RETURN_RECEIVED'];
         if (!in_array(strtoupper($hfirst->flagstatus), $allowedStatuses)) {
-            return redirect()->back()->with('error', 'Tidak Bisa Retur! Status harus RECEIVED_BY_MANDOR, RETURNED_BY_MANDOR, atau RETURN_RECEIVED. Status sekarang: ' . $hfirst->flagstatus);
+            return redirect()->back()->with('error', 'Tidak Bisa Retur! Status harus UPLOAD atau RECEIVED. Status sekarang: ' . $hfirst->flagstatus);
         }
         if(empty($first)){ 
             return redirect()->back()->with('error', 'Item Tidak ditemukan!');
