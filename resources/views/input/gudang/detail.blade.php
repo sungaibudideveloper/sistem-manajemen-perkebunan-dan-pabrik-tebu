@@ -318,7 +318,7 @@ table th, table td {
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
-            <a href="{{ url()->previous() }}" 
+            <a href="{{ url('input/gudang') }}" 
                class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
                 ← Kembali
             </a>&nbsp;
