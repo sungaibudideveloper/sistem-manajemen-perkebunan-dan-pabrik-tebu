@@ -1,4 +1,4 @@
-{{-- resources/views/input/kendaraan/index.blade.php --}}
+{{-- resources/views/input/kendaraan-workshop/index.blade.php --}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -351,7 +351,7 @@ function kendaraanData() {
             try {
                 // First, mark as printed - fix the URL to match the route
                 
-                const response = await fetch(`{{ url('input/kendaraan') }}/${lkhno}/mark-printed`, {
+                const response = await fetch(`{{ url('input/kendaraan-workshop') }}/${lkhno}/mark-printed`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -362,7 +362,7 @@ function kendaraanData() {
                 const data = await response.json();
                 if (data.success) {
                     // Open print page in new tab - fix the URL to match the route
-                    window.open(`{{ url('input/kendaraan') }}/${lkhno}/print?ordernumber=${data.order_number}`, '_blank');
+                    window.open(`{{ url('input/kendaraan-workshop') }}/${lkhno}/print?ordernumber=${data.order_number}`, '_blank');
 
                     // Reload current page to update status
                     setTimeout(() => location.reload(), 1000);
