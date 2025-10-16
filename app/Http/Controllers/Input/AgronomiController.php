@@ -9,11 +9,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use App\Http\Controllers\NotificationController;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\JsonResponse;
+use App\Models\Notification;
 
 class AgronomiController extends Controller
 {
@@ -187,7 +185,6 @@ class AgronomiController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate($this->requestValidated());
-        $notifController = new NotificationController();
 
         $existsInHeader = DB::table('agrohdr')->where('nosample', $request->nosample)
             ->where('companycode', $request->companycode)
@@ -268,8 +265,18 @@ class AgronomiController extends Controller
             $avgPerGerminasi = $totalPerGerminasi / $count;
             $avgPerGulma = $totalPerGulma / $count;
 
-            if ($avgPerGerminasi < 0.9 || $avgPerGulma > 0.25) {
-                $notifController->agronomiNotif();
+            $umurTanam = Carbon::parse($validated['tanggaltanam'])->diffInMonths(Carbon::now());
+
+            if ($avgPerGerminasi < 0.9 && $umurTanam == 1.0 || $avgPerGulma > 0.25) {
+                Notification::createForAgronomi([
+                    'plot' => $validated['plot'],
+                    'companycode' => $validated['companycode'],
+                    'condition' => [
+                        'germinasi' => $avgPerGerminasi,
+                        'gulma' => $avgPerGulma,
+                        'umur' => $umurTanam,
+                    ]
+                ]);
             }
 
             DB::commit();

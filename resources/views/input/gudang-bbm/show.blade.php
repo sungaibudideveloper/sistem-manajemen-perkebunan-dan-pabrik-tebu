@@ -219,7 +219,7 @@
             }
 
             try {
-                const response = await fetch(`{{ url('input/gudang/bbm') }}/${ordernumber}/confirm`, {
+                const response = await fetch(`{{ url('input/gudang-bbm') }}/${ordernumber}/confirm`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

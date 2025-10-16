@@ -36,3 +36,26 @@
         cursor: not-allowed;
     }
 </style>
+<style>
+    #scrollToTop {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+
+    #scrollToTop button {
+        padding: 18px 20px;
+        background-color: #a1a1a1;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        opacity: 50%;
+    }
+
+    #scrollToTop button:hover {
+        background-color: #747474;
+    }
+</style>

@@ -1,4 +1,4 @@
-{{-- resources/views/input/kendaraan/show.blade.php --}}
+{{-- resources/views/input/kendaraan-workshop/show.blade.php --}}
 <x-layout>
     <x-slot:title>Order Pengeluaran BBM - {{ $lkhData->lkhno }}</x-slot:title>
     <x-slot:navbar>Order Pengeluaran BBM</x-slot:navbar>

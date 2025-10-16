@@ -99,7 +99,7 @@ class LkhGeneratorService
                     'jenistenagakerja' => $jenistenagakerja,
                     'total_luas' => $lkhHeaderResult['total_luas'],
                     'planned_workers' => $lkhHeaderResult['planned_workers'],
-                    'status' => 'DRAFT'
+                    'status' => 'EMPTY'
                 ];
 
                 $lkhIndex++;
@@ -169,13 +169,12 @@ class LkhGeneratorService
             'mandorid' => $rkh->mandorid,
             'lkhdate' => $rkh->rkhdate,
             'jenistenagakerja' => $jenistenagakerja,
-            'totalworkers' => 0, // Will be updated when mandor assigns workers
-            'totalluasactual' => 0.00, // Will be updated when work is completed
-            'totalhasil' => 0.00, // Will be updated when work is completed
-            'totalsisa' => $totalLuas, // Sisa = total luas area awal dari semua plot
-            'totalupahall' => 0.00, // Will be calculated when wages are computed
-            // REMOVED: jammulaikerja, jamselesaikerja, totalovertimehours - these columns no longer exist
-            'status' => 'DRAFT', // Changed from 'EMPTY' to 'DRAFT'
+            'totalworkers' => 0,
+            'totalluasactual' => 0.00,
+            'totalhasil' => 0.00,
+            'totalsisa' => $totalLuas,
+            'totalupahall' => 0.00,
+            'status' => 'EMPTY', 
             'issubmit' => 0,
             'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',
