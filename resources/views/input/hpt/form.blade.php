@@ -20,67 +20,65 @@
         @method($method)
         <div class="mx-4 p-6 bg-white rounded-md shadow-md">
             <div class="text-center text-xl pb-2 mb-6 -mt-2 border-b font-medium border-gray-300">Header</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
                 <div>
-                    <label class="block text-md">Nomor Sample</label>
-                    <input type="text" name="nosample" class="border rounded-md border-gray-300 p-2 w-full"
-                        maxlength="4" autocomplete="off" value="{{ old('nosample', $header->nosample ?? '') }}"
+                    <label class="block text-sm">Nomor Sample</label>
+                    <input type="text" name="no_sample" class="border rounded-md border-gray-300 p-2 w-full"
+                        maxlength="4" autocomplete="off" value="{{ old('no_sample', $header->no_sample ?? '') }}"
                         required>
                 </div>
 
                 <div>
-                    <label class="block text-md">Kode Plot Sample</label>
-                    <select id="idblokplot" name="idblokplot" class="border rounded-md border-gray-300 p-2 w-full"
-                        required>
-                        <option value="" disabled selected class="text-gray">--Pilih Plot Sample--</option>
-                        @foreach ($mapping as $map)
-                            <option value="{{ $map->idblokplot }}"
-                                {{ old('idblokplot', $header->idblokplot ?? '') == $map->idblokplot ? 'selected' : '' }}
-                                class="text-black">
-                                {{ $map->idblokplot }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <label class="block text-sm">Plot Sample</label>
+                    <input type="number" name="kd_plotsample" id="kd_plotsample"
+                        class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off" maxlength="5"
+                        min="0" value="{{ old('kd_plotsample', $header->kd_plotsample ?? '') }}">
                 </div>
 
                 <div>
-                    <label class="block text-md">Kode Company</label>
-                    <input id="companycode" type="text" name="companycode" maxlength="4"
+                    <label class="block text-sm">Kode Company</label>
+                    <input id="kd_comp" type="text" name="kd_comp" maxlength="6"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('companycode', $header->companycode ?? '') }}" required>
+                        value="{{ old('kd_comp', $header->kd_comp ?? '') }}" required>
                 </div>
                 <div>
-                    <label class="block text-md">Kode Blok</label>
-                    <input id="blok" type="text" name="blok" maxlength="2"
+                    <label class="block text-sm">Blok</label>
+                    <input id="kd_blok" type="text" name="kd_blok" maxlength="2"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('blok', $header->blok ?? '') }}" required>
+                        value="{{ old('kd_blok', $header->kd_blok ?? '') }}" required>
                 </div>
                 <div>
-                    <label class="block text-md">Kode Plot</label>
-                    <input id="plot" type="text" name="plot" maxlength="5"
+                    <label class="block text-sm">Plot</label>
+                    <input id="kd_plot" type="text" name="kd_plot" maxlength="10"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('plot', $header->plot ?? '') }}" required>
+                        value="{{ old('kd_plot', $header->kd_plot ?? '') }}" required>
                 </div>
 
                 <div>
-                    <label class="block text-md">Varietas</label>
+                    <label class="block text-sm">Varietas</label>
                     <input type="text" name="varietas" class="border rounded-md border-gray-300 p-2 w-full"
                         maxlength="10" autocomplete="off" value="{{ old('varietas', $header->varietas ?? '') }}"
                         required>
                 </div>
 
                 <div>
-                    <label class="block text-md">Tanggal Tanam</label>
-                    <input type="date" name="tanggaltanam" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tanggaltanam', $header->tanggaltanam ?? '') }}"
+                    <label class="block text-sm">Kategori</label>
+                    <input type="text" name="kat" class="border rounded-md border-gray-300 p-2 w-full"
+                        autocomplete="off" maxlength="3" value="{{ old('kat', $header->kat ?? '') }}" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm">Tanggal Tanam</label>
+                    <input type="date" name="tgltanam" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+                        value="{{ old('tgltanam', $header->tgltanam ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
                 <div>
-                    <label class="block text-md">Tanggal Pengamatan</label>
-                    <input type="date" name="tanggalpengamatan" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tanggalpengamatan', $header->tanggalpengamatan ?? '') }}"
+                    <label class="block text-sm">Tanggal Pengamatan</label>
+                    <input type="date" name="tglamat" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+                        value="{{ old('tglamat', $header->tglamat ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
@@ -141,222 +139,227 @@
                         @foreach ($lists as $index => $list)
                             <tr>
                                 <td>
-                                    <input type="text" name="lists[{{ $index }}][nourut]" min="0"
-                                        value="{{ $list['nourut'] ?? $index + 1 }}"
+                                    <input type="text" name="lists[{{ $index }}][no_urut]" min="0"
+                                        value="{{ $list->no_urut ?? $index + 1 }}"
                                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][ppt_aktif]"
-                                        min="0" value="{{ $list['ppt_aktif'] ?? '' }}" maxlength="5"
-                                        autocomplete="off" class="form-control border rounded-md border-gray-300"
+                                        min="0" value="{{ $list->ppt_aktif ?? 0 }}" maxlength="5"
+                                        autocomplete="off"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
                                         required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][pbt_aktif]"
-                                        min="0" value="{{ $list['pbt_aktif'] ?? '' }}" maxlength="5"
-                                        autocomplete="off" class="form-control border rounded-md border-gray-300"
+                                        min="0" value="{{ $list->pbt_aktif ?? 0 }}" maxlength="5"
+                                        autocomplete="off"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
                                         required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][skor0]" min="0"
-                                        value="{{ $list['skor0'] ?? '' }}" maxlength="5" autocomplete="off"
-                                        class="form-control border rounded-md border-gray-300" required>
+                                        value="{{ $list->skor0 ?? 0 }}" maxlength="5" autocomplete="off"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][skor1]" min="0"
-                                        value="{{ $list['skor1'] ?? '' }}" maxlength="5" autocomplete="off"
-                                        class="form-control border rounded-md border-gray-300" required>
+                                        value="{{ $list->skor1 ?? 0 }}" maxlength="5" autocomplete="off"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][skor2]" min="0"
-                                        value="{{ $list['skor2'] ?? '' }}" maxlength="5" autocomplete="off"
-                                        class="form-control border rounded-md border-gray-300" required>
+                                        value="{{ $list->skor2 ?? 0 }}" maxlength="5" autocomplete="off"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][skor3]" min="0"
-                                        value="{{ $list['skor3'] ?? '' }}" maxlength="5"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->skor3 ?? 0 }}" maxlength="5"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][skor4]" min="0"
-                                        value="{{ $list['skor4'] ?? '' }}" maxlength="5"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->skor4 ?? 0 }}" maxlength="5"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][telur_ppt]"
-                                        min="0" value="{{ $list['telur_ppt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->telur_ppt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_ppt1]"
-                                        min="0" value="{{ $list['larva_ppt1'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_ppt1 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_ppt2]"
-                                        min="0" value="{{ $list['larva_ppt2'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_ppt2 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_ppt3]"
-                                        min="0" value="{{ $list['larva_ppt3'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_ppt3 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_ppt4]"
-                                        min="0" value="{{ $list['larva_ppt4'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_ppt4 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][pupa_ppt]" min="0"
-                                        value="{{ $list['pupa_ppt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->pupa_ppt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][ngengat_ppt]"
-                                        min="0" value="{{ $list['ngengat_ppt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->ngengat_ppt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][kosong_ppt]"
-                                        min="0" value="{{ $list['kosong_ppt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->kosong_ppt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][telur_pbt]"
-                                        min="0" value="{{ $list['telur_pbt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->telur_pbt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_pbt1]"
-                                        min="0" value="{{ $list['larva_pbt1'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_pbt1 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_pbt2]"
-                                        min="0" value="{{ $list['larva_pbt2'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_pbt2 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_pbt3]"
-                                        min="0" value="{{ $list['larva_pbt3'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_pbt3 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][larva_pbt4]"
-                                        min="0" value="{{ $list['larva_pbt4'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->larva_pbt4 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][pupa_pbt]" min="0"
-                                        value="{{ $list['pupa_pbt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->pupa_pbt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][ngengat_pbt]"
-                                        min="0" value="{{ $list['ngengat_pbt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->ngengat_pbt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][kosong_pbt]"
-                                        min="0" value="{{ $list['kosong_pbt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->kosong_pbt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][dh]" min="0"
-                                        value="{{ $list['dh'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->dh ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][dt]" min="0"
-                                        value="{{ $list['dt'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->dt ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][kbp]" min="0"
-                                        value="{{ $list['kbp'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->kbp ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][kbb]" min="0"
-                                        value="{{ $list['kbb'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->kbb ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][kp]" min="0"
-                                        value="{{ $list['kp'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->kp ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][cabuk]" min="0"
-                                        value="{{ $list['cabuk'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->cabuk ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][belalang]" min="0"
-                                        value="{{ $list['belalang'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        value="{{ $list->belalang ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][serang_grayak]"
-                                        min="0" value="{{ $list['serang_grayak'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->serang_grayak ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][jum_grayak]"
-                                        min="0" value="{{ $list['jum_grayak'] ?? '' }}" maxlength="3"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->jum_grayak ?? 0 }}" maxlength="3"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][serang_smut]"
-                                        min="0" value="{{ $list['serang_smut'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->serang_smut ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][smut_stadia1]"
-                                        min="0" value="{{ $list['smut_stadia1'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->smut_stadia1 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][smut_stadia2]"
-                                        min="0" value="{{ $list['smut_stadia2'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->smut_stadia2 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td>
                                     <input type="number" name="lists[{{ $index }}][smut_stadia3]"
-                                        min="0" value="{{ $list['smut_stadia3'] ?? '' }}" maxlength="4"
-                                        class="form-control border rounded-md border-gray-300" autocomplete="off"
-                                        required>
+                                        min="0" value="{{ $list->smut_stadia3 ?? 0 }}" maxlength="4"
+                                        class="form-control border rounded-md border-gray-300 auto-clear-zero"
+                                        autocomplete="off" required>
                                 </td>
                                 <td class="sticky right-0 bg-white">
                                     <button type="button" class="flex items-center group remove-row">
@@ -428,7 +431,7 @@
     </form>
 
     <div id="scrollToTop">
-        <button><svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
+        <button onclick="scrollToTop()"><svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                 viewBox="0 0 24 24">
                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -444,156 +447,156 @@
             const newRow = `
             <tr>
                 <td>
-                    <input type="text" name="lists[${rowCount}][nourut]" min="0" value="${rowCount}"
+                    <input type="text" name="lists[${rowCount}][no_urut]" min="0" value="${rowCount}"
                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][ppt_aktif]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][pbt_aktif]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][skor0]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][skor1]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][skor2]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][skor3]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][skor4]" min="0" maxlength="5"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][telur_ppt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_ppt1]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_ppt2]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_ppt3]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_ppt4]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][pupa_ppt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][ngengat_ppt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][kosong_ppt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][telur_pbt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_pbt1]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_pbt2]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_pbt3]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][larva_pbt4]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][pupa_pbt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][ngengat_pbt]"
-                        min="0" maxlength="4" class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        min="0" maxlength="4" class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][kosong_pbt]"
-                        min="0" maxlength="4" class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        min="0" maxlength="4" class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][dh]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][dt]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][kbp]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][kbb]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][kp]" min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][cabuk]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][belalang]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][serang_grayak]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][jum_grayak]" min="0" maxlength="3"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][serang_smut]"
                         min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][smut_stadia1]"
                         min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][smut_stadia2]"
                         min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td>
                     <input type="number" name="lists[${rowCount}][smut_stadia3]"
                         min="0" maxlength="4"
-                        class="form-control border rounded-md border-gray-300" autocomplete="off" required>
+                        class="form-control border rounded-md border-gray-300 auto-clear-zero" autocomplete="off" value="0" required>
                 </td>
                 <td class="sticky right-0 bg-white">
                     <button type="button" class="flex items-center group remove-row">
@@ -627,10 +630,22 @@
             }
         });
 
+        document.addEventListener('focusin', function(e) {
+            if (e.target.matches('.auto-clear-zero') && e.target.value === '0') {
+                e.target.value = '';
+            }
+        });
+
+        document.addEventListener('focusout', function(e) {
+            if (e.target.matches('.auto-clear-zero') && e.target.value.trim() === '') {
+                e.target.value = '0';
+            }
+        });
+
         function resetRowNumbers() {
             const rows = document.querySelectorAll('#listTable tbody tr');
             rows.forEach((row, index) => {
-                const noUrutInput = row.querySelector('input[name^="lists"][name$="[nourut]"]');
+                const noUrutInput = row.querySelector('input[name^="lists"][name$="[no_urut]"]');
                 noUrutInput.value = index + 1;
             });
         }
@@ -638,54 +653,67 @@
 
     <script>
         $(document).ready(function() {
-            $('#idblokplot').change(function() {
-                var idblokplot = $(this).val();
-                if (idblokplot) {
+            $('#kd_plotsample').change(function() {
+                var kd_plotsample = $(this).val();
+                if (kd_plotsample) {
                     $.ajax({
                         url: "{{ route('input.hpt.getFieldByMapping') }}",
                         type: "POST",
                         data: {
                             _token: $('meta[name="csrf-token"]').attr('content'),
-                            idblokplot: idblokplot
+                            kd_plotsample: kd_plotsample
                         },
                         success: function(response) {
-                            $('#companycode').val(response.companycode);
-                            $('#blok').val(response.blok);
-                            $('#plot').val(response.plot);
+                            $('#kd_comp').val(response.kd_comp);
+                            $('#kd_blok').val(response.kd_blok);
+                            $('#kd_plot').val(response.kd_plot);
                         },
                         error: function() {
                             alert('Data tidak ditemukan');
                         }
                     });
                 } else {
-                    $('#companycode, #blok, #plot').val('');
+                    $('#kd_comp, #kd_blok, #kd_plot').val('');
                 }
             });
         });
     </script>
-    <script>
-        document.querySelectorAll('input[name="nosample"], select[name="idblokplot"]').forEach((element) => {
-            element.addEventListener('change', () => {
-                const noSample = document.querySelector('input[name="nosample"]').value;
-                const kdPlotSample = document.querySelector('select[name="idblokplot"]').value;
+    @if (!$isEdit)
+        <script>
+            document.querySelectorAll('input[name="no_sample"], input[name="kd_plotsample"]').forEach((element) => {
+                element.addEventListener('change', () => {
+                    const noSample = document.querySelector('input[name="no_sample"]').value;
+                    const kdPlotSample = document.querySelector('input[name="kd_plotsample"]').value;
 
-                if (noSample && kdPlotSample) {
-                    fetch(
-                            `{{ route('input.hpt.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
-                        )
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.querySelector('input[name="varietas"]').value = data.varietas;
-                                document.querySelector('input[name="tanggaltanam"]').value = data.tanggaltanam;
-                            } else {
-                                alert("Data tidak ditemukan, silakan isi secara manual.");
-                                document.querySelector('input[name="varietas"]').value = '';
-                                document.querySelector('input[name="tanggaltanam"]').value = '';
-                            }
-                        })
-                        .catch(err => console.error("Terjadi kesalahan:", err));
-                }
+                    if (noSample && kdPlotSample) {
+                        fetch(
+                                `{{ route('input.hpt.check-data') }}?no_sample=${noSample}&kd_plotsample=${kdPlotSample}`
+                            )
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    document.querySelector('input[name="varietas"]').value = data.varietas;
+                                    document.querySelector('input[name="tgltanam"]').value = data.tgltanam;
+                                } else {
+                                    alert("Data tidak ditemukan, silakan isi secara manual.");
+                                    document.querySelector('input[name="varietas"]').value = '';
+                                    document.querySelector('input[name="tgltanam"]').value = '';
+                                }
+                            })
+                            .catch(err => console.error("Terjadi kesalahan:", err));
+                    }
+                });
+            });
+        </script>
+    @endif
+
+    <script>
+        document.querySelectorAll('.auto-clear-zero').forEach(input => {
+            input.addEventListener('focus', function() {
+                if (this.value === '0') this.value = '';
+            });
+            input.addEventListener('blur', function() {
+                if (this.value.trim() === '') this.value = '0';
             });
         });
     </script>

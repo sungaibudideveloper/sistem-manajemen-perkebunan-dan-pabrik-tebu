@@ -1,20 +1,18 @@
 <?php
 
 namespace App\Http\Controllers\Input;
-use App\Http\Controllers\Controller;
 
 use Carbon\Carbon;
-use App\Models\Mapping;
-use App\Models\HPTHeader;
-use App\Models\company;
 use Illuminate\Http\Request;
-use App\Models\HPTList;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use App\Http\Controllers\Controller;
+use App\Http\Controllers\NotificationController;
+use App\Models\Notification;
 
 class HPTController extends Controller
 {
@@ -30,9 +28,15 @@ class HPTController extends Controller
     public function index(Request $request)
     {
         $title = "Daftar HPT";
+        $search = $request->input('search', '');
+
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->companycode);
+        $userid = Auth::user()->userid;
+        $companycode = DB::table('usercompany')
+            ->where('userid', $userid)
+            ->value('companycode');
+        $companyArray = $companycode ? explode(',', $companycode) : [];
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -44,14 +48,32 @@ class HPTController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $hpt = HPTHeader::orderBy('createdat', 'desc')->with('lists', 'company')
-            ->where('companycode', '=', session('companycode'))
+        $hpt = DB::table('hpthdr')
+            ->join('company', 'hpthdr.companycode', '=', 'company.companycode')
+            ->where('hpthdr.companycode', '=', session('companycode'))
+            ->where('hpthdr.closingperiode', '=', 'F')
             ->when($startDate, function ($query) use ($startDate) {
-                $query->whereDate('createdat', '>=', $startDate);
+                $query->whereDate('hpthdr.createdat', '>=', $startDate);
             })
             ->when($endDate, function ($query) use ($endDate) {
-                $query->whereDate('createdat', '<=', $endDate);
-            })
+                $query->whereDate('hpthdr.createdat', '<=', $endDate);
+            });
+
+        if (!empty($search)) {
+            $hpt->where(function ($query) use ($search) {
+                $query->where('hpthdr.idblokplot', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.nosample', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.varietas', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.plot', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.kat', 'like', '%' . $search . '%');
+            });
+
+        }
+        $hpt = $hpt->select(
+            'hpthdr.*',
+            'company.nama as nama_comp'
+        )
+            ->orderBy('hpthdr.createdat', 'desc')
             ->paginate($perPage);
 
         foreach ($hpt as $item) {
@@ -62,7 +84,10 @@ class HPTController extends Controller
             $item->no = ($hpt->currentPage() - 1) * $hpt->perPage() + $index + 1;
         }
 
-        return view('input.hpt.index', compact('hpt', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('input.hpt.index', compact('hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+        return view('input.hpt.index', compact('hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 
     public function handle(Request $request)
@@ -77,7 +102,7 @@ class HPTController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $mapping = Mapping::where('companycode', '=', session('companycode'))->get();
+        $mapping = DB::table('mapping')->where('companycode', '=', session('companycode'))->get();
         $method = 'POST';
         $url = route('input.hpt.handle');
         $buttonSubmit = 'Create';
@@ -87,7 +112,9 @@ class HPTController extends Controller
     public function getFieldByMapping(Request $request)
     {
         $idblokplot = $request->input('idblokplot');
-        $mapping = Mapping::where('idblokplot', $idblokplot)->first();
+        $mapping = DB::table('mapping')
+            ->where('companycode', session('companycode'))
+            ->where('idblokplot', $idblokplot)->first();
 
         if ($mapping) {
             return response()->json([
@@ -108,11 +135,13 @@ class HPTController extends Controller
         $data = DB::table('hpthdr')
             ->where('nosample', $noSample)
             ->where('idblokplot', $kdPlotSample)
+            ->where('companycode', session('companycode'))
             ->first();
 
         if ($data) {
             return response()->json([
                 'success' => true,
+                'kat' => $data->kat,
                 'varietas' => $data->varietas,
                 'tanggaltanam' => $data->tanggaltanam,
             ]);
@@ -131,8 +160,9 @@ class HPTController extends Controller
             'companycode' => 'required',
             'blok' => 'required',
             'plot' => 'required',
-            'idblokplot' => 'required|exists:mappingblokplot,idblokplot',
+            'idblokplot' => 'required|exists:mapping,idblokplot',
             'varietas' => 'required',
+            'kat' => 'required',
             'tanggaltanam' => 'required',
             'tanggalpengamatan' => 'required',
             'lists.*.nourut' => 'required',
@@ -177,37 +207,65 @@ class HPTController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request);
         $validated = $request->validate($this->requestValidated());
+        $notifController = new NotificationController();
+
+        $existsInHeader = DB::table('hpthdr')->where('nosample', $request->nosample)
+            ->where('companycode', $request->companycode)
+            ->where('tanggalpengamatan', $request->tanggalpengamatan)
+            ->exists();
+
+        $existsInLists = DB::table('hptlst')->where('nosample', $request->nosample)
+            ->where('companycode', $request->companycode)
+            ->where('tanggalpengamatan', $request->tanggalpengamatan)
+            ->exists();
+
+        if ($existsInHeader || $existsInLists) {
+            return back()->with([
+                'success1' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
+            ])->withInput();
+        }
+
         DB::beginTransaction();
 
         try {
 
-            $header = HPTHeader::create([
+            DB::table('hpthdr')->insert([
                 'nosample' => $validated['nosample'],
                 'companycode' => $validated['companycode'],
                 'blok' => $validated['blok'],
                 'plot' => $validated['plot'],
                 'idblokplot' => $validated['idblokplot'],
                 'varietas' => $validated['varietas'],
+                'kat' => $validated['kat'],
                 'tanggaltanam' => $validated['tanggaltanam'],
                 'tanggalpengamatan' => $validated['tanggalpengamatan'],
                 'inputby' => Auth::user()->userid,
-                'createdat' => now()
+                'createdat' => now(),
+                'updatedat' => now(),
             ]);
 
+            $totalPerPPT = 0;
+            $totalPerPBT = 0;
+            $count = count($validated['lists']);
+
             foreach ($validated['lists'] as $list) {
-                $jm_batang = $list['skor0'] + $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
+                $jumlahbatang = $list['skor0'] + $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
                 $ppt = ($list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'] + $list['pupa_ppt']) + $list['kosong_ppt'];
                 $pbt = $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
                 $sum_ni = $list['skor0'] * 0 + $list['skor1'] * 1 + $list['skor2'] * 2 + $list['skor3'] * 3 + $list['skor4'] * 4;
+                $per_ppt = $jumlahbatang != 0 ? $ppt / $jumlahbatang : 0;
+                $per_pbt = $jumlahbatang != 0 ? $pbt / $jumlahbatang : 0;
+                $umur_tanam = round($validated['tanggaltanam'] ? Carbon::parse($validated['tanggaltanam'])->diffInMonths(Carbon::now()) : null);
 
-                $header->lists()->create([
+                DB::table('hptlst')->insert([
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
+                    'tanggalpengamatan' => $validated['tanggalpengamatan'],
+                    'kat' => $validated['kat'],
                     'nourut' => $list['nourut'],
-                    'jumlahbatang' => $jm_batang,
+                    'jumlahbatang' => $jumlahbatang,
                     'ppt' => $ppt,
                     'ppt_aktif' => $list['ppt_aktif'],
                     'pbt' => $pbt,
@@ -217,12 +275,12 @@ class HPTController extends Controller
                     'skor2' => $list['skor2'],
                     'skor3' => $list['skor3'],
                     'skor4' => $list['skor4'],
-                    'per_ppt' => $jm_batang != 0 ? $ppt / $jm_batang : 0,
-                    'per_ppt_aktif' => $jm_batang != 0 ? $list['ppt_aktif'] / $jm_batang : 0,
-                    'per_pbt' => $jm_batang != 0 ? $pbt / $jm_batang : 0,
-                    'per_pbt_aktif' => $jm_batang != 0 ? $list['pbt_aktif'] / $jm_batang : 0,
+                    'per_ppt' => $per_ppt,
+                    'per_ppt_aktif' => $jumlahbatang != 0 ? $list['ppt_aktif'] / $jumlahbatang : 0,
+                    'per_pbt' => $per_pbt,
+                    'per_pbt_aktif' => $jumlahbatang != 0 ? $list['pbt_aktif'] / $jumlahbatang : 0,
                     'sum_ni' => $sum_ni,
-                    'int_rusak' => $jm_batang != 0 ? $sum_ni / ($jm_batang * 4) : 0,
+                    'int_rusak' => $jumlahbatang != 0 ? $sum_ni / ($jumlahbatang * 4) : 0,
                     'telur_ppt' => $list['telur_ppt'],
                     'larva_ppt1' => $list['larva_ppt1'],
                     'larva_ppt2' => $list['larva_ppt2'],
@@ -255,7 +313,31 @@ class HPTController extends Controller
                     'jum_larva_ppt' => $list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'],
                     'jum_larva_pbt' => $list['larva_pbt1'] + $list['larva_pbt2'] + $list['larva_pbt3'] + $list['larva_pbt4'],
                     'inputby' => Auth::user()->userid,
-                    'createdat' => now()
+                    'createdat' => now(),
+                    'updatedat' => now()
+                ]);
+                $totalPerPPT += $per_ppt;
+                $totalPerPBT += $per_pbt;
+            }
+
+            $avgPPT = $count > 0 ? $totalPerPPT / $count : 0;
+            $avgPBT = $count > 0 ? $totalPerPBT / $count : 0;
+            $umurTanam = $validated['tanggaltanam'] ? Carbon::parse($validated['tanggaltanam'])->diffInMonths(Carbon::now()) : null;
+
+            if (
+                ($avgPBT > 0.03 && $umurTanam >= 1 && $umurTanam <= 3) ||
+                ($avgPPT > 0.03 && $umurTanam >= 1 && $umurTanam <= 3) ||
+                ($avgPBT > 0.05 && $umurTanam >= 4) ||
+                ($avgPPT > 0.05 && $umurTanam >= 4)
+            ) {
+                Notification::createForHPT([
+                    'plot' => $validated['plot'],
+                    'companycode' => $validated['companycode'],
+                    'condition' => [
+                        'ppt' => $avgPPT,
+                        'pbt' => $avgPBT,
+                        'umur' => $umurTanam,
+                    ]
                 ]);
             }
 
@@ -266,19 +348,19 @@ class HPTController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
+
             return redirect()->route('input.hpt.create')
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
 
 
-    public function show($nosample, $companycode, $tanggaltanam)
+    public function show($nosample, $companycode, $tanggalpengamatan)
     {
         $hpt = DB::table('hpthdr')
             ->where('companycode', '=', session('companycode'))
             ->where('nosample', $nosample)
-            ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
+            ->where('tanggalpengamatan', $tanggalpengamatan)
             ->first();
 
         if (!$hpt) {
@@ -289,7 +371,7 @@ class HPTController extends Controller
             ->leftJoin('hpthdr', function ($join) use ($hpt) {
                 $join->on('hptlst.nosample', '=', 'hpthdr.nosample')
                     ->whereColumn('hptlst.companycode', '=', 'hpthdr.companycode')
-                    ->whereColumn('hptlst.tanggaltanam', '=', 'hpthdr.tanggaltanam');
+                    ->whereColumn('hptlst.tanggalpengamatan', '=', 'hpthdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('hpthdr.companycode', '=', 'company.companycode');
@@ -305,7 +387,8 @@ class HPTController extends Controller
             ->select(
                 'hptlst.*',
                 'hpthdr.varietas',
-                'hpthdr.tanggalpengamatan',
+                'hpthdr.kat',
+                'hpthdr.tanggaltanam',
                 'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
@@ -313,8 +396,8 @@ class HPTController extends Controller
             )
             ->where('hptlst.nosample', $nosample)
             ->where('hptlst.companycode', $companycode)
-            ->where('hptlst.tanggaltanam', $tanggaltanam)
-            ->orderBy('hptlst.createdat', 'desc')
+            ->where('hptlst.tanggalpengamatan', $tanggalpengamatan)
+            ->orderBy('hptlst.nourut', 'asc')
             ->get();
 
         $now = Carbon::now();
@@ -332,27 +415,27 @@ class HPTController extends Controller
         return response()->json($hptLists);
     }
 
-    public function edit($nosample, $companycode, $tanggaltanam)
+    public function edit($nosample, $companycode, $tanggalpengamatan)
     {
         $title = 'Edit Data';
-        $header = HPTHeader::with(['lists' => function ($query) use ($nosample, $companycode, $tanggaltanam) {
-            $query->where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam);
-        }])
+        $header = DB::table('hpthdr')
             ->where('nosample', $nosample)
             ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
+            ->where('tanggalpengamatan', $tanggalpengamatan)
             ->firstOrFail();
-        $list = HPTList::where('nosample', $nosample)
+        $lists = DB::table('hptlst')->where('nosample', $nosample)
             ->where('companycode', $companycode)
-            ->where('tanggaltanam', $tanggaltanam)
-            ->firstOrFail();
-        $company = Company::all();
-        $mapping = Mapping::all();
+            ->where('tanggalpengamatan', $tanggalpengamatan)
+            ->get();
+
+        $list = $lists->first();
+        $header->lists = $lists;
+
+        $company = DB::table('company')->get();
+        $mapping = DB::table('mapping')->get();
         $method = 'PUT';
         $buttonSubmit = 'Update';
-        $url = route('input.hpt.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggaltanam' => $tanggaltanam]);
+        $url = route('input.hpt.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggalpengamatan' => $tanggalpengamatan]);
 
         if ($header->status === "Posted") {
             return redirect()->route('input.hpt.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
@@ -361,22 +444,17 @@ class HPTController extends Controller
         return view('input.hpt.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
     }
 
-    public function update(Request $request, $nosample, $companycode, $tanggaltanam)
+    public function update(Request $request, $nosample, $companycode, $tanggalpengamatan)
     {
         $validated = $request->validate($this->requestValidated());
 
         DB::beginTransaction();
 
         try {
-            $header = HPTHeader::where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->firstOrFail();
-
             DB::table('hpthdr')
                 ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
                 ->update([
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
@@ -384,35 +462,41 @@ class HPTController extends Controller
                     'plot' => $validated['plot'],
                     'idblokplot' => $validated['idblokplot'],
                     'varietas' => $validated['varietas'],
+                    'kat' => $validated['kat'],
                     'tanggaltanam' => $validated['tanggaltanam'],
                     'tanggalpengamatan' => $validated['tanggalpengamatan'],
                     'updatedat' => now(),
                 ]);
 
-            $existingLists = HPTList::where('nosample', $nosample)
-                ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->get(['nourut', 'inputby', 'createdat'])
-                ->keyBy('nourut');
-
-            DB::table('hptlst')
+            $lists = DB::table('hptlst')
                 ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->delete();
+                ->where('tanggalpengamatan', $tanggalpengamatan);
 
-            $listData = [];
+            $saved = DB::table('hptlst')
+                ->where('nosample', $nosample)
+                ->where('companycode', $companycode)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->first();
+
+            $createdAt = $saved->createdat;
+            $userInput = $saved->inputby;
+
+            $lists->delete();
+
             foreach ($validated['lists'] as $list) {
-                $jm_batang = $list['skor0'] + $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
+                $jumlahbatang = $list['skor0'] + $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
                 $ppt = ($list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'] + $list['pupa_ppt']) + $list['kosong_ppt'];
                 $pbt = $list['skor1'] + $list['skor2'] + $list['skor3'] + $list['skor4'];
                 $sum_ni = $list['skor0'] * 0 + $list['skor1'] * 1 + $list['skor2'] * 2 + $list['skor3'] * 3 + $list['skor4'] * 4;
-                $listData[] = [
+                $data = [
                     'nosample' => $validated['nosample'],
                     'companycode' => $validated['companycode'],
                     'tanggaltanam' => $validated['tanggaltanam'],
+                    'tanggalpengamatan' => $validated['tanggalpengamatan'],
+                    'kat' => $validated['kat'],
                     'nourut' => $list['nourut'],
-                    'jumlahbatang' => $jm_batang,
+                    'jumlahbatang' => $jumlahbatang,
                     'ppt' => $ppt,
                     'ppt_aktif' => $list['ppt_aktif'],
                     'pbt' => $pbt,
@@ -422,12 +506,12 @@ class HPTController extends Controller
                     'skor2' => $list['skor2'],
                     'skor3' => $list['skor3'],
                     'skor4' => $list['skor4'],
-                    'per_ppt' => $jm_batang != 0 ? $ppt / $jm_batang : 0,
-                    'per_ppt_aktif' => $jm_batang != 0 ? $list['ppt_aktif'] / $jm_batang : 0,
-                    'per_pbt' => $jm_batang != 0 ? $pbt / $jm_batang : 0,
-                    'per_pbt_aktif' => $jm_batang != 0 ? $list['pbt_aktif'] / $jm_batang : 0,
+                    'per_ppt' => $jumlahbatang != 0 ? $ppt / $jumlahbatang : 0,
+                    'per_ppt_aktif' => $jumlahbatang != 0 ? $list['ppt_aktif'] / $jumlahbatang : 0,
+                    'per_pbt' => $jumlahbatang != 0 ? $pbt / $jumlahbatang : 0,
+                    'per_pbt_aktif' => $jumlahbatang != 0 ? $list['pbt_aktif'] / $jumlahbatang : 0,
                     'sum_ni' => $sum_ni,
-                    'int_rusak' => $jm_batang != 0 ? $sum_ni / ($jm_batang * 4) : 0,
+                    'int_rusak' => $jumlahbatang != 0 ? $sum_ni / ($jumlahbatang * 4) : 0,
                     'telur_ppt' => $list['telur_ppt'],
                     'larva_ppt1' => $list['larva_ppt1'],
                     'larva_ppt2' => $list['larva_ppt2'],
@@ -459,18 +543,24 @@ class HPTController extends Controller
                     'smut_stadia3' => $list['smut_stadia3'],
                     'jum_larva_ppt' => $list['larva_ppt1'] + $list['larva_ppt2'] + $list['larva_ppt3'] + $list['larva_ppt4'],
                     'jum_larva_pbt' => $list['larva_pbt1'] + $list['larva_pbt2'] + $list['larva_pbt3'] + $list['larva_pbt4'],
-                    'inputby' => $existingLists[$list['nourut']]['inputby'] ?? $header->inputby,
-                    'createdat' => $existingLists[$list['nourut']]['createdat'] ?? $header->createdat,
+                    'inputby' => $userInput,
+                    'createdat' => $createdAt,
                     'updatedat' => now(),
                 ];
-            }
 
-            DB::table('hptlst')->insert($listData);
+
+                DB::table('hptlst')
+                    ->where('nosample', $nosample)
+                    ->where('companycode', $companycode)
+                    ->where('tanggalpengamatan', $tanggalpengamatan)
+                    ->where('nourut', $list['nourut'])
+                    ->insert($data);
+            }
 
             DB::commit();
 
             return redirect()->route('input.hpt.index')
-                ->with('success', 'Data updated successfully.');
+                ->with('success1', 'Data updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -479,19 +569,19 @@ class HPTController extends Controller
         }
     }
 
-    public function destroy($nosample, $companycode, $tanggaltanam)
+    public function destroy($nosample, $companycode, $tanggalpengamatan)
     {
-        DB::transaction(function () use ($nosample, $companycode, $tanggaltanam) {
-            $header = HPTHeader::where('nosample', $nosample)
+        DB::transaction(function () use ($nosample, $companycode, $tanggalpengamatan) {
+            DB::table('hpthdr')
+                ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam)
-                ->firstOrFail();
-            $list = HPTList::where('nosample', $nosample)
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->delete();
+            DB::table('hptlst')
+                ->where('nosample', $nosample)
                 ->where('companycode', $companycode)
-                ->where('tanggaltanam', $tanggaltanam);
-
-            $header->delete();
-            $list->delete();
+                ->where('tanggalpengamatan', $tanggalpengamatan)
+                ->delete();
         });
         return redirect()->route('input.hpt.index')
             ->with('success', 'Data deleted successfully.');
@@ -506,7 +596,7 @@ class HPTController extends Controller
             ->leftJoin('hpthdr', function ($join) {
                 $join->on('hptlst.nosample', '=', 'hpthdr.nosample')
                     ->whereColumn('hptlst.companycode', '=', 'hpthdr.companycode')
-                    ->whereColumn('hptlst.tanggaltanam', '=', 'hpthdr.tanggaltanam');
+                    ->whereColumn('hptlst.tanggalpengamatan', '=', 'hpthdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('hpthdr.companycode', '=', 'company.companycode');
@@ -524,20 +614,21 @@ class HPTController extends Controller
             ->select(
                 'hptlst.*',
                 'hpthdr.varietas',
+                'hpthdr.kat',
                 'hpthdr.tanggalpengamatan',
-                'company.name as compName',
+                'company.nama as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
                 'plot.luasarea',
             )
-            ->orderBy('hptlst.createdat', 'desc');
+            ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 
 
         if ($startDate) {
-            $query->whereDate('hptlst.createdat', '>=', $startDate);
+            $query->whereDate('hpthdr.tanggalpengamatan', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('hptlst.createdat', '<=', $endDate);
+            $query->whereDate('hpthdr.tanggalpengamatan', '<=', $endDate);
         }
         $hpt = $query->get();
 
@@ -554,51 +645,59 @@ class HPTController extends Controller
         $sheet->setCellValue('F1', 'Tanggal Tanam');
         $sheet->setCellValue('G1', 'Umur Tanam');
         $sheet->setCellValue('H1', 'Varietas');
-        $sheet->setCellValue('I1', 'Tanggal Pengamatan');
-        $sheet->setCellValue('J1', 'Bulan Pengamatan');
-        $sheet->setCellValue('K1', 'No. Urut');
-        $sheet->setCellValue('L1', 'Jumlah Batang');
-        $sheet->setCellValue('M1', 'PPT');
-        $sheet->setCellValue('N1', 'PBT');
-        $sheet->setCellValue('O1', 'Skor 0');
-        $sheet->setCellValue('P1', 'Skor 1');
-        $sheet->setCellValue('Q1', 'Skor 2');
-        $sheet->setCellValue('R1', 'Skor 3');
-        $sheet->setCellValue('S1', 'Skor 4');
-        $sheet->setCellValue('T1', '%PPT');
-        $sheet->setCellValue('U1', '%PBT');
-        $sheet->setCellValue('V1', 'Σni*vi');
-        $sheet->setCellValue('W1', 'Intensitas Kerusakan');
-        $sheet->setCellValue('X1', 'Telur PPT');
-        $sheet->setCellValue('Y1', 'Larva PPT 1');
-        $sheet->setCellValue('Z1', 'Larva PPT 2');
-        $sheet->setCellValue('AA1', 'Larva PPT 3');
-        $sheet->setCellValue('AB1', 'Larva PPT 4');
-        $sheet->setCellValue('AC1', 'Pupa PPT');
-        $sheet->setCellValue('AD1', 'Ngengat PPT');
-        $sheet->setCellValue('AE1', 'Kosong PPT');
-        $sheet->setCellValue('AF1', 'Telur PBT');
-        $sheet->setCellValue('AG1', 'Larva PBT 1');
-        $sheet->setCellValue('AH1', 'Larva PBT 2');
-        $sheet->setCellValue('AI1', 'Larva PBT 3');
-        $sheet->setCellValue('AJ1', 'Larva PBT 4');
-        $sheet->setCellValue('AK1', 'Pupa PBT');
-        $sheet->setCellValue('AL1', 'Ngengat PBT');
-        $sheet->setCellValue('AM1', 'Kosong PBT');
-        $sheet->setCellValue('AN1', 'DH');
-        $sheet->setCellValue('AO1', 'DT');
-        $sheet->setCellValue('AP1', 'KBP');
-        $sheet->setCellValue('AQ1', 'KBB');
-        $sheet->setCellValue('AR1', 'KP');
-        $sheet->setCellValue('AS1', 'Cabuk');
-        $sheet->setCellValue('AT1', 'Belalang');
-        $sheet->setCellValue('AU1', 'Ul.Grayak');
-        $sheet->setCellValue('AV1', 'BTG Terserang SMUT');
-        $sheet->setCellValue('AW1', 'SMUT Stadia 1');
-        $sheet->setCellValue('AX1', 'SMUT Stadia 2');
-        $sheet->setCellValue('AY1', 'SMUT Stadia 3');
+        $sheet->setCellValue('I1', 'Kategori');
+        $sheet->setCellValue('J1', 'Tanggal Pengamatan');
+        $sheet->setCellValue('K1', 'Bulan Pengamatan');
+        $sheet->setCellValue('L1', 'No. Urut');
+        $sheet->setCellValue('M1', 'Jumlah Batang');
+        $sheet->setCellValue('N1', 'PPT');
+        $sheet->setCellValue('O1', 'PPT Aktif');
+        $sheet->setCellValue('P1', 'PBT');
+        $sheet->setCellValue('Q1', 'PBT Aktif');
+        $sheet->setCellValue('R1', 'Skor 0');
+        $sheet->setCellValue('S1', 'Skor 1');
+        $sheet->setCellValue('T1', 'Skor 2');
+        $sheet->setCellValue('U1', 'Skor 3');
+        $sheet->setCellValue('V1', 'Skor 4');
+        $sheet->setCellValue('W1', '%PPT');
+        $sheet->setCellValue('X1', '%PPT Aktif');
+        $sheet->setCellValue('Y1', '%PBT');
+        $sheet->setCellValue('Z1', '%PBT Aktif');
+        $sheet->setCellValue('AA1', 'Σni*vi');
+        $sheet->setCellValue('AB1', 'Intensitas Kerusakan');
+        $sheet->setCellValue('AC1', 'Telur PPT');
+        $sheet->setCellValue('AD1', 'Larva PPT 1');
+        $sheet->setCellValue('AE1', 'Larva PPT 2');
+        $sheet->setCellValue('AF1', 'Larva PPT 3');
+        $sheet->setCellValue('AG1', 'Larva PPT 4');
+        $sheet->setCellValue('AH1', 'Pupa PPT');
+        $sheet->setCellValue('AI1', 'Ngengat PPT');
+        $sheet->setCellValue('AJ1', 'Kosong PPT');
+        $sheet->setCellValue('AK1', 'Telur PBT');
+        $sheet->setCellValue('AL1', 'Larva PBT 1');
+        $sheet->setCellValue('AM1', 'Larva PBT 2');
+        $sheet->setCellValue('AN1', 'Larva PBT 3');
+        $sheet->setCellValue('AO1', 'Larva PBT 4');
+        $sheet->setCellValue('AP1', 'Pupa PBT');
+        $sheet->setCellValue('AQ1', 'Ngengat PBT');
+        $sheet->setCellValue('AR1', 'Kosong PBT');
+        $sheet->setCellValue('AS1', 'DH');
+        $sheet->setCellValue('AT1', 'DT');
+        $sheet->setCellValue('AU1', 'KBP');
+        $sheet->setCellValue('AV1', 'KBB');
+        $sheet->setCellValue('AW1', 'KP');
+        $sheet->setCellValue('AX1', 'Cabuk');
+        $sheet->setCellValue('AY1', 'Belalang');
+        $sheet->setCellValue('AZ1', 'BTG Terserang Ul.Grayak');
+        $sheet->setCellValue('BA1', 'Jumlah Ul.Grayak');
+        $sheet->setCellValue('BB1', 'BTG Terserang SMUT');
+        $sheet->setCellValue('BC1', 'SMUT Stadia 1');
+        $sheet->setCellValue('BD1', 'SMUT Stadia 2');
+        $sheet->setCellValue('BE1', 'SMUT Stadia 3');
+        $sheet->setCellValue('BF1', 'Jumlah Larva PPT');
+        $sheet->setCellValue('BG1', 'Jumlah Larva PBT');
 
-        $sheet->getStyle('A1:AY1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:BG1')->getFont()->setBold(true);
         $sheet->freezePane('A2');
 
         $row = 2;
@@ -609,70 +708,73 @@ class HPTController extends Controller
 
             $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
             $bulanPengamatan = $tanggalpengamatan->format('F');
-            
+
             $sheet->setCellValue('A' . $row, $list->nosample);
             $sheet->setCellValue('B' . $row, $list->compName);
             $sheet->setCellValue('C' . $row, $list->blokName);
             $sheet->setCellValue('D' . $row, $list->plotName);
             $sheet->setCellValue('E' . $row, $list->luasarea);
             $sheet->setCellValue('F' . $row, $tanggaltanam->format('Y-m-d'));
-            $sheet->setCellValue('G' . $row, ceil($umurTanam) . ' Bulan');
+            $sheet->setCellValue('G' . $row, round($umurTanam) . ' Bulan');
             $sheet->setCellValue('H' . $row, $list->varietas);
-            $sheet->setCellValue('I' . $row, $list->tanggalpengamatan);
-            $sheet->setCellValue('J' . $row, $bulanPengamatan);
-            $sheet->setCellValue('K' . $row, $list->nourut);
-            $sheet->setCellValue('L' . $row, $list->jumlahbatang);
-            $sheet->setCellValue('M' . $row, $list->ppt);
-            $sheet->setCellValue('N' . $row, $list->pbt);
-            $sheet->setCellValue('O' . $row, $list->skor0);
-            $sheet->setCellValue('P' . $row, $list->skor1);
-            $sheet->setCellValue('Q' . $row, $list->skor2);
-            $sheet->setCellValue('R' . $row, $list->skor3);
-            $sheet->setCellValue('S' . $row, $list->skor4);
-            $sheet->setCellValue('T' . $row, $list->per_ppt);
-            $sheet->setCellValue('U' . $row, $list->per_pbt);
-            $sheet->setCellValue('V' . $row, $list->sum_ni);
-            $sheet->setCellValue('W' . $row, $list->int_rusak);
-            $sheet->setCellValue('X' . $row, $list->telur_ppt);
-            $sheet->setCellValue('Y' . $row, $list->larva_ppt1);
-            $sheet->setCellValue('Z' . $row, $list->larva_ppt2);
-            $sheet->setCellValue('AA' . $row, $list->larva_ppt3);
-            $sheet->setCellValue('AB' . $row, $list->larva_ppt4);
-            $sheet->setCellValue('AC' . $row, $list->pupa_ppt);
-            $sheet->setCellValue('AD' . $row, $list->ngengat_ppt);
-            $sheet->setCellValue('AE' . $row, $list->kosong_ppt);
-            $sheet->setCellValue('AF' . $row, $list->telur_pbt);
-            $sheet->setCellValue('AG' . $row, $list->larva_pbt1);
-            $sheet->setCellValue('AH' . $row, $list->larva_pbt2);
-            $sheet->setCellValue('AI' . $row, $list->larva_pbt3);
-            $sheet->setCellValue('AJ' . $row, $list->larva_pbt4);
-            $sheet->setCellValue('AK' . $row, $list->pupa_pbt);
-            $sheet->setCellValue('AL' . $row, $list->ngengat_pbt);
-            $sheet->setCellValue('AM' . $row, $list->kosong_pbt);
-            $sheet->setCellValue('AN' . $row, $list->dh);
-            $sheet->setCellValue('AO' . $row, $list->dt);
-            $sheet->setCellValue('AP' . $row, $list->kbp);
-            $sheet->setCellValue('AQ' . $row, $list->kbb);
-            $sheet->setCellValue('AR' . $row, $list->kp);
-            $sheet->setCellValue('AS' . $row, $list->cabuk);
-            $sheet->setCellValue('AT' . $row, $list->belalang);
-            $sheet->setCellValue('AU' . $row, $list->jum_grayak);
-            $sheet->setCellValue('AV' . $row, $list->serang_smut);
-            $sheet->setCellValue('AW' . $row, $list->smut_stadia1);
-            $sheet->setCellValue('AX' . $row, $list->smut_stadia2);
-            $sheet->setCellValue('AY' . $row, $list->smut_stadia3);
+            $sheet->setCellValue('I' . $row, $list->kat);
+            $sheet->setCellValue('J' . $row, $list->tanggalpengamatan);
+            $sheet->setCellValue('K' . $row, $bulanPengamatan);
+            $sheet->setCellValue('L' . $row, $list->nourut);
+            $sheet->setCellValue('M' . $row, $list->jumlahbatang);
+            $sheet->setCellValue('N' . $row, $list->ppt);
+            $sheet->setCellValue('O' . $row, $list->ppt_aktif);
+            $sheet->setCellValue('P' . $row, $list->pbt);
+            $sheet->setCellValue('Q' . $row, $list->pbt_aktif);
+            $sheet->setCellValue('R' . $row, $list->skor0);
+            $sheet->setCellValue('S' . $row, $list->skor1);
+            $sheet->setCellValue('T' . $row, $list->skor2);
+            $sheet->setCellValue('U' . $row, $list->skor3);
+            $sheet->setCellValue('V' . $row, $list->skor4);
+            $sheet->setCellValue('W' . $row, $list->per_ppt);
+            $sheet->setCellValue('X' . $row, $list->per_ppt_aktif);
+            $sheet->setCellValue('Y' . $row, $list->per_pbt);
+            $sheet->setCellValue('Z' . $row, $list->per_pbt_aktif);
+            $sheet->setCellValue('AA' . $row, $list->sum_ni);
+            $sheet->setCellValue('AB' . $row, $list->int_rusak);
+            $sheet->setCellValue('AC' . $row, $list->telur_ppt);
+            $sheet->setCellValue('AD' . $row, $list->larva_ppt1);
+            $sheet->setCellValue('AE' . $row, $list->larva_ppt2);
+            $sheet->setCellValue('AF' . $row, $list->larva_ppt3);
+            $sheet->setCellValue('AG' . $row, $list->larva_ppt4);
+            $sheet->setCellValue('AH' . $row, $list->pupa_ppt);
+            $sheet->setCellValue('AI' . $row, $list->ngengat_ppt);
+            $sheet->setCellValue('AJ' . $row, $list->kosong_ppt);
+            $sheet->setCellValue('AK' . $row, $list->telur_pbt);
+            $sheet->setCellValue('AL' . $row, $list->larva_pbt1);
+            $sheet->setCellValue('AM' . $row, $list->larva_pbt2);
+            $sheet->setCellValue('AN' . $row, $list->larva_pbt3);
+            $sheet->setCellValue('AO' . $row, $list->larva_pbt4);
+            $sheet->setCellValue('AP' . $row, $list->pupa_pbt);
+            $sheet->setCellValue('AQ' . $row, $list->ngengat_pbt);
+            $sheet->setCellValue('AR' . $row, $list->kosong_pbt);
+            $sheet->setCellValue('AS' . $row, $list->dh);
+            $sheet->setCellValue('AT' . $row, $list->dt);
+            $sheet->setCellValue('AU' . $row, $list->kbp);
+            $sheet->setCellValue('AV' . $row, $list->kbb);
+            $sheet->setCellValue('AW' . $row, $list->kp);
+            $sheet->setCellValue('AX' . $row, $list->cabuk);
+            $sheet->setCellValue('AY' . $row, $list->belalang);
+            $sheet->setCellValue('AZ' . $row, $list->serang_grayak);
+            $sheet->setCellValue('BA' . $row, $list->jum_grayak);
+            $sheet->setCellValue('BB' . $row, $list->serang_smut);
+            $sheet->setCellValue('BC' . $row, $list->smut_stadia1);
+            $sheet->setCellValue('BD' . $row, $list->smut_stadia2);
+            $sheet->setCellValue('BE' . $row, $list->smut_stadia3);
+            $sheet->setCellValue('BF' . $row, $list->jum_larva_ppt);
+            $sheet->setCellValue('BG' . $row, $list->jum_larva_pbt);
 
-            $sheet->getStyle('T' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+            $sheet->getStyle('W' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+            $sheet->getStyle('X' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+            $sheet->getStyle('Y' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+            $sheet->getStyle('Z' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+            $sheet->getStyle('AB' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
 
-            $sheet->getStyle('U' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-
-            $sheet->getStyle('W' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
             $row++;
         }
 
