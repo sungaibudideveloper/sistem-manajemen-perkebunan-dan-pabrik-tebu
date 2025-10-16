@@ -9,11 +9,11 @@
     <meta name="user-id" content="{{ auth()->user()->userid }}">
     <meta name="current-username" content="{{ Auth::user()->usernm }}">
     <meta name="theme-color" content="#3b82f6">
-    
+
     <!-- Preload font awesome untuk prevent icon flash -->
     <link rel="preload" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}" as="style">
     <link rel="preload" href="{{ asset('asset/inter.css') }}" as="style">
-    
+
     <!-- Dynamic Manifest Link -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,48 +21,93 @@
     <meta name="apple-mobile-web-app-title" content="SB Tebu App">
     <link rel="apple-touch-icon" href="{{ asset('img/icon-sb-tebu-circle.png') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    
+
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
         /* Hide everything initially */
-        body { visibility: hidden; opacity: 0; }
-        
+        body {
+            visibility: hidden;
+            opacity: 0;
+        }
+
         /* Base layout styles to prevent flash */
-        .layout-container { display: flex; min-height: 100vh; }
-        
+        .layout-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
         /* Mobile: No sidebar space reserved */
-        .sidebar-wrapper { 
-            width: 0; 
-            flex-shrink: 0; 
+        .sidebar-wrapper {
+            width: 0;
+            flex-shrink: 0;
             transition: width 0.3s ease;
         }
-        
+
         /* Desktop: Reserve sidebar space */
         @media (min-width: 1024px) {
-            .sidebar-wrapper { 
-                width: 18rem; 
+            .sidebar-wrapper {
+                width: 18rem;
             }
-            .sidebar-minimized .sidebar-wrapper { 
-                width: 4rem; 
+
+            .sidebar-minimized .sidebar-wrapper {
+                width: 4rem;
             }
         }
-        
-        .main-wrapper { flex: 1; margin-left: 0; }
-        
+
+        .main-wrapper {
+            flex: 1;
+            margin-left: 0;
+            overflow-x: hidden;
+        }
+
         /* Show body after state determined */
-        body.ready { visibility: visible; opacity: 1; transition: opacity 0.15s ease; }
-        
-        [x-cloak] { display: none !important; }
+        body.ready {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.15s ease;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
 
         @media print {
-            .sidebar-wrapper, aside, header, .header, nav, footer, .footer, .no-print, .print-hidden { display: none !important; }
-            .main-wrapper { margin-left: 0 !important; width: 100% !important; flex: none !important; }
-            .layout-container { display: block !important; }
-            main { margin: 0 !important; padding: 0 !important; background: white !important; }
-            * { box-shadow: none !important; text-shadow: none !important; }
+
+            .sidebar-wrapper,
+            aside,
+            header,
+            .header,
+            nav,
+            footer,
+            .footer,
+            .no-print,
+            .print-hidden {
+                display: none !important;
+            }
+
+            .main-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+                flex: none !important;
+            }
+
+            .layout-container {
+                display: block !important;
+            }
+
+            main {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
         }
     </style>
-    
+
     <!-- Set initial state IMMEDIATELY -->
     <script>
         (function() {
@@ -70,19 +115,19 @@
             const localState = localStorage.getItem('sidebar-minimized');
             const cookieState = document.cookie.match(/sidebar_minimized=([^;]+)/);
             const isMinimized = localState ? localState === 'true' : (cookieState ? cookieState[1] === 'true' : false);
-            
+
             // Apply state to HTML element (only affects desktop)
             if (isMinimized && window.innerWidth >= 1024) {
                 document.documentElement.classList.add('sidebar-minimized');
             }
         })();
     </script>
-    
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('asset/inter.css') }}">
     <link rel="stylesheet" href="{{ asset('asset/font-awesome-6.5.1-all.min.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    
+
     <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     <script src="{{ asset('asset/chart.js') }}"></script>
     <script src="{{ asset('asset/chartjs-plugin-datalabels@2.0.0.js') }}"></script>
@@ -102,7 +147,7 @@
 
         <!-- Main Content Area -->
         <div class="main-wrapper flex flex-col">
-            
+
             <!-- Header -->
             <x-header>{{ $title }}
                 <x-slot:navhint>
@@ -136,7 +181,8 @@
                 {{ $hero ?? null }}
                 <div class="px-2 py-3 sm:px-3 lg:px-4">
                     @error('duplicateClosing')
-                        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
+                        <div
+                            class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
                             {{ $message }}
                         </div>
                     @enderror
@@ -166,20 +212,16 @@
         </div>
 
         <!-- Mobile sidebar overlay -->
-        <div x-show="$store.sidebar.mobileOpen" 
-             @click="$store.sidebar.closeMobile()"
-             x-transition:enter="transition-opacity ease-linear duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition-opacity ease-linear duration-300"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 lg:hidden">
+        <div x-show="$store.sidebar.mobileOpen" @click="$store.sidebar.closeMobile()"
+            x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 lg:hidden">
         </div>
     </div>
 
     <!-- Global Company Modal -->
-    @if(isset($company) && $company)
+    @if (isset($company) && $company)
         <x-company-modal :companies="$company" />
     @endif
 
@@ -207,18 +249,18 @@
                     if (window.innerWidth >= 1024) {
                         const localState = localStorage.getItem('sidebar-minimized');
                         const cookieState = getCookie('sidebar_minimized');
-                        
-                        const isMinimized = localState !== null 
-                            ? localState === 'true' 
-                            : (cookieState === 'true');
-                        
+
+                        const isMinimized = localState !== null ?
+                            localState === 'true' :
+                            (cookieState === 'true');
+
                         // Apply state to HTML
                         if (isMinimized) {
                             document.documentElement.classList.add('sidebar-minimized');
                         } else {
                             document.documentElement.classList.remove('sidebar-minimized');
                         }
-                        
+
                         // Sync with Alpine store
                         this.$nextTick(() => {
                             if (Alpine.store('sidebar')) {
@@ -226,7 +268,7 @@
                             }
                         });
                     }
-                    
+
                     // Listen for toggle events
                     window.addEventListener('sidebar-toggle', (e) => {
                         if (window.innerWidth >= 1024) {
@@ -249,17 +291,17 @@
             Alpine.store('sidebar', {
                 isMinimized: false,
                 mobileOpen: false,
-                
+
                 init() {
                     // Initialize from storage (desktop only)
                     if (window.innerWidth >= 1024) {
                         const localState = localStorage.getItem('sidebar-minimized');
                         const cookieState = getCookie('sidebar_minimized');
-                        this.isMinimized = localState !== null 
-                            ? localState === 'true' 
-                            : (cookieState === 'true');
+                        this.isMinimized = localState !== null ?
+                            localState === 'true' :
+                            (cookieState === 'true');
                     }
-                    
+
                     // ============================================
                     // FIX: RESPONSIVE RESIZE HANDLER
                     // Reset state saat switch mobile/desktop
@@ -273,58 +315,60 @@
                             // Masuk desktop view: Restore state dari storage
                             const localState = localStorage.getItem('sidebar-minimized');
                             const cookieState = getCookie('sidebar_minimized');
-                            this.isMinimized = localState !== null 
-                                ? localState === 'true' 
-                                : (cookieState === 'true');
-                            
+                            this.isMinimized = localState !== null ?
+                                localState === 'true' :
+                                (cookieState === 'true');
+
                             // Apply ke HTML
                             if (this.isMinimized) {
                                 document.documentElement.classList.add('sidebar-minimized');
                             } else {
                                 document.documentElement.classList.remove('sidebar-minimized');
                             }
-                            
+
                             // Close mobile sidebar jika kebetulan terbuka
                             this.mobileOpen = false;
                         }
                     });
                 },
-                
+
                 // Desktop toggle (collapse/expand)
                 toggle() {
                     if (window.innerWidth >= 1024) {
                         this.isMinimized = !this.isMinimized;
-                        
+
                         // Save to both localStorage and cookie
                         localStorage.setItem('sidebar-minimized', this.isMinimized);
                         setCookie('sidebar_minimized', this.isMinimized);
-                        
+
                         // Update HTML class
                         if (this.isMinimized) {
                             document.documentElement.classList.add('sidebar-minimized');
                         } else {
                             document.documentElement.classList.remove('sidebar-minimized');
                         }
-                        
+
                         // Dispatch event
                         window.dispatchEvent(new CustomEvent('sidebar-toggle', {
-                            detail: { minimized: this.isMinimized }
+                            detail: {
+                                minimized: this.isMinimized
+                            }
                         }));
                     }
                 },
-                
+
                 // Mobile toggle (show/hide)
                 toggleMobile() {
                     if (window.innerWidth < 1024) {
                         this.mobileOpen = !this.mobileOpen;
                     }
                 },
-                
+
                 // Mobile close
                 closeMobile() {
                     this.mobileOpen = false;
                 },
-                
+
                 // Mobile open
                 openMobile() {
                     if (window.innerWidth < 1024) {
@@ -332,7 +376,7 @@
                     }
                 }
             });
-            
+
             // Initialize store
             Alpine.store('sidebar').init();
         });
@@ -345,7 +389,7 @@
         // ============================================
         // SERVICE WORKER MANAGEMENT
         // ============================================
-        
+
         // Clear cache on logout
         document.addEventListener('DOMContentLoaded', function() {
             // Intercept logout forms
@@ -354,8 +398,8 @@
                 form.addEventListener('submit', function() {
                     // Clear SW cache before logout
                     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                        navigator.serviceWorker.controller.postMessage({ 
-                            type: 'CLEAR_CACHE' 
+                        navigator.serviceWorker.controller.postMessage({
+                            type: 'CLEAR_CACHE'
                         });
                     }
                     // Also clear browser caches
@@ -366,9 +410,9 @@
                     }
                 });
             });
-            
+
             // Handle login success
-            if (window.location.pathname.includes('/dashboard') && 
+            if (window.location.pathname.includes('/dashboard') &&
                 document.referrer && document.referrer.includes('/login')) {
                 // User just logged in, update SW
                 if ('serviceWorker' in navigator) {
@@ -378,43 +422,47 @@
                 }
             }
         });
-        
+
         // Service Worker Registration with version control
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Add timestamp to force update in development
-                const swUrl = @if(config('app.env') === 'local')
-                                '{{ asset("sw.js") }}' + '?v=' + Date.now();
-                              @else
-                                '{{ url("/") }}/sw.js?v=6';
-                              @endif
-                
+                const swUrl =
+                    @if (config('app.env') === 'local')
+                        '{{ asset('sw.js') }}' + '?v=' + Date.now();
+                    @else
+                        '{{ url('/') }}/sw.js?v=6';
+                    @endif
+
                 navigator.serviceWorker.register(swUrl)
                     .then(function(registration) {
                         console.log('ServiceWorker registered:', registration.scope);
-                        
+
                         // Check for updates periodically
-                        @if(config('app.env') === 'local')
-                        // Development: Check every minute
-                        setInterval(() => {
-                            registration.update();
-                        }, 60 * 1000);
+                        @if (config('app.env') === 'local')
+                            // Development: Check every minute
+                            setInterval(() => {
+                                registration.update();
+                            }, 60 * 1000);
                         @else
-                        // Production: Check every 30 minutes
-                        setInterval(() => {
-                            registration.update();
-                        }, 30 * 60 * 1000);
+                            // Production: Check every 30 minutes
+                            setInterval(() => {
+                                registration.update();
+                            }, 30 * 60 * 1000);
                         @endif
-                        
+
                         // Handle updates
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker
+                                    .controller) {
                                     console.log('New service worker available');
                                     // Optionally show update notification
                                     if (confirm('Update tersedia! Refresh halaman?')) {
-                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        newWorker.postMessage({
+                                            type: 'SKIP_WAITING'
+                                        });
                                         window.location.reload();
                                     }
                                 }
@@ -424,27 +472,27 @@
                     .catch(function(err) {
                         console.error('ServiceWorker registration failed:', err);
                     });
-                
+
                 // Handle controller change
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     window.location.reload();
                 });
             });
         }
-        
+
         // Helper function to clear all caches (for debugging)
         window.clearAllCache = function() {
             console.log('Clearing all caches...');
-            
+
             // Clear Service Worker
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for(let registration of registrations) {
+                    for (let registration of registrations) {
                         registration.unregister();
                     }
                 });
             }
-            
+
             // Clear Caches
             if ('caches' in window) {
                 caches.keys().then(names => {
@@ -453,19 +501,19 @@
                     });
                 });
             }
-            
+
             // Clear localStorage
             localStorage.clear();
-            
+
             // Clear sessionStorage
             sessionStorage.clear();
-            
+
             console.log('All caches cleared. Reloading...');
             setTimeout(() => {
                 window.location.reload(true);
             }, 500);
         };
-        
+
         // Debug helper
         window.swInfo = function() {
             if ('serviceWorker' in navigator) {
@@ -474,7 +522,7 @@
                     console.log('SW Active:', reg.active);
                     console.log('SW Scope:', reg.scope);
                 });
-                
+
                 caches.keys().then(names => {
                     console.log('Active Caches:', names);
                 });
@@ -487,7 +535,7 @@
 
     <!-- Global Loading Indicator -->
     <x-global-loader />
-    
+
 </body>
 <x-script></x-script>
 <x-style></x-style>

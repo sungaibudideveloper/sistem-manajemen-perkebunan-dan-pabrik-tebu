@@ -7,12 +7,14 @@
     .table-container {
         display: grid;
         justify-content: justify;
-        align-items: flex-start;
         place-items: center;
+        align-items: flex-start;
         min-height: 10vh;
         padding: 0px;
         overflow-x: auto;
+        box-sizing: border-box;
     }
+
 
     table#listTable input[type="text"],
     table#listTable input[type="number"] {
@@ -29,6 +31,7 @@
 
     #listTable {
         table-layout: fixed;
+        margin: 0 auto;
     }
 
     input[disabled] {

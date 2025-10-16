@@ -202,3 +202,21 @@
         });
     });
 </script>
+
+<script>
+    window.addEventListener('scroll', function() {
+        const scrollToTopButton = document.getElementById('scrollToTop');
+        if (window.scrollY > 100) {
+            scrollToTopButton.style.display = 'block';
+        } else {
+            scrollToTopButton.style.display = 'none';
+        }
+    });
+
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+</script>
