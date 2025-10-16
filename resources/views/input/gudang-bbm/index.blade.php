@@ -157,7 +157,7 @@ function gudangBbmData() {
             try {
                 const btn = event?.currentTarget;
                 if (btn) { btn.disabled = true; btn.classList.add('opacity-75'); }
-                const response = await fetch(`{{ url('input/gudang/bbm') }}/${ordernumber}/confirm`, {
+                const response = await fetch(`{{ url('input/gudang-bbm') }}/${ordernumber}/confirm`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

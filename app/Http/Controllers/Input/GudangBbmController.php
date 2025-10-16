@@ -97,7 +97,7 @@ class GudangBbmController extends Controller
                 'total_solar' => $groupedData->sum('solar')
             ];
 
-            return view('input.gudang.gudang-bbm', compact('bbmData','stats','search','filterDate'))
+            return view('input.gudang-bbm.index', compact('bbmData','stats','search','filterDate'))
                 ->with([
                     'title' => 'Gudang BBM - Konfirmasi BBM',
                     'navbar' => 'Input Gudang BBM',
@@ -201,7 +201,7 @@ class GudangBbmController extends Controller
             // Check if can be confirmed (belum dikonfirmasi gudang)
             $canConfirm = $vehicleData->where('gudangconfirm', 0)->count() > 0;
             
-            return view('input.gudang.gudang-bbm-show', compact(
+            return view('input.gudang-bbm.show', compact(
                 'lkhData',
                 'vehicleData',
                 'totalSolar',
