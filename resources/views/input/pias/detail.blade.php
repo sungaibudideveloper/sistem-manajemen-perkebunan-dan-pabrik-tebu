@@ -198,7 +198,7 @@
           <a href="{{ url('input/pias') }}" 
           class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
            ← Kembali
-          </a>
+          </a> &nbsp;
           <button
               type="submit"
               class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
