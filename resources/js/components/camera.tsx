@@ -152,7 +152,7 @@ const Camera: React.FC<CameraProps> = ({
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // ✅ Detect orientation
+    // Detect orientation
     const isPortrait = canvas.height > canvas.width;
 
     // Draw timestamp
@@ -161,35 +161,35 @@ const Camera: React.FC<CameraProps> = ({
     const timestampWidth = ctx.measureText(serverTimestamp).width;
     
     if (isPortrait) {
-      // Portrait: Top left, smaller font
       ctx.fillRect(10, 10, timestampWidth + 20, 35);
       ctx.fillStyle = 'white';
       ctx.fillText(serverTimestamp, 20, 35);
     } else {
-      // Landscape: Bottom left, normal font
       ctx.fillRect(10, canvas.height - 100, timestampWidth + 20, 45);
       ctx.fillStyle = 'white';
       ctx.fillText(serverTimestamp, 20, canvas.height - 67);
     }
 
-    // Draw GPS coordinates
+    // Draw GPS or error stamp
+    let gpsText = '';
     if (gpsCoordinates) {
-      const gpsText = `📍 ${gpsCoordinates.latitude.toFixed(6)}, ${gpsCoordinates.longitude.toFixed(6)}`;
-      ctx.font = isPortrait ? 'bold 18px Arial' : 'bold 24px Arial';
-      const gpsWidth = ctx.measureText(gpsText).width;
-      ctx.fillStyle = 'rgba(147, 51, 234, 0.75)';
-      
-      if (isPortrait) {
-        // Portrait: Below timestamp
-        ctx.fillRect(10, 50, gpsWidth + 20, 30);
-        ctx.fillStyle = 'white';
-        ctx.fillText(gpsText, 20, 72);
-      } else {
-        // Landscape: Below timestamp at bottom
-        ctx.fillRect(10, canvas.height - 50, gpsWidth + 20, 40);
-        ctx.fillStyle = 'white';
-        ctx.fillText(gpsText, 20, canvas.height - 22);
-      }
+      gpsText = `📍 ${gpsCoordinates.latitude.toFixed(6)}, ${gpsCoordinates.longitude.toFixed(6)}`;
+    } else {
+      gpsText = '⚠️ Location Not Detected';
+    }
+
+    ctx.font = isPortrait ? 'bold 18px Arial' : 'bold 24px Arial';
+    const gpsWidth = ctx.measureText(gpsText).width;
+    ctx.fillStyle = gpsCoordinates ? 'rgba(147, 51, 234, 0.75)' : 'rgba(220, 38, 38, 0.75)';
+    
+    if (isPortrait) {
+      ctx.fillRect(10, 50, gpsWidth + 20, 30);
+      ctx.fillStyle = 'white';
+      ctx.fillText(gpsText, 20, 72);
+    } else {
+      ctx.fillRect(10, canvas.height - 50, gpsWidth + 20, 40);
+      ctx.fillStyle = 'white';
+      ctx.fillText(gpsText, 20, canvas.height - 22);
     }
 
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -228,14 +228,18 @@ const Camera: React.FC<CameraProps> = ({
       backgroundColor: 'rgba(0,0,0,0.9)',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      padding: '16px'
     }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         overflow: 'hidden',
         maxWidth: '600px',
-        width: '90%'
+        maxHeight: '95vh',
+        width: '90%',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {/* Header */}
         <div style={{
@@ -346,7 +350,12 @@ const Camera: React.FC<CameraProps> = ({
         <div style={{
           backgroundColor: '#000',
           position: 'relative',
-          height: '400px'
+          minHeight: '300px',
+          maxHeight: 'calc(90vh - 250px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'auto'
         }}>
           <video
             ref={videoRef}
@@ -354,9 +363,9 @@ const Camera: React.FC<CameraProps> = ({
             muted
             playsInline
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
               display: capturedPhoto ? 'none' : 'block'
             }}
           />
@@ -366,9 +375,9 @@ const Camera: React.FC<CameraProps> = ({
               src={capturedPhoto}
               alt="Captured"
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
               }}
             />
           )}
