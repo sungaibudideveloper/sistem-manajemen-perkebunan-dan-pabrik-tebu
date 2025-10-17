@@ -1,13 +1,13 @@
-// resources/js/components/Camera.tsx
+// resources/js/components/camera.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  FiX, FiRefreshCw, FiCamera, FiCheck, FiMapPin, FiAlertTriangle, FiClock
+  FiX, FiRefreshCw, FiCamera, FiCheck, FiMapPin, FiAlertTriangle
 } from 'react-icons/fi';
 
 interface CameraProps {
   isOpen: boolean;
   onClose: () => void;
-  onCapture: (photoDataUrl: string, gpsCoordinates?: { latitude: number; longitude: number }, timestamp?: string) => void;
+  onCapture: (photoDataUrl: string, gpsCoordinates?: { latitude: number; longitude: number }) => void;
   workerName?: string;
   requireGPS?: boolean;
 }
@@ -28,55 +28,6 @@ const Camera: React.FC<CameraProps> = ({
   const [gpsCoordinates, setGpsCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [isGettingGPS, setIsGettingGPS] = useState(false);
-  const [serverTimestamp, setServerTimestamp] = useState<string>('');
-  const [serverTime, setServerTime] = useState<Date>(new Date());
-
-  // Fetch server time and update every second
-  useEffect(() => {
-    let intervalId: number;
-
-    const fetchServerTime = async () => {
-      try {
-        const response = await fetch('/api/server-time');
-        const data = await response.json();
-        console.log('📡 Server time fetched:', data.timestamp);
-        setServerTime(new Date(data.timestamp));
-      } catch (error) {
-        console.warn('⚠️ Failed to fetch server time, using client time:', error);
-        setServerTime(new Date());
-      }
-    };
-
-    if (isOpen) {
-      fetchServerTime();
-
-      intervalId = window.setInterval(() => {
-        setServerTime(prevTime => {
-          const newTime = new Date(prevTime.getTime() + 1000);
-          const formatted = newTime.toLocaleString('id-ID', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          });
-          setServerTimestamp(formatted);
-          
-          if (newTime.getSeconds() % 5 === 0) {
-            console.log('🕐 Current server time:', formatted);
-          }
-          
-          return newTime;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isOpen]);
 
   const startCamera = async (facing: 'user' | 'environment') => {
     if (stream) {
@@ -172,7 +123,7 @@ const Camera: React.FC<CameraProps> = ({
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current || !isReady) {
       alert('Camera not ready');
       return;
@@ -181,6 +132,35 @@ const Camera: React.FC<CameraProps> = ({
     if (requireGPS && !gpsCoordinates) {
       alert('GPS coordinates diperlukan untuk absen LOKASI. Pastikan GPS aktif dan izin lokasi diberikan.');
       return;
+    }
+
+    // ✅ FETCH SERVER TIME pas capture (bukan realtime)
+    let serverTimestamp = '';
+    try {
+      const response = await fetch('/api/server-time');
+      const data = await response.json();
+      serverTimestamp = new Date(data.timestamp).toLocaleString('id-ID', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      console.log('📡 Fetched server time for photo:', serverTimestamp);
+    } catch (error) {
+      console.error('❌ Failed to fetch server time:', error);
+      // Fallback: pakai client time
+      serverTimestamp = new Date().toLocaleString('id-ID', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
     }
 
     const video = videoRef.current;
@@ -193,14 +173,13 @@ const Camera: React.FC<CameraProps> = ({
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Draw timestamp
-    const timestampText = serverTimestamp;
+    // Draw timestamp (dari server)
     ctx.font = 'bold 28px Arial';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    const timestampWidth = ctx.measureText(timestampText).width;
+    const timestampWidth = ctx.measureText(serverTimestamp).width;
     ctx.fillRect(10, canvas.height - 100, timestampWidth + 20, 45);
     ctx.fillStyle = 'white';
-    ctx.fillText(timestampText, 20, canvas.height - 67);
+    ctx.fillText(serverTimestamp, 20, canvas.height - 67);
 
     // Draw GPS coordinates
     if (gpsCoordinates) {
@@ -216,7 +195,7 @@ const Camera: React.FC<CameraProps> = ({
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     setCapturedPhoto(photoDataUrl);
     
-    console.log('📸 Photo captured with timestamp:', timestampText);
+    console.log('📸 Photo captured with server timestamp:', serverTimestamp);
     if (gpsCoordinates) {
       console.log('📍 GPS embedded:', gpsCoordinates);
     }
@@ -224,13 +203,10 @@ const Camera: React.FC<CameraProps> = ({
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
-      console.log('✅ Confirming photo with data:', {
-        timestamp: serverTimestamp,
-        gps: gpsCoordinates,
-        photoSize: capturedPhoto.length
-      });
+      console.log('✅ Confirming photo with GPS:', gpsCoordinates);
       
-      onCapture(capturedPhoto, gpsCoordinates || undefined, serverTimestamp);
+      // Backend akan pakai now() sendiri, timestamp dari foto cuma untuk display
+      onCapture(capturedPhoto, gpsCoordinates || undefined);
       handleClose();
     }
   };
@@ -245,7 +221,6 @@ const Camera: React.FC<CameraProps> = ({
     setGpsCoordinates(null);
     setGpsError(null);
     setIsGettingGPS(false);
-    setServerTimestamp('');
     onClose();
   };
 
@@ -375,7 +350,7 @@ const Camera: React.FC<CameraProps> = ({
           </div>
         )}
 
-        {/* Video/Photo Area */}
+                  {/* Video/Photo Area */}
         <div style={{
           backgroundColor: '#000',
           position: 'relative',
@@ -393,56 +368,6 @@ const Camera: React.FC<CameraProps> = ({
               display: capturedPhoto ? 'none' : 'block'
             }}
           />
-
-          {/* Live Server Timestamp Overlay */}
-          {!capturedPhoto && isReady && (
-            <div style={{
-              position: 'absolute',
-              bottom: '10px',
-              left: '10px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px'
-            }}>
-              {serverTimestamp && (
-                <div style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                  color: 'white',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)'
-                }}>
-                  <FiClock size={14} />
-                  {serverTimestamp}
-                </div>
-              )}
-              
-              {gpsCoordinates && (
-                <div style={{
-                  backgroundColor: 'rgba(147, 51, 234, 0.75)',
-                  color: 'white',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)'
-                }}>
-                  <FiMapPin size={14} />
-                  {gpsCoordinates.latitude.toFixed(6)}, {gpsCoordinates.longitude.toFixed(6)}
-                </div>
-              )}
-            </div>
-          )}
 
           {capturedPhoto && (
             <img
@@ -525,7 +450,7 @@ const Camera: React.FC<CameraProps> = ({
               fontWeight: 'bold'
             }}>
               <FiMapPin size={12} />
-              GPS Active
+              GPS Ready
             </div>
           )}
 

@@ -171,8 +171,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
 
   const handlePhotoCapture = async (
     photoDataUrl: string, 
-    gpsCoordinates?: { latitude: number; longitude: number },
-    timestamp?: string
+    gpsCoordinates?: { latitude: number; longitude: number }
   ) => {
     if (!selectedWorker && !editingAttendance) return;
 
@@ -180,7 +179,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
       worker: selectedWorker?.nama || editingAttendance?.tenaga_kerja.nama,
       type: selectedAbsenType,
       hasGPS: !!gpsCoordinates,
-      timestamp: timestamp,
       photoSize: photoDataUrl.length
     });
 
@@ -197,8 +195,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           tenagakerjaid: editingAttendance.tenagakerjaid,
           photo: photoDataUrl,
           latitude: gpsCoordinates?.latitude,
-          longitude: gpsCoordinates?.longitude,
-          timestamp: timestamp
+          longitude: gpsCoordinates?.longitude
         };
       } else if (selectedWorker) {
         url = routes.process_checkin;
@@ -207,8 +204,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           photo: photoDataUrl,
           absentype: selectedAbsenType,
           latitude: gpsCoordinates?.latitude,
-          longitude: gpsCoordinates?.longitude,
-          timestamp: timestamp
+          longitude: gpsCoordinates?.longitude
         };
       } else {
         throw new Error('No worker or editing attendance selected');
