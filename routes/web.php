@@ -338,6 +338,15 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             ->name('approver.attendance.history');
     });
 
+    // route untuk server-time absen API
+    Route::get('/api/server-time', function() {
+        return response()->json([
+            'timestamp' => now()->toIso8601String(),
+            'formatted' => now()->format('d/m/Y, H:i:s'),
+            'timezone' => config('app.timezone')
+        ]);
+    });
+
 });
 
 
@@ -345,15 +354,6 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 Route::middleware('api')->prefix('api/mobile')->group(function () {
     Route::post('/insert-upah-tenaga-kerja', [App\Http\Controllers\Api\PerhitunganUpahApiMobile::class, 'insertWorkerWage']);
 });
-
-Route::get('/api/server-time', function() {
-    return response()->json([
-        'timestamp' => now()->toIso8601String(),
-        'formatted' => now()->format('d/m/Y, H:i:s'),
-        'timezone' => config('app.timezone')
-    ]);
-});
-
 
 
 
