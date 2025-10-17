@@ -1,4 +1,4 @@
-// resources/js/components/camera.tsx
+// resources/js/components/camera.tsx - RESPONSIVE OVERLAY FIX
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FiX, FiRefreshCw, FiCamera, FiCheck, FiMapPin, FiAlertTriangle
@@ -51,7 +51,6 @@ const Camera: React.FC<CameraProps> = ({
         videoRef.current.srcObject = mediaStream;
         videoRef.current.onloadedmetadata = () => {
           setIsReady(true);
-          console.log('✅ Camera ready');
         };
       }
     } catch (err) {
@@ -77,7 +76,6 @@ const Camera: React.FC<CameraProps> = ({
         };
         setGpsCoordinates(coords);
         setIsGettingGPS(false);
-        console.log('📍 GPS coordinates:', coords);
       },
       (error) => {
         let errorMsg = 'Gagal mendapatkan lokasi GPS';
@@ -94,7 +92,6 @@ const Camera: React.FC<CameraProps> = ({
         }
         setGpsError(errorMsg);
         setIsGettingGPS(false);
-        console.error('❌ GPS error:', error);
       },
       {
         enableHighAccuracy: true,
@@ -134,61 +131,73 @@ const Camera: React.FC<CameraProps> = ({
       return;
     }
 
-    // FETCH SERVER TIME pas capture (bukan realtime)
+    // Fetch server time
     let serverTimestamp = '';
     try {
       const response = await fetch('/api/mandor/server-time');
       if (!response.ok) throw new Error('Server error');
       const data = await response.json();
-      serverTimestamp = data.formatted; 
+      serverTimestamp = data.formatted;
     } catch (error) {
       alert('Gagal mengambil waktu server. Foto tidak dapat diambil.');
-      return; 
+      return;
     }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-
     if (!ctx) return;
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Draw timestamp (dari server)
-    ctx.font = 'bold 28px Arial';
+    // ✅ Detect orientation
+    const isPortrait = canvas.height > canvas.width;
+
+    // Draw timestamp
+    ctx.font = isPortrait ? 'bold 20px Arial' : 'bold 28px Arial';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     const timestampWidth = ctx.measureText(serverTimestamp).width;
-    ctx.fillRect(10, canvas.height - 100, timestampWidth + 20, 45);
-    ctx.fillStyle = 'white';
-    ctx.fillText(serverTimestamp, 20, canvas.height - 67);
+    
+    if (isPortrait) {
+      // Portrait: Top left, smaller font
+      ctx.fillRect(10, 10, timestampWidth + 20, 35);
+      ctx.fillStyle = 'white';
+      ctx.fillText(serverTimestamp, 20, 35);
+    } else {
+      // Landscape: Bottom left, normal font
+      ctx.fillRect(10, canvas.height - 100, timestampWidth + 20, 45);
+      ctx.fillStyle = 'white';
+      ctx.fillText(serverTimestamp, 20, canvas.height - 67);
+    }
 
     // Draw GPS coordinates
     if (gpsCoordinates) {
       const gpsText = `📍 ${gpsCoordinates.latitude.toFixed(6)}, ${gpsCoordinates.longitude.toFixed(6)}`;
-      ctx.font = 'bold 24px Arial';
+      ctx.font = isPortrait ? 'bold 18px Arial' : 'bold 24px Arial';
       const gpsWidth = ctx.measureText(gpsText).width;
       ctx.fillStyle = 'rgba(147, 51, 234, 0.75)';
-      ctx.fillRect(10, canvas.height - 50, gpsWidth + 20, 40);
-      ctx.fillStyle = 'white';
-      ctx.fillText(gpsText, 20, canvas.height - 22);
+      
+      if (isPortrait) {
+        // Portrait: Below timestamp
+        ctx.fillRect(10, 50, gpsWidth + 20, 30);
+        ctx.fillStyle = 'white';
+        ctx.fillText(gpsText, 20, 72);
+      } else {
+        // Landscape: Below timestamp at bottom
+        ctx.fillRect(10, canvas.height - 50, gpsWidth + 20, 40);
+        ctx.fillStyle = 'white';
+        ctx.fillText(gpsText, 20, canvas.height - 22);
+      }
     }
 
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     setCapturedPhoto(photoDataUrl);
-    
-    console.log('📸 Photo captured with server timestamp:', serverTimestamp);
-    if (gpsCoordinates) {
-      console.log('📍 GPS embedded:', gpsCoordinates);
-    }
   };
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
-      console.log('✅ Confirming photo with GPS:', gpsCoordinates);
-      
-      // Backend akan pakai now() sendiri, timestamp dari foto cuma untuk display
       onCapture(capturedPhoto, gpsCoordinates || undefined);
       handleClose();
     }
@@ -273,7 +282,7 @@ const Camera: React.FC<CameraProps> = ({
           </button>
         </div>
 
-        {/* GPS Status Bar - Only show for LOKASI */}
+        {/* GPS Status Bar */}
         {requireGPS && (
           <div style={{
             padding: '12px 16px',
@@ -333,7 +342,7 @@ const Camera: React.FC<CameraProps> = ({
           </div>
         )}
 
-                  {/* Video/Photo Area */}
+        {/* Video/Photo Area */}
         <div style={{
           backgroundColor: '#000',
           position: 'relative',
@@ -464,10 +473,7 @@ const Camera: React.FC<CameraProps> = ({
           ) : (
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
-                onClick={() => {
-                  setCapturedPhoto(null);
-                  console.log('🔄 Retaking photo');
-                }}
+                onClick={() => setCapturedPhoto(null)}
                 style={{
                   backgroundColor: '#6b7280',
                   color: 'white',
