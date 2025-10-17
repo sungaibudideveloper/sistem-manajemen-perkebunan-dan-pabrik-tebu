@@ -831,7 +831,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           requireGPS={selectedAbsenType === 'LOKASI'}
         />
 
-        {/* ✅ RESPONSIVE PHOTO VIEWER MODAL */}
+        {/* ✅ RESPONSIVE PHOTO VIEWER MODAL - AUTO FIT */}
         {viewingPhoto && (
           <div 
             style={{
@@ -852,19 +852,21 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 borderRadius: '12px',
                 maxWidth: '500px',
                 width: '100%',
-                overflow: 'hidden',
+                maxHeight: '90vh',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div style={{
-                padding: '16px',
+                padding: '12px 16px',
                 borderBottom: '1px solid #e5e7eb',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                flexShrink: 0
               }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: 0 }}>
                   Foto Absensi
@@ -886,34 +888,35 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 </button>
               </div>
 
-              {/* Photo Container */}
+              {/* Photo Container - AUTO FIT NO SCROLL */}
               <div style={{
-                padding: '16px',
+                padding: '12px',
                 backgroundColor: '#000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                maxHeight: '60vh',
-                overflow: 'auto'
+                flex: 1,
+                minHeight: 0
               }}>
                 <img
                   src={viewingPhoto}
                   alt="Foto Absensi"
                   style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
+                    width: '100%',
+                    height: '100%',
                     objectFit: 'contain',
-                    borderRadius: '8px'
+                    borderRadius: '4px'
                   }}
                 />
               </div>
 
               {/* Footer with Close Button */}
               <div style={{
-                padding: '16px',
+                padding: '12px 16px',
                 borderTop: '1px solid #e5e7eb',
                 display: 'flex',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
                 <button
                   onClick={() => setViewingPhoto(null)}
