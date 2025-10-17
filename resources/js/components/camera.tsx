@@ -1,29 +1,84 @@
-// resources\js\components\camera.tsx - WITH REAR CAMERA
-import React, { useRef, useState, useEffect } from 'react';
-import { FiCamera, FiX, FiRotateCcw, FiCheck, FiRefreshCw } from 'react-icons/fi';
+// resources/js/components/Camera.tsx
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  FiX, FiRefreshCw, FiCamera, FiCheck, FiMapPin, FiAlertTriangle, FiClock
+} from 'react-icons/fi';
 
 interface CameraProps {
   isOpen: boolean;
   onClose: () => void;
-  onCapture: (photoDataUrl: string) => void;
+  onCapture: (photoDataUrl: string, gpsCoordinates?: { latitude: number; longitude: number }, timestamp?: string) => void;
   workerName?: string;
+  requireGPS?: boolean;
 }
 
 const Camera: React.FC<CameraProps> = ({ 
   isOpen, 
   onClose, 
   onCapture, 
-  workerName 
+  workerName,
+  requireGPS = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user'); // user = depan, environment = belakang
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [isGettingGPS, setIsGettingGPS] = useState(false);
+  const [serverTimestamp, setServerTimestamp] = useState<string>('');
+  const [serverTime, setServerTime] = useState<Date>(new Date());
+
+  // Fetch server time and update every second
+  useEffect(() => {
+    let intervalId: number;
+
+    const fetchServerTime = async () => {
+      try {
+        const response = await fetch('/api/server-time');
+        const data = await response.json();
+        console.log('📡 Server time fetched:', data.timestamp);
+        setServerTime(new Date(data.timestamp));
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch server time, using client time:', error);
+        setServerTime(new Date());
+      }
+    };
+
+    if (isOpen) {
+      fetchServerTime();
+
+      intervalId = window.setInterval(() => {
+        setServerTime(prevTime => {
+          const newTime = new Date(prevTime.getTime() + 1000);
+          const formatted = newTime.toLocaleString('id-ID', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+          setServerTimestamp(formatted);
+          
+          if (newTime.getSeconds() % 5 === 0) {
+            console.log('🕐 Current server time:', formatted);
+          }
+          
+          return newTime;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isOpen]);
 
   const startCamera = async (facing: 'user' | 'environment') => {
-    // Stop existing stream
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -31,36 +86,77 @@ const Camera: React.FC<CameraProps> = ({
     }
 
     try {
-      console.log('Starting camera with facingMode:', facing);
-      
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: { ideal: facing } // gunakan object untuk fleksibilitas
+          facingMode: { ideal: facing }
         } 
       });
 
-      console.log('Got stream:', mediaStream);
       setStream(mediaStream);
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded');
           setIsReady(true);
+          console.log('✅ Camera ready');
         };
       }
     } catch (err) {
-      console.error('Camera error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown camera error';
-      alert('Error: ' + errorMessage);
+      console.error('❌ Camera error:', err);
+      alert('Error: ' + (err instanceof Error ? err.message : 'Unknown camera error'));
     }
+  };
+
+  const getGPSCoordinates = () => {
+    if (!navigator.geolocation) {
+      setGpsError('GPS tidak tersedia di perangkat ini');
+      return;
+    }
+
+    setIsGettingGPS(true);
+    setGpsError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+        setGpsCoordinates(coords);
+        setIsGettingGPS(false);
+        console.log('📍 GPS coordinates:', coords);
+      },
+      (error) => {
+        let errorMsg = 'Gagal mendapatkan lokasi GPS';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = 'Izin lokasi ditolak. Aktifkan GPS di pengaturan browser.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = 'Lokasi tidak tersedia. Pastikan GPS aktif.';
+            break;
+          case error.TIMEOUT:
+            errorMsg = 'Request lokasi timeout. Coba lagi.';
+            break;
+        }
+        setGpsError(errorMsg);
+        setIsGettingGPS(false);
+        console.error('❌ GPS error:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   useEffect(() => {
     if (isOpen && videoRef.current) {
       startCamera(facingMode);
+      getGPSCoordinates();
     }
 
     return () => {
@@ -70,7 +166,7 @@ const Camera: React.FC<CameraProps> = ({
         setIsReady(false);
       }
     };
-  }, [isOpen, facingMode]); // Tambah facingMode ke dependency
+  }, [isOpen, facingMode]);
 
   const switchCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
@@ -79,6 +175,11 @@ const Camera: React.FC<CameraProps> = ({
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current || !isReady) {
       alert('Camera not ready');
+      return;
+    }
+
+    if (requireGPS && !gpsCoordinates) {
+      alert('GPS coordinates diperlukan untuk absen LOKASI. Pastikan GPS aktif dan izin lokasi diberikan.');
       return;
     }
 
@@ -92,13 +193,44 @@ const Camera: React.FC<CameraProps> = ({
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
+    // Draw timestamp
+    const timestampText = serverTimestamp;
+    ctx.font = 'bold 28px Arial';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    const timestampWidth = ctx.measureText(timestampText).width;
+    ctx.fillRect(10, canvas.height - 100, timestampWidth + 20, 45);
+    ctx.fillStyle = 'white';
+    ctx.fillText(timestampText, 20, canvas.height - 67);
+
+    // Draw GPS coordinates
+    if (gpsCoordinates) {
+      const gpsText = `📍 ${gpsCoordinates.latitude.toFixed(6)}, ${gpsCoordinates.longitude.toFixed(6)}`;
+      ctx.font = 'bold 24px Arial';
+      const gpsWidth = ctx.measureText(gpsText).width;
+      ctx.fillStyle = 'rgba(147, 51, 234, 0.75)';
+      ctx.fillRect(10, canvas.height - 50, gpsWidth + 20, 40);
+      ctx.fillStyle = 'white';
+      ctx.fillText(gpsText, 20, canvas.height - 22);
+    }
+
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     setCapturedPhoto(photoDataUrl);
+    
+    console.log('📸 Photo captured with timestamp:', timestampText);
+    if (gpsCoordinates) {
+      console.log('📍 GPS embedded:', gpsCoordinates);
+    }
   };
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
-      onCapture(capturedPhoto);
+      console.log('✅ Confirming photo with data:', {
+        timestamp: serverTimestamp,
+        gps: gpsCoordinates,
+        photoSize: capturedPhoto.length
+      });
+      
+      onCapture(capturedPhoto, gpsCoordinates || undefined, serverTimestamp);
       handleClose();
     }
   };
@@ -110,10 +242,16 @@ const Camera: React.FC<CameraProps> = ({
     setStream(null);
     setIsReady(false);
     setCapturedPhoto(null);
+    setGpsCoordinates(null);
+    setGpsError(null);
+    setIsGettingGPS(false);
+    setServerTimestamp('');
     onClose();
   };
 
   if (!isOpen) return null;
+
+  const canCapture = isReady && (!requireGPS || gpsCoordinates !== null);
 
   return (
     <div style={{
@@ -149,6 +287,19 @@ const Camera: React.FC<CameraProps> = ({
                 {workerName}
               </p>
             )}
+            {requireGPS && (
+              <p style={{ 
+                margin: '4px 0 0 0', 
+                fontSize: '12px', 
+                color: '#9333ea',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <FiMapPin size={12} />
+                GPS diperlukan untuk absen LOKASI
+              </p>
+            )}
           </div>
           <button 
             onClick={handleClose}
@@ -164,13 +315,72 @@ const Camera: React.FC<CameraProps> = ({
           </button>
         </div>
 
+        {/* GPS Status Bar - Only show for LOKASI */}
+        {requireGPS && (
+          <div style={{
+            padding: '12px 16px',
+            backgroundColor: gpsCoordinates ? '#dcfce7' : (gpsError ? '#fee2e2' : '#fef3c7'),
+            borderBottom: '1px solid #e5e5e5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isGettingGPS ? (
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #f59e0b',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <span style={{ fontSize: '14px', color: '#92400e' }}>
+                    Mendapatkan lokasi GPS...
+                  </span>
+                </>
+              ) : gpsCoordinates ? (
+                <>
+                  <FiMapPin style={{ color: '#16a34a' }} />
+                  <span style={{ fontSize: '14px', color: '#166534' }}>
+                    GPS Ready: {gpsCoordinates.latitude.toFixed(6)}, {gpsCoordinates.longitude.toFixed(6)}
+                  </span>
+                </>
+              ) : gpsError ? (
+                <>
+                  <FiAlertTriangle style={{ color: '#dc2626' }} />
+                  <span style={{ fontSize: '14px', color: '#991b1b' }}>
+                    {gpsError}
+                  </span>
+                </>
+              ) : null}
+            </div>
+            {gpsError && (
+              <button
+                onClick={getGPSCoordinates}
+                style={{
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Coba Lagi
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Video/Photo Area */}
         <div style={{
           backgroundColor: '#000',
           position: 'relative',
           height: '400px'
         }}>
-          {/* Video */}
           <video
             ref={videoRef}
             autoPlay
@@ -184,7 +394,56 @@ const Camera: React.FC<CameraProps> = ({
             }}
           />
 
-          {/* Captured Photo */}
+          {/* Live Server Timestamp Overlay */}
+          {!capturedPhoto && isReady && (
+            <div style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              {serverTimestamp && (
+                <div style={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)'
+                }}>
+                  <FiClock size={14} />
+                  {serverTimestamp}
+                </div>
+              )}
+              
+              {gpsCoordinates && (
+                <div style={{
+                  backgroundColor: 'rgba(147, 51, 234, 0.75)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)'
+                }}>
+                  <FiMapPin size={14} />
+                  {gpsCoordinates.latitude.toFixed(6)}, {gpsCoordinates.longitude.toFixed(6)}
+                </div>
+              )}
+            </div>
+          )}
+
           {capturedPhoto && (
             <img
               src={capturedPhoto}
@@ -197,7 +456,6 @@ const Camera: React.FC<CameraProps> = ({
             />
           )}
 
-          {/* Status Indicator */}
           <div style={{
             position: 'absolute',
             top: '10px',
@@ -211,49 +469,66 @@ const Camera: React.FC<CameraProps> = ({
             {isReady ? '✓ Camera Ready' : 'Loading...'}
           </div>
 
-          {/* Camera Switch Button */}
           <button
-              onClick={switchCamera}
-              disabled={!isReady}
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                color: 'black',
-                border: '2px solid white',
-                borderRadius: '50%',
-                width: '44px',
-                height: '44px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '18px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-              }}
-              title={facingMode === 'user' ? 'Switch to Back Camera' : 'Switch to Front Camera'}
-            >
-              <FiRefreshCw />
-            </button>
+            onClick={switchCamera}
+            disabled={!isReady}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              backgroundColor: 'rgba(255,255,255,0.9)',
+              color: 'black',
+              border: '2px solid white',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+          >
+            <FiRefreshCw />
+          </button>
 
-          {/* Camera Mode Indicator */}
           {!capturedPhoto && (
             <div style={{
               position: 'absolute',
-              bottom: '10px',
-              left: '10px',
+              top: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
               backgroundColor: 'rgba(0,0,0,0.6)',
               color: 'white',
               padding: '4px 8px',
               borderRadius: '4px',
               fontSize: '12px'
             }}>
-              {facingMode === 'user' ? 'Front' : 'Back'}
+              {facingMode === 'user' ? '📷 Front Camera' : '📷 Back Camera'}
             </div>
           )}
 
-          {/* Hidden Canvas */}
+          {!capturedPhoto && gpsCoordinates && (
+            <div style={{
+              position: 'absolute',
+              bottom: '10px',
+              right: '10px',
+              backgroundColor: 'rgba(16, 185, 129, 0.8)',
+              color: 'white',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: 'bold'
+            }}>
+              <FiMapPin size={12} />
+              GPS Active
+            </div>
+          )}
+
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
 
@@ -262,15 +537,15 @@ const Camera: React.FC<CameraProps> = ({
           {!capturedPhoto ? (
             <button
               onClick={capturePhoto}
-              disabled={!isReady}
+              disabled={!canCapture}
               style={{
-                backgroundColor: isReady ? '#3b82f6' : '#9ca3af',
+                backgroundColor: canCapture ? '#3b82f6' : '#9ca3af',
                 color: 'white',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: '8px',
                 fontSize: '16px',
-                cursor: isReady ? 'pointer' : 'not-allowed',
+                cursor: canCapture ? 'pointer' : 'not-allowed',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px'
@@ -281,7 +556,10 @@ const Camera: React.FC<CameraProps> = ({
           ) : (
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
-                onClick={() => setCapturedPhoto(null)}
+                onClick={() => {
+                  setCapturedPhoto(null);
+                  console.log('🔄 Retaking photo');
+                }}
                 style={{
                   backgroundColor: '#6b7280',
                   color: 'white',
@@ -294,7 +572,7 @@ const Camera: React.FC<CameraProps> = ({
                   gap: '6px'
                 }}
               >
-                <FiRotateCcw /> Ulangi
+                <FiRefreshCw /> Ulangi
               </button>
               <button
                 onClick={confirmPhoto}
@@ -315,7 +593,40 @@ const Camera: React.FC<CameraProps> = ({
             </div>
           )}
         </div>
+
+        {requireGPS && !gpsCoordinates && !capturedPhoto && (
+          <div style={{
+            padding: '12px 16px',
+            backgroundColor: '#fef3c7',
+            borderTop: '1px solid #e5e5e5',
+            fontSize: '12px',
+            color: '#92400e',
+            textAlign: 'center'
+          }}>
+            💡 GPS WAJIB untuk absen LOKASI. Pastikan GPS aktif dan izin lokasi diberikan ke browser
+          </div>
+        )}
+        
+        {!requireGPS && !capturedPhoto && (
+          <div style={{
+            padding: '12px 16px',
+            backgroundColor: '#dbeafe',
+            borderTop: '1px solid #e5e5e5',
+            fontSize: '12px',
+            color: '#1e40af',
+            textAlign: 'center'
+          }}>
+            💡 GPS akan dicatat otomatis untuk absen HADIR (untuk tracking lokasi)
+          </div>
+        )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

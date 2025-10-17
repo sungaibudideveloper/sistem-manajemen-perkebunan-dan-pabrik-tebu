@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 // Models
 use App\Models\User;
@@ -114,64 +115,117 @@ class MandorPageController extends Controller
     }
 
     /**
- * Get attendance for specific date - FIXED to return approval status data
- */
-public function getTodayAttendance(Request $request)
-{
-    try {
-        $date = $request->input('date', now()->format('Y-m-d'));
-        
-        if (!auth()->check()) {
-            return response()->json(['error' => 'User not authenticated'], 401);
+     * Get attendance for specific date - FIXED for absentype support
+     */
+    public function getTodayAttendance(Request $request)
+    {
+        try {
+            $date = $request->input('date', now()->format('Y-m-d'));
+            
+            if (!auth()->check()) {
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
+            
+            $user = auth()->user();
+            
+            // FIXED: Check if columns exist before querying
+            $attendance = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->join('tenagakerja as tk', 'al.tenagakerjaid', '=', 'tk.tenagakerjaid')
+                ->where('ah.companycode', $user->companycode)
+                ->where('ah.mandorid', $user->userid)
+                ->whereDate('al.absenmasuk', $date)
+                ->select([
+                    'al.absenno',
+                    'al.id',
+                    'al.tenagakerjaid',
+                    'al.absenmasuk',
+                    // NEW: Check if column exists with DB::raw and COALESCE
+                    DB::raw("COALESCE(al.absentype, 'HADIR') as absentype"),
+                    DB::raw("al.checkintime"),
+                    'al.fotoabsen',
+                    'al.lokasifotolat',
+                    'al.lokasifotolng',
+                    DB::raw("COALESCE(al.approval_status, 'PENDING') as approval_status"),
+                    'al.approval_date',
+                    'al.approved_by',
+                    'al.rejection_reason',
+                    'al.rejection_date',
+                    DB::raw("COALESCE(al.is_edited, 0) as is_edited"),
+                    DB::raw("COALESCE(al.edit_count, 0) as edit_count"),
+                    'tk.nama',
+                    'tk.nik',
+                    'tk.gender',
+                    'tk.jenistenagakerja'
+                ])
+                ->orderBy('al.absenmasuk')
+                ->get()
+                ->map(function($record) {
+                    return [
+                        'absenno' => $record->absenno ?? 'N/A',
+                        'absen_id' => $record->id ?? 0,
+                        'tenagakerjaid' => $record->tenagakerjaid,
+                        'absenmasuk' => $record->absenmasuk,
+                        'absentype' => $record->absentype ?? 'HADIR',
+                        'checkintime' => $record->checkintime,
+                        'fotoabsen' => $record->fotoabsen,
+                        'lokasifotolat' => $record->lokasifotolat,
+                        'lokasifotolng' => $record->lokasifotolng,
+                        'approval_status' => $record->approval_status ?? 'PENDING',
+                        'approval_date' => $record->approval_date,
+                        'approved_by' => $record->approved_by,
+                        'rejection_reason' => $record->rejection_reason,
+                        'rejection_date' => $record->rejection_date,
+                        'is_edited' => (bool) ($record->is_edited ?? false),
+                        'edit_count' => (int) ($record->edit_count ?? 0),
+                        'tenaga_kerja' => [
+                            'nama' => $record->nama,
+                            'nik' => $record->nik,
+                            'gender' => $record->gender,
+                            'jenistenagakerja' => $record->jenistenagakerja
+                        ]
+                    ];
+                });
+            
+            // Group by type
+            $groupedByType = [
+                'hadir' => $attendance->where('absentype', 'HADIR')->values(),
+                'lokasi' => $attendance->where('absentype', 'LOKASI')->values(),
+            ];
+            
+            return response()->json([
+                'attendance' => $attendance->toArray(),
+                'grouped_by_type' => $groupedByType,
+                'date' => $date,
+                'date_formatted' => Carbon::parse($date)->format('d F Y'),
+                'summary' => [
+                    'total' => $attendance->count(),
+                    'hadir_count' => $groupedByType['hadir']->count(),
+                    'lokasi_count' => $groupedByType['lokasi']->count(),
+                    'approved_count' => $attendance->where('approval_status', 'APPROVED')->count(),
+                    'pending_count' => $attendance->where('approval_status', 'PENDING')->count(),
+                    'rejected_count' => $attendance->where('approval_status', 'REJECTED')->count(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error in getTodayAttendance', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            
+            return response()->json([
+                'error' => 'Internal server error',
+                'message' => $e->getMessage(),
+                'attendance' => [] // Return empty array to prevent frontend crash
+            ], 500);
         }
-        
-        $user = auth()->user();
-        
-        // Use the new method that includes approval status
-        $attendance = AbsenLst::getAttendanceByMandorAndDate($user->companycode, $user->userid, $date)
-            ->map(function($record) {
-                return [
-                    'absenno' => $record->absenno ?? 'N/A',
-                    'absen_id' => $record->id ?? 0,
-                    'tenagakerjaid' => $record->tenagakerjaid,
-                    'absenmasuk' => $record->absenmasuk,
-                    'fotoabsen' => $record->fotoabsen,
-                    'lokasifotolat' => $record->lokasifotolat,
-                    'lokasifotolng' => $record->lokasifotolng,
-                    'approval_status' => $record->approval_status ?? 'PENDING',
-                    'approval_date' => $record->approval_date,
-                    'approved_by' => $record->approved_by,
-                    'rejection_reason' => $record->rejection_reason,
-                    'rejection_date' => $record->rejection_date,
-                    'is_edited' => $record->is_edited ?? false,
-                    'edit_count' => $record->edit_count ?? 0,
-                    'tenaga_kerja' => [
-                        'nama' => $record->nama,
-                        'nik' => $record->nik,
-                        'gender' => $record->gender,
-                        'jenistenagakerja' => $record->jenistenagakerja
-                    ]
-                ];
-            });
-        
-        return response()->json([
-            'attendance' => $attendance->toArray(),
-            'date' => $date,
-            'date_formatted' => Carbon::parse($date)->format('d F Y')
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error in getTodayAttendance', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
     }
-}
 
     /**
-     * Process check-in with photo - UPDATED for individual approval flow
+     * Process check-in with photo - UPDATED: Support HADIR & LOKASI + File Storage
      */
     public function processCheckIn(Request $request)
     {
@@ -181,6 +235,7 @@ public function getTodayAttendance(Request $request)
                 'photo' => 'required|string',
                 'latitude' => 'nullable|numeric',
                 'longitude' => 'nullable|numeric',
+                'absentype' => 'required|in:HADIR,LOKASI', // NEW: Type validation
             ]);
             
             if (!auth()->check()) {
@@ -189,6 +244,7 @@ public function getTodayAttendance(Request $request)
             
             $user = auth()->user();
             $today = now()->format('Y-m-d');
+            $absenType = $request->input('absentype', 'HADIR');
             
             // Check if worker exists and belongs to this mandor
             $worker = TenagaKerja::where('tenagakerjaid', $request->tenagakerjaid)
@@ -201,9 +257,26 @@ public function getTodayAttendance(Request $request)
                 return response()->json(['error' => 'Pekerja tidak ditemukan atau tidak terdaftar pada mandor ini'], 404);
             }
             
-            // Check if already checked in today
-            if (AbsenLst::hasCheckedInToday($user->companycode, $user->userid, $request->tenagakerjaid, $today)) {
-                return response()->json(['error' => 'Pekerja sudah absen hari ini'], 400);
+            // UPDATED: Check based on type
+            if ($absenType === 'HADIR') {
+                // Check if already checked in HADIR today
+                $existingHadir = DB::table('absenlst as al')
+                    ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                    ->where('ah.companycode', $user->companycode)
+                    ->where('ah.mandorid', $user->userid)
+                    ->where('al.tenagakerjaid', $request->tenagakerjaid)
+                    ->where('al.absentype', 'HADIR')
+                    ->whereDate('al.absenmasuk', $today)
+                    ->exists();
+                
+                if ($existingHadir) {
+                    return response()->json(['error' => 'Pekerja sudah absen HADIR hari ini'], 400);
+                }
+            } else {
+                // LOKASI: Validate GPS required
+                if (!$request->latitude || !$request->longitude) {
+                    return response()->json(['error' => 'GPS coordinates wajib untuk absen LOKASI'], 400);
+                }
             }
             
             DB::beginTransaction();
@@ -243,17 +316,29 @@ public function getTodayAttendance(Request $request)
                     $absenHdr->refresh();
                 }
                 
+                // NEW: Save photo to file storage and get URL
+                $photoUrl = $this->savePhotoToStorage(
+                    $request->photo,
+                    $request->tenagakerjaid,
+                    $absenType
+                );
+                
+                // NEW: Prepare checkintime
+                $checkinTime = ($absenType === 'LOKASI') ? now() : null;
+                
                 // Create AbsenLst record with PENDING approval status
                 DB::table('absenlst')->insert([
                     'absenno' => $absenHdr->absenno,
                     'id' => $nextId,
                     'tenagakerjaid' => $request->tenagakerjaid,
-                    'absenmasuk' => now(),
-                    'keterangan' => 'Absen dengan foto via mobile app',
-                    'fotoabsen' => $request->photo,
+                    'absenmasuk' => now(), // Server timestamp
+                    'absentype' => $absenType, // NEW
+                    'checkintime' => $checkinTime, // NEW
+                    'keterangan' => "Absen {$absenType} dengan foto via mobile app",
+                    'fotoabsen' => $photoUrl, // NEW: URL instead of base64
                     'lokasifotolat' => $request->latitude,
                     'lokasifotolng' => $request->longitude,
-                    'approval_status' => 'PENDING', // Default status
+                    'approval_status' => 'PENDING',
                     'createdat' => now(),
                     'updatedat' => now()
                 ]);
@@ -262,15 +347,18 @@ public function getTodayAttendance(Request $request)
                 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Absen berhasil dicatat dengan foto (menunggu approval)',
+                    'message' => "Absen {$absenType} berhasil dicatat dengan foto (menunggu approval)",
                     'data' => [
                         'absenno' => $absenHdr->absenno,
                         'absen_id' => $nextId,
                         'tenagakerjaid' => $request->tenagakerjaid,
                         'worker_name' => $worker->nama,
+                        'absentype' => $absenType,
                         'time' => now()->format('H:i'),
+                        'server_timestamp' => now()->toIso8601String(), // NEW: Return server time
                         'approval_status' => 'PENDING',
                         'total_today' => $absenHdr->totalpekerja,
+                        'photo_url' => $photoUrl, // NEW
                     ]
                 ]);
                 
@@ -289,96 +377,119 @@ public function getTodayAttendance(Request $request)
         }
     }
 
-/**
- * Update attendance photo - Edit functionality
- */
-public function updateAttendancePhoto(Request $request)
-{
-    try {
-        $request->validate([
-            'absenno' => 'required|string',
-            'absen_id' => 'required|integer',
-            'tenagakerjaid' => 'required|string',
-            'photo' => 'required|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
-        
-        if (!auth()->check()) {
-            return response()->json(['error' => 'User not authenticated'], 401);
-        }
-        
-        $user = auth()->user();
-        
-        // Verify the attendance record belongs to this mandor
-        $attendanceRecord = DB::table('absenlst as al')
-            ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
-            ->where('al.absenno', $request->absenno)
-            ->where('al.id', $request->absen_id)
-            ->where('al.tenagakerjaid', $request->tenagakerjaid)
-            ->where('ah.mandorid', $user->userid)
-            ->where('ah.companycode', $user->companycode)
-            ->select(['al.approval_status', 'al.absenno', 'al.id'])
-            ->first();
-        
-        if (!$attendanceRecord) {
-            return response()->json(['error' => 'Record absensi tidak ditemukan atau tidak berhak diakses'], 404);
-        }
-        
-        // Check if already approved - don't allow edit if approved
-        if ($attendanceRecord->approval_status === 'APPROVED') {
-            return response()->json(['error' => 'Tidak dapat mengedit foto yang sudah diapprove'], 400);
-        }
-        
-        DB::beginTransaction();
-        
+    /**
+     * Update attendance photo - UPDATED: Support file storage
+     */
+    public function updateAttendancePhoto(Request $request)
+    {
         try {
-            // Update photo and reset approval status
-            $updated = AbsenLst::updatePhotoAndResetApproval(
-                $request->absenno,
-                $request->absen_id,
-                $request->photo,
-                $request->latitude,
-                $request->longitude
-            );
-            
-            if (!$updated) {
-                return response()->json(['error' => 'Gagal mengupdate foto'], 500);
-            }
-            
-            // Get worker name for response
-            $worker = TenagaKerja::where('tenagakerjaid', $request->tenagakerjaid)->first();
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Foto absensi berhasil diupdate (status direset ke PENDING)',
-                'data' => [
-                    'absenno' => $request->absenno,
-                    'absen_id' => $request->absen_id,
-                    'tenagakerjaid' => $request->tenagakerjaid,
-                    'worker_name' => $worker->nama ?? 'Unknown',
-                    'approval_status' => 'PENDING',
-                    'updated_at' => now()->format('Y-m-d H:i:s'),
-                ]
+            $request->validate([
+                'absenno' => 'required|string',
+                'absen_id' => 'required|integer',
+                'tenagakerjaid' => 'required|string',
+                'photo' => 'required|string',
+                'latitude' => 'nullable|numeric',
+                'longitude' => 'nullable|numeric',
             ]);
             
+            if (!auth()->check()) {
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
+            
+            $user = auth()->user();
+            
+            // Verify the attendance record belongs to this mandor
+            $attendanceRecord = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->where('al.absenno', $request->absenno)
+                ->where('al.id', $request->absen_id)
+                ->where('al.tenagakerjaid', $request->tenagakerjaid)
+                ->where('ah.mandorid', $user->userid)
+                ->where('ah.companycode', $user->companycode)
+                ->select(['al.approval_status', 'al.absenno', 'al.id', 'al.fotoabsen', 'al.absentype'])
+                ->first();
+            
+            if (!$attendanceRecord) {
+                return response()->json(['error' => 'Record absensi tidak ditemukan atau tidak berhak diakses'], 404);
+            }
+            
+            // Check if already approved - don't allow edit if approved
+            if ($attendanceRecord->approval_status === 'APPROVED') {
+                return response()->json(['error' => 'Tidak dapat mengedit foto yang sudah diapprove'], 400);
+            }
+            
+            DB::beginTransaction();
+            
+            try {
+                // NEW: Delete old photo file
+                if ($attendanceRecord->fotoabsen) {
+                    $this->deletePhotoFromStorage($attendanceRecord->fotoabsen);
+                }
+                
+                // NEW: Save new photo to storage
+                $photoUrl = $this->savePhotoToStorage(
+                    $request->photo,
+                    $request->tenagakerjaid,
+                    $attendanceRecord->absentype
+                );
+                
+                // Update photo and reset approval status
+                $updated = DB::table('absenlst')
+                    ->where('absenno', $request->absenno)
+                    ->where('id', $request->absen_id)
+                    ->update([
+                        'fotoabsen' => $photoUrl, // NEW: URL instead of base64
+                        'lokasifotolat' => $request->latitude,
+                        'lokasifotolng' => $request->longitude,
+                        'approval_status' => 'PENDING',
+                        'approval_date' => null,
+                        'approved_by' => null,
+                        'rejection_reason' => null,
+                        'rejection_date' => null,
+                        'is_edited' => true,
+                        'edit_count' => DB::raw('COALESCE(edit_count, 0) + 1'),
+                        'last_edited_at' => now(),
+                        'updatedat' => now()
+                    ]);
+                
+                if (!$updated) {
+                    return response()->json(['error' => 'Gagal mengupdate foto'], 500);
+                }
+                
+                // Get worker name for response
+                $worker = TenagaKerja::where('tenagakerjaid', $request->tenagakerjaid)->first();
+                
+                DB::commit();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Foto absensi berhasil diupdate (status direset ke PENDING)',
+                    'data' => [
+                        'absenno' => $request->absenno,
+                        'absen_id' => $request->absen_id,
+                        'tenagakerjaid' => $request->tenagakerjaid,
+                        'worker_name' => $worker->nama ?? 'Unknown',
+                        'approval_status' => 'PENDING',
+                        'photo_url' => $photoUrl, // NEW
+                        'updated_at' => now()->format('Y-m-d H:i:s'),
+                    ]
+                ]);
+                
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
+            
         } catch (\Exception $e) {
-            DB::rollback();
-            throw $e;
+            Log::error('Error in updateAttendancePhoto', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
         }
-        
-    } catch (\Exception $e) {
-        \Log::error('Error in updateAttendancePhoto', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-            'request_data' => $request->all()
-        ]);
-        
-        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
     }
-}
 
     // =============================================================================
     // LKH MANAGEMENT - DATA RETRIEVAL
@@ -2942,6 +3053,157 @@ public function getRejectedAttendance(Request $request)
         $jenisMap = [1 => 'Harian', 2 => 'Borongan', 3 => 'Kontrak'];
         return $jenisMap[$jenisId] ?? "Jenis $jenisId";
     }
+
+
+
+    // =============================================================================
+    // PRIVATE HELPER METHODS - PHOTO STORAGE
+    // =============================================================================
+
+    /**
+     * Save photo to file storage
+     * Format: YYYYMMDD_absen_TYPE_TENAGAKERJAID_TIMESTAMP.jpg
+     * 
+     * @param string $photoBase64 Base64 encoded photo
+     * @param string $tenagakerjaId Worker ID
+     * @param string $type HADIR or LOKASI
+     * @return string Photo URL
+     */
+    private function savePhotoToStorage($photoBase64, $tenagakerjaId, $type)
+    {
+        try {
+            // Decode base64
+            $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $photoBase64));
+            
+            // Generate filename with new format
+            $date = now()->format('Ymd'); // YYYYMMDD
+            $timestamp = now()->timestamp;
+            $filename = "{$date}_absen_{$type}_{$tenagakerjaId}_{$timestamp}.jpg";
+            
+            // Path: attendance/YYYY-MM-DD/filename.jpg
+            $datePath = now()->format('Y-m-d');
+            $path = "attendance/{$datePath}/{$filename}";
+            
+            // Save to storage/app/public/attendance/
+            Storage::disk('public')->put($path, $imageData);
+            
+            // Generate URL
+            $photoUrl = Storage::disk('public')->url($path);
+            
+            Log::info('Photo saved to storage', [
+                'path' => $path,
+                'url' => $photoUrl,
+                'type' => $type,
+                'worker' => $tenagakerjaId
+            ]);
+            
+            return $photoUrl;
+            
+        } catch (\Exception $e) {
+            Log::error('Error saving photo to storage', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            throw new \Exception('Gagal menyimpan foto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete photo from storage
+     * 
+     * @param string $photoUrl Photo URL
+     * @return bool
+     */
+    private function deletePhotoFromStorage($photoUrl)
+    {
+        try {
+            // Extract path from URL
+            // URL format: http://server/storage/attendance/2025-01-17/file.jpg
+            // Need to get: attendance/2025-01-17/file.jpg
+            
+            $urlPath = parse_url($photoUrl, PHP_URL_PATH);
+            $storagePath = str_replace('/storage/', '', $urlPath);
+            
+            if (Storage::disk('public')->exists($storagePath)) {
+                Storage::disk('public')->delete($storagePath);
+                
+                Log::info('Photo deleted from storage', [
+                    'url' => $photoUrl,
+                    'path' => $storagePath
+                ]);
+                
+                return true;
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            Log::warning('Error deleting photo from storage', [
+                'url' => $photoUrl,
+                'error' => $e->getMessage()
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Get attendance statistics by type
+     * Helper untuk dashboard/reporting
+     * 
+     * @param string $companyCode
+     * @param string $mandorId
+     * @param string $date
+     * @return array
+     */
+    private function getAttendanceStatsByType($companyCode, $mandorId, $date)
+    {
+        try {
+            $stats = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->where('ah.companycode', $companyCode)
+                ->where('ah.mandorid', $mandorId)
+                ->whereDate('al.absenmasuk', $date)
+                ->select([
+                    'al.absentype',
+                    DB::raw('COUNT(*) as total'),
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'APPROVED' THEN 1 END) as approved"),
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'PENDING' THEN 1 END) as pending"),
+                    DB::raw("COUNT(CASE WHEN al.approval_status = 'REJECTED' THEN 1 END) as rejected")
+                ])
+                ->groupBy('al.absentype')
+                ->get()
+                ->keyBy('absentype');
+            
+            return [
+                'hadir' => [
+                    'total' => $stats->get('HADIR')->total ?? 0,
+                    'approved' => $stats->get('HADIR')->approved ?? 0,
+                    'pending' => $stats->get('HADIR')->pending ?? 0,
+                    'rejected' => $stats->get('HADIR')->rejected ?? 0,
+                ],
+                'lokasi' => [
+                    'total' => $stats->get('LOKASI')->total ?? 0,
+                    'approved' => $stats->get('LOKASI')->approved ?? 0,
+                    'pending' => $stats->get('LOKASI')->pending ?? 0,
+                    'rejected' => $stats->get('LOKASI')->rejected ?? 0,
+                ]
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting attendance stats by type', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'hadir' => ['total' => 0, 'approved' => 0, 'pending' => 0, 'rejected' => 0],
+                'lokasi' => ['total' => 0, 'approved' => 0, 'pending' => 0, 'rejected' => 0]
+            ];
+        }
+    }
+
+
 
     /**
      * Generate absenno format: ABS{YYYYMMDD}{sequence}

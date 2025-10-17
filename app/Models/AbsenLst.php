@@ -101,6 +101,7 @@ class AbsenLst extends Model
             ->where('ah.companycode', $companyCode)
             ->where('ah.mandorid', $mandorId)
             ->where('al.approval_status', 'APPROVED')
+            ->where('al.absentype', 'HADIR')
             ->whereDate('al.absenmasuk', $date)
             ->select([
                 'al.tenagakerjaid',
