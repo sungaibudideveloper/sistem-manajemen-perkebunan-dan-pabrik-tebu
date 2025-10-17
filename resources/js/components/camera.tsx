@@ -61,6 +61,7 @@ const Camera: React.FC<CameraProps> = ({
   const getGPSCoordinates = () => {
     if (!navigator.geolocation) {
       setGpsError('GPS tidak tersedia di perangkat ini');
+      setIsGettingGPS(false);
       return;
     }
 
@@ -103,6 +104,8 @@ const Camera: React.FC<CameraProps> = ({
   useEffect(() => {
     if (isOpen && videoRef.current) {
       startCamera(facingMode);
+      // Selalu ambil GPS untuk semua jenis absensi
+      setIsGettingGPS(true);
       getGPSCoordinates();
     }
 
@@ -125,12 +128,12 @@ const Camera: React.FC<CameraProps> = ({
       return;
     }
 
-    if (requireGPS && !gpsCoordinates) {
-      alert('GPS coordinates diperlukan untuk absen LOKASI. Pastikan GPS aktif dan izin lokasi diberikan.');
+    // GPS wajib untuk semua jenis absensi
+    if (!gpsCoordinates) {
+      alert('GPS coordinates diperlukan untuk absensi. Pastikan GPS aktif dan izin lokasi diberikan.');
       return;
     }
 
-    // Fetch server time - TIDAK BLOCKING jika gagal
     let serverTimestamp = '⚠️ Waktu Server Gagal Diambil';
     try {
       const response = await fetch('/api/mandor/server-time');
@@ -142,7 +145,6 @@ const Camera: React.FC<CameraProps> = ({
       }
     } catch (error) {
       console.warn('Failed to fetch server time:', error);
-      // Tetap lanjut, tidak perlu alert
     }
 
     const video = videoRef.current;
@@ -154,10 +156,8 @@ const Camera: React.FC<CameraProps> = ({
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Detect orientation
     const isPortrait = canvas.height > canvas.width;
 
-    // Draw timestamp
     ctx.font = isPortrait ? 'bold 20px Arial' : 'bold 28px Arial';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     const timestampWidth = ctx.measureText(serverTimestamp).width;
@@ -172,7 +172,6 @@ const Camera: React.FC<CameraProps> = ({
       ctx.fillText(serverTimestamp, 20, canvas.height - 67);
     }
 
-    // Draw GPS or error stamp
     let gpsText = '';
     if (gpsCoordinates) {
       gpsText = `📍 ${gpsCoordinates.latitude.toFixed(6)}, ${gpsCoordinates.longitude.toFixed(6)}`;
@@ -220,8 +219,8 @@ const Camera: React.FC<CameraProps> = ({
 
   if (!isOpen) return null;
 
-  // ✅ Camera + GPS both ready (or GPS not required)
-  const canCapture = isReady && (!requireGPS || (gpsCoordinates !== null && !isGettingGPS));
+  // GPS selalu required untuk semua jenis absensi
+  const canCapture = isReady && gpsCoordinates !== null && !isGettingGPS;
 
   return (
     <div style={{
@@ -261,19 +260,6 @@ const Camera: React.FC<CameraProps> = ({
                 {workerName}
               </p>
             )}
-            {requireGPS && (
-              <p style={{ 
-                margin: '4px 0 0 0', 
-                fontSize: '12px', 
-                color: '#9333ea',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <FiMapPin size={12} />
-                GPS diperlukan untuk absen LOKASI
-              </p>
-            )}
           </div>
           <button 
             onClick={handleClose}
@@ -289,65 +275,77 @@ const Camera: React.FC<CameraProps> = ({
           </button>
         </div>
 
-        {/* GPS Status Bar */}
-        {requireGPS && (
-          <div style={{
-            padding: '12px 16px',
-            backgroundColor: gpsCoordinates ? '#dcfce7' : (gpsError ? '#fee2e2' : '#fef3c7'),
-            borderBottom: '1px solid #e5e5e5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isGettingGPS ? (
-                <>
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid #f59e0b',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
-                  <span style={{ fontSize: '14px', color: '#92400e' }}>
-                    Mendapatkan lokasi GPS...
-                  </span>
-                </>
-              ) : gpsCoordinates ? (
-                <>
-                  <FiMapPin style={{ color: '#16a34a' }} />
-                  <span style={{ fontSize: '14px', color: '#166534' }}>
-                    GPS Ready: {gpsCoordinates.latitude.toFixed(6)}, {gpsCoordinates.longitude.toFixed(6)}
-                  </span>
-                </>
-              ) : gpsError ? (
-                <>
-                  <FiAlertTriangle style={{ color: '#dc2626' }} />
-                  <span style={{ fontSize: '14px', color: '#991b1b' }}>
-                    {gpsError}
-                  </span>
-                </>
-              ) : null}
-            </div>
-            {gpsError && (
-              <button
-                onClick={getGPSCoordinates}
-                style={{
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
-              >
-                Coba Lagi
-              </button>
+        {/* GPS Status Bar - Selalu tampil untuk semua jenis absensi */}
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: gpsCoordinates ? '#dcfce7' : (gpsError ? '#fee2e2' : '#fef3c7'),
+          borderBottom: '1px solid #e5e5e5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isGettingGPS ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid #f59e0b',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <span style={{ fontSize: '14px', color: '#92400e' }}>
+                  Mendapatkan lokasi GPS...
+                </span>
+              </>
+            ) : gpsCoordinates ? (
+              <>
+                <FiMapPin style={{ color: '#16a34a' }} />
+                <span style={{ fontSize: '14px', color: '#166534' }}>
+                  GPS Ready: {gpsCoordinates.latitude.toFixed(6)}, {gpsCoordinates.longitude.toFixed(6)}
+                </span>
+              </>
+            ) : gpsError ? (
+              <>
+                <FiAlertTriangle style={{ color: '#dc2626' }} />
+                <span style={{ fontSize: '14px', color: '#991b1b' }}>
+                  {gpsError}
+                </span>
+              </>
+            ) : (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid #f59e0b',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <span style={{ fontSize: '14px', color: '#92400e' }}>
+                  Menunggu GPS...
+                </span>
+              </>
             )}
           </div>
-        )}
+          {gpsError && (
+            <button
+              onClick={getGPSCoordinates}
+              style={{
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                padding: '4px 12px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Coba Lagi
+            </button>
+          )}
+        </div>
 
         {/* Video/Photo Area */}
         <div style={{
@@ -391,11 +389,24 @@ const Camera: React.FC<CameraProps> = ({
             left: '10px',
             backgroundColor: isReady ? '#10b981' : '#f59e0b',
             color: 'white',
-            padding: '4px 8px',
+            padding: '6px 10px',
             borderRadius: '4px',
-            fontSize: '12px'
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}>
-            {isReady ? '✓ Camera Ready' : 'Loading...'}
+            {!isReady && (
+              <div style={{
+                width: '12px',
+                height: '12px',
+                border: '2px solid white',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+            )}
+            {isReady ? '✓ Camera Ready' : 'Loading Camera...'}
           </div>
 
           <button
@@ -411,12 +422,13 @@ const Camera: React.FC<CameraProps> = ({
               borderRadius: '50%',
               width: '44px',
               height: '44px',
-              cursor: 'pointer',
+              cursor: isReady ? 'pointer' : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '18px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              opacity: isReady ? 1 : 0.5
             }}
           >
             <FiRefreshCw />
@@ -435,26 +447,6 @@ const Camera: React.FC<CameraProps> = ({
               fontSize: '12px'
             }}>
               {facingMode === 'user' ? '📷 Front Camera' : '📷 Back Camera'}
-            </div>
-          )}
-
-          {!capturedPhoto && gpsCoordinates && (
-            <div style={{
-              position: 'absolute',
-              bottom: '10px',
-              right: '10px',
-              backgroundColor: 'rgba(16, 185, 129, 0.8)',
-              color: 'white',
-              padding: '6px 10px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontWeight: 'bold'
-            }}>
-              <FiMapPin size={12} />
-              GPS Ready
             </div>
           )}
 
@@ -477,7 +469,8 @@ const Camera: React.FC<CameraProps> = ({
                 cursor: canCapture ? 'pointer' : 'not-allowed',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                opacity: canCapture ? 1 : 0.6
               }}
             >
               <FiCamera /> Ambil Foto
@@ -520,7 +513,7 @@ const Camera: React.FC<CameraProps> = ({
           )}
         </div>
 
-        {requireGPS && !gpsCoordinates && !capturedPhoto && (
+        {!capturedPhoto && (
           <div style={{
             padding: '12px 16px',
             backgroundColor: '#fef3c7',
@@ -529,20 +522,7 @@ const Camera: React.FC<CameraProps> = ({
             color: '#92400e',
             textAlign: 'center'
           }}>
-            💡 GPS WAJIB untuk absen LOKASI. Pastikan GPS aktif dan izin lokasi diberikan ke browser
-          </div>
-        )}
-        
-        {!requireGPS && !capturedPhoto && (
-          <div style={{
-            padding: '12px 16px',
-            backgroundColor: '#dbeafe',
-            borderTop: '1px solid #e5e5e5',
-            fontSize: '12px',
-            color: '#1e40af',
-            textAlign: 'center'
-          }}>
-            💡 GPS akan dicatat otomatis untuk absen HADIR (untuk tracking lokasi)
+            💡 GPS diperlukan untuk semua jenis absensi. Pastikan GPS aktif dan izin lokasi diberikan.
           </div>
         )}
       </div>
