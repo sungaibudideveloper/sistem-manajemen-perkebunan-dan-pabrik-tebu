@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Process;
 
 use Carbon\Carbon;
-use App\Models\HPTHeader;
 use Illuminate\Http\Request;
-use App\Models\AgronomiHeader;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +11,6 @@ use Illuminate\Support\Facades\View;
 
 class PostController extends Controller
 {
-
     public function __construct()
     {
         View::share([
@@ -25,10 +22,21 @@ class PostController extends Controller
     public function index(Request $request)
     {
         $title = "Posting";
+        $search = $request->input('search', '');
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->companycode);
+        if ($request->has('start_date')) {
+            session(['start_date_posting' => $request->start_date]);
+        }
+        if ($request->has('end_date')) {
+            session(['end_date_posting' => $request->end_date]);
+        }
+        $startDate = session('start_date_posting');
+        $endDate = session('end_date_posting');
+        $userid = Auth::user()->userid;
+        $companycode = DB::table('usercompany')
+            ->where('userid', $userid)
+            ->value('companycode');
+        $companyArray = $companycode ? explode(',', $companycode) : [];
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -40,18 +48,30 @@ class PostController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
+        if ($request->has('posting')) {
+            session(['posting' => $request->posting]);
+        }
         $session = session('posting');
-        $dropdownValue = session('companycode');
+        $companysession = session('companycode');
 
-        $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
+        $table = $session === 'Agronomi' ? 'agrohdr' : 'hpthdr';
 
-        $posts = $model::orderBy('createdat', 'desc')
-            ->with(['lists', 'company'])
-            ->where('companycode', '=', $dropdownValue)
+        $posts = DB::table($table)
+            ->orderBy('createdat', 'desc')
+            ->where('companycode', '=', $companysession)
             ->where('status', '=', 'Unposted')
-            ->when($startDate, fn($query) => $query->whereDate('createdat', '>=', $startDate))
-            ->when($endDate, fn($query) => $query->whereDate('createdat', '<=', $endDate))
-            ->paginate($perPage);
+            ->when($startDate, fn($query) => $query->whereDate('tanggalpengamatan', '>=', $startDate))
+            ->when($endDate, fn($query) => $query->whereDate('tanggalpengamatan', '<=', $endDate));
+
+        if (!empty($search)) {
+            $posts->where(function ($query) use ($search) {
+                $query->where('nosample', 'like', '%' . $search . '%')
+                    ->orWhere('idblokplot', 'like', '%' . $search . '%')
+                    ->orWhere('varietas', 'like', '%' . $search . '%')
+                    ->orWhere('kat', 'like', '%' . $search . '%');
+            });
+        }
+        $posts = $posts->paginate($perPage);
 
         foreach ($posts as $index => $item) {
             if (!empty($item->tanggaltanam)) {
@@ -63,7 +83,10 @@ class PostController extends Controller
             $item->no = ($posts->currentPage() - 1) * $posts->perPage() + $index + 1;
         }
 
-        return view('process.posting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('process.posting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+        return view('process.posting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 
     public function postSession(Request $request)
@@ -84,8 +107,8 @@ class PostController extends Controller
             $parts = explode(',', $item);
             return [
                 'nosample' => $parts[0] ?? null,
-                'companycode'   => $parts[1] ?? null,
-                'tanggaltanam'  => $parts[2] ?? null,
+                'companycode' => $parts[1] ?? null,
+                'tanggalpengamatan' => $parts[2] ?? null,
             ];
         }, $selectedItems);
 
@@ -98,11 +121,20 @@ class PostController extends Controller
             : ['hpthdr', 'hptlst'];
 
         foreach ($tables as $table) {
+            $updateData = [
+                'status' => 'Posted',
+                'count' => DB::raw('count + 1'),
+            ];
+
+            if (in_array($table, ['agrohdr', 'hpthdr'])) {
+                $updateData['tanggalposting'] = now()->toDateString();
+            }
+
             DB::table($table)
                 ->whereIn('nosample', array_column($selectedItems, 'nosample'))
                 ->whereIn('companycode', array_column($selectedItems, 'companycode'))
-                ->whereIn('tanggaltanam', array_column($selectedItems, 'tanggaltanam'))
-                ->update(['status' => 'Posted', 'count' => DB::raw('count + 1')]);
+                ->whereIn('tanggalpengamatan', array_column($selectedItems, 'tanggalpengamatan'))
+                ->update($updateData);
         }
 
         return redirect()->back()->with('success1', 'Data berhasil diposting.');

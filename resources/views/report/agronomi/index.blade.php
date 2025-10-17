@@ -3,15 +3,16 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white rounded-md shadow-md">
+    <div class="mx-auto py-4 bg-white rounded-md shadow-md {{ $startDate && $endDate ? 'w-full' : 'w-fit' }}">
         @if (!$startDate && !$endDate)
-            <div class="px-4 py-2 text-gray-500 font-medium text-sm">*(silahkan pilih range tanggal pengamatan untuk
-                menampilkan data)</div>
+            <div class="px-4 py-2 text-gray-500 font-medium text-sm text-center">*(silahkan pilih range tanggal
+                pengamatan untuk menampilkan data)</div>
         @endif
-        <div class="flex mx-4 items-center gap-2 justify-between flex-wrap">
+        <div
+            class="flex mx-4 items-center gap-2 flex-wrap {{ $startDate && $endDate ? 'lg:justify-between justify-center' : 'justify-center' }}">
             @if ($startDate && $endDate)
                 <div class="flex gap-2 text-sm">
-                    @if(hasPermission('Excel Agronomi'))
+                    @if (hasPermission('Excel Agronomi'))
                         <button
                             class="bg-green-600 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-green-500 flex items-center space-x-2"
                             onclick="window.location.href='{{ route('report.agronomi.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -24,7 +25,7 @@
                             <span>Export to Excel</span>
                         </button>
                     @endif
-                    @if(hasPermission('Pivot Agronomi'))
+                    @if (hasPermission('Pivot Agronomi'))
                         <button
                             class="bg-blue-700 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-blue-800 flex items-center space-x-2"
                             onclick="window.location.href='{{ route('pivotTableAgronomi', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -39,7 +40,6 @@
                     @endif
                 </div>
             @endif
-
 
             <form method="POST" action="{{ route('report.agronomi.index') }}">
                 @csrf
@@ -71,7 +71,7 @@
                                     <div class="py-2">
                                         <label for="start_date" class="block text-sm font-medium text-gray-700">Start
                                             Date</label>
-                                        <input type="date" id="start_date" name="start_date"
+                                        <input type="date" id="start_date" name="start_date" required
                                             value="{{ old('start_date', $startDate ?? '') }}"
                                             class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
                                             oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
@@ -80,28 +80,50 @@
                                     <div class="py-2">
                                         <label for="end_date" class="block text-sm font-medium text-gray-700">End
                                             Date</label>
-                                        <input type="date" id="end_date" name="end_date"
+                                        <input type="date" id="end_date" name="end_date" required
                                             value="{{ old('end_date', $endDate ?? '') }}"
                                             class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
                                             oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
                                     </div>
 
-                                    <div class="py-2">
-                                        <button type="submit" name="filter"
-                                            class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                            Apply
-                                        </button>
-                                    </div>
+                                    @if (!$startDate && !$endDate)
+                                        <div class="py-2">
+                                            <button type="submit" name="filter"
+                                                class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                Apply
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <label for="perPage" class="text-sm font-medium text-gray-700">Items per page:</label>
-                        <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
-                            onchange="this.form.submit()"
-                            class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    <div id="ajax-data" data-url="{{ route('report.agronomi.index') }}">
+                        <div class="flex items-center gap-2 w-full">
+                            <div>
+                                <label for="perPage" class="text-sm font-medium text-gray-700">Items per
+                                    page:</label>
+                                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
+                                    min="1" autocomplete="off"
+                                    class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+                        </div>
                     </div>
+                    @if ($startDate && $endDate)
+                        <div class="relative">
+                            <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                                </svg>
+                            </div>
+                            <input type="text" id="search" autocomplete="off" name="search"
+                                value="{{ old('search', $search) }}"
+                                class="block w-[350px] p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="Search Sample, Plot, Variety, or Category..." />
+                        </div>
+                    @endif
                 </div>
             </form>
         </div>
@@ -112,11 +134,9 @@
                         <thead>
                             <tr>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kebun
-                                </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                     Sample</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">block
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Blok
                                 </th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
                                 </th>
@@ -176,8 +196,6 @@
                             @foreach ($agronomi as $item)
                                 <tr>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->no }}.</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">
-                                        {{ $item->compName ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->nosample }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->blokName ?? '' }}
                                     </td>
@@ -187,12 +205,15 @@
                                         {{ $item->luasarea ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->varietas ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->kat ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggaltanam ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ ceil($item->umur_tanam) }} Bulan
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggaltanam ?? '' }}
+                                    </td>
+                                    <td class="py-2 px-4 border-b border-gray-300">{{ round($item->umur_tanam) }}
+                                        Bulan
                                     </td>
                                     <td class="py-2 px-4 border-b border-gray-300">
                                         {{ $item->jaraktanam ?? '' }}</td>
-                                    <td class="py-2 px-4 border-b border-gray-300">{{ $item->tanggalpengamatan ?? '' }}</td>
+                                    <td class="py-2 px-4 border-b border-gray-300">
+                                        {{ $item->tanggalpengamatan ?? '' }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->bulanPengamatan }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->nourut }}</td>
                                     <td class="py-2 px-4 border-b border-gray-300">{{ $item->jumlahbatang }}</td>
@@ -234,16 +255,6 @@
             </div>
         @endif
     </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const inputElement = document.getElementById("perPage");
-
-            inputElement.addEventListener("input", (event) => {
-                event.target.value = event.target.value.replace(/[^0-9]/g, '');
-            });
-        });
-    </script>
 
     <script>
         function toggleDropdown() {

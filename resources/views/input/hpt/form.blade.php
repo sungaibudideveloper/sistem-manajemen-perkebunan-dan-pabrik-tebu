@@ -24,35 +24,35 @@
 
                 <div>
                     <label class="block text-sm">Nomor Sample</label>
-                    <input type="text" name="no_sample" class="border rounded-md border-gray-300 p-2 w-full"
-                        maxlength="4" autocomplete="off" value="{{ old('no_sample', $header->no_sample ?? '') }}"
+                    <input type="text" name="nosample" class="border rounded-md border-gray-300 p-2 w-full"
+                        maxlength="4" autocomplete="off" value="{{ old('nosample', $header->nosample ?? '') }}"
                         required>
                 </div>
 
                 <div>
                     <label class="block text-sm">Plot Sample</label>
-                    <input type="number" name="kd_plotsample" id="kd_plotsample"
+                    <input type="number" name="idblokplot" id="idblokplot"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off" maxlength="5"
-                        min="0" value="{{ old('kd_plotsample', $header->kd_plotsample ?? '') }}">
+                        min="0" value="{{ old('idblokplot', $header->idblokplot ?? '') }}">
                 </div>
 
                 <div>
                     <label class="block text-sm">Kode Company</label>
-                    <input id="kd_comp" type="text" name="kd_comp" maxlength="6"
+                    <input id="companycode" type="text" name="companycode" maxlength="6"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('kd_comp', $header->kd_comp ?? '') }}" required>
+                        value="{{ old('companycode', $header->companycode ?? '') }}" required>
                 </div>
                 <div>
                     <label class="block text-sm">Blok</label>
-                    <input id="kd_blok" type="text" name="kd_blok" maxlength="2"
+                    <input id="blok" type="text" name="blok" maxlength="2"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('kd_blok', $header->kd_blok ?? '') }}" required>
+                        value="{{ old('blok', $header->blok ?? '') }}" required>
                 </div>
                 <div>
                     <label class="block text-sm">Plot</label>
-                    <input id="kd_plot" type="text" name="kd_plot" maxlength="10"
+                    <input id="plot" type="text" name="plot" maxlength="10"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('kd_plot', $header->kd_plot ?? '') }}" required>
+                        value="{{ old('plot', $header->plot ?? '') }}" required>
                 </div>
 
                 <div>
@@ -70,15 +70,15 @@
 
                 <div>
                     <label class="block text-sm">Tanggal Tanam</label>
-                    <input type="date" name="tgltanam" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tgltanam', $header->tgltanam ?? '') }}"
+                    <input type="date" name="tanggaltanam" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+                        value="{{ old('tanggaltanam', $header->tanggaltanam ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
                 <div>
                     <label class="block text-sm">Tanggal Pengamatan</label>
-                    <input type="date" name="tglamat" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tglamat', $header->tglamat ?? '') }}"
+                    <input type="date" name="tanggalpengamatan" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
+                        value="{{ old('tanggalpengamatan', $header->tanggalpengamatan ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
@@ -139,8 +139,8 @@
                         @foreach ($lists as $index => $list)
                             <tr>
                                 <td>
-                                    <input type="text" name="lists[{{ $index }}][no_urut]" min="0"
-                                        value="{{ $list->no_urut ?? $index + 1 }}"
+                                    <input type="text" name="lists[{{ $index }}][nourut]" min="0"
+                                        value="{{ $list->nourut ?? $index + 1 }}"
                                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                                 </td>
                                 <td>
@@ -447,7 +447,7 @@
             const newRow = `
             <tr>
                 <td>
-                    <input type="text" name="lists[${rowCount}][no_urut]" min="0" value="${rowCount}"
+                    <input type="text" name="lists[${rowCount}][nourut]" min="0" value="${rowCount}"
                         class="form-control border rounded-md border-gray-300 text-center" readonly>
                 </td>
                 <td>
@@ -645,7 +645,7 @@
         function resetRowNumbers() {
             const rows = document.querySelectorAll('#listTable tbody tr');
             rows.forEach((row, index) => {
-                const noUrutInput = row.querySelector('input[name^="lists"][name$="[no_urut]"]');
+                const noUrutInput = row.querySelector('input[name^="lists"][name$="[nourut]"]');
                 noUrutInput.value = index + 1;
             });
         }
@@ -653,51 +653,52 @@
 
     <script>
         $(document).ready(function() {
-            $('#kd_plotsample').change(function() {
-                var kd_plotsample = $(this).val();
-                if (kd_plotsample) {
+            $('#idblokplot').change(function() {
+                var idblokplot = $(this).val();
+                if (idblokplot) {
                     $.ajax({
                         url: "{{ route('input.hpt.getFieldByMapping') }}",
                         type: "POST",
                         data: {
                             _token: $('meta[name="csrf-token"]').attr('content'),
-                            kd_plotsample: kd_plotsample
+                            idblokplot: idblokplot
                         },
                         success: function(response) {
-                            $('#kd_comp').val(response.kd_comp);
-                            $('#kd_blok').val(response.kd_blok);
-                            $('#kd_plot').val(response.kd_plot);
+                            $('#companycode').val(response.companycode);
+                            $('#blok').val(response.blok);
+                            $('#plot').val(response.plot);
                         },
                         error: function() {
                             alert('Data tidak ditemukan');
                         }
                     });
                 } else {
-                    $('#kd_comp, #kd_blok, #kd_plot').val('');
+                    $('#companycode, #blok, #plot').val('');
                 }
             });
         });
     </script>
     @if (!$isEdit)
         <script>
-            document.querySelectorAll('input[name="no_sample"], input[name="kd_plotsample"]').forEach((element) => {
+            document.querySelectorAll('input[name="nosample"], input[name="idblokplot"]').forEach((element) => {
                 element.addEventListener('change', () => {
-                    const noSample = document.querySelector('input[name="no_sample"]').value;
-                    const kdPlotSample = document.querySelector('input[name="kd_plotsample"]').value;
+                    const noSample = document.querySelector('input[name="nosample"]').value;
+                    const kdPlotSample = document.querySelector('input[name="idblokplot"]').value;
 
                     if (noSample && kdPlotSample) {
                         fetch(
-                                `{{ route('input.hpt.check-data') }}?no_sample=${noSample}&kd_plotsample=${kdPlotSample}`
+                                `{{ route('input.hpt.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
                             )
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
                                     document.querySelector('input[name="varietas"]').value = data.varietas;
-                                    document.querySelector('input[name="tgltanam"]').value = data.tgltanam;
+                                    document.querySelector('input[name="tanggaltanam"]').value = data
+                                        .tanggaltanam;
                                 } else {
                                     alert("Data tidak ditemukan, silakan isi secara manual.");
                                     document.querySelector('input[name="varietas"]').value = '';
-                                    document.querySelector('input[name="tgltanam"]').value = '';
+                                    document.querySelector('input[name="tanggaltanam"]').value = '';
                                 }
                             })
                             .catch(err => console.error("Terjadi kesalahan:", err));
