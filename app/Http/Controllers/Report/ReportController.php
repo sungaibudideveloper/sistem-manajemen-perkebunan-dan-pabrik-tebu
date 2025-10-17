@@ -1,12 +1,11 @@
 <?php
+
 namespace App\Http\Controllers\Report;
-use App\Http\Controllers\Controller;
 
 use Carbon\Carbon;
-use App\Models\company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
 
 class ReportController extends Controller
@@ -21,7 +20,9 @@ class ReportController extends Controller
     {
         $title = "Report Agronomi";
         $nav = "Agronomi";
-        $company = company::all();
+        $search = $request->input('search', '');
+
+        $company = DB::table('company')->get();
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -35,11 +36,11 @@ class ReportController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $query = DB::table('agrolst')
+        $querys = DB::table('agrolst')
             ->leftJoin('agrohdr', function ($join) {
                 $join->on('agrolst.nosample', '=', 'agrohdr.nosample')
                     ->whereColumn('agrolst.companycode', '=', 'agrohdr.companycode')
-                    ->whereColumn('agrolst.tanggaltanam', '=', 'agrohdr.tanggaltanam');
+                    ->whereColumn('agrolst.tanggalpengamatan', '=', 'agrohdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('agrohdr.companycode', '=', 'company.companycode');
@@ -56,31 +57,40 @@ class ReportController extends Controller
             ->where('agrohdr.companycode', session('companycode'))
             ->where('agrohdr.status', '=', 'Posted')
             ->where('agrolst.status', '=', 'Posted')
-            ->select(
-                'agrolst.*',
-                'agrohdr.varietas',
-                'agrohdr.kat',
-                'agrohdr.tanggalpengamatan',
-                'company.name as compName',
-                'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
-                'plot.jaraktanam',
-            )
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
+            });
+
+        if (!empty($search)) {
+            $querys->where(function ($query) use ($search) {
+                $query->where('agrohdr.nosample', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.plot', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.varietas', 'like', '%' . $search . '%')
+                    ->orWhere('agrohdr.kat', 'like', '%' . $search . '%');
+            });
+        }
+
+        $querys = $querys->select(
+            'agrolst.*',
+            'agrohdr.varietas',
+            'agrohdr.kat',
+            'agrohdr.tanggaltanam',
+            'company.name as compName',
+            'blok.blok as blokName',
+            'plot.plot as plotName',
+            'plot.luasarea',
+            'plot.jaraktanam',
+        )
             ->orderBy('agrohdr.tanggalpengamatan', 'asc');
 
-        if ($startDate) {
-            $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
-        }
-
-        $agronomi = $query->paginate($perPage);
+        $agronomi = $querys->paginate($perPage);
 
         foreach ($agronomi as $item) {
             $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
-            $dateInput = Carbon::parse($item->createdat);
+            $dateInput = Carbon::parse($item->tanggalpengamatan);
             $item->bulanPengamatan = $dateInput->format('F');
         }
 
@@ -88,14 +98,18 @@ class ReportController extends Controller
             $item->no = ($agronomi->currentPage() - 1) * $agronomi->perPage() + $index + 1;
         }
 
-        return view('report.agronomi.index', compact('company', 'nav', 'agronomi', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('report.agronomi.index', compact('company', 'nav', 'agronomi', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+        return view('report.agronomi.index', compact('company', 'nav', 'agronomi', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 
     public function hpt(Request $request)
     {
         $title = "Report HPT";
         $nav = "HPT";
-        $company = company::all();
+        $search = $request->input('search', '');
+        $company = DB::table('company')->get();
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -109,11 +123,11 @@ class ReportController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
-        $query = DB::table('hptlst')
+        $querys = DB::table('hptlst')
             ->leftJoin('hpthdr', function ($join) {
                 $join->on('hptlst.nosample', '=', 'hpthdr.nosample')
                     ->whereColumn('hptlst.companycode', '=', 'hpthdr.companycode')
-                    ->whereColumn('hptlst.tanggaltanam', '=', 'hpthdr.tanggaltanam');
+                    ->whereColumn('hptlst.tanggalpengamatan', '=', 'hpthdr.tanggalpengamatan');
             })
             ->leftJoin('company', function ($join) {
                 $join->on('hpthdr.companycode', '=', 'company.companycode');
@@ -130,29 +144,37 @@ class ReportController extends Controller
             ->where('hpthdr.companycode', session('companycode'))
             ->where('hpthdr.status', '=', 'Posted')
             ->where('hptlst.status', '=', 'Posted')
-            ->select(
-                'hptlst.*',
-                'hpthdr.varietas',
-                'hpthdr.tanggalpengamatan',
-                'company.name as compName',
-                'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
-            )
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('hpthdr.tanggalpengamatan', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('hpthdr.tanggalpengamatan', '<=', $endDate);
+            });
+
+        if (!empty($search)) {
+            $querys->where(function ($query) use ($search) {
+                $query->where('hpthdr.nosample', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.varietas', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.plot', 'like', '%' . $search . '%')
+                    ->orWhere('hpthdr.kat', 'like', '%' . $search . '%');
+            });
+        }
+        $querys = $querys->select(
+            'hptlst.*',
+            'hpthdr.varietas',
+            'hpthdr.tanggaltanam',
+            'company.name as compName',
+            'blok.blok as blokName',
+            'plot.plot as plotName',
+            'plot.luasarea',
+        )
             ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 
-        if ($startDate) {
-            $query->whereDate('hpthdr.tanggalpengamatan', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('hpthdr.tanggalpengamatan', '<=', $endDate);
-        }
-
-        $hpt = $query->paginate($perPage);
+        $hpt = $querys->paginate($perPage);
 
         foreach ($hpt as $item) {
             $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
-            $dateInput = Carbon::parse($item->createdat);
+            $dateInput = Carbon::parse($item->tanggalpengamatan);
             $item->bulanPengamatan = $dateInput->format('F');
         }
 
@@ -160,6 +182,9 @@ class ReportController extends Controller
             $item->no = ($hpt->currentPage() - 1) * $hpt->perPage() + $index + 1;
         }
 
-        return view('report.hpt.index', compact('company', 'nav', 'hpt', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('report.hpt.index', compact('company', 'nav', 'hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+        return view('report.hpt.index', compact('company', 'nav', 'hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 }
