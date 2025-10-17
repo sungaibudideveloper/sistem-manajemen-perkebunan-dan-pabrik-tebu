@@ -831,7 +831,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           requireGPS={selectedAbsenType === 'LOKASI'}
         />
 
-        {/* ✅ RESPONSIVE PHOTO VIEWER MODAL - AUTO FIT */}
+        {/* ✅ PHOTO VIEWER MODAL - AUTO FIT (FIXED PORTRAIT) */}
         {viewingPhoto && (
           <div 
             style={{
@@ -850,25 +850,28 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
               style={{ 
                 backgroundColor: 'white',
                 borderRadius: '12px',
-                maxWidth: '500px',
-                width: '100%',
+                maxWidth: '600px',
                 maxHeight: '90vh',
+                width: '100%',
                 display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
+                flexDirection: 'column'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
+              {/* Header - Fixed Top */}
               <div style={{
-                padding: '12px 16px',
+                padding: '16px 20px',
                 borderBottom: '1px solid #e5e7eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                flexShrink: 0
+                backgroundColor: 'white',
+                borderTopLeftRadius: '12px',
+                borderTopRightRadius: '12px',
+                flexShrink: 0,
+                zIndex: 10
               }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: 0 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'black', margin: 0 }}>
                   Foto Absensi
                 </h3>
                 <button
@@ -881,47 +884,56 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#6b7280'
+                    color: '#6b7280',
+                    transition: 'color 0.2s'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#374151'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
                 >
-                  <FiX style={{ width: '20px', height: '20px' }} />
+                  <FiX style={{ width: '24px', height: '24px' }} />
                 </button>
               </div>
 
-              {/* Photo Container - AUTO FIT NO SCROLL */}
+              {/* Photo Container - Auto Fit dengan proper height calculation */}
               <div style={{
-                padding: '12px',
                 backgroundColor: '#000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flex: 1,
-                minHeight: 0
+                padding: '20px',
+                overflow: 'hidden',
+                height: 'calc(90vh - 130px)',
+                flexShrink: 0
               }}>
                 <img
                   src={viewingPhoto}
                   alt="Foto Absensi"
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
                     objectFit: 'contain',
-                    borderRadius: '4px'
+                    display: 'block'
                   }}
                 />
               </div>
 
-              {/* Footer with Close Button */}
+              {/* Footer - Fixed Bottom */}
               <div style={{
-                padding: '12px 16px',
+                padding: '16px 20px',
                 borderTop: '1px solid #e5e7eb',
                 display: 'flex',
                 justifyContent: 'center',
+                backgroundColor: 'white',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px',
                 flexShrink: 0
               }}>
                 <button
                   onClick={() => setViewingPhoto(null)}
                   style={{
-                    padding: '10px 24px',
+                    padding: '12px 32px',
                     backgroundColor: '#2563eb',
                     color: 'white',
                     border: 'none',
@@ -934,6 +946,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                     gap: '8px',
                     transition: 'background-color 0.2s'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 >
                   <FiX style={{ width: '16px', height: '16px' }} />
                   Tutup
