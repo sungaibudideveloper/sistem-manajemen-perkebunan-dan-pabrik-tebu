@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Dashboard;
 
 use Carbon\Carbon;
@@ -23,8 +24,14 @@ class DashboardController extends Controller
         $kdPlotAgronomi = $request->input('plot', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
+        $startYear = $request->input('start_year', now()->format('Y'));
+        $endYear = $request->input('end_year', now()->format('Y'));
         $title = "Dashboard Agronomi";
         $nav = "Agronomi";
+
+        $minAge = $request->input('min_age');
+        $maxAge = $request->input('max_age');
+        $ageUnit = $request->input('age_unit', 'bulan');
 
         $verticalField = $request->input('vertical', 'per_germinasi');
 
@@ -73,7 +80,7 @@ class DashboardController extends Controller
         $startMonthNum = $months[$startMonth] ?? null;
         $endMonthNum = $months[$endMonth] ?? null;
 
-        if (!empty($kdCompAgronomi) || !empty($kdBlokAgronomi) || !empty($kdPlotAgronomi) || ($startMonthNum && $endMonthNum)) {
+        if (!empty($kdCompAgronomi) || !empty($kdBlokAgronomi) || !empty($kdPlotAgronomi) || ($startMonthNum && $endMonthNum) || ($minAge && $maxAge)) {
             $chartDataQuery = DB::table('agrohdr')
                 ->join('agrolst', function ($join) {
                     $join->on('agrohdr.nosample', '=', 'agrolst.nosample')
@@ -92,14 +99,15 @@ class DashboardController extends Controller
                     DB::raw("MONTH(agrohdr.tanggalpengamatan) as bln_amat"),
                     DB::raw("MIN(agrohdr.tanggaltanam) as tanggaltanam"),
                     'agrohdr.kat',
-                    DB::raw("CASE
-                        WHEN '$verticalField' IN ('populasi', 'ph_tanah')
-                        THEN AVG($verticalField)
-                        ELSE AVG($verticalField) * 100
-                    END as total"),
+                    DB::raw("CASE 
+                    WHEN '$verticalField' IN ('populasi', 'ph_tanah') 
+                    THEN AVG($verticalField) 
+                    ELSE AVG($verticalField) * 100 
+                END as total"),
                     'company.name as company_nama',
                     'blok.blok as blok_nama',
-                    'plot.plot as plot_nama'
+                    'plot.plot as plot_nama',
+                    DB::raw("ROUND(DATEDIFF(CURDATE(), agrohdr.tanggaltanam) / 30) as umur_bulan")
                 )
                 ->when($kdCompAgronomi, function ($query) use ($kdCompAgronomi) {
                     return $query->whereIn('agrohdr.companycode', $kdCompAgronomi);
@@ -110,15 +118,43 @@ class DashboardController extends Controller
                 ->when($kdPlotAgronomi, function ($query) use ($kdPlotAgronomi) {
                     return $query->whereIn('agrohdr.plot', $kdPlotAgronomi);
                 })
-                ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
-                    return $query->whereBetween(DB::raw("MONTH(agrohdr.tanggalpengamatan)"), [$startMonthNum, $endMonthNum]);
+                ->when($startMonthNum && $endMonthNum && $startYear && $endYear, function ($query) use ($startMonthNum, $endMonthNum, $startYear, $endYear) {
+                    return $query->whereRaw("
+                        (YEAR(agrohdr.tanggalpengamatan) > ? OR 
+                        (YEAR(agrohdr.tanggalpengamatan) = ? AND MONTH(agrohdr.tanggalpengamatan) >= ?)) 
+                        AND 
+                        (YEAR(agrohdr.tanggalpengamatan) < ? OR 
+                        (YEAR(agrohdr.tanggalpengamatan) = ? AND MONTH(agrohdr.tanggalpengamatan) <= ?))
+                    ", [
+                        $startYear,
+                        $startYear,
+                        $startMonthNum,
+                        $endYear,
+                        $endYear,
+                        $endMonthNum
+                    ]);
+                })
+                ->when($minAge && $maxAge, function ($query) use ($minAge, $maxAge, $ageUnit) {
+                    if ($ageUnit === 'tahun') {
+                        $minAgeMonths = $minAge * 12;
+                        $maxAgeMonths = $maxAge * 12;
+                        return $query->whereRaw(
+                            "ROUND(DATEDIFF(CURDATE(), agrohdr.tanggaltanam) / 30) BETWEEN ? AND ?",
+                            [$minAgeMonths, $maxAgeMonths]
+                        );
+                    } else {
+                        return $query->whereRaw(
+                            "ROUND(DATEDIFF(CURDATE(), agrohdr.tanggaltanam) / 30) BETWEEN ? AND ?",
+                            [$minAge, $maxAge]
+                        );
+                    }
                 })
                 ->groupBy('bln_amat', 'kat', 'company.name', 'blok.blok', 'plot.plot')
                 ->orderBy('kat');
 
             $chartDataResult = $chartDataQuery->get();
             $chartDataResult->transform(function ($item) {
-                $item->umur_tanam = ceil(Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now())) . ' Bulan';
+                $item->umur_tanam = $item->umur_bulan . ' Bulan';
                 return $item;
             });
 
@@ -140,7 +176,7 @@ class DashboardController extends Controller
                 }
             })->unique()->values();
 
-            $legends = $chartDataResult->pluck('bln_amat')->unique();
+            $legends = $chartDataResult->pluck('bln_amat')->sort()->unique();
 
             foreach ($legends as $legend) {
                 $data = [];
@@ -207,19 +243,32 @@ class DashboardController extends Controller
         $kdCompAgroOpt = DB::table('company')
             ->join('agrohdr', 'company.companycode', '=', 'agrohdr.companycode')
             ->select('company.companycode', 'company.name')
+            ->orderBy('company.companycode', 'ASC')
             ->distinct()
             ->get();
         $kdBlokAgroOpt = DB::table('blok')
             ->join('agrohdr', 'blok.blok', '=', 'agrohdr.blok')
             ->select('blok.blok')
+            ->orderBy('blok.blok', 'asc')
             ->distinct()
             ->get();
-        $kdPlotAgroOpt = DB::table('plot')
-            ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
-            ->select('plot.plot')
-            ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
-            ->distinct()
-            ->get();
+
+        if (!empty($kdBlokAgronomi)) {
+            $kdPlotAgroOpt = DB::table('plot')
+                ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
+                ->whereIn('agrohdr.blok', $kdBlokAgronomi)
+                ->select('plot.plot')
+                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->distinct()
+                ->get();
+        } else {
+            $kdPlotAgroOpt = DB::table('plot')
+                ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
+                ->select('plot.plot')
+                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->distinct()
+                ->get();
+        }
 
         if (!empty($kdCompAgronomi) && empty($kdBlokAgronomi) && empty($kdPlotAgronomi)) {
             $horizontalLabel = 'Umur - Kategori - Kebun';
@@ -254,7 +303,12 @@ class DashboardController extends Controller
             'nav',
             'startMonth',
             'endMonth',
-            'monthsLabel'
+            'startYear',
+            'endYear',
+            'monthsLabel',
+            'minAge',
+            'maxAge',
+            'ageUnit'
         ));
     }
 
@@ -265,14 +319,23 @@ class DashboardController extends Controller
         $kdPlotHPT = $request->input('plot', []);
         $startMonth = $request->input('start_month');
         $endMonth = $request->input('end_month');
+        $startYear = $request->input('start_year', now()->format('Y'));
+        $endYear = $request->input('end_year', now()->format('Y'));
         $title = "Dashboard HPT";
         $nav = "HPT";
+
+        $minAge = $request->input('min_age');
+        $maxAge = $request->input('max_age');
+        $ageUnit = $request->input('age_unit', 'bulan');
 
         $verticalField = $request->input('vertical', 'per_ppt');
 
         $verticalLabels = [
             'per_ppt' => '% PPT',
-            'per_PBT' => '% PBT',
+            'per_ppt_aktif' => '% PPT Aktif',
+            'per_pbt' => '% PBT',
+            'per_pbt_aktif' => '% PBT Aktif',
+            'int_rusak' => '% Intensitas Kerusakan',
             'dh' => 'Dead Heart',
             'dt' => 'Dead Top',
             'kbp' => 'Kutu Bulu Putih',
@@ -280,8 +343,11 @@ class DashboardController extends Controller
             'kp' => 'Kutu Perisai',
             'cabuk' => 'Cabuk',
             'belalang' => 'Belalang',
-            'jum_grayak' => 'Ulat Grayak',
-            'serang_smut' => 'SMUT',
+            'serang_grayak' => 'BTG Terserang Ulat Grayak',
+            'jum_grayak' => 'Jumlah Ulat Grayak',
+            'serang_smut' => 'BTG Terserang SMUT',
+            'jum_larva_ppt' => 'Jumlah Larva PPT',
+            'jum_larva_pbt' => 'Jumlah Larva PBT',
         ];
         $verticalLabel = $verticalLabels[$verticalField] ?? ucfirst($verticalField);
 
@@ -339,14 +405,15 @@ class DashboardController extends Controller
                 ->select(
                     DB::raw("MONTH(hpthdr.tanggalpengamatan) as bln_amat"),
                     DB::raw("MIN(hpthdr.tanggaltanam) as tanggaltanam"),
-                    DB::raw("CASE
-                        WHEN '$verticalField' IN ('per_ppt', 'per_pbt')
+                    DB::raw("CASE 
+                        WHEN '$verticalField' IN ('per_ppt', 'per_pbt', 'per_ppt_aktif', 'per_pbt_aktif', 'int_rusak') 
                         THEN AVG($verticalField) * 100
-                        ELSE AVG($verticalField)
+                        ELSE AVG($verticalField) 
                     END as total"),
                     'company.name as company_nama',
                     'blok.blok as blok_nama',
-                    'plot.plot as plot_nama'
+                    'plot.plot as plot_nama',
+                    DB::raw("ROUND(DATEDIFF(CURDATE(), hpthdr.tanggaltanam) / 30) as umur_bulan")
                 )
                 ->when($kdCompHPT, function ($query) use ($kdCompHPT) {
                     return $query->whereIn('hpthdr.companycode', $kdCompHPT);
@@ -357,8 +424,36 @@ class DashboardController extends Controller
                 ->when($kdPlotHPT, function ($query) use ($kdPlotHPT) {
                     return $query->whereIn('hpthdr.plot', $kdPlotHPT);
                 })
-                ->when($startMonthNum && $endMonthNum, function ($query) use ($startMonthNum, $endMonthNum) {
-                    return $query->whereBetween(DB::raw("MONTH(hpthdr.tanggalpengamatan)"), [$startMonthNum, $endMonthNum]);
+                ->when($startMonthNum && $endMonthNum && $startYear && $endYear, function ($query) use ($startMonthNum, $endMonthNum, $startYear, $endYear) {
+                    return $query->whereRaw("
+                            (YEAR(hpthdr.tanggalpengamatan) > ? OR 
+                            (YEAR(hpthdr.tanggalpengamatan) = ? AND MONTH(hpthdr.tanggalpengamatan) >= ?)) 
+                            AND 
+                            (YEAR(hpthdr.tanggalpengamatan) < ? OR 
+                            (YEAR(hpthdr.tanggalpengamatan) = ? AND MONTH(hpthdr.tanggalpengamatan) <= ?))
+                        ", [
+                        $startYear,
+                        $startYear,
+                        $startMonthNum,
+                        $endYear,
+                        $endYear,
+                        $endMonthNum
+                    ]);
+                })
+                ->when($minAge && $maxAge, function ($query) use ($minAge, $maxAge, $ageUnit) {
+                    if ($ageUnit === 'tahun') {
+                        $minAgeMonths = $minAge * 12;
+                        $maxAgeMonths = $maxAge * 12;
+                        return $query->whereRaw(
+                            "ROUND(DATEDIFF(CURDATE(), hpthdr.tanggaltanam) / 30) BETWEEN ? AND ?",
+                            [$minAgeMonths, $maxAgeMonths]
+                        );
+                    } else {
+                        return $query->whereRaw(
+                            "ROUND(DATEDIFF(CURDATE(), hpthdr.tanggaltanam) / 30) BETWEEN ? AND ?",
+                            [$minAge, $maxAge]
+                        );
+                    }
                 })
                 ->groupBy('company.name', 'blok.blok', 'plot.plot', 'bln_amat')
                 ->orderBy('plot_nama');
@@ -366,7 +461,7 @@ class DashboardController extends Controller
 
             $chartDataResult = $chartDataQuery->get();
             $chartDataResult->transform(function ($item) {
-                $item->umur_tanam = ceil(Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now())) . ' Bulan';
+                $item->umur_tanam = round(Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now())) . ' Bulan';
                 return $item;
             });
 
@@ -388,7 +483,7 @@ class DashboardController extends Controller
                 }
             })->unique()->values();
 
-            $legends = $chartDataResult->pluck('bln_amat')->unique();
+            $legends = $chartDataResult->pluck('bln_amat')->sort()->unique();
 
             foreach ($legends as $legend) {
                 $data = [];
@@ -448,19 +543,32 @@ class DashboardController extends Controller
         $kdCompHPTOpt = DB::table('company')
             ->join('hpthdr', 'company.companycode', '=', 'hpthdr.companycode')
             ->select('company.companycode', 'company.name')
+            ->orderBy('company.companycode', 'ASC')
             ->distinct()
             ->get();
         $kdBlokHPTOpt = DB::table('blok')
             ->join('hpthdr', 'blok.blok', '=', 'hpthdr.blok')
             ->select('blok.blok')
+            ->orderBy('blok.blok', 'asc')
             ->distinct()
             ->get();
-        $kdPlotHPTOpt = DB::table('plot')
-            ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
-            ->select('plot.plot')
-            ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
-            ->distinct()
-            ->get();
+
+        if (!empty($kdBlokHPT)) {
+            $kdPlotHPTOpt = DB::table('plot')
+                ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
+                ->whereIn('hpthdr.blok', $kdBlokHPT)
+                ->select('plot.plot')
+                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->distinct()
+                ->get();
+        } else {
+            $kdPlotHPTOpt = DB::table('plot')
+                ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
+                ->select('plot.plot')
+                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->distinct()
+                ->get();
+        }
 
         if (!empty($kdCompHPT) && empty($kdBlokHPT) && empty($kdPlotHPT)) {
             $horizontalLabel = 'Umur - Kebun';
@@ -495,7 +603,12 @@ class DashboardController extends Controller
             'nav',
             'startMonth',
             'endMonth',
-            'monthsLabel'
+            'startYear',
+            'endYear',
+            'monthsLabel',
+            'minAge',
+            'maxAge',
+            'ageUnit'
         ));
     }
 }
