@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Process;
 
 use Carbon\Carbon;
-use App\Models\HPTHeader;
 use Illuminate\Http\Request;
-use App\Models\AgronomiHeader;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -17,17 +15,28 @@ class UnpostController extends Controller
     {
         View::share([
             'navbar' => 'Process',
-            'nav' => 'Posting',
+            'nav' => 'Unposting',
         ]);
     }
 
     public function index(Request $request)
     {
         $title = "Unposting";
+        $search = $request->input('search', '');
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $companyArray = explode(',', Auth::user()->userComp->companycode);
+        if ($request->has('start_date')) {
+            session(['start_date_unposting' => $request->start_date]);
+        }
+        if ($request->has('end_date')) {
+            session(['end_date_unposting' => $request->end_date]);
+        }
+        $startDate = session('start_date_unposting');
+        $endDate = session('end_date_unposting');
+        $userid = Auth::user()->userid;
+        $companycode = DB::table('usercompany')
+            ->where('userid', $userid)
+            ->value('companycode');
+        $companyArray = $companycode ? explode(',', $companycode) : [];
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -39,30 +48,46 @@ class UnpostController extends Controller
 
         $perPage = $request->session()->get('perPage', 10);
 
+        if ($request->has('unposting')) {
+            session(['unposting' => $request->unposting]);
+        }
         $session = session('unposting');
-        $dropdownValue = session('companycode');
+        $companysession = session('companycode');
 
-        $model = $session === 'Agronomi' ? AgronomiHeader::class : HPTHeader::class;
+        $table = $session === 'Agronomi' ? 'agrohdr' : 'hpthdr';
 
-        $posts = $model::orderBy('createdat', 'desc')
-            ->with(['lists', 'company'])
-            ->where('companycode', '=', $dropdownValue)
+        $unposts = DB::table($table)
+            ->orderBy('createdat', 'desc')
+            ->where('companycode', '=', $companysession)
             ->where('status', '=', 'Posted')
-            ->when($startDate, fn($query) => $query->whereDate('createdat', '>=', $startDate))
-            ->when($endDate, fn($query) => $query->whereDate('createdat', '<=', $endDate))
-            ->paginate($perPage);
+            ->when($startDate, fn($query) => $query->whereDate('tanggalpengamatan', '>=', $startDate))
+            ->when($endDate, fn($query) => $query->whereDate('tanggalpengamatan', '<=', $endDate));
 
-        foreach ($posts as $index => $item) {
+        if (!empty($search)) {
+            $unposts->where(function ($query) use ($search) {
+                $query->where('nosample', 'like', '%' . $search . '%')
+                    ->orWhere('idblokplot', 'like', '%' . $search . '%')
+                    ->orWhere('varietas', 'like', '%' . $search . '%')
+                    ->orWhere('kat', 'like', '%' . $search . '%');
+            });
+        }
+
+        $unposts = $unposts->paginate($perPage);
+
+        foreach ($unposts as $index => $item) {
             if (!empty($item->tanggaltanam)) {
                 $item->umur_tanam = Carbon::parse($item->tanggaltanam)->diffInMonths(Carbon::now());
             } else {
                 $item->umur_tanam = null;
             }
 
-            $item->no = ($posts->currentPage() - 1) * $posts->perPage() + $index + 1;
+            $item->no = ($unposts->currentPage() - 1) * $unposts->perPage() + $index + 1;
         }
 
-        return view('process.unposting.index', compact('posts', 'perPage', 'startDate', 'endDate', 'title'));
+        if ($request->ajax()) {
+            return view('process.unposting.index', compact('unposts', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+        }
+        return view('process.unposting.index', compact('unposts', 'perPage', 'startDate', 'endDate', 'title', 'search'));
     }
 
     public function unpostSession(Request $request)
@@ -83,8 +108,8 @@ class UnpostController extends Controller
             $parts = explode(',', $item);
             return [
                 'nosample' => $parts[0] ?? null,
-                'companycode'   => $parts[1] ?? null,
-                'tanggaltanam'  => $parts[2] ?? null,
+                'companycode' => $parts[1] ?? null,
+                'tanggalpengamatan' => $parts[2] ?? null,
             ];
         }, $selectedItems);
 
@@ -100,7 +125,7 @@ class UnpostController extends Controller
             DB::table($table)
                 ->whereIn('nosample', array_column($selectedItems, 'nosample'))
                 ->whereIn('companycode', array_column($selectedItems, 'companycode'))
-                ->whereIn('tanggaltanam', array_column($selectedItems, 'tanggaltanam'))
+                ->whereIn('tanggalpengamatan', array_column($selectedItems, 'tanggalpengamatan'))
                 ->update(['status' => 'Unposted']);
         }
 

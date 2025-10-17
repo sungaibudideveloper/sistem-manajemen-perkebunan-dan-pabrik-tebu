@@ -3,7 +3,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     <x-slot:navnav>{{ $title }}</x-slot:navnav>
-
+    @include('errorfile')
     @php
         $isEdit = isset($header);
     @endphp

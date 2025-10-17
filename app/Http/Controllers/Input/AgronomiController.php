@@ -520,8 +520,8 @@ class AgronomiController extends Controller
                 'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
-                'plot.luas_area',
-                'plot.jarak_tanam',
+                'plot.luasarea',
+                'plot.jaraktanam',
             )
             ->orderBy('agrohdr.tanggalpengamatan', 'desc');
 
@@ -585,12 +585,12 @@ class AgronomiController extends Controller
             $sheet->setCellValue('B' . $row, $list->compName);
             $sheet->setCellValue('C' . $row, $list->blokName);
             $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luas_area);
+            $sheet->setCellValue('E' . $row, $list->luasarea);
             $sheet->setCellValue('F' . $row, $list->varietas);
             $sheet->setCellValue('G' . $row, $list->kat);
             $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
             $sheet->setCellValue('I' . $row, round($umurTanam) . ' Bulan');
-            $sheet->setCellValue('J' . $row, $list->jarak_tanam);
+            $sheet->setCellValue('J' . $row, $list->jaraktanam);
             $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
             $sheet->setCellValue('L' . $row, $bulanPengamatan);
             $sheet->setCellValue('M' . $row, $list->nourut);

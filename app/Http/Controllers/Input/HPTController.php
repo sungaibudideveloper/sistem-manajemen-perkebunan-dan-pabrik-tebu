@@ -71,7 +71,7 @@ class HPTController extends Controller
         }
         $hpt = $hpt->select(
             'hpthdr.*',
-            'company.nama as nama_comp'
+            'company.name as nama_comp'
         )
             ->orderBy('hpthdr.createdat', 'desc')
             ->paginate($perPage);
@@ -256,7 +256,7 @@ class HPTController extends Controller
                 $sum_ni = $list['skor0'] * 0 + $list['skor1'] * 1 + $list['skor2'] * 2 + $list['skor3'] * 3 + $list['skor4'] * 4;
                 $per_ppt = $jumlahbatang != 0 ? $ppt / $jumlahbatang : 0;
                 $per_pbt = $jumlahbatang != 0 ? $pbt / $jumlahbatang : 0;
-                $umur_tanam = round($validated['tanggaltanam'] ? Carbon::parse($validated['tanggaltanam'])->diffInMonths(Carbon::now()) : null);
+                // $umur_tanam = round($validated['tanggaltanam'] ? Carbon::parse($validated['tanggaltanam'])->diffInMonths(Carbon::now()) : null);
 
                 DB::table('hptlst')->insert([
                     'nosample' => $validated['nosample'],
@@ -616,7 +616,7 @@ class HPTController extends Controller
                 'hpthdr.varietas',
                 'hpthdr.kat',
                 'hpthdr.tanggalpengamatan',
-                'company.nama as compName',
+                'company.name as compName',
                 'blok.blok as blokName',
                 'plot.plot as plotName',
                 'plot.luasarea',

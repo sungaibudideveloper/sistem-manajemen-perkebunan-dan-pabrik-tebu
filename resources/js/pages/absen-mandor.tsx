@@ -1,11 +1,15 @@
+// resources/js/pages/absen-mandor.tsx - REFACTORED
 import React, { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
-import {
-  FiArrowLeft, FiRefreshCw, FiCamera, FiUsers, FiCheck, FiCalendar, FiEye, FiX,
-  FiEdit3, FiClock, FiXCircle, FiCheckCircle, FiAlertTriangle
-} from 'react-icons/fi';
 import Camera from '../components/camera';
-import { LoadingCard, LoadingInline, LoadingOverlay } from '../components/loading-spinner';
+import {
+  FiArrowLeft, FiUsers, FiCheck, FiCalendar, FiEye, FiX,
+  FiEdit3, FiClock, FiXCircle, FiCheckCircle, FiAlertTriangle, 
+  FiMapPin, FiHome
+} from 'react-icons/fi';
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 interface Worker {
   tenagakerjaid: string;
@@ -20,6 +24,8 @@ interface AttendanceRecord {
   absen_id: number;
   tenagakerjaid: string;
   absenmasuk: string;
+  absentype: 'HADIR' | 'LOKASI';
+  checkintime: string | null;
   fotoabsen: string;
   lokasifotolat: number | null;
   lokasifotolng: number | null;
@@ -50,6 +56,12 @@ interface AbsenMandorProps {
   onSectionChange: (section: string) => void;
 }
 
+type AbsenType = 'HADIR' | 'LOKASI';
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 const AbsenMandor: React.FC<AbsenMandorProps> = ({ 
   routes,
   csrf_token,
@@ -61,12 +73,10 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
   const [editingAttendance, setEditingAttendance] = useState<AttendanceRecord | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  
-  // Loading states
+  const [activeTab, setActiveTab] = useState<'all' | 'hadir' | 'lokasi' | 'pending' | 'approved' | 'rejected'>('all');
+  const [selectedAbsenType, setSelectedAbsenType] = useState<AbsenType>('HADIR');
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(true);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
@@ -84,8 +94,9 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
       const response = await fetch(routes.workers);
       const data = await response.json();
       setWorkers(data.workers || []);
+      console.log('👥 Loaded workers:', data.workers?.length || 0);
     } catch (error) {
-      console.error('Error loading workers:', error);
+      console.error('❌ Error loading workers:', error);
     } finally {
       setIsLoadingWorkers(false);
     }
@@ -97,20 +108,40 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
       const response = await fetch(`${routes.attendance_today}?date=${attendanceDate}`);
       const data = await response.json();
       setTodayAttendance(data.attendance || []);
+      console.log('📋 Loaded attendance:', data.attendance?.length || 0, 'for date:', attendanceDate);
     } catch (error) {
-      console.error('Error loading attendance:', error);
+      console.error('❌ Error loading attendance:', error);
     } finally {
       setIsLoadingAttendance(false);
     }
   };
 
+  // ✅ NEW: Get available workers with button state logic
   const getAvailableWorkers = () => {
-    const attendedWorkerIds = todayAttendance.map(att => att.tenagakerjaid);
-    return workers.filter(worker => !attendedWorkerIds.includes(worker.tenagakerjaid));
+    return workers.map(worker => {
+      const hadirRecord = todayAttendance.find(
+        att => att.tenagakerjaid === worker.tenagakerjaid && att.absentype === 'HADIR'
+      );
+      const lokasiRecord = todayAttendance.find(
+        att => att.tenagakerjaid === worker.tenagakerjaid && att.absentype === 'LOKASI'
+      );
+      
+      return {
+        ...worker,
+        hasHadir: !!hadirRecord,
+        hasLokasi: !!lokasiRecord,
+        // Worker hilang dari list jika sudah HADIR + LOKASI
+        shouldShow: !(hadirRecord && lokasiRecord)
+      };
+    }).filter(worker => worker.shouldShow);
   };
 
   const getFilteredAttendance = () => {
     switch (activeTab) {
+      case 'hadir':
+        return todayAttendance.filter(att => att.absentype === 'HADIR');
+      case 'lokasi':
+        return todayAttendance.filter(att => att.absentype === 'LOKASI');
       case 'pending':
         return todayAttendance.filter(att => att.approval_status === 'PENDING');
       case 'approved':
@@ -122,20 +153,34 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
     }
   };
 
-  const handleWorkerSelect = (worker: Worker) => {
+  const handleWorkerSelect = (worker: Worker, type: AbsenType) => {
     setSelectedWorker(worker);
+    setSelectedAbsenType(type);
     setEditingAttendance(null);
     setIsCameraOpen(true);
+    console.log('👤 Selected worker:', worker.nama, 'Type:', type);
   };
 
   const handleEditPhoto = (attendance: AttendanceRecord) => {
     setEditingAttendance(attendance);
     setSelectedWorker(null);
+    setSelectedAbsenType(attendance.absentype);
     setIsCameraOpen(true);
+    console.log('✏️ Editing attendance:', attendance.tenaga_kerja.nama, 'Type:', attendance.absentype);
   };
 
-  const handlePhotoCapture = async (photoDataUrl: string) => {
+  const handlePhotoCapture = async (
+    photoDataUrl: string, 
+    gpsCoordinates?: { latitude: number; longitude: number }
+  ) => {
     if (!selectedWorker && !editingAttendance) return;
+
+    console.log('📤 Submitting attendance with data:', {
+      worker: selectedWorker?.nama || editingAttendance?.tenaga_kerja.nama,
+      type: selectedAbsenType,
+      hasGPS: !!gpsCoordinates,
+      photoSize: photoDataUrl.length
+    });
 
     setIsSubmitting(true);
     try {
@@ -143,23 +188,25 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
       let payload: any;
 
       if (editingAttendance) {
-        // Update existing photo
         url = routes.update_photo;
         payload = {
           absenno: editingAttendance.absenno,
           absen_id: editingAttendance.absen_id,
           tenagakerjaid: editingAttendance.tenagakerjaid,
-          photo: photoDataUrl
+          photo: photoDataUrl,
+          latitude: gpsCoordinates?.latitude,
+          longitude: gpsCoordinates?.longitude
         };
       } else if (selectedWorker) {
-        // New attendance
         url = routes.process_checkin;
         payload = {
           tenagakerjaid: selectedWorker.tenagakerjaid,
-          photo: photoDataUrl
+          photo: photoDataUrl,
+          absentype: selectedAbsenType,
+          latitude: gpsCoordinates?.latitude,
+          longitude: gpsCoordinates?.longitude
         };
       } else {
-        // Should never reach here, but safety check
         throw new Error('No worker or editing attendance selected');
       }
 
@@ -173,9 +220,9 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
       });
 
       const result = await response.json();
+      console.log('📥 Server response:', result);
 
       if (result.success) {
-        // AUTO REFRESH data setelah berhasil absen/update
         await Promise.all([
           loadWorkersData(),
           loadAttendanceData()
@@ -187,47 +234,87 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
         
         const message = editingAttendance 
           ? `Foto berhasil diupdate untuk ${workerName} (status direset ke PENDING)`
-          : `Absen berhasil untuk ${workerName}`;
+          : `Absen ${selectedAbsenType} berhasil untuk ${workerName}`;
         
+        console.log('✅ Success:', message);
         alert(message);
       } else {
+        console.error('❌ Server error:', result.error || result.message);
         alert(result.error || result.message || 'Gagal menyimpan');
       }
     } catch (error) {
-      console.error('Error submitting attendance:', error);
+      console.error('❌ Error submitting attendance:', error);
       alert('Terjadi kesalahan saat menyimpan');
     } finally {
       setIsSubmitting(false);
       setSelectedWorker(null);
       setEditingAttendance(null);
+      setIsCameraOpen(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-            <FiClock className="w-3 h-3" />
-            Pending
-          </span>
-        );
-      case 'APPROVED':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-            <FiCheckCircle className="w-3 h-3" />
-            Approved
-          </span>
-        );
-      case 'REJECTED':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-            <FiXCircle className="w-3 h-3" />
-            Rejected
-          </span>
-        );
-      default:
-        return null;
+    const styles: Record<string, any> = {
+      PENDING: { bg: '#fef3c7', color: '#92400e', icon: FiClock },
+      APPROVED: { bg: '#dcfce7', color: '#166534', icon: FiCheckCircle },
+      REJECTED: { bg: '#fee2e2', color: '#991b1b', icon: FiXCircle }
+    };
+    
+    const style = styles[status];
+    if (!style) return null;
+    
+    const Icon = style.icon;
+    
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        backgroundColor: style.bg,
+        color: style.color,
+        fontSize: '12px',
+        borderRadius: '9999px'
+      }}>
+        <Icon style={{ width: '12px', height: '12px' }} />
+        {status === 'PENDING' ? 'Pending' : status === 'APPROVED' ? 'Approved' : 'Rejected'}
+      </span>
+    );
+  };
+
+  const getTypeBadge = (type: 'HADIR' | 'LOKASI') => {
+    if (type === 'HADIR') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          backgroundColor: '#dbeafe',
+          color: '#1e40af',
+          fontSize: '12px',
+          borderRadius: '9999px'
+        }}>
+          <FiHome style={{ width: '12px', height: '12px' }} />
+          HADIR
+        </span>
+      );
+    } else {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          backgroundColor: '#f3e8ff',
+          color: '#7c3aed',
+          fontSize: '12px',
+          borderRadius: '9999px'
+        }}>
+          <FiMapPin style={{ width: '12px', height: '12px' }} />
+          LOKASI
+        </span>
+      );
     }
   };
 
@@ -257,6 +344,10 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
 
   const getTabCount = (tab: string) => {
     switch (tab) {
+      case 'hadir':
+        return todayAttendance.filter(att => att.absentype === 'HADIR').length;
+      case 'lokasi':
+        return todayAttendance.filter(att => att.absentype === 'LOKASI').length;
       case 'pending':
         return todayAttendance.filter(att => att.approval_status === 'PENDING').length;
       case 'approved':
@@ -270,144 +361,298 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
 
   const availableWorkers = getAvailableWorkers();
   const filteredAttendance = getFilteredAttendance();
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = attendanceDate === new Date().toISOString().split('T')[0];
+
+  const hadirCount = todayAttendance.filter(att => att.absentype === 'HADIR').length;
+  const lokasiCount = todayAttendance.filter(att => att.absentype === 'LOKASI').length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
         {/* Header */}
-        <div className="mb-8">
+        <div style={{ marginBottom: '32px' }}>
           <button
             onClick={() => onSectionChange('dashboard')}
-            className="flex items-center gap-2 text-gray-600 hover:text-black mb-4 transition-colors"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#6b7280',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '16px',
+              transition: 'color 0.2s'
+            }}
           >
-            <FiArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Kembali ke Beranda</span>
+            <FiArrowLeft style={{ width: '16px', height: '16px' }} />
+            Kembali ke Beranda
           </button>
           
-          <div className="flex items-center justify-between">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 className="text-3xl font-bold text-black mb-2">Sistem Absensi</h1>
-              <p className="text-gray-600">Pencatatan kehadiran pekerja dengan foto dan approval individual</p>
+              <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>
+                Sistem Absensi
+              </h1>
+              <p style={{ color: '#6b7280' }}>Absen HADIR (pagi) dan LOKASI (di kebun/plot)</p>
             </div>
           </div>
           
           {/* Date Info */}
-          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
+          <div style={{
+            marginTop: '16px',
+            padding: '16px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h3 className="font-semibold text-black">
+                <h3 style={{ fontWeight: '600', color: 'black' }}>
                   {formatDate(new Date().toISOString().split('T')[0])}
-                  <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Hari ini</span>
+                  <span style={{
+                    marginLeft: '8px',
+                    padding: '4px 8px',
+                    backgroundColor: '#dcfce7',
+                    color: '#166534',
+                    fontSize: '12px',
+                    borderRadius: '9999px'
+                  }}>
+                    Hari ini
+                  </span>
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p style={{ fontSize: '14px', color: '#6b7280' }}>
                   {isLoadingWorkers ? (
                     "Memuat data pekerja..."
                   ) : (
-                    `${availableWorkers.length} pekerja belum absen • ${workers.length} total pekerja`
+                    `${availableWorkers.length} pekerja masih perlu absen • ${workers.length} total pekerja`
                   )}
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-black">
-                  {isLoadingWorkers ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
-                  ) : (
-                    `${workers.length > 0 ? Math.round(((workers.length - availableWorkers.length) / workers.length) * 100) : 0}%`
-                  )}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2563eb' }}>{hadirCount}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>HADIR</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#9333ea' }}>{lokasiCount}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>LOKASI</div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">Kehadiran</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
+          gap: '32px'
+        }}>
           
           {/* Left Card - Belum Absen */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 p-6">
-              <div className="flex items-center gap-3">
-                <FiUsers className="w-5 h-5 text-orange-500" />
-                <h2 className="text-xl font-semibold text-black">
-                  Belum Absen {isLoadingWorkers ? '' : `(${availableWorkers.length})`}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              borderBottom: '1px solid #e5e7eb',
+              padding: '24px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <FiUsers style={{ width: '20px', height: '20px', color: '#f97316' }} />
+                <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'black' }}>
+                  Perlu Absen {!isLoadingWorkers && `(${availableWorkers.length})`}
                 </h2>
-                {isLoadingWorkers && (
-                  <LoadingInline color="orange" />
-                )}
               </div>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                Absen HADIR (pagi) dan LOKASI (di kebun/plot)
+              </p>
             </div>
             
-            <div className="max-h-96 overflow-y-auto">
+            <div style={{ maxHeight: '384px', overflowY: 'auto' }}>
               {isLoadingWorkers ? (
-                <LoadingCard text="Memuat data pekerja..." />
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: '4px solid #e5e7eb',
+                    borderTopColor: '#f97316',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto'
+                  }} />
+                  <p style={{ marginTop: '16px', color: '#6b7280' }}>Memuat data pekerja...</p>
+                </div>
               ) : availableWorkers.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+                <div>
                   {availableWorkers.map((worker) => (
                     <div
                       key={worker.tenagakerjaid}
-                      className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '16px',
+                        borderBottom: '1px solid #f3f4f6',
+                        transition: 'background-color 0.2s'
+                      }}
                     >
-                      <div className="flex-1">
-                        <div className="font-medium text-black">{worker.nama}</div>
-                        <div className="text-sm text-gray-500">
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ fontWeight: '500', color: 'black' }}>{worker.nama}</div>
+                          {worker.hasHadir && (
+                            <span style={{
+                              padding: '2px 8px',
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              fontSize: '11px',
+                              borderRadius: '9999px',
+                              fontWeight: '600'
+                            }}>
+                              ✓ HADIR
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#6b7280' }}>
                           {worker.nik} • {worker.gender === 'L' ? 'Laki-laki' : 'Perempuan'} • {getJenisKerja(worker.jenistenagakerja)}
                         </div>
                       </div>
                       
                       {isToday && (
-                        <button 
-                          onClick={() => handleWorkerSelect(worker)}
-                          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                        >
-                          <FiCamera className="w-4 h-4" />
-                          <span className="text-sm">Absen</span>
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {/* ✅ HADIR Button - Disabled if already HADIR */}
+                          {!worker.hasHadir ? (
+                            <button 
+                              onClick={() => handleWorkerSelect(worker, 'HADIR')}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                backgroundColor: '#2563eb',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                transition: 'background-color 0.2s'
+                              }}
+                            >
+                              <FiHome style={{ width: '16px', height: '16px' }} />
+                              HADIR
+                            </button>
+                          ) : (
+                            <button 
+                              disabled
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                backgroundColor: '#e5e7eb',
+                                color: '#9ca3af',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'not-allowed',
+                                fontSize: '14px'
+                              }}
+                              title="Sudah absen HADIR"
+                            >
+                              <FiCheck style={{ width: '16px', height: '16px' }} />
+                              HADIR
+                            </button>
+                          )}
+                          
+                          {/* ✅ LOKASI Button - Only enabled if hasHadir = true */}
+                          <button 
+                            onClick={() => handleWorkerSelect(worker, 'LOKASI')}
+                            disabled={!worker.hasHadir}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 16px',
+                              backgroundColor: worker.hasHadir ? '#7c3aed' : '#e5e7eb',
+                              color: worker.hasHadir ? 'white' : '#9ca3af',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: worker.hasHadir ? 'pointer' : 'not-allowed',
+                              fontSize: '14px',
+                              transition: 'background-color 0.2s'
+                            }}
+                            title={!worker.hasHadir ? "Harus absen HADIR terlebih dahulu" : ""}
+                          >
+                            <FiMapPin style={{ width: '16px', height: '16px' }} />
+                            LOKASI
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center">
-                  <FiCheck className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                  <p className="text-gray-500">Semua pekerja sudah absen</p>
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <FiCheck style={{ width: '48px', height: '48px', color: '#10b981', margin: '0 auto 16px' }} />
+                  <p style={{ color: '#6b7280', fontWeight: '500' }}>Semua pekerja sudah lengkap!</p>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                    HADIR dan LOKASI sudah tercatat
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Card - Data Absen */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <FiCheck className="w-5 h-5 text-blue-500" />
-                <h2 className="text-xl font-semibold text-black">
-                  Data Absen {isLoadingAttendance ? '' : `(${todayAttendance.length})`}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              borderBottom: '1px solid #e5e7eb',
+              padding: '24px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <FiCheck style={{ width: '20px', height: '20px', color: '#2563eb' }} />
+                <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'black' }}>
+                  Data Absen {!isLoadingAttendance && `(${todayAttendance.length})`}
                 </h2>
-                {isLoadingAttendance && (
-                  <LoadingInline color="blue" />
-                )}
               </div>
               
               {/* Date Filter */}
-              <div className="flex items-center gap-2 mb-4">
-                <FiCalendar className="w-4 h-4 text-gray-500" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <FiCalendar style={{ width: '16px', height: '16px', color: '#6b7280' }} />
                 <input
                   type="date"
                   value={attendanceDate}
                   onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
                 />
-                <span className="text-sm text-gray-500">
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>
                   {formatDate(attendanceDate)}
                 </span>
               </div>
 
               {/* Status Tabs */}
-              <div className="flex gap-2">
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {[
                   { key: 'all', label: 'Semua', icon: FiUsers },
+                  { key: 'hadir', label: 'HADIR', icon: FiHome },
+                  { key: 'lokasi', label: 'LOKASI', icon: FiMapPin },
                   { key: 'pending', label: 'Pending', icon: FiClock },
                   { key: 'approved', label: 'Approved', icon: FiCheckCircle },
                   { key: 'rejected', label: 'Rejected', icon: FiXCircle },
@@ -420,17 +665,28 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key as any)}
-                      className={`flex items-center gap-1 px-3 py-2 text-xs rounded-lg transition-colors ${
-                        isActive 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        backgroundColor: isActive ? '#2563eb' : '#f3f4f6',
+                        color: isActive ? 'white' : '#6b7280'
+                      }}
                     >
-                      <Icon className="w-3 h-3" />
+                      <Icon style={{ width: '12px', height: '12px' }} />
                       <span>{tab.label}</span>
-                      <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-                        isActive ? 'bg-white bg-opacity-20' : 'bg-gray-200'
-                      }`}>
+                      <span style={{
+                        padding: '2px 6px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#e5e7eb'
+                      }}>
                         {count}
                       </span>
                     </button>
@@ -439,58 +695,106 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
               </div>
             </div>
             
-            <div className="max-h-96 overflow-y-auto">
+            <div style={{ maxHeight: '384px', overflowY: 'auto' }}>
               {isLoadingAttendance ? (
-                <LoadingCard text="Memuat data absensi..." />
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: '4px solid #e5e7eb',
+                    borderTopColor: '#2563eb',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto'
+                  }} />
+                  <p style={{ marginTop: '16px', color: '#6b7280' }}>Memuat data absensi...</p>
+                </div>
               ) : filteredAttendance.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+                <div>
                   {filteredAttendance.map((record) => (
                     <div
                       key={`${record.tenagakerjaid}-${record.absenmasuk}`}
-                      className="flex items-center justify-between p-4"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '16px',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="font-medium text-black">{record.tenaga_kerja.nama}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ fontWeight: '500', color: 'black' }}>{record.tenaga_kerja.nama}</div>
+                          {getTypeBadge(record.absentype)}
                           {getStatusBadge(record.approval_status)}
                           {record.is_edited && (
-                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                            <span style={{
+                              padding: '2px 6px',
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              fontSize: '12px',
+                              borderRadius: '4px'
+                            }}>
                               Edited {record.edit_count}x
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div style={{ fontSize: '14px', color: '#6b7280' }}>
                           {record.tenaga_kerja.nik} • {formatTime(record.absenmasuk)}
+                          {record.absentype === 'LOKASI' && record.checkintime && (
+                            <span style={{ marginLeft: '8px', color: '#7c3aed' }}>
+                              • Checkin: {formatTime(record.checkintime)}
+                            </span>
+                          )}
                         </div>
                         {record.rejection_reason && (
-                          <div className="text-xs text-red-600 mt-1">
-                            <FiAlertTriangle className="w-3 h-3 inline mr-1" />
+                          <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
+                            <FiAlertTriangle style={{ width: '12px', height: '12px', display: 'inline', marginRight: '4px' }} />
                             {record.rejection_reason}
                           </div>
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button
                           onClick={() => setViewingPhoto(record.fotoabsen)}
-                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            transition: 'background-color 0.2s'
+                          }}
                         >
-                          <FiEye className="w-4 h-4" />
-                          <span className="text-sm">Lihat</span>
+                          <FiEye style={{ width: '16px', height: '16px' }} />
+                          Lihat
                         </button>
                         
-                        {/* Edit button - only for REJECTED or PENDING and today */}
                         {(record.approval_status === 'REJECTED' || record.approval_status === 'PENDING') && isToday && (
                           <button
                             onClick={() => handleEditPhoto(record)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                              record.approval_status === 'REJECTED'
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                            }`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 12px',
+                              backgroundColor: record.approval_status === 'REJECTED' ? '#fee2e2' : '#fef3c7',
+                              color: record.approval_status === 'REJECTED' ? '#991b1b' : '#92400e',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              transition: 'background-color 0.2s'
+                            }}
                           >
-                            <FiEdit3 className="w-4 h-4" />
-                            <span className="text-sm">Edit</span>
+                            <FiEdit3 style={{ width: '16px', height: '16px' }} />
+                            Edit
                           </button>
                         )}
                       </div>
@@ -498,15 +802,15 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center">
-                  <FiUsers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <FiUsers style={{ width: '48px', height: '48px', color: '#d1d5db', margin: '0 auto 16px' }} />
+                  <p style={{ color: '#6b7280' }}>
                     {activeTab === 'all' 
                       ? 'Belum ada yang absen'
-                      : `Tidak ada absensi dengan status ${activeTab.toUpperCase()}`
+                      : `Tidak ada absensi dengan filter ${activeTab.toUpperCase()}`
                     }
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">untuk {formatDate(attendanceDate)}</p>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>untuk {formatDate(attendanceDate)}</p>
                 </div>
               )}
             </div>
@@ -524,35 +828,98 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           onCapture={handlePhotoCapture}
           workerName={
             editingAttendance 
-              ? `${editingAttendance.tenaga_kerja.nama} (Edit)`
-              : selectedWorker?.nama
+              ? `${editingAttendance.tenaga_kerja.nama} (Edit ${editingAttendance.absentype})`
+              : selectedWorker 
+                ? `${selectedWorker.nama} - ${selectedAbsenType}`
+                : undefined
           }
+          requireGPS={selectedAbsenType === 'LOKASI'}
         />
 
         {/* Photo Viewer Modal */}
         {viewingPhoto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
-            <div className="relative max-w-4xl max-h-[90vh] p-4">
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.9)'
+          }}>
+            <div style={{ position: 'relative', maxWidth: '1024px', maxHeight: '90vh', padding: '16px' }}>
               <button
                 onClick={() => setViewingPhoto(null)}
-                className="absolute -top-2 -right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors z-10"
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  padding: '8px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  zIndex: 10
+                }}
               >
-                <FiX className="w-5 h-5" />
+                <FiX style={{ width: '20px', height: '20px' }} />
               </button>
               <img
                 src={viewingPhoto}
                 alt="Foto Absensi"
-                className="max-w-full max-h-full object-contain rounded-lg"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
               />
             </div>
           </div>
         )}
 
-        {/* Loading Overlay for Submission */}
+        {/* Loading Overlay */}
         {isSubmitting && (
-          <LoadingOverlay text="Menyimpan absensi..." />
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '32px',
+              borderRadius: '12px',
+              textAlign: 'center',
+              minWidth: '250px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                border: '4px solid #e5e7eb',
+                borderTopColor: '#2563eb',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 16px'
+              }} />
+              <p style={{ fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
+                Menyimpan absensi...
+              </p>
+            </div>
+          </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

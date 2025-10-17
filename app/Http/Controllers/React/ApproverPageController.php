@@ -59,8 +59,6 @@ class ApproverPageController extends Controller
     public function getDashboardStats(Request $request)
     {
         try {
-            \Log::info('getDashboardStats called'); // Debug log
-            
             if (!auth()->check()) {
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
@@ -69,77 +67,27 @@ class ApproverPageController extends Controller
             $companyCode = $user->companycode;
             $today = Carbon::today()->format('Y-m-d');
             
-            \Log::info('Dashboard Stats Debug', [
-                'user_id' => $user->userid,
-                'company_code' => $companyCode,
-                'today' => $today
-            ]);
-            
-            // FIXED: Use raw queries to avoid model dependencies
-            // Base query for attendance today
             $baseQuery = DB::table('absenlst as al')
                 ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
                 ->where('ah.companycode', $companyCode)
                 ->whereDate('ah.uploaddate', $today);
             
-            // 1. Pending Count - STATUS = 'PENDING'
-            $pendingCount = (clone $baseQuery)
-                ->where('al.approval_status', 'PENDING')
-                ->count();
-            
-            // 2. Approved Today - STATUS = 'APPROVED' and approved today
-            $approvedToday = (clone $baseQuery)
-                ->where('al.approval_status', 'APPROVED')
-                ->whereDate('al.approval_date', $today)
-                ->count();
-            
-            // 3. Rejected Today - STATUS = 'REJECTED' and rejected today  
-            $rejectedToday = (clone $baseQuery)
-                ->where('al.approval_status', 'REJECTED')
-                ->whereDate('al.rejection_date', $today)
-                ->count();
-            
-            // 4. Total Workers Today - All attendance records for today (any status)
+            // Main stats
+            $pendingCount = (clone $baseQuery)->where('al.approval_status', 'PENDING')->count();
+            $approvedToday = (clone $baseQuery)->where('al.approval_status', 'APPROVED')->whereDate('al.approval_date', $today)->count();
+            $rejectedToday = (clone $baseQuery)->where('al.approval_status', 'REJECTED')->whereDate('al.rejection_date', $today)->count();
             $totalWorkersToday = (clone $baseQuery)->count();
+            $mandorCount = DB::table('absenhdr as ah')->where('ah.companycode', $companyCode)->whereDate('ah.uploaddate', $today)->distinct()->count('ah.mandorid');
             
-            // 5. Mandor Count - Unique mandors who have attendance today
-            $mandorCount = DB::table('absenhdr as ah')
-                ->where('ah.companycode', $companyCode)
-                ->whereDate('ah.uploaddate', $today)
-                ->distinct()
-                ->count('ah.mandorid');
+            // NEW: HADIR/LOKASI breakdown
+            $hadirPending = (clone $baseQuery)->where('al.approval_status', 'PENDING')->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'HADIR')->count();
+            $lokasiPending = (clone $baseQuery)->where('al.approval_status', 'PENDING')->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'LOKASI')->count();
             
-            // Additional stats for better insight
-            $additionalStats = [
-                'approval_rate' => $totalWorkersToday > 0 ? round(($approvedToday / $totalWorkersToday) * 100, 1) : 0,
-                'rejection_rate' => $totalWorkersToday > 0 ? round(($rejectedToday / $totalWorkersToday) * 100, 1) : 0,
-                'pending_rate' => $totalWorkersToday > 0 ? round(($pendingCount / $totalWorkersToday) * 100, 1) : 0,
-            ];
+            $hadirApproved = (clone $baseQuery)->where('al.approval_status', 'APPROVED')->whereDate('al.approval_date', $today)->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'HADIR')->count();
+            $lokasiApproved = (clone $baseQuery)->where('al.approval_status', 'APPROVED')->whereDate('al.approval_date', $today)->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'LOKASI')->count();
             
-            // Get mandor list with their stats for additional context - SIMPLIFIED
-            $mandorStats = DB::table('absenhdr as ah')
-                ->join('user as u', 'ah.mandorid', '=', 'u.userid')
-                ->leftJoin('absenlst as al', 'ah.absenno', '=', 'al.absenno')
-                ->where('ah.companycode', $companyCode)
-                ->whereDate('ah.uploaddate', $today)
-                ->select([
-                    'ah.mandorid',
-                    'u.name as mandor_name',
-                    'ah.totalpekerja',
-                    DB::raw("COUNT(CASE WHEN al.approval_status = 'PENDING' THEN 1 END) as pending_count"),
-                    DB::raw("COUNT(CASE WHEN al.approval_status = 'APPROVED' THEN 1 END) as approved_count"),
-                    DB::raw("COUNT(CASE WHEN al.approval_status = 'REJECTED' THEN 1 END) as rejected_count")
-                ])
-                ->groupBy(['ah.mandorid', 'u.name', 'ah.totalpekerja'])
-                ->get();
-            
-            \Log::info('Dashboard Stats Results', [
-                'pending_count' => $pendingCount,
-                'approved_today' => $approvedToday,
-                'rejected_today' => $rejectedToday,
-                'total_workers_today' => $totalWorkersToday,
-                'mandor_count' => $mandorCount
-            ]);
+            $hadirRejected = (clone $baseQuery)->where('al.approval_status', 'REJECTED')->whereDate('al.rejection_date', $today)->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'HADIR')->count();
+            $lokasiRejected = (clone $baseQuery)->where('al.approval_status', 'REJECTED')->whereDate('al.rejection_date', $today)->where(DB::raw("COALESCE(al.absentype, 'HADIR')"), 'LOKASI')->count();
             
             return response()->json([
                 'success' => true,
@@ -150,18 +98,22 @@ class ApproverPageController extends Controller
                     'approved_today' => (int) $approvedToday,
                     'rejected_today' => (int) $rejectedToday,
                     'total_workers_today' => (int) $totalWorkersToday,
-                    'mandor_count' => (int) $mandorCount
+                    'mandor_count' => (int) $mandorCount,
+                    // NEW: HADIR/LOKASI breakdown
+                    'hadir_pending' => (int) $hadirPending,
+                    'lokasi_pending' => (int) $lokasiPending,
+                    'hadir_approved' => (int) $hadirApproved,
+                    'lokasi_approved' => (int) $lokasiApproved,
+                    'hadir_rejected' => (int) $hadirRejected,
+                    'lokasi_rejected' => (int) $lokasiRejected
                 ],
-                'additional_stats' => $additionalStats,
-                'mandor_breakdown' => $mandorStats,
                 'generated_at' => now()->format('Y-m-d H:i:s')
             ]);
             
         } catch (\Exception $e) {
             Log::error('Error in getDashboardStats', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => auth()->user()->userid ?? 'unknown'
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
@@ -177,7 +129,7 @@ class ApproverPageController extends Controller
     // =============================================================================
 
     /**
-     * Get pending attendance for approval - UPDATED for individual approval
+     * Get pending attendance for approval - UPDATED with absentype support
      */
     public function getPendingAttendance(Request $request)
     {
@@ -190,8 +142,38 @@ class ApproverPageController extends Controller
             $date = $request->input('date', now()->format('Y-m-d'));
             $mandorId = $request->input('mandor_id'); // Filter by specific mandor
             
-            // Get pending attendance records with individual approval
-            $pendingRecords = AbsenLst::getPendingAttendanceByMandor($user->companycode, $mandorId, $date);
+            // UPDATED: Get pending with absentype
+            $query = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->join('tenagakerja as tk', 'al.tenagakerjaid', '=', 'tk.tenagakerjaid')
+                ->join('user as u', 'ah.mandorid', '=', 'u.userid')
+                ->where('ah.companycode', $user->companycode)
+                ->where('al.approval_status', 'PENDING')
+                ->whereDate('al.absenmasuk', $date);
+            
+            if ($mandorId) {
+                $query->where('ah.mandorid', $mandorId);
+            }
+            
+            $pendingRecords = $query->select([
+                'al.absenno',
+                'al.id as absen_id',
+                'al.tenagakerjaid',
+                'al.absenmasuk',
+                DB::raw("COALESCE(al.absentype, 'HADIR') as absentype"), // NEW
+                'al.checkintime', // NEW
+                'al.fotoabsen',
+                'al.lokasifotolat',
+                'al.lokasifotolng',
+                'al.keterangan',
+                'al.approval_status',
+                'ah.mandorid',
+                'u.name as mandor_nama',
+                'tk.nama as pekerja_nama',
+                'tk.nik as pekerja_nik',
+                'tk.gender as pekerja_gender',
+                'tk.jenistenagakerja'
+            ])->get();
             
             // Group by mandor for better organization
             $groupedByMandor = $pendingRecords->groupBy('mandorid')->map(function ($records, $mandorId) {
@@ -213,6 +195,8 @@ class ApproverPageController extends Controller
                             'absenmasuk' => $record->absenmasuk,
                             'absen_time' => Carbon::parse($record->absenmasuk)->format('H:i'),
                             'absen_date_formatted' => Carbon::parse($record->absenmasuk)->format('d M Y'),
+                            'absentype' => $record->absentype ?? 'HADIR', // NEW
+                            'checkintime' => $record->checkintime, // NEW
                             'has_photo' => !empty($record->fotoabsen),
                             'has_location' => !empty($record->lokasifotolat),
                             'fotoabsen' => $record->fotoabsen,
@@ -226,7 +210,20 @@ class ApproverPageController extends Controller
             })->values();
             
             // Get mandor list with pending counts
-            $mandorList = AbsenLst::getMandorListWithPendingCount($user->companycode, $date);
+            $mandorList = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->join('user as u', 'ah.mandorid', '=', 'u.userid')
+                ->where('ah.companycode', $user->companycode)
+                ->where('al.approval_status', 'PENDING')
+                ->whereDate('al.absenmasuk', $date)
+                ->select([
+                    'ah.mandorid',
+                    'u.name as mandor_nama',
+                    DB::raw('COUNT(*) as pending_count')
+                ])
+                ->groupBy('ah.mandorid', 'u.name')
+                ->orderBy('u.name')
+                ->get();
             
             return response()->json([
                 'pending_by_mandor' => $groupedByMandor->toArray(),
@@ -546,99 +543,99 @@ public function rejectAttendance(Request $request)
 }
 
    /**
- * Get attendance history - UPDATED for individual records
- */
-public function getAttendanceHistory(Request $request)
-{
-    try {
-        if (!auth()->check()) {
-            return response()->json(['error' => 'User not authenticated'], 401);
-        }
-        
-        $user = auth()->user();
-        $date = $request->input('date');
-        $status = $request->input('status', 'ALL'); // ALL, APPROVED, REJECTED
-        $mandorId = $request->input('mandor_id');
-        
-        $query = DB::table('absenlst as al')
-            ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
-            ->join('tenagakerja as tk', 'al.tenagakerjaid', '=', 'tk.tenagakerjaid')
-            ->join('user as u', 'ah.mandorid', '=', 'u.userid')
-            ->where('ah.companycode', $user->companycode)
-            ->whereIn('al.approval_status', ['APPROVED', 'REJECTED']);
-        
-        // Filter by date
-        if ($date) {
-            $query->whereDate('al.absenmasuk', $date);
-        }
-        
-        // Filter by status
-        if ($status !== 'ALL') {
-            $query->where('al.approval_status', $status);
-        }
-        
-        // Filter by mandor
-        if ($mandorId) {
-            $query->where('ah.mandorid', $mandorId);
-        }
-        
-        $historyRecords = $query
-            ->select([
-                'al.absenno', 'al.id as absen_id', 'al.tenagakerjaid',
-                'al.absenmasuk', 'al.approval_status', 'al.approval_date', 
-                'al.rejection_date', 'al.approved_by', 'al.rejection_reason',
-                'al.is_edited', 'al.edit_count',
-                'ah.mandorid', 'u.name as mandor_nama',
-                'tk.nama as pekerja_nama', 'tk.nik as pekerja_nik'
-            ])
-            ->orderBy('al.absenmasuk', 'desc')
-            ->limit(100)
-            ->get();
-        
-        // Format records
-        $formattedRecords = $historyRecords->map(function($record) {
-            $processedDate = $record->approval_status === 'APPROVED' ? $record->approval_date : $record->rejection_date;
+     * Get attendance history - UPDATED for individual records
+     */
+    public function getAttendanceHistory(Request $request)
+    {
+        try {
+            if (!auth()->check()) {
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
             
-            return [
-                'absenno' => $record->absenno,
-                'absen_id' => $record->absen_id,
-                'tenagakerjaid' => $record->tenagakerjaid,
-                'pekerja_nama' => $record->pekerja_nama,
-                'pekerja_nik' => $record->pekerja_nik,
-                'mandorid' => $record->mandorid,
-                'mandor_nama' => $record->mandor_nama,
-                'absenmasuk' => $record->absenmasuk,
-                'absen_time' => Carbon::parse($record->absenmasuk)->format('H:i'),
-                'absen_date_formatted' => Carbon::parse($record->absenmasuk)->format('d M Y'),
-                'approval_status' => $record->approval_status,
-                'status_label' => $record->approval_status === 'APPROVED' ? 'Disetujui' : 'Ditolak',
-                'processed_date' => $processedDate,
-                'processed_date_formatted' => $processedDate ? Carbon::parse($processedDate)->format('d M Y, H:i') : null,
-                'approved_by' => $record->approved_by,
-                'rejection_reason' => $record->rejection_reason,
-                'is_edited' => $record->is_edited,
-                'edit_count' => $record->edit_count
-            ];
-        });
-        
-        return response()->json([
-            'history' => $formattedRecords->toArray(),
-            'summary' => [
-                'total_records' => $formattedRecords->count(),
-                'approved_count' => $formattedRecords->where('approval_status', 'APPROVED')->count(),
-                'rejected_count' => $formattedRecords->where('approval_status', 'REJECTED')->count(),
-            ]
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error in getAttendanceHistory', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+            $user = auth()->user();
+            $date = $request->input('date');
+            $status = $request->input('status', 'ALL');
+            $mandorId = $request->input('mandor_id');
+            
+            $query = DB::table('absenlst as al')
+                ->join('absenhdr as ah', 'al.absenno', '=', 'ah.absenno')
+                ->join('tenagakerja as tk', 'al.tenagakerjaid', '=', 'tk.tenagakerjaid')
+                ->join('user as u', 'ah.mandorid', '=', 'u.userid')
+                ->where('ah.companycode', $user->companycode)
+                ->whereIn('al.approval_status', ['APPROVED', 'REJECTED']);
+            
+            if ($date) {
+                $query->whereDate('al.absenmasuk', $date);
+            }
+            
+            if ($status !== 'ALL') {
+                $query->where('al.approval_status', $status);
+            }
+            
+            if ($mandorId) {
+                $query->where('ah.mandorid', $mandorId);
+            }
+            
+            $historyRecords = $query
+                ->select([
+                    'al.absenno', 'al.id as absen_id', 'al.tenagakerjaid',
+                    'al.absenmasuk', 'al.approval_status', 'al.approval_date', 
+                    'al.rejection_date', 'al.approved_by', 'al.rejection_reason',
+                    'al.is_edited', 'al.edit_count',
+                    DB::raw("COALESCE(al.absentype, 'HADIR') as absentype"), // NEW
+                    'al.checkintime', // NEW
+                    'ah.mandorid', 'u.name as mandor_nama',
+                    'tk.nama as pekerja_nama', 'tk.nik as pekerja_nik'
+                ])
+                ->orderBy('al.absenmasuk', 'desc')
+                ->limit(100)
+                ->get();
+            
+            $formattedRecords = $historyRecords->map(function($record) {
+                $processedDate = $record->approval_status === 'APPROVED' ? $record->approval_date : $record->rejection_date;
+                
+                return [
+                    'absenno' => $record->absenno,
+                    'absen_id' => $record->absen_id,
+                    'tenagakerjaid' => $record->tenagakerjaid,
+                    'pekerja_nama' => $record->pekerja_nama,
+                    'pekerja_nik' => $record->pekerja_nik,
+                    'mandorid' => $record->mandorid,
+                    'mandor_nama' => $record->mandor_nama,
+                    'absenmasuk' => $record->absenmasuk,
+                    'absen_time' => Carbon::parse($record->absenmasuk)->format('H:i'),
+                    'absen_date_formatted' => Carbon::parse($record->absenmasuk)->format('d M Y'),
+                    'absentype' => $record->absentype ?? 'HADIR', // NEW
+                    'checkintime' => $record->checkintime, // NEW
+                    'approval_status' => $record->approval_status,
+                    'status_label' => $record->approval_status === 'APPROVED' ? 'Disetujui' : 'Ditolak',
+                    'processed_date' => $processedDate,
+                    'processed_date_formatted' => $processedDate ? Carbon::parse($processedDate)->format('d M Y, H:i') : null,
+                    'approved_by' => $record->approved_by,
+                    'rejection_reason' => $record->rejection_reason,
+                    'is_edited' => $record->is_edited,
+                    'edit_count' => $record->edit_count
+                ];
+            });
+            
+            return response()->json([
+                'history' => $formattedRecords->toArray(),
+                'summary' => [
+                    'total_records' => $formattedRecords->count(),
+                    'approved_count' => $formattedRecords->where('approval_status', 'APPROVED')->count(),
+                    'rejected_count' => $formattedRecords->where('approval_status', 'REJECTED')->count(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error in getAttendanceHistory', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Internal server error: ' . $e->getMessage()], 500);
+        }
     }
-}
 
     // =============================================================================
     // PRIVATE HELPER METHODS

@@ -1,8 +1,9 @@
-// resources/js/pages/approver/dashboard-approver.tsx - Original UI with Real API
+// resources/js/pages/approver/dashboard-approver.tsx - WITH HADIR/LOKASI STATS
 
 import React, { useState, useEffect } from 'react';
 import {
-  FiClock, FiCheck, FiX, FiUsers, FiRefreshCw, FiTrendingUp, FiArrowRight, FiAlertCircle
+  FiClock, FiCheck, FiX, FiUsers, FiRefreshCw, FiTrendingUp, FiArrowRight, 
+  FiAlertCircle, FiHome, FiMapPin
 } from 'react-icons/fi';
 
 interface DashboardStats {
@@ -11,6 +12,13 @@ interface DashboardStats {
   rejected_today: number;
   total_workers_today: number;
   mandor_count: number;
+  // NEW: HADIR/LOKASI breakdown
+  hadir_pending?: number;
+  lokasi_pending?: number;
+  hadir_approved?: number;
+  lokasi_approved?: number;
+  hadir_rejected?: number;
+  lokasi_rejected?: number;
 }
 
 interface ApiResponse {
@@ -40,7 +48,13 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
     approved_today: 0,
     rejected_today: 0,
     total_workers_today: 0,
-    mandor_count: 0
+    mandor_count: 0,
+    hadir_pending: 0,
+    lokasi_pending: 0,
+    hadir_approved: 0,
+    lokasi_approved: 0,
+    hadir_rejected: 0,
+    lokasi_rejected: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +64,6 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
   useEffect(() => {
     loadDashboardData();
     
-    // Auto refresh every 30 seconds
     const interval = setInterval(loadDashboardData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -88,8 +101,6 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
-      
-      // Keep old data on error, don't reset to zeros
     } finally {
       setIsLoading(false);
     }
@@ -105,161 +116,406 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div style={{ minHeight: '100vh', backgroundColor: 'white' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <div>
-              <h1 className="text-3xl font-bold text-black mb-2">Dashboard</h1>
-              <p className="text-neutral-600">{formatDate(currentDate)}</p>
+              <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>
+                Dashboard
+              </h1>
+              <p style={{ color: '#737373' }}>{formatDate(currentDate)}</p>
               {lastUpdated && (
-                <p className="text-sm text-neutral-500 mt-1">
+                <p style={{ fontSize: '14px', color: '#a3a3a3', marginTop: '4px' }}>
                   Terakhir diperbarui: {lastUpdated}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {error && (
-                <div className="flex items-center gap-2 px-3 py-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                  <FiAlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Error loading data</span>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '8px 12px', 
+                  color: '#b91c1c', 
+                  backgroundColor: '#fef2f2', 
+                  border: '1px solid #fecaca', 
+                  borderRadius: '8px' 
+                }}>
+                  <FiAlertCircle style={{ width: '16px', height: '16px' }} />
+                  <span style={{ fontSize: '14px' }}>Error loading data</span>
                 </div>
               )}
               <button
                 onClick={loadDashboardData}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 text-neutral-700 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  color: '#525252',
+                  border: '1px solid #d4d4d4',
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.5 : 1,
+                  transition: 'background-color 0.2s'
+                }}
               >
-                <FiRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="text-sm">Refresh</span>
+                <FiRefreshCw style={{ width: '16px', height: '16px' }} className={isLoading ? 'animate-spin' : ''} />
+                <span style={{ fontSize: '14px' }}>Refresh</span>
               </button>
             </div>
           </div>
 
-          {/* Today's Summary - Original Style */}
-          <div className="bg-neutral-50 rounded-lg border border-neutral-200 p-6 mb-8">
-            <h3 className="text-lg font-semibold text-black mb-4">Ringkasan Hari Ini</h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    <FiClock className="w-4 h-4 text-black" />
+          {/* Today's Summary */}
+          <div style={{ 
+            backgroundColor: '#fafafa', 
+            borderRadius: '8px', 
+            border: '1px solid #e5e5e5', 
+            padding: '24px', 
+            marginBottom: '32px' 
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'black', marginBottom: '16px' }}>
+              Ringkasan Hari Ini
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+              gap: '16px' 
+            }}>
+              {/* Pending */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FiClock style={{ width: '16px', height: '16px', color: 'black' }} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-neutral-600">Pending</div>
+                  <div style={{ fontSize: '14px', color: '#737373' }}>Pending</div>
                   {isLoading ? (
-                    <div className="animate-pulse bg-neutral-200 h-5 w-6 rounded"></div>
+                    <div style={{ 
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', 
+                      backgroundColor: '#e5e5e5', 
+                      height: '20px', 
+                      width: '24px', 
+                      borderRadius: '4px' 
+                    }} />
                   ) : (
-                    <div className="text-lg font-semibold text-black">{stats.pending_count}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'black' }}>
+                      {stats.pending_count}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    <FiCheck className="w-4 h-4 text-black" />
+              {/* Approved */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FiCheck style={{ width: '16px', height: '16px', color: 'black' }} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-neutral-600">Approved</div>
+                  <div style={{ fontSize: '14px', color: '#737373' }}>Approved</div>
                   {isLoading ? (
-                    <div className="animate-pulse bg-neutral-200 h-5 w-6 rounded"></div>
+                    <div style={{ 
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', 
+                      backgroundColor: '#e5e5e5', 
+                      height: '20px', 
+                      width: '24px', 
+                      borderRadius: '4px' 
+                    }} />
                   ) : (
-                    <div className="text-lg font-semibold text-black">{stats.approved_today}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'black' }}>
+                      {stats.approved_today}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    <FiX className="w-4 h-4 text-black" />
+              {/* Rejected */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FiX style={{ width: '16px', height: '16px', color: 'black' }} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-neutral-600">Rejected</div>
+                  <div style={{ fontSize: '14px', color: '#737373' }}>Rejected</div>
                   {isLoading ? (
-                    <div className="animate-pulse bg-neutral-200 h-5 w-6 rounded"></div>
+                    <div style={{ 
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', 
+                      backgroundColor: '#e5e5e5', 
+                      height: '20px', 
+                      width: '24px', 
+                      borderRadius: '4px' 
+                    }} />
                   ) : (
-                    <div className="text-lg font-semibold text-black">{stats.rejected_today}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'black' }}>
+                      {stats.rejected_today}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    <FiUsers className="w-4 h-4 text-black" />
+              {/* Workers */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FiUsers style={{ width: '16px', height: '16px', color: 'black' }} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-neutral-600">Workers</div>
+                  <div style={{ fontSize: '14px', color: '#737373' }}>Workers</div>
                   {isLoading ? (
-                    <div className="animate-pulse bg-neutral-200 h-5 w-8 rounded"></div>
+                    <div style={{ 
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', 
+                      backgroundColor: '#e5e5e5', 
+                      height: '20px', 
+                      width: '32px', 
+                      borderRadius: '4px' 
+                    }} />
                   ) : (
-                    <div className="text-lg font-semibold text-black">{stats.total_workers_today}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'black' }}>
+                      {stats.total_workers_today}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    <FiTrendingUp className="w-4 h-4 text-black" />
+              {/* Mandor */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FiTrendingUp style={{ width: '16px', height: '16px', color: 'black' }} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-neutral-600">Mandor</div>
+                  <div style={{ fontSize: '14px', color: '#737373' }}>Mandor</div>
                   {isLoading ? (
-                    <div className="animate-pulse bg-neutral-200 h-5 w-4 rounded"></div>
+                    <div style={{ 
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', 
+                      backgroundColor: '#e5e5e5', 
+                      height: '20px', 
+                      width: '16px', 
+                      borderRadius: '4px' 
+                    }} />
                   ) : (
-                    <div className="text-lg font-semibold text-black">{stats.mandor_count}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'black' }}>
+                      {stats.mandor_count}
+                    </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* NEW: HADIR vs LOKASI Breakdown */}
+            <div style={{ 
+              marginTop: '24px', 
+              paddingTop: '24px', 
+              borderTop: '1px solid #e5e5e5',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '16px'
+            }}>
+              {/* HADIR */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: '1px solid #e5e5e5'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  marginBottom: '12px'
+                }}>
+                  <FiHome style={{ width: '16px', height: '16px', color: '#2563eb' }} />
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2563eb' }}>HADIR</span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
+                  <div>
+                    <div style={{ color: '#737373' }}>Pending</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.hadir_pending || 0}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#737373' }}>Approved</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.hadir_approved || 0}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#737373' }}>Rejected</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.hadir_rejected || 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* LOKASI */}
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: '1px solid #e5e5e5'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  marginBottom: '12px'
+                }}>
+                  <FiMapPin style={{ width: '16px', height: '16px', color: '#7c3aed' }} />
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#7c3aed' }}>LOKASI</span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
+                  <div>
+                    <div style={{ color: '#737373' }}>Pending</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.lokasi_pending || 0}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#737373' }}>Approved</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.lokasi_approved || 0}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#737373' }}>Rejected</div>
+                    <div style={{ fontWeight: '600', color: 'black' }}>{stats.lokasi_rejected || 0}</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Feature Cards - EXACT SAME as Original */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-16 pb-24">
+        {/* Feature Cards */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+          gap: '32px', 
+          paddingTop: '64px', 
+          paddingBottom: '96px' 
+        }}>
           {/* Pending Approval Card */}
           <div
             onClick={() => onSectionChange('approval')}
-            className="group cursor-pointer"
+            style={{ cursor: 'pointer' }}
           >
-            <div className="relative h-64 overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-900 to-neutral-700 hover:-translate-y-2 transition-transform duration-300 border-2 border-neutral-300 hover:border-neutral-400 shadow-lg hover:shadow-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/50" />
+            <div style={{ 
+              position: 'relative', 
+              height: '256px', 
+              overflow: 'hidden', 
+              borderRadius: '16px', 
+              background: 'linear-gradient(to bottom right, #171717, #404040)',
+              border: '2px solid #d4d4d4',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              transform: 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-8px)';
+              e.currentTarget.style.boxShadow = '0 10px 15px rgba(0,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            }}
+            >
+              <div style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                background: 'linear-gradient(to bottom right, transparent, rgba(0,0,0,0.5))' 
+              }} />
               
-              {/* Pattern overlay */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute inset-0" 
-                  style={{
-                    backgroundImage: `linear-gradient(45deg, transparent 48%, white 49%, white 51%, transparent 52%)`,
-                    backgroundSize: '20px 20px'
-                  }}
-                />
-              </div>
+              <div style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                opacity: 0.1,
+                backgroundImage: 'linear-gradient(45deg, transparent 48%, white 49%, white 51%, transparent 52%)',
+                backgroundSize: '20px 20px'
+              }} />
 
-              <div className="relative h-full flex flex-col justify-between p-8">
+              <div style={{ 
+                position: 'relative', 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                padding: '32px' 
+              }}>
                 <div>
-                  <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
-                    <FiClock className="w-8 h-8 text-neutral" />
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    padding: '12px', 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    backdropFilter: 'blur(10px)', 
+                    borderRadius: '16px', 
+                    marginBottom: '16px' 
+                  }}>
+                    <FiClock style={{ width: '32px', height: '32px', color: '#f5f5f5' }} />
                   </div>
-                  <h3 className="text-2xl font-bold text-neutral mb-2">
+                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: '#f5f5f5', marginBottom: '8px' }}>
                     Pending Approval
                   </h3>
-                  <p className="text-neutral-200">
+                  <p style={{ color: '#e5e5e5' }}>
                     Review and approve attendance records
                   </p>
                 </div>
                 
-                <div className="flex items-center text-white/80 group-hover:text-white transition-colors">
-                  <span className="text-sm font-medium">Review Now</span>
-                  <FiArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  color: 'rgba(255,255,255,0.8)',
+                  transition: 'color 0.2s'
+                }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>Review Now</span>
+                  <FiArrowRight style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    marginLeft: '8px',
+                    transition: 'transform 0.2s'
+                  }} />
                 </div>
               </div>
             </div>
@@ -268,37 +524,82 @@ const DashboardApprover: React.FC<DashboardApproverProps> = ({
           {/* Approval History Card */}
           <div
             onClick={() => onSectionChange('history')}
-            className="group cursor-pointer"
+            style={{ cursor: 'pointer' }}
           >
-            <div className="relative h-64 overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-600 hover:-translate-y-2 transition-transform duration-300 border-2 border-neutral-300 hover:border-neutral-400 shadow-lg hover:shadow-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/50" />
+            <div style={{ 
+              position: 'relative', 
+              height: '256px', 
+              overflow: 'hidden', 
+              borderRadius: '16px', 
+              background: 'linear-gradient(to bottom right, #262626, #525252)',
+              border: '2px solid #d4d4d4',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              transform: 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-8px)';
+              e.currentTarget.style.boxShadow = '0 10px 15px rgba(0,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            }}
+            >
+              <div style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                background: 'linear-gradient(to bottom right, transparent, rgba(0,0,0,0.5))' 
+              }} />
               
-              {/* Dots pattern */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute inset-0"
-                  style={{
-                    backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
-                    backgroundSize: '30px 30px'
-                  }}
-                />
-              </div>
+              <div style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                opacity: 0.1,
+                backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+                backgroundSize: '30px 30px'
+              }} />
 
-              <div className="relative h-full flex flex-col justify-between p-8">
+              <div style={{ 
+                position: 'relative', 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                padding: '32px' 
+              }}>
                 <div>
-                  <div className="inline-flex p-3 bg-white/10 backdrop-blur rounded-2xl mb-4">
-                    <FiCheck className="w-8 h-8 text-neutral" />
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    padding: '12px', 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    backdropFilter: 'blur(10px)', 
+                    borderRadius: '16px', 
+                    marginBottom: '16px' 
+                  }}>
+                    <FiCheck style={{ width: '32px', height: '32px', color: '#f5f5f5' }} />
                   </div>
-                  <h3 className="text-2xl font-bold text-neutral mb-2">
+                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: '#f5f5f5', marginBottom: '8px' }}>
                     Approval History
                   </h3>
-                  <p className="text-neutral-200">
+                  <p style={{ color: '#e5e5e5' }}>
                     View processed attendance records
                   </p>
                 </div>
                 
-                <div className="flex items-center text-white/80 group-hover:text-white transition-colors">
-                  <span className="text-sm font-medium">View History</span>
-                  <FiArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  color: 'rgba(255,255,255,0.8)',
+                  transition: 'color 0.2s'
+                }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>View History</span>
+                  <FiArrowRight style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    marginLeft: '8px',
+                    transition: 'transform 0.2s'
+                  }} />
                 </div>
               </div>
             </div>

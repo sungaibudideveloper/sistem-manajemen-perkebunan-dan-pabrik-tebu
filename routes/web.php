@@ -346,6 +346,21 @@ Route::middleware('api')->prefix('api/mobile')->group(function () {
     Route::post('/insert-upah-tenaga-kerja', [App\Http\Controllers\Api\PerhitunganUpahApiMobile::class, 'insertWorkerWage']);
 });
 
+Route::get('/api/server-time', function() {
+    return response()->json([
+        'timestamp' => now()->toIso8601String(),
+        'formatted' => now()->format('d/m/Y, H:i:s'),
+        'timezone' => config('app.timezone')
+    ]);
+});
+
+
+
+
+
+
+
+
 // =============================================================================
 // CARA KERJA ROLE-BASED REDIRECT:
 // =============================================================================

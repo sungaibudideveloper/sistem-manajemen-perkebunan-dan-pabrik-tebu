@@ -3,105 +3,153 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white rounded-md shadow-md">
-        <div class="flex items-end mx-4 gap-2 flex-wrap justify-between">
-            <form action="{{ route('postSession') }}" method="POST">
-                @csrf
-                <div class="text-center">
-                    <label for="posting" class="font-medium text-sm text-gray-700">Silahkan Pilih Pengamatan yang akan ditampilkan
-                        :</label>
-                    <select name="posting" class="w-fit border border-gray-300 rounded p-2 text-sm" required
-                        onchange="this.form.submit()">
-                        <option value="" disabled {{ old('posting', session('posting')) == null ? 'selected' : '' }}>
-                            --Pilih Pengamatan--</option>
-                        <option value="Agronomi" {{ old('posting', session('posting')) == 'Agronomi' ? 'selected' : '' }}>
-                            Agronomi</option>
-                        <option value="HPT" {{ old('posting', session('posting')) == 'HPT' ? 'selected' : '' }}>HPT
-                        </option>
-                    </select>
-                </div>
-            </form>
-            @if (session('posting') != null)
-                <div class="flex justify-center items-end gap-2 flex-wrap">
+    <div class="mx-auto py-4 bg-white rounded-md shadow-md {{ $startDate && $endDate ? 'w-full' : 'w-fit' }}">
+        @if (!$startDate && !$endDate)
+            <div class="px-4 py-2 text-gray-500 font-medium text-xs text-center">*(silahkan atur pengamatan dan range
+                tanggal untuk
+                menampilkan data)</div>
+        @endif
+        <div class="flex items-start mx-4 gap-2 lg:justify-between flex-wrap justify-center">
+            <div class="flex items-end gap-2 flex-wrap">
+                <div class="flex gap-2 justify-between">
                     <form method="POST" action="{{ route('process.posting') }}">
                         @csrf
-                        <div class="flex gap-2 items-end">
+                        <div class="flex gap-2 items-end flex-wrap justify-center">
                             <div>
-                                <label for="perPage" class="text-sm font-medium text-gray-700">Items per page:</label>
-                                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
-                                    min="1" onchange="this.form.submit()"
-                                    class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-
+                                <label for="posting" class="font-medium text-sm text-gray-700">Pilih
+                                    Pengamatan:</label>
+                                <select name="posting" id="posting" onchange="this.form.submit()"
+                                    class="w-fit border border-gray-300 rounded-md p-2 text-sm" required>
+                                    <option value="" disabled
+                                        {{ old('posting', session('posting')) == null ? 'selected' : '' }}>
+                                        --Pilih Pengamatan--</option>
+                                    <option value="Agronomi" class="text-black"
+                                        {{ old('posting', session('posting')) == 'Agronomi' ? 'selected' : '' }}>
+                                        Agronomi</option>
+                                    <option value="HPT" class="text-black"
+                                        {{ old('posting', session('posting')) == 'HPT' ? 'selected' : '' }}>
+                                        HPT
+                                    </option>
+                                </select>
                             </div>
                             <div>
-                                <div class="relative inline-block text-left w-full">
-                                    <div>
-                                        <button type="button"
-                                            class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                            id="menu-button" aria-expanded="false" aria-haspopup="true"
-                                            onclick="toggleDropdown()">
-                                            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-                                                class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20"
-                                                fill="currentColor">
-                                                <path fill-rule="evenodd"
-                                                    d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                                                    clip-rule="evenodd" />
-                                            </svg>
-                                            <span>Date Filter</span>
-                                            <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                                aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                <div class="flex items-center gap-2 flex-wrap justify-center">
+                                    <div class="flex items-center gap-2 flex-wrap justify-center">
+                                        <span class="text-sm text-gray-700 font-medium">Range tanggal pengamatan:
+                                        </span>
+                                        <div class="relative inline-block w-fit">
+                                            <button type="button"
+                                                class="inline-flex justify-between text-left w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                                id="menu-button" aria-expanded="false" aria-haspopup="true"
+                                                onclick="toggleDropdown()">
+                                                <div class="flex items-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                                                        class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20"
+                                                        fill="currentColor">
+                                                        <path fill-rule="evenodd"
+                                                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                                                            clip-rule="evenodd" />
+                                                    </svg>
+                                                    <span>Date Filter</span>
+                                                </div>
+                                                <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                    aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            <div class="absolute z-10 mt-[0.5px] w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden pb-2"
+                                                id="menu-dropdown">
+                                                <div class="py-1 px-4" role="menu" aria-orientation="vertical"
+                                                    aria-labelledby="menu-button">
+                                                    <div class="py-2">
+                                                        <label for="start_date"
+                                                            class="block text-sm font-medium text-gray-700">Start
+                                                            Date</label>
+                                                        <input type="date" id="start_date" name="start_date"
+                                                            value="{{ old('start_date', $startDate ?? '') }}"
+                                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                                    </div>
 
-                                    <div class="absolute z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
-                                        id="menu-dropdown">
-                                        <div class="py-1 px-4" role="menu" aria-orientation="vertical"
-                                            aria-labelledby="menu-button">
-                                            <div class="py-2">
-                                                <label for="start_date"
-                                                    class="block text-sm font-medium text-gray-700">Start Date</label>
-                                                <input type="date" id="start_date" name="start_date"
-                                                    value="{{ old('start_date', $startDate ?? '') }}"
-                                                    class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                                    oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                            </div>
+                                                    <div class="py-2">
+                                                        <label for="end_date"
+                                                            class="block text-sm font-medium text-gray-700">End
+                                                            Date</label>
+                                                        <input type="date" id="end_date" name="end_date"
+                                                            value="{{ old('end_date', $endDate ?? '') }}"
+                                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                                    </div>
 
-                                            <div class="py-2">
-                                                <label for="end_date"
-                                                    class="block text-sm font-medium text-gray-700">End
-                                                    Date</label>
-                                                <input type="date" id="end_date" name="end_date"
-                                                    value="{{ old('end_date', $endDate ?? '') }}"
-                                                    class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                                    oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                            </div>
 
-                                            <div class="py-2">
-                                                <button type="submit" name="filter"
-                                                    class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                                    Apply
-                                                </button>
+                                                </div>
                                             </div>
                                         </div>
+                                        <div id="ajax-data" data-url="{{ route('process.posting') }}">
+                                            <div class="flex items-center gap-2 w-full">
+                                                <div>
+                                                    <label for="perPage"
+                                                        class="text-sm font-medium text-gray-700">Items per
+                                                        page:</label>
+                                                    <input type="text" name="perPage" id="perPage"
+                                                        value="{{ $perPage }}" min="1" autocomplete="off"
+                                                        class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-blue-500 focus:border-blue-500" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if ($startDate && $endDate)
+                                            <div class="relative">
+                                                <div
+                                                    class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                                                    <svg class="w-4 h-4 text-gray-500 dark:text-gray-400"
+                                                        aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none" viewBox="0 0 20 20">
+                                                        <path stroke="currentColor" stroke-linecap="round"
+                                                            stroke-linejoin="round" stroke-width="2"
+                                                            d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                                                    </svg>
+                                                </div>
+                                                <input type="text" id="search" autocomplete="off" name="search"
+                                                    value="{{ old('search', $search) }}"
+                                                    class="block w-80 p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                                    placeholder="Search Sample, Variety, or Category..." />
+                                            </div>
+                                        @endif
                                     </div>
+                                    @if (!$startDate && !$endDate)
+                                        <div class="justify-center flex">
+                                            <button type="submit" name="filter"
+                                                class="flex items-center gap-2 w-auto py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
+                                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                    fill="currentColor" viewBox="0 0 24 24">
+                                                    <path fill-rule="evenodd"
+                                                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.793-1.793a1 1 0 0 0-1.414 1.414l2.5 2.5a1 1 0 0 0 1.414 0l4-4Z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                <span>Apply</span>
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
-
                         </div>
                     </form>
+                </div>
+            </div>
+            @if ($startDate && $endDate)
+                @if (hasPermission('Submit Posting'))
                     <div>
-                        <form action="{{ route('process.posting.submit') }}" method="POST">
+                        <form action="{{ route('process.posting.submit') }}" method="POST" id="post">
                             @csrf
                             <input type="hidden" name="selected_items" id="selected_items">
                             <button type="submit"
                                 class="flex items-center border text-green-600 border-green-600 py-2 px-4 hover:bg-green-600 hover:text-white font-medium rounded-md text-sm gap-2">
                                 <svg class="w-5 h-5 dark:text-white" aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                    viewBox="0 0 24 24">
+                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                    fill="currentColor" viewBox="0 0 24 24">
                                     <path fill-rule="evenodd"
                                         d="M18 14a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2h-2v-2Z"
                                         clip-rule="evenodd" />
@@ -109,24 +157,23 @@
                                         d="M15.026 21.534A9.994 9.994 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2c2.51 0 4.802.924 6.558 2.45l-7.635 7.636L7.707 8.87a1 1 0 0 0-1.414 1.414l3.923 3.923a1 1 0 0 0 1.414 0l8.3-8.3A9.956 9.956 0 0 1 22 12a9.994 9.994 0 0 1-.466 3.026A2.49 2.49 0 0 0 20 14.5h-.5V14a2.5 2.5 0 0 0-5 0v.5H14a2.5 2.5 0 0 0 0 5h.5v.5c0 .578.196 1.11.526 1.534Z"
                                         clip-rule="evenodd" />
                                 </svg>
-
                                 <span>
                                     Posting
                                 </span>
                             </button>
                         </form>
                     </div>
-                </div>
+                @endif
             @endif
         </div>
 
-        @if (session('posting') != null)
+        @if ($startDate && $endDate)
             <div class="mx-auto px-4 py-4">
                 <div class="mb-1 -mt-2">
                     <span class="text-xs text-gray-400">*(check the checkbox for the data that will be unposted)</span>
                 </div>
                 <div class="overflow-x-auto rounded-md border-gray-300 border">
-                    <table class="min-w-full bg-white text-sm text-center">
+                    <table class="min-w-full bg-white text-sm text-center" id="tables">
                         <thead>
                             <tr>
                                 <th class="w-1 py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
@@ -143,11 +190,11 @@
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
                                     Varietas
                                 </th>
-                                @if (session('posting') === 'Agronomi')
-                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
-                                        Kategori
-                                    </th>
-                                @endif
+                                {{-- @if (session('posting') === 'Agronomi') --}}
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
+                                    Kategori
+                                </th>
+                                {{-- @endif --}}
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
                                     Tanggal Tanam</th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
@@ -159,7 +206,7 @@
                                 <tr>
                                     <td class="w-1 py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         <input type="checkbox" class="rowCheckbox rounded" name="selected_items[]"
-                                            value="{{ $item->nosample }},{{ $item->companycode }},{{ $item->tanggaltanam }}">
+                                            value="{{ $item->nosample }},{{ $item->companycode }},{{ $item->tanggalpengamatan }}">
                                     </td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->no }}.</td>
@@ -170,10 +217,10 @@
                                         {{ $item->idblokplot }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->varietas }}</td>
-                                    @if (session('posting') === 'Agronomi')
-                                        <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                            {{ $item->kat }}</td>
-                                    @endif
+                                    {{-- @if (session('posting') === 'Agronomi') --}}
+                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                        {{ $item->kat }}</td>
+                                    {{-- @endif --}}
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->tanggaltanam }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -184,7 +231,7 @@
                     </table>
                 </div>
             </div>
-            <div class="mx-4 my-1">
+            <div class="mx-4 my-1" id="pagination-links">
                 @if ($posts->hasPages())
                     {{ $posts->appends(['perPage' => $posts->perPage(), 'start_date' => $startDate, 'end_date' => $endDate])->links() }}
                 @else
@@ -198,14 +245,7 @@
             </div>
         @endif
     </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const inputElement = document.getElementById("perPage");
-            inputElement.addEventListener("input", (event) => {
-                event.target.value = event.target.value.replace(/[^0-9]/g, '');
-            });
-        });
-    </script>
+
     <script>
         function toggleCheckboxes(source) {
             const checkboxes = document.querySelectorAll('.rowCheckbox');
@@ -216,6 +256,8 @@
             const dropdown = document.getElementById('menu-dropdown');
             dropdown.classList.toggle('hidden');
         }
+    </script>
+    <script>
         document.addEventListener("click", function(event) {
             const dropdown = document.getElementById("menu-dropdown");
             const button = document.getElementById("menu-button");
@@ -224,8 +266,9 @@
             }
         });
     </script>
+
     <script>
-        document.querySelector("form[action='{{ route('process.posting.submit') }}']").addEventListener("submit", function(
+        document.querySelector("#post").addEventListener("submit", function(
             event) {
             event.preventDefault();
             const selectedItems = [];
@@ -234,6 +277,12 @@
             });
             if (selectedItems.length === 0) {
                 alert("Silakan pilih setidaknya satu data untuk diposting.");
+                return;
+            }
+            const selectedSamples = selectedItems.map(item => item.split(',')[0]);
+            const confirmText =
+                `Yakin ingin posting data untuk nomor sample berikut?\n\n${selectedSamples.join(', ')}`;
+            if (!confirm(confirmText)) {
                 return;
             }
             document.getElementById("selected_items").value = JSON.stringify(selectedItems);
@@ -252,26 +301,6 @@
             max-height: 24rem;
             overflow-x: auto;
             overflow-y: hidden;
-        }
-
-        select:invalid {
-            color: gray;
-        }
-
-        option[disabled] {
-            color: gray;
-        }
-
-        select:disabled {
-            color: gray;
-        }
-
-        option:disabled {
-            color: gray;
-        }
-
-        option:not([disabled]) {
-            color: black;
         }
     </style>
 
