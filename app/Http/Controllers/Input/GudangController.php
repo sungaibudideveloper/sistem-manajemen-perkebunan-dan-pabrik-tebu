@@ -215,7 +215,7 @@ class GudangController extends Controller
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
         ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-            'connection' => 'TESTING',
+            'connection' => '172.17.1.39',
             'company' => $companyinv->companyinventory,
             'factory' => $hfirst->factoryinv,
             'isi' => $isi,  
@@ -293,6 +293,9 @@ class GudangController extends Controller
         
         if (strtoupper($first->flagstatus) != 'ACTIVE') {
             throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
+        } 
+        if ($details->whereNotNull('nouse')->count() >= 1){
+            throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
         // Validasi duplikat: lkhno + itemcode
@@ -401,23 +404,23 @@ class GudangController extends Controller
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
                     ->asJson()
                     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
-                        'connection' => 'TESTING',
+                        'connection' => '172.17.1.39',
                         'company' => $companyinv->companyinventory,
                         'factory' => $first->factoryinv,
                         'isi' => array_values($apiPayload),  
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
-                    ->asJson()
-                    ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
-                        'connection' => 'TESTING',
-                        'nouse' => $first->nouse,
-                        'company' => $companyinv->companyinventory,
-                        'factory' => $first->factoryinv,
-                        'isi' => array_values($apiPayload),  
-                        'userid' => substr(auth()->user()->userid, 0, 10)
-                    ]);
+                // $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
+                //     ->asJson()
+                //     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
+                //         'connection' => 'TESTING',
+                //         'nouse' => $first->nouse,
+                //         'company' => $companyinv->companyinventory,
+                //         'factory' => $first->factoryinv,
+                //         'isi' => array_values($apiPayload),  
+                //         'userid' => substr(auth()->user()->userid, 0, 10)
+                //     ]);
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
