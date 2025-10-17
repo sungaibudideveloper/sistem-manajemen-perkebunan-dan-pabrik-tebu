@@ -101,7 +101,15 @@ const LayoutMandor: React.FC<LayoutMandorProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div 
+      className="min-h-screen bg-white"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        width: '100vw',
+        maxWidth: '100%'
+      }}
+    >
       {/* Sidebar - Desktop Navigation */}
       <Sidebar
         isOpen={sidebarOpen}
