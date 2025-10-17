@@ -137,8 +137,13 @@ const Camera: React.FC<CameraProps> = ({
     // ✅ FETCH SERVER TIME pas capture (bukan realtime)
     let serverTimestamp = '';
     try {
+      console.log('🔍 BEFORE FETCH - Client time:', new Date().toLocaleString('id-ID'));
       const response = await fetch('/api/mandor/server-time');
       const data = await response.json();
+        console.log('🔍 RAW SERVER DATA:', data);
+  console.log('🔍 RAW TIMESTAMP:', data.timestamp);
+    const parsedDate = new Date(data.timestamp);
+  console.log('🔍 PARSED DATE:', parsedDate);
       serverTimestamp = new Date(data.timestamp).toLocaleString('id-ID', {
         year: 'numeric',
         month: '2-digit',
@@ -148,6 +153,7 @@ const Camera: React.FC<CameraProps> = ({
         second: '2-digit',
         hour12: false
       });
+        console.log('🔍 FINAL FORMATTED:', serverTimestamp);
       console.log('📡 Fetched server time for photo:', serverTimestamp);
     } catch (error) {
       console.error('❌ Failed to fetch server time:', error);
