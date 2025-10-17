@@ -1,4 +1,3 @@
-// resources/js/pages/absen-mandor.tsx - REFACTORED
 import React, { useState, useEffect } from 'react';
 import Camera from '../components/camera';
 import {
@@ -116,7 +115,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
     }
   };
 
-  // ✅ NEW: Get available workers with button state logic
   const getAvailableWorkers = () => {
     return workers.map(worker => {
       const hadirRecord = todayAttendance.find(
@@ -130,7 +128,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
         ...worker,
         hasHadir: !!hadirRecord,
         hasLokasi: !!lokasiRecord,
-        // Worker hilang dari list jika sudah HADIR + LOKASI
         shouldShow: !(hadirRecord && lokasiRecord)
       };
     }).filter(worker => worker.shouldShow);
@@ -527,7 +524,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                       
                       {isToday && (
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          {/* ✅ HADIR Button - Disabled if already HADIR */}
                           {!worker.hasHadir ? (
                             <button 
                               onClick={() => handleWorkerSelect(worker, 'HADIR')}
@@ -570,7 +566,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                             </button>
                           )}
                           
-                          {/* ✅ LOKASI Button - Only enabled if hasHadir = true */}
                           <button 
                             onClick={() => handleWorkerSelect(worker, 'LOKASI')}
                             disabled={!worker.hasHadir}
@@ -836,45 +831,111 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           requireGPS={selectedAbsenType === 'LOKASI'}
         />
 
-        {/* Photo Viewer Modal */}
+        {/* ✅ RESPONSIVE PHOTO VIEWER MODAL */}
         {viewingPhoto && (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.9)'
-          }}>
-            <div style={{ position: 'relative', maxWidth: '1024px', maxHeight: '90vh', padding: '16px' }}>
-              <button
-                onClick={() => setViewingPhoto(null)}
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  padding: '8px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  zIndex: 10
-                }}
-              >
-                <FiX style={{ width: '20px', height: '20px' }} />
-              </button>
-              <img
-                src={viewingPhoto}
-                alt="Foto Absensi"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  borderRadius: '8px'
-                }}
-              />
+          <div 
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.9)',
+              padding: '16px'
+            }}
+            onClick={() => setViewingPhoto(null)}
+          >
+            <div 
+              style={{ 
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                maxWidth: '500px',
+                width: '100%',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '16px',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: 0 }}>
+                  Foto Absensi
+                </h3>
+                <button
+                  onClick={() => setViewingPhoto(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#6b7280'
+                  }}
+                >
+                  <FiX style={{ width: '20px', height: '20px' }} />
+                </button>
+              </div>
+
+              {/* Photo Container */}
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                maxHeight: '60vh',
+                overflow: 'auto'
+              }}>
+                <img
+                  src={viewingPhoto}
+                  alt="Foto Absensi"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+              </div>
+
+              {/* Footer with Close Button */}
+              <div style={{
+                padding: '16px',
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={() => setViewingPhoto(null)}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'background-color 0.2s'
+                  }}
+                >
+                  <FiX style={{ width: '16px', height: '16px' }} />
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         )}

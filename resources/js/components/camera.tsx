@@ -1,4 +1,3 @@
-// resources/js/components/camera.tsx - RESPONSIVE OVERLAY FIX
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FiX, FiRefreshCw, FiCamera, FiCheck, FiMapPin, FiAlertTriangle
@@ -131,16 +130,19 @@ const Camera: React.FC<CameraProps> = ({
       return;
     }
 
-    // Fetch server time
-    let serverTimestamp = '';
+    // Fetch server time - TIDAK BLOCKING jika gagal
+    let serverTimestamp = '⚠️ Waktu Server Gagal Diambil';
     try {
       const response = await fetch('/api/mandor/server-time');
-      if (!response.ok) throw new Error('Server error');
-      const data = await response.json();
-      serverTimestamp = data.formatted;
+      if (response.ok) {
+        const data = await response.json();
+        serverTimestamp = data.formatted;
+      } else {
+        console.warn('Server time request failed with status:', response.status);
+      }
     } catch (error) {
-      alert('Gagal mengambil waktu server. Foto tidak dapat diambil.');
-      return;
+      console.warn('Failed to fetch server time:', error);
+      // Tetap lanjut, tidak perlu alert
     }
 
     const video = videoRef.current;
@@ -218,7 +220,8 @@ const Camera: React.FC<CameraProps> = ({
 
   if (!isOpen) return null;
 
-  const canCapture = isReady && (!requireGPS || gpsCoordinates !== null);
+  // ✅ Camera + GPS both ready (or GPS not required)
+  const canCapture = isReady && (!requireGPS || (gpsCoordinates !== null && !isGettingGPS));
 
   return (
     <div style={{
