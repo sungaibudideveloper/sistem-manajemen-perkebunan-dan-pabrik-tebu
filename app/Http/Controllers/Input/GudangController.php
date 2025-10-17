@@ -157,7 +157,7 @@ class GudangController extends Controller
             'detailmaterial'=> $detailmaterial
         ]);
     }
-
+ 
     public function retur(Request $request)
     {   
         $usematerialhdr = new usematerialhdr;
@@ -243,6 +243,39 @@ class GudangController extends Controller
             }
 
         return redirect()->back()->with('success1', 'Sukses Membuat Dokumen Retur '. $response->json()['noretur']);
+    }
+
+    // Panggil fungsi retur yang SUDAH ADA, satu per baris usemateriallst
+    public function returAll(Request $request)
+    {
+        $rows = usemateriallst::where('companycode', session('companycode'))
+            ->where('rkhno', $request->rkhno)
+            ->whereNull('noretur')
+            ->where('qtyretur', '>', 0)
+            ->get(['rkhno','lkhno','itemcode','plot']);
+
+        $ok = 0; $fail = 0;
+
+        foreach ($rows as $row) {
+            // bentuk sub-request sesuai parameter yang dibutuhkan fungsi retur()
+            $sub = new \Illuminate\Http\Request([
+                'rkhno'    => $row->rkhno,
+                'lkhno'    => $row->lkhno,
+                'itemcode' => $row->itemcode,
+                'plot'     => $row->plot,
+            ]);
+
+            try {
+                $resp = $this->retur($sub); // pakai fungsi retur() yang sudah ada
+                // anggap retur() redirect back; hitung sukses jika tidak melempar exception
+                $ok++;
+            } catch (\Throwable $e) {
+                \Log::error('retur_bulk error', ['item'=>$row->itemcode, 'err'=>$e->getMessage()]);
+                $fail++;
+            }
+        }
+
+        return back()->with($ok ? 'success1' : 'error', "Retur massal selesai. Sukses: {$ok}, Gagal: {$fail}");
     }
 
 

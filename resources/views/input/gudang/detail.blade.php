@@ -5,6 +5,9 @@
 <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
 <x-slot:nav>{{ $nav }}</x-slot:nav>   
 @php 
+$returEligible = collect($detailmaterial)
+    ->filter(fn($d) => (float)($d->qtyretur ?? 0) > 0 && empty($d->noretur))
+    ->count();
 @endphp
 
 <style>
@@ -327,7 +330,18 @@ table th, table td {
                 onclick="window.print()"
                 class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 rounded shadow no-print">
                 🖨️ Cetak
-            </button>
+            </button>&nbsp;
+            @endif
+            @if (strtoupper($details[0]->flagstatus) != 'ACTIVE' && $returEligible > 0)
+            <form action="{{ route('input.gudang.returall') }}" method="POST"
+                  onsubmit="return confirm('Proses retur massal untuk {{ $returEligible }} item?')">
+              @csrf
+              <input type="hidden" name="rkhno" value="{{ $details[0]->rkhno }}">
+              <button type="submit"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow transition">
+                Retur Semua ({{ $returEligible }})
+              </button>
+            </form>
             @endif
         </div>
         
