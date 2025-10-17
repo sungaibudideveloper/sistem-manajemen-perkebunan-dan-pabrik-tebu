@@ -137,7 +137,7 @@ const Camera: React.FC<CameraProps> = ({
     // ✅ FETCH SERVER TIME pas capture (bukan realtime)
     let serverTimestamp = '';
     try {
-      const response = await fetch('/api/server-time');
+      const response = await fetch('/api/mandor/server-time');
       const data = await response.json();
       serverTimestamp = new Date(data.timestamp).toLocaleString('id-ID', {
         year: 'numeric',

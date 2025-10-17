@@ -287,6 +287,14 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
                 'results' => $results
             ]);
         })->name('mandor.bulk-save');
+
+        Route::get('/server-time', function() {
+            return response()->json([
+                'timestamp' => now()->toIso8601String(),
+                'formatted' => now()->format('d/m/Y, H:i:s'),
+                'timezone' => config('app.timezone')
+            ]);
+        })->name('mandor.server-time');
         
     });
 
@@ -336,15 +344,6 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
         // Get attendance history - individual records
         Route::get('/attendance/history', [ApproverPageController::class, 'getAttendanceHistory'])
             ->name('approver.attendance.history');
-    });
-
-    // route untuk server-time absen API
-    Route::get('/api/server-time', function() {
-        return response()->json([
-            'timestamp' => now()->toIso8601String(),
-            'formatted' => now()->format('d/m/Y, H:i:s'),
-            'timezone' => config('app.timezone')
-        ]);
     });
 
 });
