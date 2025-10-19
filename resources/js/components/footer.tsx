@@ -1,3 +1,4 @@
+// resources/js/components/footer.tsx - FIXED CIRCULAR SHADOW
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -106,11 +107,11 @@ const Footer: React.FC<FooterProps> = ({
           <div 
             className="absolute z-50" 
             style={{ 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                top: '-30px' 
+              left: '50%', 
+              transform: 'translateX(-50%)', 
+              top: '-30px' 
             }}
-            >
+          >
             <motion.button
               onClick={() => handleItemClick(heroItem.id)}
               className="relative flex flex-col items-center cursor-pointer"
@@ -118,7 +119,7 @@ const Footer: React.FC<FooterProps> = ({
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              {/* Hero Icon Container */}
+              {/* ✅ FIXED: Hero Icon Container with CIRCULAR shadow */}
               <motion.div
                 className="relative z-10 mb-1 flex items-center justify-center"
                 animate={{
@@ -130,26 +131,42 @@ const Footer: React.FC<FooterProps> = ({
                   rotate: { duration: 0.5, ease: "easeInOut" }
                 }}
               >
-                <div className="flex items-center justify-center rounded-full bg-gray-40 p-2">
+                {/* ✅ Outer circle with shadow - CIRCULAR SHADOW */}
+                <div 
+                  className={`
+                    flex items-center justify-center rounded-full 
+                    transition-all duration-300
+                    ${activeSection === heroItem.id 
+                      ? 'shadow-[0_8px_16px_rgba(0,0,0,0.15)]' 
+                      : 'shadow-[0_4px_8px_rgba(0,0,0,0.1)]'
+                    }
+                  `}
+                  style={{
+                    backgroundColor: 'white',
+                    padding: '4px'
+                  }}
+                >
+                  {/* Inner black circle with icon */}
                   <div className="flex items-center justify-center rounded-full bg-black w-16 h-16">
                     <heroItem.icon className="w-6 h-6 text-white" />
                   </div>
                 </div>
               </motion.div>
 
-              {/* Hero Button Shadow */}
+              {/* ✅ REMOVED: Square shadow - now using circular shadow above */}
+              {/* Hero Button Ground Shadow - subtle circular indicator */}
               <motion.div
                 className={`
-                  w-16 h-3 rounded-full
+                  w-12 h-2 rounded-full blur-sm
                   transition-all duration-300
                   ${activeSection === heroItem.id 
-                    ? 'bg-black/10 shadow-md' 
-                    : 'bg-gray-300/50'
+                    ? 'bg-black/20' 
+                    : 'bg-gray-400/30'
                   }
                 `}
                 animate={{
-                  scale: activeSection === heroItem.id ? 1.1 : 1,
-                  opacity: activeSection === heroItem.id ? 1 : 0.7
+                  scale: activeSection === heroItem.id ? 1.2 : 1,
+                  opacity: activeSection === heroItem.id ? 0.8 : 0.5
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               />
