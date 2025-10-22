@@ -215,7 +215,7 @@ class GudangController extends Controller
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
         ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-            'connection' => 'TESTING',
+            'connection' => '172.17.1.39',
             'company' => $companyinv->companyinventory,
             'factory' => $hfirst->factoryinv,
             'isi' => $isi,  
@@ -404,7 +404,7 @@ class GudangController extends Controller
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
                     ->asJson()
                     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
-                        'connection' => 'TESTING',
+                        'connection' => '172.17.1.39',
                         'company' => $companyinv->companyinventory,
                         'factory' => $first->factoryinv,
                         'isi' => array_values($apiPayload),  
