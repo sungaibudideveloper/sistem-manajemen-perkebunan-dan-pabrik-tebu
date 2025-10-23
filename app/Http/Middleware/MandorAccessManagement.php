@@ -17,8 +17,8 @@ class MandorAccessManagement
 
         $user = auth()->user();
         
-        // Jika user adalah mandor (idjabatan = 5)
-        if ($user->idjabatan == 5) {
+        // Jika user adalah mandor (idjabatan = 20)
+        if ($user->idjabatan == 20) {
             $allowedPaths = [
                 'mandor',
                 'logout', 

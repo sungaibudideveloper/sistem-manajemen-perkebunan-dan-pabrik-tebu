@@ -96,19 +96,18 @@
     {{-- Footer --}}
     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
       <div class="flex justify-between items-center text-xs text-gray-500">
-        <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
-        <button
-          type="button"
-          @click.stop="clear()"
-          class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
-        >
-          Clear Selected Mandor
-        </button>
-      </div>
-    </div>
+        <span x-text="${filteredMandors.length} mandor tersedia"></span>
+<button
+type="button"
+@click.stop="clear()"
+class="text-red-500 hover:text-red-700 hover:underline text-sm font-medium"
+>
+Clear Selected Mandor
+</button>
+</div>
+</div>
   </div>
 </div>
-
 @push('scripts')
 <script>
 function mandorPicker() {
@@ -117,6 +116,38 @@ function mandorPicker() {
     searchQuery: '',
     mandors: @json($mandors ?? []),
     selected: { companycode: '', userid: '', name: '' },
+    isMandorUser: false, // ✅ NEW: Track if current user is Mandor
+
+    // ✅ NEW: Check if logged-in user is a Mandor
+    checkIfUserIsMandor() {
+      // idjabatan = 5 means Mandor
+      if (window.currentUser.idjabatan === 5) {
+        this.isMandorUser = true;
+        
+        // Auto-select current user as mandor
+        const currentUserAsMandor = this.mandors.find(m => m.userid === window.currentUser.userid);
+        
+        if (currentUserAsMandor) {
+          this.selected = {
+            companycode: currentUserAsMandor.companycode,
+            userid: currentUserAsMandor.userid,
+            name: currentUserAsMandor.name
+          };
+          
+          // Update absen summary immediately
+          updateAbsenSummary(currentUserAsMandor.userid, currentUserAsMandor.userid, currentUserAsMandor.name);
+        } else {
+          // Fallback: create from current user data
+          this.selected = {
+            companycode: '',
+            userid: window.currentUser.userid,
+            name: window.currentUser.name
+          };
+          
+          updateAbsenSummary(window.currentUser.userid, window.currentUser.userid, window.currentUser.name);
+        }
+      }
+    },
 
     get filteredMandors() {
       if (!this.searchQuery) return this.mandors;
@@ -128,6 +159,11 @@ function mandorPicker() {
     },
 
     selectMandor(mandor) {
+      // ✅ Prevent selection if user is Mandor (should not happen, but safety check)
+      if (this.isMandorUser) {
+        return;
+      }
+
       this.selected = {
         companycode: mandor.companycode,
         userid: mandor.userid,
@@ -138,6 +174,11 @@ function mandorPicker() {
     },
 
     clear() {
+      // ✅ Prevent clearing if user is Mandor
+      if (this.isMandorUser) {
+        return;
+      }
+
       this.selected = { companycode: '', userid: '', name: '' };
       this.searchQuery = '';
       updateAbsenSummary(null);
