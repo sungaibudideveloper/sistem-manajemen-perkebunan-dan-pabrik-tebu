@@ -148,7 +148,7 @@ function materialPicker(rowIndex) {
             groups[item.herbisidagroupid] = {
               herbisidagroupid: item.herbisidagroupid,
               herbisidagroupname: item.herbisidagroupname,
-              showDetails: false,
+              showDetails: false, // ✅ FIXED: Initialize showDetails
               items: []
             };
           }
@@ -190,7 +190,7 @@ function materialPicker(rowIndex) {
       this.updateHiddenInputs();
     },
 
-    // **Tambah ini** agar tombol “Selesai” berfungsi
+    // ✅ Tombol "Selesai" berfungsi
     confirmSelection() {
       this.updateHiddenInputs();
       this.open = false;
@@ -199,48 +199,61 @@ function materialPicker(rowIndex) {
     // Update value hidden inputs
     updateHiddenInputs() {
       this.ensureHiddenInputsExist();
-      document.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`).value =
-        this.selectedGroup ? this.selectedGroup.herbisidagroupid : '';
-      document.querySelector(`input[name="rows[${this.rowIndex}][material_group_name]"]`).value =
-        this.selectedGroup ? this.selectedGroup.herbisidagroupname : '';
-      document.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`).value =
-        this.selectedGroup ? '1' : '0';
+      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(6)`);
+      if (!materialCell) return;
+      
+      const groupIdInput = materialCell.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`);
+      const usingMaterialInput = materialCell.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`);
+      
+      if (groupIdInput) {
+        groupIdInput.value = this.selectedGroup ? this.selectedGroup.herbisidagroupid : '';
+      }
+      if (usingMaterialInput) {
+        usingMaterialInput.value = this.selectedGroup ? '1' : '0';
+      }
     },
 
     // Pastikan hidden inputs ada di DOM
     ensureHiddenInputsExist() {
-      const cell = document.querySelector(
-        `tr:nth-child(${this.rowIndex + 1}) td:nth-child(10)`
-      );
-      if (!cell) return;
-      ['material_group_id','material_group_name','usingmaterial'].forEach(name => {
-        if (!cell.querySelector(`input[name="rows[${this.rowIndex}][${name}]"]`)) {
+      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(6)`);
+      if (!materialCell) return;
+      
+      ['material_group_id', 'usingmaterial'].forEach(name => {
+        if (!materialCell.querySelector(`input[name="rows[${this.rowIndex}][${name}]"]`)) {
           const inp = document.createElement('input');
           inp.type = 'hidden';
           inp.name = `rows[${this.rowIndex}][${name}]`;
           inp.value = name === 'usingmaterial' ? '0' : '';
-          cell.appendChild(inp);
+          materialCell.appendChild(inp);
         }
       });
     },
 
     init() {
-      // sama seperti sebelumnya: observasi activity input dan reset selection
-      const activityInput = document.querySelector(
-        `input[name="rows[${this.rowIndex}][nama]"]`
-      );
+      this.ensureHiddenInputsExist();
+      
+      // Observasi activity input dan reset selection
+      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
       if (activityInput) {
         const observer = new MutationObserver(() => {
-          this.currentActivityCode = activityInput.value || '';
-          this.selectedGroup = null;
-          this.updateHiddenInputs();
+          const newActivity = activityInput.value || '';
+          if (this.currentActivityCode !== newActivity) {
+            this.currentActivityCode = newActivity;
+            this.selectedGroup = null;
+            this.updateHiddenInputs();
+          }
         });
         observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
+        
         activityInput.addEventListener('input', () => {
-          this.currentActivityCode = activityInput.value || '';
-          this.selectedGroup = null;
-          this.updateHiddenInputs();
+          const newActivity = activityInput.value || '';
+          if (this.currentActivityCode !== newActivity) {
+            this.currentActivityCode = newActivity;
+            this.selectedGroup = null;
+            this.updateHiddenInputs();
+          }
         });
+        
         this.currentActivityCode = activityInput.value || '';
         this.updateHiddenInputs();
       }
