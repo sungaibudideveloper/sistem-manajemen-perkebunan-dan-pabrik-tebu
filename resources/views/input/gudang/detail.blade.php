@@ -338,7 +338,7 @@ table th, table td {
               @csrf
               <input type="hidden" name="rkhno" value="{{ $details[0]->rkhno }}">
               <button type="submit"
-                class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow transition">
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow transition no-print">
                 Retur Semua ({{ $returEligible }})
               </button>
             </form>
