@@ -447,9 +447,11 @@ class GudangController extends Controller
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
                     }
                 }
-
+                
+                
                 // update nouse & itemprice
                 foreach ($itemPriceMap as $itemcode => $itemprice) {
+                    
                     Log::info("Before DB update:", [
                         'itemcode' => $itemcode, 
                         'itemprice' => $itemprice,
@@ -461,7 +463,7 @@ class GudangController extends Controller
                         ->where('itemcode', $itemcode)
                         ->update([
                             'nouse'     => $responseData['noUse'],
-                            'itemprice' => $itemprice,
+                            'itemprice' => $itemprice
                         ]);
 
                     // Cek hasil di database
