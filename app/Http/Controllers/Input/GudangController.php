@@ -447,13 +447,15 @@ class GudangController extends Controller
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
                     }
                 }
-
+                
+                
                 // update nouse & itemprice
                 foreach ($itemPriceMap as $itemcode => $itemprice) {
+                    $totalprice = $itemprice*$responseData['data'][$itemcode]['qtybpb'];
                     Log::info("Before DB update:", [
                         'itemcode' => $itemcode, 
                         'itemprice' => $itemprice,
-                        'totalprice' => $itemprice*$qty,
+                        'totalprice' => $totalprice, 
                         'type' => gettype($itemprice)
                     ]);
 
@@ -463,14 +465,14 @@ class GudangController extends Controller
                         ->update([
                             'nouse'     => $responseData['noUse'],
                             'itemprice' => $itemprice,
-                            'totalprice' => $itemprice*$qty
+                            'totalprice' => $totalprice
                         ]);
 
                     // Cek hasil di database
                     $saved = usemateriallst::where('rkhno', $request->rkhno)
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
-                        ->value('itemprice','totalprice');
+                        ->value('itemprice');
 
                     Log::info("After DB update:", [
                         'itemcode' => $itemcode,
