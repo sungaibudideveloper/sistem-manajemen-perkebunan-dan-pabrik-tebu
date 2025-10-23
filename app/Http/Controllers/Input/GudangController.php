@@ -455,7 +455,6 @@ class GudangController extends Controller
                     Log::info("Before DB update:", [
                         'itemcode' => $itemcode, 
                         'itemprice' => $itemprice,
-                        'totalprice' => $totalprice, 
                         'type' => gettype($itemprice)
                     ]);
 
@@ -464,8 +463,7 @@ class GudangController extends Controller
                         ->where('itemcode', $itemcode)
                         ->update([
                             'nouse'     => $responseData['noUse'],
-                            'itemprice' => $itemprice,
-                            'totalprice' => $totalprice
+                            'itemprice' => $itemprice
                         ]);
 
                     // Cek hasil di database
