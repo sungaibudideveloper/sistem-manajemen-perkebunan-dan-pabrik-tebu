@@ -164,11 +164,21 @@
                 <td class="p-3 border-b text-center">{{ $item->kodestatus }}</td>
                 <td class="p-3 border-b">{{ $item->kodevarietas }}</td>
                 <td class="p-3 border-b text-right">{{ $item->luasrkh }}</td>
-                <td class="p-3 border-b tj-result bg-blue-50 font-semibold text-right">
-                  {{ isset($existTJ) ? number_format($existTJ, 2, ',', '.') : '' }}
+                <td class="p-3 border-b bg-blue-50 font-semibold text-right">
+                  <input
+                    type="number" step="1" min="0"
+                    class="tj-result w-24 text-right border rounded px-2 py-1 bg-white"
+                    value="{{ old("rows.$loop->index.tj", isset($existTJ) ? (int)$existTJ : '') }}"
+                    name="rows[{{ $loop->index }}][tj]"
+                  >
                 </td>
-                <td class="p-3 border-b tc-result bg-green-50 font-semibold text-right">
-                  {{ isset($existTC) ? number_format($existTC, 2, ',', '.') : '' }}
+                <td class="p-3 border-b bg-green-50 font-semibold text-right">
+                  <input
+                    type="number" step="1" min="0"
+                    class="tc-result w-24 text-right border rounded px-2 py-1 bg-white"
+                    value="{{ old("rows.$loop->index.tc", isset($existTC) ? (int)$existTC : '') }}"
+                    name="rows[{{ $loop->index }}][tc]"
+                  >
                 </td>
                 <td class="p-3 border-b pias-formula text-left text-sm no-print"></td>
               </tr>
@@ -427,8 +437,12 @@
         const aTJ = allocTJ[i]|0, aTC = allocTC[i]|0;
         sumAllocTJ += aTJ; sumAllocTC += aTC;
 
-        if (m.tjEl) m.tjEl.textContent = fmt0(aTJ);
-        if (m.tcEl) m.tcEl.textContent = fmt0(aTC);
+        // if (m.tjEl) m.tjEl.textContent = fmt0(aTJ);
+        // if (m.tcEl) m.tcEl.textContent = fmt0(aTC);
+
+      if (m.tjEl) (m.tjEl.tagName === 'INPUT') ? m.tjEl.value = String(aTJ) : m.tjEl.textContent = fmt0(aTJ);
+      if (m.tcEl) (m.tcEl.tagName === 'INPUT') ? m.tcEl.value = String(aTC) : m.tcEl.textContent = fmt0(aTC);
+
       }
 
       if (sumTJCell)  sumTJCell.textContent  = fmt0(sumAllocTJ);
