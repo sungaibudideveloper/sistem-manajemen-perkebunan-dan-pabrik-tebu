@@ -451,7 +451,7 @@ class GudangController extends Controller
                 
                 // update nouse & itemprice
                 foreach ($itemPriceMap as $itemcode => $itemprice) {
-                    $totalprice = $itemprice*$responseData['data'][$itemcode]['qtybpb'];
+                    
                     Log::info("Before DB update:", [
                         'itemcode' => $itemcode, 
                         'itemprice' => $itemprice,
