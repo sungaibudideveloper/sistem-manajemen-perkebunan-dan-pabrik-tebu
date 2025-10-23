@@ -453,6 +453,7 @@ class GudangController extends Controller
                     Log::info("Before DB update:", [
                         'itemcode' => $itemcode, 
                         'itemprice' => $itemprice,
+                        'totalprice' => $itemprice*$qty,
                         'type' => gettype($itemprice)
                     ]);
 
@@ -462,13 +463,14 @@ class GudangController extends Controller
                         ->update([
                             'nouse'     => $responseData['noUse'],
                             'itemprice' => $itemprice,
+                            'totalprice' => $itemprice*$qty
                         ]);
 
                     // Cek hasil di database
                     $saved = usemateriallst::where('rkhno', $request->rkhno)
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
-                        ->value('itemprice');
+                        ->value('itemprice','totalprice');
 
                     Log::info("After DB update:", [
                         'itemcode' => $itemcode,
