@@ -4,6 +4,9 @@ namespace App\Http\Controllers\MasterData;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Middleware\CheckPermission;
+
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -163,8 +166,11 @@ class UserManagementController extends Controller
             
             if (!$user) {
                 return redirect()->route('usermanagement.user.index')
-                               ->with('error', 'User tidak ditemukan');
+                            ->with('error', 'User tidak ditemukan');
             }
+
+            // 🔥 CHECK: Apakah jabatan berubah?
+            $jabatanChanged = $user->idjabatan != $request->idjabatan;
 
             $user->update([
                 'name' => $request->name,
@@ -182,13 +188,18 @@ class UserManagementController extends Controller
                 ]);
             }
 
+            // ✅ CLEAR CACHE jika jabatan berubah
+            if ($jabatanChanged) {
+                $this->clearUserCache($user, 'Jabatan changed');
+            }
+
             return redirect()->route('usermanagement.user.index')
-                           ->with('success', 'User berhasil diperbarui');
+                        ->with('success', 'User berhasil diperbarui');
 
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal memperbarui user: ' . $e->getMessage());
+                        ->withInput()
+                        ->with('error', 'Gagal memperbarui user: ' . $e->getMessage());
         }
     }
 
@@ -377,7 +388,6 @@ class UserManagementController extends Controller
     }
 
     public function jabatanPermissionStore(Request $request)
-    // Fungsi ini juga untuk unchecked permission atau menghapuskan atau menonaktifkan ya. bukan hanya store.
     {
         $request->validate([
             'idjabatan' => 'required|integer|exists:jabatan,idjabatan',
@@ -395,7 +405,7 @@ class UserManagementController extends Controller
 
             // STEP 1: Nonaktifkan semua permissions untuk jabatan ini
             JabatanPermission::where('idjabatan', $request->idjabatan)
-                            ->update(['isactive' => 0]); // Hapus updatedat
+                            ->update(['isactive' => 0]);
 
             // STEP 2: Aktifkan hanya permissions yang dipilih
             $selectedPermissions = $request->permissions ?? [];
@@ -407,9 +417,12 @@ class UserManagementController extends Controller
                 ], [
                     'isactive' => 1,
                     'grantedby' => Auth::user()->userid,
-                    'createdat' => now() // Hapus updatedat
+                    'createdat' => now()
                 ]);
             }
+
+            // CLEAR CACHE untuk semua user dalam jabatan ini
+            $this->clearCacheForJabatan($request->idjabatan);
 
             DB::commit();
 
@@ -629,17 +642,23 @@ class UserManagementController extends Controller
     {
         try {
             UserCompany::where('userid', $userid)
-                       ->where('companycode', $companycode)
-                       ->update([
-                           'isactive' => 0,
-                           'updatedat' => now()
-                       ]);
+                    ->where('companycode', $companycode)
+                    ->update([
+                        'isactive' => 0,
+                        'updatedat' => now()
+                    ]);
+
+            // CLEAR CACHE (company access & permission cache)
+            $user = User::find($userid);
+            if ($user) {
+                $this->clearUserAndCompanyCache($user, 'Company access removed');
+            }
 
             return redirect()->route('usermanagement.user-company-permissions.index')
-                           ->with('success', 'Company access berhasil dihapus');
+                        ->with('success', 'Company access berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.user-company-permissions.index')
-                           ->with('error', 'Gagal menghapus company access');
+                        ->with('error', 'Gagal menghapus company access');
         }
     }
 
@@ -647,7 +666,7 @@ class UserManagementController extends Controller
     {
         $request->validate([
             'userid' => 'required|string|exists:user,userid',
-            'companycodes' => 'array', // Tidak required, bisa kosong (uncheck semua)
+            'companycodes' => 'array',
             'companycodes.*' => 'string|exists:company,companycode'
         ]);
 
@@ -670,6 +689,12 @@ class UserManagementController extends Controller
                     'grantedby' => Auth::user()->userid,
                     'createdat' => now()
                 ]);
+            }
+
+            // CLEAR CACHE (company access berubah)
+            $user = User::find($request->userid);
+            if ($user) {
+                $this->clearUserAndCompanyCache($user, 'Company access updated');
             }
 
             DB::commit();
@@ -738,13 +763,13 @@ class UserManagementController extends Controller
         try {
             // Check if user has access to the company
             $userCompany = UserCompany::where('userid', $request->userid)
-                                     ->where('companycode', $request->companycode)
-                                     ->where('isactive', 1)
-                                     ->first();
+                                    ->where('companycode', $request->companycode)
+                                    ->where('isactive', 1)
+                                    ->first();
 
             if (!$userCompany) {
                 return redirect()->back()
-                               ->with('error', 'User tidak memiliki akses ke company yang dipilih');
+                            ->with('error', 'User tidak memiliki akses ke company yang dipilih');
             }
 
             $permission = Permission::find($request->permissionid);
@@ -762,13 +787,19 @@ class UserManagementController extends Controller
                 'createdat' => now()
             ]);
 
+            // ✅ CLEAR CACHE saat permission override ditambahkan
+            $user = User::find($request->userid);
+            if ($user) {
+                $this->clearUserCache($user, 'Permission override created: ' . $permission->permissionname);
+            }
+
             return redirect()->route('usermanagement.user-permissions.index')
-                           ->with('success', 'Permission override berhasil ditambahkan');
+                        ->with('success', 'Permission override berhasil ditambahkan');
 
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal menambahkan permission override: ' . $e->getMessage());
+                        ->withInput()
+                        ->with('error', 'Gagal menambahkan permission override: ' . $e->getMessage());
         }
     }
 
@@ -776,18 +807,24 @@ class UserManagementController extends Controller
     {
         try {
             UserPermission::where('userid', $userid)
-                         ->where('companycode', $companycode)
-                         ->where('permission', $permission)
-                         ->update([
-                             'isactive' => 0,
-                             'updatedat' => now()
-                         ]);
+                        ->where('companycode', $companycode)
+                        ->where('permission', $permission)
+                        ->update([
+                            'isactive' => 0,
+                            'updatedat' => now()
+                        ]);
+
+            // CLEAR CACHE saat permission override dihapus
+            $user = User::find($userid);
+            if ($user) {
+                $this->clearUserCache($user, 'Permission override removed: ' . $permission);
+            }
 
             return redirect()->route('usermanagement.user-permissions.index')
-                           ->with('success', 'Permission override berhasil dihapus');
+                        ->with('success', 'Permission override berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.user-permissions.index')
-                           ->with('error', 'Gagal menghapus permission override');
+                        ->with('error', 'Gagal menghapus permission override');
         }
     }
 
@@ -1175,5 +1212,110 @@ class UserManagementController extends Controller
             return redirect()->back()
                            ->with('error', 'Gagal menghapus ticket: ' . $e->getMessage());
         }
+    }
+
+
+
+    // =============================================================================
+    // PRIVATE HELPER FUNCTIONS - CACHE MANAGEMENT
+    // =============================================================================
+
+    /**
+     * Clear permission cache untuk single user
+     * 
+     * @param User $user
+     * @param string $reason - Reason untuk logging
+     * @return void
+     */
+    private function clearUserCache(User $user, string $reason = 'Manual clear')
+    {
+        // Clear permission cache
+        CheckPermission::clearUserCache($user);
+        
+        \App\View\Composers\NavigationComposer::clearNavigationCache($user);
+        
+        Log::info('Permission & navigation cache cleared', [
+            'userid' => $user->userid,
+            'jabatan' => $user->idjabatan,
+            'reason' => $reason
+        ]);
+    }
+
+    /**
+     * Clear cache user + company cache sekaligus
+     * Dipakai saat company access berubah
+     * 
+     * @param User $user
+     * @param string $reason
+     * @return void
+     */
+    private function clearUserAndCompanyCache(User $user, string $reason = 'Company access changed')
+    {
+        // Clear permission cache
+        CheckPermission::clearUserCache($user);
+        
+        // Clear company cache
+        $cacheKey = "user_companies_{$user->userid}";
+        \Cache::forget($cacheKey);
+
+        \App\View\Composers\NavigationComposer::clearNavigationCache($user);
+        
+        Log::info('Permission, company & navigation cache cleared', [
+            'userid' => $user->userid,
+            'reason' => $reason
+        ]);
+    }
+
+    /**
+     * Clear cache untuk semua user dalam jabatan tertentu
+     * Dipakai saat jabatan permission berubah (mass update)
+     * 
+     * @param int $idjabatan
+     * @return int - Jumlah user yang di-clear cache-nya
+     */
+    private function clearCacheForJabatan($idjabatan)
+    {
+        $users = User::where('idjabatan', $idjabatan)
+                    ->where('isactive', 1)
+                    ->get();
+        
+        foreach ($users as $user) {
+            CheckPermission::clearUserCache($user);
+            
+            // Clear navigation cache per user
+            \App\View\Composers\NavigationComposer::clearNavigationCache($user);
+        }
+        
+        Log::info('Bulk cache clear (permissions + navigation) for jabatan', [
+            'idjabatan' => $idjabatan,
+            'affected_users' => $users->count()
+        ]);
+        
+        return $users->count();
+    }
+
+    /**
+     * Clear cache untuk multiple users sekaligus
+     * Berguna untuk bulk operations
+     * 
+     * @param array $userIds
+     * @return int - Jumlah user yang di-clear cache-nya
+     */
+    private function clearCacheForUsers(array $userIds)
+    {
+        $users = User::whereIn('userid', $userIds)
+                    ->where('isactive', 1)
+                    ->get();
+        
+        foreach ($users as $user) {
+            CheckPermission::clearUserCache($user);
+        }
+        
+        Log::info('Bulk cache clear for users', [
+            'count' => $users->count(),
+            'userids' => $userIds
+        ]);
+        
+        return $users->count();
     }
 }
