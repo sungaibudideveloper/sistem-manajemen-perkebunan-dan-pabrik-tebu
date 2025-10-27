@@ -180,7 +180,10 @@
                     name="rows[{{ $loop->index }}][tc]"
                   >
                 </td>
-                <td class="p-3 border-b pias-formula text-left text-sm no-print"></td>
+                <td class="p-3 border-b pias-formula text-left text-sm no-print">
+                  <input type="hidden" name="rows[{{ $loop->index }}][blok]" value="{{ $item->blok }}">
+                  <input type="hidden" name="rows[{{ $loop->index }}][plot]" value="{{ $item->plot }}">
+                </td>
               </tr>
             @endforeach
           </tbody>

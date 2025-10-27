@@ -134,6 +134,7 @@ class GudangController extends Controller
         ->get();
             
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno,1));
+        $first = $details->first();
         $detailmaterial2 = collect($usemateriallst->where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->orderBy('lkhno')->orderBy('plot')->get()); 
         $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
         ->leftJoin('lkhdetailplot', function($join) {
@@ -144,8 +145,17 @@ class GudangController extends Controller
         $groupIds = $details->pluck('herbisidagroupid')->unique(); 
         $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->get();
 
-        // $header
-        $title = "Gudang";
+        //api_costcenter
+        $companyinv = company::where('companycode', session('companycode'))->first();
+        $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
+        ->asJson()
+        ->get('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/costcenter_api', [
+            'connection' => '172.17.1.39',
+            'company' => $companyinv->companyinventory,
+            'factory' => $first->factoryinv
+        ]);
+        
+        $costcenter = collect($response->json('costcenter'));
 
 
         return view('input.gudang.detail')->with([
@@ -154,6 +164,7 @@ class GudangController extends Controller
             'dosage'        => $dosage,
             'lst'           => $lst,
             'itemlist'      => $itemlist,
+            'costcenter'    => $costcenter,
             'detailmaterial'=> $detailmaterial
         ]);
     }
