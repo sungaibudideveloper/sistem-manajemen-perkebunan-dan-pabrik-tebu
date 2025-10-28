@@ -156,7 +156,7 @@ class GudangController extends Controller
         ]);
         
         $costcenter = collect($response->json('costcenter'));
-
+dd($costcenter);
 
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
@@ -418,6 +418,7 @@ class GudangController extends Controller
                         'connection' => 'TESTING',
                         'company' => $companyinv->companyinventory,
                         'factory' => $first->factoryinv,
+                        'costcenter' => $request->costcenter,
                         'isi' => array_values($apiPayload),  
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
