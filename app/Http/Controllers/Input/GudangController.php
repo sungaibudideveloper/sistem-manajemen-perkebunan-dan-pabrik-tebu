@@ -475,7 +475,8 @@ class GudangController extends Controller
                         ->where('itemcode', $itemcode)
                         ->update([
                             'nouse'     => $responseData['noUse'],
-                            'itemprice' => $itemprice
+                            'itemprice' => $itemprice,
+                            'costcenter' => $request->costcenter
                         ]);
 
                     // Cek hasil di database
