@@ -4,6 +4,9 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
+  <!-- Choices.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+
   <!-- Success Modal -->
   <div x-data="{ showModal: false, modalMessage: '' }" 
        x-show="showModal" 
@@ -56,9 +59,9 @@
 
     <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
       
-      <!-- Header Info -->
+      <!-- Header Info (NO TARGET FIELDS) -->
       <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           <!-- Tanggal (Read-only) -->
           <div>
@@ -84,30 +87,6 @@
               @endforeach
             </select>
           </div>
-
-          <!-- Target Ton -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Target Hari Ini (Ton)</label>
-            <input type="number" 
-                   name="targettoday" 
-                   step="0.01" 
-                   min="0"
-                   value="{{ old('targettoday') }}"
-                   placeholder="0.00"
-                   class="w-full border-2 border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          </div>
-
-          <!-- Target Hektar -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Target Hari Ini (Ha)</label>
-            <input type="number" 
-                   name="targetha" 
-                   step="0.01" 
-                   min="0"
-                   value="{{ old('targetha') }}"
-                   placeholder="0.00"
-                   class="w-full border-2 border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          </div>
         </div>
 
         <!-- Keterangan -->
@@ -131,25 +110,45 @@
 
         <div class="p-6">
           <div class="overflow-x-auto">
-            <table id="kontraktor-table" class="min-w-full divide-y divide-gray-200">
+            <table id="kontraktor-table" class="min-w-full divide-y divide-gray-200 border border-gray-300">
               <thead class="bg-gray-100">
+                <!-- 2-LEVEL HEADER -->
                 <tr>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Kontraktor</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Jenis Panen</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Rencana (Ton)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Rencana (Ha)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">YPH</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Tenaga (Tebang/Muat)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Armada (WL/Umum)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Mesin Panen</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Grab Loader</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Lokasi Plot</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Aksi</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center border-r border-gray-300">Kontraktor</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center border-r border-gray-300">Jenis<br>Panen</th>
+                  <th colspan="3" class="px-3 py-2 text-xs font-semibold text-gray-700 text-center border-r border-gray-300 bg-green-50">Rencana Panen</th>
+                  <th colspan="2" class="px-3 py-2 text-xs font-semibold text-gray-700 text-center border-r border-gray-300 bg-blue-50">Tenaga</th>
+                  <th colspan="2" class="px-3 py-2 text-xs font-semibold text-gray-700 text-center border-r border-gray-300 bg-purple-50">Armada</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center border-r border-gray-300">Mesin<br>Panen</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center border-r border-gray-300">Grab<br>Loader</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center border-r border-gray-300">Lokasi Plot</th>
+                  <th rowspan="2" class="px-3 py-3 text-xs font-semibold text-gray-700 text-center">Aksi</th>
+                </tr>
+                <tr class="bg-gray-50">
+                  <!-- Rencana Panen sub-headers -->
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-green-50">Netto<br>(Ton)</th>
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-green-50">Luas<br>(Ha)</th>
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-green-50">YPH</th>
+                  <!-- Tenaga sub-headers -->
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-blue-50">Tebang</th>
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-blue-50">Muat</th>
+                  <!-- Armada sub-headers -->
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-purple-50">WL</th>
+                  <th class="px-3 py-2 text-xs font-medium text-gray-600 text-center border-r border-gray-300 bg-purple-50">Umum</th>
                 </tr>
               </thead>
               <tbody id="kontraktor-rows" class="divide-y divide-gray-200">
                 <!-- Dynamic rows akan di-insert via JS -->
               </tbody>
+              <!-- TOTAL ROW -->
+              <tfoot class="bg-yellow-50 font-bold">
+                <tr>
+                  <td colspan="2" class="px-3 py-3 text-sm text-gray-800 text-right border-t-2 border-gray-400">TOTAL:</td>
+                  <td class="px-3 py-3 text-sm text-gray-800 text-center border-t-2 border-gray-400" id="total-netto">0.00</td>
+                  <td class="px-3 py-3 text-sm text-gray-800 text-center border-t-2 border-gray-400" id="total-luas">0.00</td>
+                  <td colspan="9" class="border-t-2 border-gray-400"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
@@ -191,24 +190,38 @@
     </div>
   </form>
 
+  <!-- Choices.js -->
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
   <script>
     // Global data
     window.kontraktorsData = @json($kontraktors ?? []);
+    window.plotsData = @json($plots ?? []);
     let rowIndex = 0;
+    let choicesInstances = {};
+
+    // YPH options (10, 20, 30, ... 200)
+    function generateYphOptions(defaultValue = 80) {
+      let options = '';
+      for (let i = 10; i <= 200; i += 10) {
+        options += `<option value="${i}" ${i === defaultValue ? 'selected' : ''}>${i}</option>`;
+      }
+      return options;
+    }
 
     // Kontraktor row template
     function createKontraktorRow(index) {
       return `
         <tr data-index="${index}" class="hover:bg-gray-50">
-          <td class="px-3 py-2">
+          <td class="px-3 py-2 border-r border-gray-200">
             <select name="kontraktors[${index}][kontraktorid]" 
                     required
                     class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500">
               <option value="">Pilih</option>
-              ${window.kontraktorsData.map(k => `<option value="${k.kontraktorid}">${k.nama}</option>`).join('')}
+              ${window.kontraktorsData.map(k => `<option value="${k.kontraktorid}">${k.namakontraktor}</option>`).join('')}
             </select>
           </td>
-          <td class="px-3 py-2">
+          <td class="px-3 py-2 border-r border-gray-200">
             <select name="kontraktors[${index}][jenispanen]" 
                     class="jenis-panen-select w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500"
                     data-row="${index}"
@@ -219,45 +232,56 @@
               <option value="MEKANIS">Mekanis</option>
             </select>
           </td>
-          <td class="px-3 py-2">
+          <td class="px-3 py-2 border-r border-gray-200 bg-green-50">
             <input type="number" name="kontraktors[${index}][rencananetto]" step="0.01" min="0" 
-                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
+                   class="rencana-netto w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-right"
+                   onchange="calculateTotals()">
           </td>
-          <td class="px-3 py-2">
+          <td class="px-3 py-2 border-r border-gray-200 bg-green-50">
             <input type="number" name="kontraktors[${index}][rencanaha]" step="0.01" min="0" 
-                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
+                   class="rencana-luas w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-right"
+                   onchange="calculateTotals()">
           </td>
-          <td class="px-3 py-2">
-            <input type="number" name="kontraktors[${index}][estimasiyph]" step="0.01" min="0" 
-                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
+          <td class="px-3 py-2 border-r border-gray-200 bg-green-50">
+            <select name="kontraktors[${index}][estimasiyph]" required
+                    class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500">
+              ${generateYphOptions(80)}
+            </select>
           </td>
-          <td class="px-3 py-2">
-            <div class="flex gap-1">
-              <input type="number" name="kontraktors[${index}][tenagatebangjumlah]" min="0" placeholder="Tebang"
-                     class="tenaga-tebang w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-              <input type="number" name="kontraktors[${index}][tenagamuatjumlah]" min="0" placeholder="Muat"
-                     class="tenaga-muat w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-            </div>
+          <td class="px-3 py-2 border-r border-gray-200 bg-blue-50">
+            <input type="number" name="kontraktors[${index}][tenagatebangjumlah]" min="0"
+                   class="tenaga-tebang w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-center">
           </td>
-          <td class="px-3 py-2">
-            <div class="flex gap-1">
-              <input type="number" name="kontraktors[${index}][armadawl]" min="0" placeholder="WL"
-                     class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-              <input type="number" name="kontraktors[${index}][armadaumum]" min="0" placeholder="Umum"
-                     class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-            </div>
+          <td class="px-3 py-2 border-r border-gray-200 bg-blue-50">
+            <input type="number" name="kontraktors[${index}][tenagamuatjumlah]" min="0"
+                   class="tenaga-muat w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-center">
           </td>
-          <td class="px-3 py-2 text-center">
+          <td class="px-3 py-2 border-r border-gray-200 bg-purple-50">
+            <input type="number" name="kontraktors[${index}][armadawl]" min="0"
+                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-center">
+          </td>
+          <td class="px-3 py-2 border-r border-gray-200 bg-purple-50">
+            <input type="number" name="kontraktors[${index}][armadaumum]" min="0"
+                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 text-center">
+          </td>
+          <td class="px-3 py-2 text-center border-r border-gray-200">
             <input type="checkbox" name="kontraktors[${index}][mesinpanen]" value="1"
                    class="mesin-panen-check w-4 h-4 text-blue-600 rounded" disabled>
           </td>
-          <td class="px-3 py-2 text-center">
+          <td class="px-3 py-2 text-center border-r border-gray-200">
             <input type="checkbox" name="kontraktors[${index}][grabloader]" value="1"
                    class="grabloader-check w-4 h-4 text-blue-600 rounded" disabled>
           </td>
-          <td class="px-3 py-2">
-            <textarea name="kontraktors[${index}][lokasiplot]" rows="2" placeholder="A001, A002..."
-                      class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 resize-none"></textarea>
+          <td class="px-3 py-2 border-r border-gray-200">
+            <select name="kontraktors[${index}][lokasiplot]" 
+                    id="lokasi-plot-${index}"
+                    class="lokasi-plot-select"
+                    multiple 
+                    required>
+              ${window.plotsData.map(p => 
+                `<option value="${p.plot}">${p.blok}-${p.plot} (${p.luasarea} ha)</option>`
+              ).join('')}
+            </select>
           </td>
           <td class="px-3 py-2 text-center">
             <button type="button" onclick="removeRow(${index})" 
@@ -275,13 +299,51 @@
     document.getElementById('add-kontraktor-row').addEventListener('click', function() {
       const tbody = document.getElementById('kontraktor-rows');
       tbody.insertAdjacentHTML('beforeend', createKontraktorRow(rowIndex));
+      
+      // Initialize Choices.js for the new select
+      const selectElement = document.getElementById(`lokasi-plot-${rowIndex}`);
+      choicesInstances[rowIndex] = new Choices(selectElement, {
+        removeItemButton: true,
+        searchEnabled: true,
+        searchPlaceholderValue: 'Cari plot...',
+        noResultsText: 'Plot tidak ditemukan',
+        itemSelectText: 'Klik untuk pilih',
+        placeholder: true,
+        placeholderValue: 'Pilih lokasi plot...',
+      });
+      
       rowIndex++;
     });
 
     // Remove row
     function removeRow(index) {
       const row = document.querySelector(`tr[data-index="${index}"]`);
-      if (row) row.remove();
+      if (row) {
+        // Destroy Choices instance
+        if (choicesInstances[index]) {
+          choicesInstances[index].destroy();
+          delete choicesInstances[index];
+        }
+        row.remove();
+        calculateTotals();
+      }
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+      let totalNetto = 0;
+      let totalLuas = 0;
+
+      document.querySelectorAll('.rencana-netto').forEach(input => {
+        totalNetto += parseFloat(input.value) || 0;
+      });
+
+      document.querySelectorAll('.rencana-luas').forEach(input => {
+        totalLuas += parseFloat(input.value) || 0;
+      });
+
+      document.getElementById('total-netto').textContent = totalNetto.toFixed(2);
+      document.getElementById('total-luas').textContent = totalLuas.toFixed(2);
     }
 
     // Jenis panen logic
@@ -329,6 +391,25 @@
         alert('Minimal harus ada 1 kontraktor!');
         return;
       }
+      
+      // Convert Choices.js values to comma-separated string
+      Object.keys(choicesInstances).forEach(index => {
+        const choicesInstance = choicesInstances[index];
+        const selectedValues = choicesInstance.getValue(true); // Get array of values
+        
+        // Create hidden input with comma-separated values
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = `kontraktors[${index}][lokasiplot]`;
+        hiddenInput.value = selectedValues.join(',');
+        this.appendChild(hiddenInput);
+        
+        // Remove the original multiple select from form data
+        const originalSelect = document.querySelector(`select[name="kontraktors[${index}][lokasiplot]"]`);
+        if (originalSelect) {
+          originalSelect.removeAttribute('name');
+        }
+      });
       
       // Show loading
       const submitBtn = document.getElementById('submit-btn');

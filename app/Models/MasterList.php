@@ -7,51 +7,30 @@ use Illuminate\Database\Eloquent\Model;
 class Masterlist extends Model
 {
     protected $table = 'masterlist';
-
-    public $timestamps = false;
-
-    protected $primaryKey = ['companycode', 'plot', 'batchno'];
+    protected $primaryKey = null;
     public $incrementing = false;
-    protected $keyType = 'string';
+    public $timestamps = false;
 
     protected $fillable = [
         'companycode',
-        'blok',
         'plot',
-        'batchno',
-        'batchdate',
-        'batcharea',
+        'blok',
         'tanggalulangtahun',
-        'kodevarietas',
-        'kodestatus',
-        'jaraktanam',
-        'lastactivity',
-        'tanggalpanenpc',
-        'tanggalpanenrc1',
-        'tanggalpanenrc2',
-        'tanggalpanenrc3',
+        'activebatchno',
         'isactive',
     ];
 
-    protected $casts = [
-        'batchdate' => 'date',
-        'tanggalulangtahun' => 'date',
-        'tanggalpanenpc' => 'date',
-        'tanggalpanenrc1' => 'date',
-        'tanggalpanenrc2' => 'date',
-        'tanggalpanenrc3' => 'date',
-        'batcharea' => 'float',
-        'jaraktanam' => 'integer',
-        'isactive' => 'boolean',
-    ];
-
-    /**
-     * Override default behavior for composite keys (manual handling required in queries).
-     */
+    // Composite primary key handling
     protected function setKeysForSaveQuery($query)
     {
-        return $query->where('companycode', $this->getAttribute('companycode'))
-                     ->where('plot', $this->getAttribute('plot'))
-                     ->where('batchno', $this->getAttribute('batchno'));
+        $query->where('companycode', $this->getAttribute('companycode'))
+              ->where('plot', $this->getAttribute('plot'));
+        return $query;
+    }
+
+    // Relationship to active batch
+    public function activeBatch()
+    {
+        return $this->belongsTo(Batch::class, 'activebatchno', 'batchno');
     }
 }
