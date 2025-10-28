@@ -308,7 +308,7 @@ table th, table td {
             aria-label="Pilih cost center"
             required
         >
-            @if(empty($costcenter))
+            @if($costcenter->isEmpty())
             <option value="">— Cost center tidak tersedia —</option>
             @else
             <option value="" disabled {{ old('costcenter') ? '' : 'selected' }}>Pilih cost center…</option>
