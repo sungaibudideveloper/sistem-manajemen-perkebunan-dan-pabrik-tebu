@@ -156,7 +156,6 @@ class GudangController extends Controller
         ]);
         
         $costcenter = collect($response->json('costcenter'));
-dd($costcenter, $response->json());
 
         return view('input.gudang.detail')->with([
             'title'         => 'Gudang',
