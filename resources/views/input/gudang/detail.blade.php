@@ -313,8 +313,8 @@ table th, table td {
             @else
             <option value="" disabled {{ old('costcenter') ? '' : 'selected' }}>Pilih cost center…</option>
             @foreach ($costcenter as $c)
-                <option value="{{ $c->costcentercode }}" {{ old('costcenter') == $c->costcentercode ? 'selected' : '' }}>
-                ({{ $c->costcentercode }}) {{ $c->costcenterdesc }}
+                <option value="{{ $c['costcentercode'] }}" {{ old('costcenter') == $c['costcentercode'] ? 'selected' : '' }}>
+                    ({{ $c['costcentercode'] }}) {{ $c['costcenterdesc'] }}
                 </option>
             @endforeach
             @endif
