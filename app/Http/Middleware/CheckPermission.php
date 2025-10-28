@@ -4,16 +4,23 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 use App\Models\User;
 use App\Models\Permission;
-use App\Models\JabatanPermission;
-use App\Models\UserPermission;
-use App\Models\UserCompany;
 
 class CheckPermission
 {
+    /**
+     * Cache duration in seconds (1 hour)
+     */
+    const CACHE_TTL = 3600;
+
+    /**
+     * Handle an incoming request.
+     */
     public function handle(Request $request, Closure $next, $permission): Response
     {
         if (!Auth::check()) {
@@ -21,9 +28,8 @@ class CheckPermission
         }
         
         $user = Auth::user();
-        $hasPermission = $this->checkUserPermission($user, $permission);
         
-        if (!$hasPermission) {
+        if (!$this->hasPermission($user, $permission)) {
             Log::warning('Permission denied', [
                 'user' => $user->name,
                 'userid' => $user->userid,
@@ -39,103 +45,56 @@ class CheckPermission
     }
 
     /**
-     * Check if user has the required permission using new permission system only
+     * Check if user has specific permission
      */
-    private function checkUserPermission(User $user, string $permissionName): bool
+    private function hasPermission(User $user, string $permissionName): bool
     {
-        // Step 1: Check if permission exists in master data
-        $permissionModel = Permission::where('permissionname', $permissionName)
-                                   ->where('isactive', 1)
-                                   ->first();
+        $effectivePermissions = $this->getUserEffectivePermissions($user);
         
-        if (!$permissionModel) {
-            Log::warning('Permission not found in master data', [
-                'permission' => $permissionName,
-                'userid' => $user->userid
-            ]);
-            return false;
-        }
-
-        // Step 2: Check user-specific permission overrides first (GRANT/DENY)
-        $userPermission = UserPermission::where('userid', $user->userid)
-                                       ->where('permission', $permissionName)
-                                       ->where('isactive', 1)
-                                       ->first();
-
-        if ($userPermission) {
-            $hasCompanyAccess = $this->checkCompanyAccess($user, $userPermission->companycode);
-            
-            if ($hasCompanyAccess) {
-                $result = $userPermission->permissiontype === 'GRANT';
-                
-                Log::info('User-specific permission override', [
-                    'userid' => $user->userid,
-                    'permission' => $permissionName,
-                    'type' => $userPermission->permissiontype,
-                    'company' => $userPermission->companycode,
-                    'result' => $result
-                ]);
-                
-                return $result;
-            }
-        }
-
-        // Step 3: Check role-based (jabatan) permissions
-        if ($user->idjabatan) {
-            $jabatanPermission = JabatanPermission::where('idjabatan', $user->idjabatan)
-                                                 ->where('permissionid', $permissionModel->permissionid)
-                                                 ->where('isactive', 1)
-                                                 ->first();
-
-            if ($jabatanPermission) {
-                Log::info('Jabatan permission granted', [
-                    'userid' => $user->userid,
-                    'jabatan' => $user->idjabatan,
-                    'permission' => $permissionName
-                ]);
-                
-                return true;
-            }
-        }
-
-        // Step 4: No permission found
-        Log::info('Permission denied - not found in new system', [
-            'userid' => $user->userid,
-            'permission' => $permissionName,
-            'jabatan' => $user->idjabatan
-        ]);
-        
-        return false;
+        return isset($effectivePermissions[$permissionName]) && 
+               $effectivePermissions[$permissionName]['granted'] === true;
     }
 
     /**
-     * Check if user has access to specific company
-     */
-    private function checkCompanyAccess(User $user, string $companycode): bool
-    {
-        $userCompany = UserCompany::where('userid', $user->userid)
-                                  ->where('companycode', $companycode)
-                                  ->where('isactive', 1)
-                                  ->first();
-        
-        return $userCompany !== null;
-    }
-
-    /**
-     * Get all effective permissions for a user (for debugging/admin purposes)
+     * Get all effective permissions for a user with caching
+     * 
+     * OPTIMIZED: 
+     * - Cache results per user
+     * - Single query for jabatan permissions
+     * - Single query for user permissions  
+     * - Single query for user companies (no N+1)
+     * 
+     * @param User $user
+     * @return array
      */
     public static function getUserEffectivePermissions(User $user): array
     {
+        $cacheKey = self::getCacheKey($user);
+        
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+            return self::loadUserPermissions($user);
+        });
+    }
+
+    /**
+     * Load user permissions from database (without cache)
+     * Called only on cache miss
+     */
+    private static function loadUserPermissions(User $user): array
+    {
         $effectivePermissions = [];
         
-        // Get jabatan permissions
+        // =====================================================================
+        // STEP 1: Load Jabatan Permissions (1 Query)
+        // =====================================================================
         if ($user->idjabatan) {
-            $jabatanPermissions = JabatanPermission::join('permissions', 'jabatanpermissions.permissionid', '=', 'permissions.permissionid')
-                                                  ->where('jabatanpermissions.idjabatan', $user->idjabatan)
-                                                  ->where('jabatanpermissions.isactive', 1)
-                                                  ->where('permissions.isactive', 1)
-                                                  ->select('permissions.permissionname', 'permissions.category')
-                                                  ->get();
+            $jabatanPermissions = DB::table('jabatanpermissions')
+                ->join('permissions', 'jabatanpermissions.permissionid', '=', 'permissions.permissionid')
+                ->where('jabatanpermissions.idjabatan', $user->idjabatan)
+                ->where('jabatanpermissions.isactive', 1)
+                ->where('permissions.isactive', 1)
+                ->select('permissions.permissionname', 'permissions.category')
+                ->get();
 
             foreach ($jabatanPermissions as $perm) {
                 $effectivePermissions[$perm->permissionname] = [
@@ -144,22 +103,45 @@ class CheckPermission
                     'granted' => true
                 ];
             }
+            
+            Log::info('Loaded jabatan permissions', [
+                'userid' => $user->userid,
+                'jabatan' => $user->idjabatan,
+                'count' => $jabatanPermissions->count()
+            ]);
         }
 
-        // Override with user-specific permissions
-        $userPermissions = UserPermission::join('permissions', 'userpermission.permissionid', '=', 'permissions.permissionid')
-                                        ->where('userpermission.userid', $user->userid)
-                                        ->where('userpermission.isactive', 1)
-                                        ->where('permissions.isactive', 1)
-                                        ->select('permissions.permissionname', 'permissions.category', 'userpermission.permissiontype', 'userpermission.companycode')
-                                        ->get();
+        // =====================================================================
+        // STEP 2: Load User Companies ONCE (1 Query)
+        // =====================================================================
+        $userCompanies = DB::table('usercompany')
+            ->where('userid', $user->userid)
+            ->where('isactive', 1)
+            ->pluck('companycode')
+            ->toArray();
 
+        // =====================================================================
+        // STEP 3: Load User-Specific Permission Overrides (1 Query)
+        // =====================================================================
+        $userPermissions = DB::table('userpermission')
+            ->join('permissions', 'userpermission.permissionid', '=', 'permissions.permissionid')
+            ->where('userpermission.userid', $user->userid)
+            ->where('userpermission.isactive', 1)
+            ->where('permissions.isactive', 1)
+            ->select(
+                'permissions.permissionname', 
+                'permissions.category', 
+                'userpermission.permissiontype', 
+                'userpermission.companycode'
+            )
+            ->get();
+
+        // =====================================================================
+        // STEP 4: Apply User Overrides (No Additional Queries)
+        // =====================================================================
         foreach ($userPermissions as $perm) {
-            // Check if user has access to the company
-            $hasCompanyAccess = UserCompany::where('userid', $user->userid)
-                                          ->where('companycode', $perm->companycode)
-                                          ->where('isactive', 1)
-                                          ->exists();
+            // Check company access using in-memory array (NO QUERY!)
+            $hasCompanyAccess = in_array($perm->companycode, $userCompanies);
 
             if ($hasCompanyAccess) {
                 $effectivePermissions[$perm->permissionname] = [
@@ -171,6 +153,159 @@ class CheckPermission
             }
         }
 
+        Log::info('Loaded user permissions (CACHE MISS)', [
+            'userid' => $user->userid,
+            'total_permissions' => count($effectivePermissions),
+            'user_overrides' => $userPermissions->count()
+        ]);
+
         return $effectivePermissions;
+    }
+
+    /**
+     * Get granted permission names only (for blade views)
+     * 
+     * @param User $user
+     * @return array
+     */
+    public static function getGrantedPermissions(User $user): array
+    {
+        $effectivePermissions = self::getUserEffectivePermissions($user);
+        
+        $grantedPermissions = [];
+        foreach ($effectivePermissions as $permissionName => $details) {
+            if ($details['granted']) {
+                $grantedPermissions[] = $permissionName;
+            }
+        }
+        
+        return $grantedPermissions;
+    }
+
+    /**
+     * Check if permission exists in master data
+     * Used for validation before checking user permissions
+     */
+    private static function permissionExists(string $permissionName): bool
+    {
+        static $permissionCache = [];
+        
+        if (!isset($permissionCache[$permissionName])) {
+            $permissionCache[$permissionName] = Permission::where('permissionname', $permissionName)
+                ->where('isactive', 1)
+                ->exists();
+        }
+        
+        return $permissionCache[$permissionName];
+    }
+
+    /**
+     * Generate cache key for user permissions
+     */
+    private static function getCacheKey(User $user): string
+    {
+        return "user_permissions_{$user->userid}_{$user->idjabatan}";
+    }
+
+    /**
+     * Clear user permission cache
+     * Call this after:
+     * - User logout
+     * - Permission changes
+     * - Jabatan changes
+     * - Company access changes
+     */
+    public static function clearUserCache(User $user): void
+    {
+        $cacheKey = self::getCacheKey($user);
+        Cache::forget($cacheKey);
+        
+        Log::info('Cleared permission cache', [
+            'userid' => $user->userid,
+            'cache_key' => $cacheKey
+        ]);
+    }
+
+    /**
+     * Clear all user permission caches
+     * Call this after bulk permission updates
+     */
+    public static function clearAllUserCaches(): void
+    {
+        // Note: This requires you to track active users or use cache tags
+        // For now, this is a placeholder for manual implementation
+        
+        Log::warning('clearAllUserCaches called - implement cache tag flushing if needed');
+        
+        // If using Redis with cache tags:
+        // Cache::tags(['user_permissions'])->flush();
+    }
+
+    /**
+     * Refresh user permission cache
+     * Useful for immediate permission updates without logout
+     */
+    public static function refreshUserCache(User $user): array
+    {
+        self::clearUserCache($user);
+        return self::getUserEffectivePermissions($user);
+    }
+
+    /**
+     * Check if user has access to specific company
+     * OPTIMIZED: Uses cached user companies
+     */
+    public static function hasCompanyAccess(User $user, string $companycode): bool
+    {
+        $cacheKey = "user_companies_{$user->userid}";
+        
+        $userCompanies = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+            return DB::table('usercompany')
+                ->where('userid', $user->userid)
+                ->where('isactive', 1)
+                ->pluck('companycode')
+                ->toArray();
+        });
+        
+        return in_array($companycode, $userCompanies);
+    }
+
+    /**
+     * Get user's accessible companies (cached)
+     */
+    public static function getUserCompanies(User $user): array
+    {
+        $cacheKey = "user_companies_{$user->userid}";
+        
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+            return DB::table('usercompany')
+                ->where('userid', $user->userid)
+                ->where('isactive', 1)
+                ->pluck('companycode')
+                ->toArray();
+        });
+    }
+
+    /**
+     * Debug: Get permission details for specific permission
+     * Useful for troubleshooting
+     */
+    public static function debugPermission(User $user, string $permissionName): array
+    {
+        $effectivePermissions = self::getUserEffectivePermissions($user);
+        
+        return [
+            'user' => [
+                'userid' => $user->userid,
+                'name' => $user->name,
+                'jabatan' => $user->idjabatan
+            ],
+            'permission' => $permissionName,
+            'has_permission' => isset($effectivePermissions[$permissionName]) && 
+                              $effectivePermissions[$permissionName]['granted'],
+            'details' => $effectivePermissions[$permissionName] ?? null,
+            'all_permissions_count' => count($effectivePermissions),
+            'cache_key' => self::getCacheKey($user)
+        ];
     }
 }

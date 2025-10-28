@@ -6,29 +6,63 @@ use Carbon\Carbon;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Middleware\CheckPermission;
 
 class NavigationComposer
 {
+    /**
+     * Cache duration in seconds (1 hour)
+     */
+    const CACHE_TTL = 3600;
+
+    /**
+     * Request-level cache untuk permission array (in-memory)
+     * Prevents repeated cache queries dalam single request
+     */
+    private static $requestPermissionCache = [];
+
+    /**
+     * Bind data to the view
+     * Caches all navigation data per user to minimize database queries
+     *
+     * @param View $view
+     * @return void
+     */
     public function compose(View $view)
     {
-        // Hanya load navigation data jika user sudah login
         if (Auth::check()) {
-            $view->with([
-                'navigationMenus' => $this->getNavigationMenus(),
-                'allSubmenus' => $this->getAllSubmenus(),
-                'userPermissions' => $this->getUserPermissions(),
-                'companyName' => $this->getCompanyName(),
-                'user' => $this->getCurrentUserName(),
-                'userCompanies' => $this->getUserCompanies(),
-                'company' => $this->getUserCompanies(),
-                'period' => $this->getMonitoringPeriod()
-            ]);
+            $user = Auth::user();
+            
+            // Generate unique cache key per user, jabatan, and company
+            $cacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_" . session('companycode');
+            
+            // Cache all navigation data to prevent repeated queries
+            $navigationData = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+                return [
+                    'navigationMenus' => $this->getNavigationMenus(),
+                    'allSubmenus' => $this->getAllSubmenus(),
+                    'userPermissions' => $this->getUserPermissions(), // ✅ Load once, store in cache
+                    'companyName' => $this->getCompanyName(),
+                    'user' => $this->getCurrentUserName(),
+                    'userCompanies' => $this->getUserCompanies(),
+                    'company' => $this->getUserCompanies(),
+                    'period' => $this->getMonitoringPeriod()
+                ];
+            });
+            
+            // ✅ STORE permission array in request-level memory cache
+            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
+            self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
+            
+            $view->with($navigationData);
         }
     }
 
     /**
      * Get navigation menus for sidebar
+     *
+     * @return \Illuminate\Support\Collection
      */
     private function getNavigationMenus()
     {
@@ -44,6 +78,8 @@ class NavigationComposer
 
     /**
      * Get all submenus for sidebar
+     *
+     * @return \Illuminate\Support\Collection
      */
     private function getAllSubmenus()
     {
@@ -59,7 +95,10 @@ class NavigationComposer
     }
 
     /**
-     * Get user permissions - NEW: menggunakan sistem permission baru
+     * Get user permissions with additional caching layer
+     * Returns array of granted permission names
+     *
+     * @return array
      */
     private function getUserPermissions()
     {
@@ -69,17 +108,24 @@ class NavigationComposer
             }
 
             $user = Auth::user();
-            $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
             
-            // Return array of permission names yang di-grant
-            $grantedPermissions = [];
-            foreach ($effectivePermissions as $permissionName => $details) {
-                if ($details['granted']) {
-                    $grantedPermissions[] = $permissionName;
+            // Additional cache layer for permission array
+            // This prevents repeated calls to CheckPermission::getUserEffectivePermissions()
+            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+            
+            return Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
+                $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
+                
+                // Extract only granted permission names
+                $grantedPermissions = [];
+                foreach ($effectivePermissions as $permissionName => $details) {
+                    if ($details['granted']) {
+                        $grantedPermissions[] = $permissionName;
+                    }
                 }
-            }
-            
-            return $grantedPermissions;
+                
+                return $grantedPermissions;
+            });
             
         } catch (\Exception $e) {
             \Log::error('Error getting user permissions: ' . $e->getMessage());
@@ -89,6 +135,10 @@ class NavigationComposer
 
     /**
      * Check if user has specific permission
+     * Uses REQUEST-LEVEL in-memory cache to prevent repeated cache queries
+     *
+     * @param string $permissionName
+     * @return bool
      */
     public function hasPermission($permissionName)
     {
@@ -98,10 +148,33 @@ class NavigationComposer
             }
 
             $user = Auth::user();
-            $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
+            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
             
-            return isset($effectivePermissions[$permissionName]) && 
-                   $effectivePermissions[$permissionName]['granted'] === true;
+            // ✅ PRIORITY 1: Check request-level memory cache (NO DB QUERY)
+            if (isset(self::$requestPermissionCache[$requestCacheKey])) {
+                return in_array($permissionName, self::$requestPermissionCache[$requestCacheKey]);
+            }
+            
+            // ✅ PRIORITY 2: Load from Laravel cache (1 DB query)
+            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+            
+            $grantedPermissions = Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
+                $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
+                
+                $grantedPermissions = [];
+                foreach ($effectivePermissions as $permName => $details) {
+                    if ($details['granted']) {
+                        $grantedPermissions[] = $permName;
+                    }
+                }
+                
+                return $grantedPermissions;
+            });
+            
+            // ✅ Store in request cache untuk calls berikutnya
+            self::$requestPermissionCache[$requestCacheKey] = $grantedPermissions;
+            
+            return in_array($permissionName, $grantedPermissions);
             
         } catch (\Exception $e) {
             \Log::error('Error checking permission: ' . $e->getMessage());
@@ -110,20 +183,22 @@ class NavigationComposer
     }
 
     /**
-     * ✨ NEW: Convention-based permission mapping
+     * Convention-based permission mapping
      * Maps submenu slug to permission name
      * 
      * DEFAULT BEHAVIOR:
      * - Returns titleized slug as permission name
-     * - Example: 'support-ticket' → 'Support Ticket'
+     * - Example: 'support-ticket' becomes 'Support Ticket'
      * 
-     * OVERRIDE untuk special cases yang tidak mengikuti convention
+     * OVERRIDE for special cases that don't follow convention
+     *
+     * @param string $menuSlug
+     * @param string|null $submenuSlug
+     * @return string
      */
     public function getPermissionName($menuSlug, $submenuSlug = null)
     {
-        // ============================================
-        // MENU-LEVEL PERMISSIONS
-        // ============================================
+        // Menu-level permissions
         $menuPermissions = [
             'masterdata' => 'Master',
             'input' => 'Input Data', 
@@ -133,35 +208,33 @@ class NavigationComposer
             'usermanagement' => 'Kelola User'
         ];
 
-        // ============================================
-        // SUBMENU-LEVEL PERMISSION OVERRIDES
-        // Hanya untuk yang TIDAK mengikuti convention
-        // ============================================
+        // Submenu-level permission overrides
+        // Only for cases that don't follow the convention
         $submenuPermissionOverrides = [
-            // Master Data - yang tidak standard
+            // Master Data - non-standard permissions
             'master-list' => 'MasterList',
             'herbisida-dosage' => 'Dosis Herbisida',
             'tenagakerja' => 'Tenaga Kerja',
             
-            // Input Data - yang tidak standard
+            // Input Data - non-standard permissions
             'rencanakerjaharian' => 'Rencana Kerja Harian',
             'gudang-bbm' => 'Menu Gudang',
             'kendaraan-workshop' => 'Kendaraan',
             'pias' => 'Menu Pias',
 
-            // Dashboard - yang tidak standard
+            // Dashboard - non-standard permissions
             'agronomi-dashboard' => 'Dashboard Agronomi',
             'hpt-dashboard' => 'Dashboard HPT',
 
-            // Report - yang tidak standard
+            // Report - non-standard permissions
             'agronomi-report' => 'Report Agronomi',
             'hpt-report' => 'Report HPT',
 
-            // Process - yang tidak standard
+            // Process - non-standard permissions
             'upload-gpx-file' => 'Upload GPX File',
             'export-kml-file' => 'Export KML File',
 
-            // User Management - yang tidak standard
+            // User Management - non-standard permissions
             'user' => 'Kelola User',
             'user-company-permissions' => 'Kelola User',
             'user-permissions' => 'Kelola User',
@@ -171,23 +244,17 @@ class NavigationComposer
             'menu' => 'Menu',
             'submenu' => 'Submenu',
             'subsubmenu' => 'Subsubmenu',
-            ];
+        ];
 
-        // ============================================
-        // LOGIC: Convention Over Configuration
-        // ============================================
-        
-        // Jika ada submenu
+        // Logic: Convention over configuration
         if ($submenuSlug) {
-            // 1. Check: Ada override untuk slug ini?
+            // Check if there's an override for this slug
             if (isset($submenuPermissionOverrides[$submenuSlug])) {
                 return $submenuPermissionOverrides[$submenuSlug];
             }
             
-            // 2. Convention: Titleize slug → permission name
-            // Example: 'support-ticket' → 'Support Ticket'
-            //          'company' → 'Company'
-            //          'jabatan' → 'Jabatan'
+            // Convention: Titleize slug to get permission name
+            // Example: 'support-ticket' becomes 'Support Ticket'
             return $this->slugToPermissionName($submenuSlug);
         }
 
@@ -196,25 +263,29 @@ class NavigationComposer
     }
 
     /**
-     * ✨ NEW: Convert slug to Permission Name (Title Case)
+     * Convert slug to Permission Name (Title Case)
      * 
      * Examples:
-     * - 'support-ticket' → 'Support Ticket'
-     * - 'user' → 'User'
-     * - 'company' → 'Company'
-     * - 'herbisida' → 'Herbisida'
+     * - 'support-ticket' becomes 'Support Ticket'
+     * - 'user' becomes 'User'
+     * - 'company' becomes 'Company'
+     *
+     * @param string $slug
+     * @return string
      */
     private function slugToPermissionName($slug)
     {
         // Replace hyphens/underscores with spaces
         $name = str_replace(['-', '_'], ' ', $slug);
         
-        // Title case
+        // Convert to title case
         return ucwords($name);
     }
 
     /**
-     * Get company name
+     * Get company name for current session
+     *
+     * @return string
      */
     private function getCompanyName()
     {
@@ -239,7 +310,9 @@ class NavigationComposer
     }
 
     /**
-     * Get monitoring period for header
+     * Get monitoring period for header display
+     *
+     * @return string|null
      */
     private function getMonitoringPeriod()
     {
@@ -262,6 +335,8 @@ class NavigationComposer
 
     /**
      * Get current user name
+     *
+     * @return string
      */
     private function getCurrentUserName()
     {
@@ -279,7 +354,9 @@ class NavigationComposer
     }
 
     /**
-     * Get user companies - FIXED: untuk sistem baru
+     * Get user companies for current user
+     *
+     * @return array
      */
     private function getUserCompanies()
     {
@@ -299,5 +376,40 @@ class NavigationComposer
             \Log::error('Error getting user companies: ' . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Clear navigation and permission caches for a user
+     * Should be called when user permissions, jabatan, or company access changes
+     *
+     * @param \App\Models\User $user
+     * @return void
+     */
+    public static function clearNavigationCache($user)
+    {
+        $companies = DB::table('usercompany')
+            ->where('userid', $user->userid)
+            ->where('isactive', 1)
+            ->pluck('companycode');
+        
+        // Clear navigation cache for all companies user has access to
+        foreach ($companies as $companycode) {
+            $navCacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}";
+            Cache::forget($navCacheKey);
+        }
+        
+        // Clear permission array cache
+        $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+        Cache::forget($permCacheKey);
+        
+        // ✅ Clear request-level cache
+        $requestCacheKey = $user->userid . '_' . $user->idjabatan;
+        unset(self::$requestPermissionCache[$requestCacheKey]);
+        
+        \Log::info('Navigation and permission array cache cleared', [
+            'userid' => $user->userid,
+            'jabatan' => $user->idjabatan,
+            'companies_count' => $companies->count()
+        ]);
     }
 }
