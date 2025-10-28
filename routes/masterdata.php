@@ -23,6 +23,8 @@ use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 use App\Http\Controllers\MasterData\UpahController;
 use App\Http\Controllers\MasterData\KendaraanController;
 use App\Http\Controllers\MasterData\UserManagementController;
+use App\Http\Controllers\MasterData\KontraktorController;
+use App\Http\Controllers\MasterData\SubkontraktorController;
 
 // =============================================================================
 // MASTER DATA ROUTES
@@ -218,6 +220,29 @@ Route::delete('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanCont
     ->middleware(['auth', 'permission:Hapus Kendaraan'])
     ->name('masterdata.kendaraan.destroy');
 
+// Kontraktor Routes
+Route::group(['middleware' => ['auth', 'permission:Kontraktor']], function () {
+    Route::get('masterdata/kontraktor', [KontraktorController::class, 'index'])->name('masterdata.kontraktor.index');
+    Route::post('masterdata/kontraktor', [KontraktorController::class, 'store'])->name('masterdata.kontraktor.store');
+});
+Route::match(['put', 'patch'], 'masterdata/kontraktor/{companycode}/{id}', [KontraktorController::class, 'update'])
+    ->name('masterdata.kontraktor.update')
+    ->middleware(['auth', 'permission:Edit Kontraktor']);
+Route::delete('masterdata/kontraktor/{companycode}/{id}', [KontraktorController::class, 'destroy'])
+    ->name('masterdata.kontraktor.destroy')
+    ->middleware(['auth', 'permission:Hapus Kontraktor']);
+
+// Subkontraktor Routes
+Route::group(['middleware' => ['auth', 'permission:Subkontraktor']], function () {
+    Route::get('masterdata/subkontraktor', [SubkontraktorController::class, 'index'])->name('masterdata.subkontraktor.index');
+    Route::post('masterdata/subkontraktor', [SubkontraktorController::class, 'store'])->name('masterdata.subkontraktor.store');
+});
+Route::match(['put', 'patch'], 'masterdata/subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'update'])
+    ->name('masterdata.subkontraktor.update')
+    ->middleware(['auth', 'permission:Edit Subkontraktor']);
+Route::delete('masterdata/subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'destroy'])
+    ->name('masterdata.subkontraktor.destroy')
+    ->middleware(['auth', 'permission:Hapus Subkontraktor']);
 
 
 // =============================================================================

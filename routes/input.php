@@ -8,6 +8,7 @@ use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\GudangBbmController;
 use App\Http\Controllers\Input\PiasController;
+use App\Http\Controllers\Input\RkhPanenController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -120,6 +121,26 @@ Route::middleware('auth')->group(function () {
             Route::get('/{rkhno}/material-usage', [RencanaKerjaHarianController::class, 'getMaterialUsageApi'])->name('getMaterialUsage');
             Route::post('/generate-material-usage', [RencanaKerjaHarianController::class, 'generateMaterialUsage'])->name('generateMaterialUsage');
         });
+});
+
+Route::middleware('auth')->group(function () {
+    // Main CRUD routes
+    Route::get('input/rkh-panen', [RkhPanenController::class, 'index'])
+        ->name('input.rkh-panen.index');
+    Route::get('input/rkh-panen/create', [RkhPanenController::class, 'create'])
+        ->name('input.rkh-panen.create');
+    Route::post('input/rkh-panen/store', [RkhPanenController::class, 'store'])
+        ->name('input.rkh-panen.store');
+    Route::get('input/rkh-panen/{rkhpanenno}/show', [RkhPanenController::class, 'show'])
+        ->name('input.rkh-panen.show');
+    Route::delete('input/rkh-panen/{rkhpanenno}', [RkhPanenController::class, 'destroy'])
+        ->name('input.rkh-panen.destroy');
+    
+    // Hasil Panen routes
+    Route::get('input/rkh-panen/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])
+        ->name('input.rkh-panen.editHasil');
+    Route::put('input/rkh-panen/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])
+        ->name('input.rkh-panen.updateHasil');
 });
 
 // =====================================
