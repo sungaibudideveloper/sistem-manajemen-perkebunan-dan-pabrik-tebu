@@ -302,7 +302,7 @@ table th, table td {
         
         
         <div class="flex justify-center mt-4">
-        <select
+        <select @if( !empty($details[0]->costcenter)) disabled @endif
             name="costcenter"
             class="w-full max-w-md border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Pilih cost center"
@@ -313,7 +313,7 @@ table th, table td {
             @else
             <option value="" disabled {{ old('costcenter') ? '' : 'selected' }}>Pilih cost center…</option>
             @foreach ($costcenter as $c)
-                <option value="{{ $c['costcentercode'] }}" {{ old('costcenter') == $c['costcentercode'] ? 'selected' : '' }}>
+                <option value="{{ $c['costcentercode'] }}" {{ $details[0]->costcenter == $c['costcentercode'] ? 'selected' : '' }}>
                     ({{ $c['costcentercode'] }}) {{ $c['costcenterdesc'] }}
                 </option>
             @endforeach
