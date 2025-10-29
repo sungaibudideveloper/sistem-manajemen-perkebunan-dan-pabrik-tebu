@@ -419,7 +419,7 @@ class GudangController extends Controller
             $companyinv = company::where('companycode', session('companycode'))->first();
             // Bulk insert
             usemateriallst::insert($insertData);
-
+dd('a');
             // API Call
             if($details->whereNotNull('nouse')->count() < 1) {  
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
@@ -441,7 +441,7 @@ class GudangController extends Controller
                         'Details count:', $details->whereNotNull('nouse')->count()
                     );
             }
-    dd('a', $response);
+    
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
             // DD jika response TIDAK successful
             if (!$response->successful()) {
