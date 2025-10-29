@@ -443,15 +443,18 @@ class GudangController extends Controller
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
-            if ($response->successful()) { 
-                Log::info('API success:', $response->json());
-            } else { dd($response->status(),
-                    $response->body(),
-                    $first );
-                Log::error('API error', [
+            // DD jika response TIDAK successful
+            if (!$response->successful()) {
+                dd([
                     'status' => $response->status(),
                     'body' => $response->body(),
-                    'isi' => $first  // ✅ KEMBALIKAN: Log $first untuk debugging
+                    'payload_sent' => [
+                        'company' => $companyinv->companyinventory,
+                        'factory' => $first->factoryinv,
+                        'costcenter' => $request->costcenter,
+                        'isi' => array_values($apiPayload),
+                        'userid' => substr(auth()->user()->userid, 0, 10)
+                    ]
                 ]);
             }
     
