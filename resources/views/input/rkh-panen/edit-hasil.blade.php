@@ -4,418 +4,363 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <!-- Success Modal -->
-  <div x-data="{ showModal: false, modalMessage: '' }" 
-       x-show="showModal" 
-       x-cloak
-       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-       style="display: none;">
-    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
-      <div class="p-6 text-center">
-        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Berhasil!</h3>
-        <p class="text-sm text-gray-600 mb-4" x-html="modalMessage"></p>
-        <button @click="window.location.href = '{{ route('input.rkh-panen.show', $rkhPanen->rkhpanenno) }}'"
-                class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-          OK
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <form id="hasil-panen-form" action="{{ route('input.rkh-panen.updateHasil', $rkhPanen->rkhpanenno) }}" method="POST">
-    @csrf
-    @method('PUT')
-
-    @if ($errors->any())
-      <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">
-              Terdapat {{ $errors->count() }} kesalahan yang perlu diperbaiki:
-            </h3>
-            <div class="mt-2 text-sm text-red-700">
-              <ul class="list-disc pl-5 space-y-1">
-                @foreach ($errors->all() as $error)
-                  <li>{{ $error }}</li>
-                @endforeach
-              </ul>
-            </div>
-          </div>
+  <div class="bg-white rounded-lg shadow-md p-6" x-data="hasilPanenForm()" x-init="init()">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Input Hasil Panen</h2>
+        <div class="flex items-center gap-4 text-sm text-gray-600">
+          <span class="font-semibold">{{ $rkhPanen->rkhpanenno }}</span>
+          <span>•</span>
+          <span>{{ \Carbon\Carbon::parse($rkhPanen->rkhdate)->format('d F Y') }}</span>
+          <span>•</span>
+          <span>Mandor: <strong>{{ $rkhPanen->mandor->name ?? '-' }}</strong></span>
         </div>
       </div>
-    @endif
-
-    <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
       
-      <!-- RKH Info Header -->
-      <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">No RKH Panen</label>
-            <p class="text-sm font-bold text-gray-900">{{ $rkhPanen->rkhpanenno }}</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Tanggal</label>
-            <p class="text-sm font-semibold text-gray-900">{{ \Carbon\Carbon::parse($rkhPanen->rkhdate)->format('d/m/Y') }}</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Mandor</label>
-            <p class="text-sm font-semibold text-gray-900">{{ $rkhPanen->mandor->name ?? '-' }}</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Target</label>
-            <p class="text-sm font-semibold text-gray-900">
-              {{ number_format($rkhPanen->targettoday ?? 0, 2) }} ton / {{ number_format($rkhPanen->targetha ?? 0, 2) }} ha
-            </p>
-          </div>
+      <a href="{{ route('input.rkh-panen.show', $rkhPanen->rkhpanenno) }}" 
+         class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+        Kembali
+      </a>
+    </div>
+
+    <!-- Form -->
+    <form @submit.prevent="submitForm" id="hasilForm">
+      @csrf
+      @method('PUT')
+
+      <!-- Table -->
+      <div class="overflow-x-auto border border-gray-200 rounded-lg mb-6">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-800 text-white">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold" rowspan="2">No</th>
+              <th class="px-4 py-3 text-left font-semibold" rowspan="2">Blok</th>
+              <th class="px-4 py-3 text-left font-semibold" rowspan="2">Plot</th>
+              <th class="px-4 py-3 text-center font-semibold" rowspan="2">Status</th>
+              <th class="px-4 py-3 text-center font-semibold" rowspan="2">Hari</th>
+              <th class="px-4 py-3 text-right font-semibold" rowspan="2">Luas (Ha)</th>
+              <th class="px-4 py-3 text-right font-semibold" rowspan="2">STC (Ha)</th>
+              <th class="px-4 py-3 text-right font-semibold" rowspan="2">HC (Ha)</th>
+              <th class="px-4 py-3 text-right font-semibold" rowspan="2">BC (Ha)</th>
+              <th class="px-4 py-3 text-center font-semibold border-l-2 border-gray-600" colspan="2">Field Balance</th>
+              <th class="px-4 py-3 text-center font-semibold" rowspan="2">Premium</th>
+              <th class="px-4 py-3 text-left font-semibold" rowspan="2">Keterangan</th>
+            </tr>
+            <tr class="bg-gray-700">
+              <th class="px-4 py-2 text-center text-xs font-medium border-l-2 border-gray-600">Rit</th>
+              <th class="px-4 py-2 text-center text-xs font-medium">Ton</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            @forelse($hasilRows as $index => $row)
+            <tr class="hover:bg-gray-50" x-data="hasilRow({{ $index }}, {{ $row->stc ?? 0 }})">
+              <input type="hidden" name="hasil[{{ $index }}][plot]" value="{{ $row->plot }}">
+              
+              <td class="px-4 py-3 text-gray-700 font-medium">{{ $index + 1 }}</td>
+              <td class="px-4 py-3 text-gray-900 font-semibold">{{ $row->blok }}</td>
+              <td class="px-4 py-3 text-gray-900 font-semibold">{{ $row->plot }}</td>
+              
+              <td class="px-4 py-3 text-center">
+                <span class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ $row->kodestatus }}
+                </span>
+              </td>
+              
+              <td class="px-4 py-3 text-center text-gray-700 font-medium">{{ $row->haritebang }}</td>
+              <td class="px-4 py-3 text-right text-gray-700">{{ number_format($row->luasplot ?? 0, 2) }}</td>
+              
+              <!-- STC (Read-only) -->
+              <td class="px-4 py-3 text-right">
+                <input type="text" 
+                       :value="stc.toFixed(2)"
+                       readonly
+                       class="w-24 text-right bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-orange-700 cursor-not-allowed">
+              </td>
+              
+              <!-- HC (Required, Empty by default) -->
+              <td class="px-4 py-3 text-right">
+                <input type="number" 
+                       name="hasil[{{ $index }}][hc]" 
+                       x-model.number="hc"
+                       @input="onHcChange()"
+                       step="0.01"
+                       min="0.01"
+                       :max="stc"
+                       required
+                       @if($row->hc > 0) value="{{ $row->hc }}" @endif
+                       class="w-24 text-right border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-green-700 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                       placeholder="">
+              </td>
+              
+              <!-- BC (Auto-calculated) -->
+              <td class="px-4 py-3 text-right">
+                <input type="text" 
+                       :value="bc.toFixed(2)"
+                       readonly
+                       class="w-24 text-right bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-gray-700 cursor-not-allowed">
+              </td>
+              
+              <!-- FB Rit -->
+              <td class="px-4 py-3 text-center border-l-2 border-gray-200">
+                <select name="hasil[{{ $index }}][fbrit]" 
+                        x-model.number="fbrit"
+                        @change="onFbRitChange()"
+                        class="w-20 text-center border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
+                  @for($i = 0; $i <= 20; $i++)
+                    <option value="{{ $i }}" {{ old('hasil.'.$index.'.fbrit', $row->fbrit ?? 0) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                  @endfor
+                </select>
+              </td>
+              
+              <!-- FB Ton (Editable) -->
+              <td class="px-4 py-3 text-right">
+                <input type="number" 
+                       name="hasil[{{ $index }}][fbton]" 
+                       x-model.number="fbton"
+                       @input="$dispatch('update-totals')"
+                       step="0.01"
+                       min="0"
+                       class="w-24 text-right border border-blue-300 rounded px-2 py-1.5 text-sm font-semibold text-blue-700 focus:ring-2 focus:ring-blue-500"
+                       placeholder="0.00">
+              </td>
+              
+              <!-- Premium -->
+              <td class="px-4 py-3 text-center">
+                <input type="checkbox" 
+                       name="hasil[{{ $index }}][ispremium]" 
+                       value="1"
+                       {{ old('hasil.'.$index.'.ispremium', $row->ispremium) ? 'checked' : '' }}
+                       class="w-5 h-5 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500">
+              </td>
+              
+              <!-- Keterangan -->
+              <td class="px-4 py-3">
+                <input type="text" 
+                       name="hasil[{{ $index }}][keterangan]" 
+                       value="{{ old('hasil.'.$index.'.keterangan', $row->keterangan) }}"
+                       maxlength="100"
+                       class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
+                       placeholder="-">
+              </td>
+            </tr>
+            @empty
+            <tr>
+              <td colspan="13" class="px-4 py-8 text-center text-gray-500">Tidak ada plot untuk di-input hasilnya</td>
+            </tr>
+            @endforelse
+          </tbody>
+
+          <!-- Total -->
+          @if($hasilRows->count() > 0)
+          <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300">
+            <tr>
+              <td colspan="5" class="px-4 py-3 text-right text-gray-800">TOTAL:</td>
+              <td class="px-4 py-3 text-right text-gray-800">{{ number_format($hasilRows->sum('luasplot'), 2) }}</td>
+              <td class="px-4 py-3 text-right text-orange-700" x-text="totalSTC">0.00</td>
+              <td class="px-4 py-3 text-right text-green-700" x-text="totalHC">0.00</td>
+              <td class="px-4 py-3 text-right text-gray-800" x-text="totalBC">0.00</td>
+              <td class="px-4 py-3 text-center text-gray-800 border-l-2 border-gray-200" x-text="totalFbRit">0</td>
+              <td class="px-4 py-3 text-right text-blue-700" x-text="totalFbTon">0.00</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+          @endif
+        </table>
+      </div>
+
+      <!-- Legend -->
+      <div class="bg-gray-50 rounded-lg p-4 mb-6 text-xs text-gray-700 leading-relaxed">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+          <div><strong>STC (Standing Cane):</strong> Tebu yang masih berdiri di lahan, belum dipanen</div>
+          <div><strong>HC (Hectare Cutting):</strong> Luas area yang dipanen pada hari ini</div>
+          <div><strong>BC (Balance Cutting):</strong> Sisa luas yang belum dipanen (STC - HC)</div>
+          <div><strong>FB (Field Balance):</strong> Sisa tebu di lapangan yang belum diangkut ke pabrik</div>
         </div>
       </div>
 
-      <!-- Section 2: Hasil Panen Kemarin -->
-      <div class="bg-white rounded-xl border border-gray-300 shadow-md">
-        <div class="bg-gradient-to-r from-orange-700 to-orange-600 text-white px-6 py-3 rounded-t-xl">
-          <h3 class="text-lg font-bold">Section 2: Input Hasil Panen Kemarin</h3>
-        </div>
-
-        <div class="p-6">
-          <div class="overflow-x-auto">
-            <table id="hasil-table" class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Blok</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Plot</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Luas Plot (Ha)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">KTG</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Hari Tebang Ke-</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">STC (Ha)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">HC (Ha)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">BC (Ha)</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">FB RIT</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">FB TON</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Premium</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-left">Keterangan</th>
-                  <th class="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="hasil-rows" class="divide-y divide-gray-200">
-                @foreach($rkhPanen->results as $index => $hasil)
-                  <tr data-index="{{ $index }}" class="hover:bg-gray-50">
-                    <td class="px-3 py-2">
-                      <select name="hasil[{{ $index }}][blok]" 
-                              required
-                              class="blok-select w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500">
-                        <option value="">Pilih</option>
-                        @foreach($bloks as $blok)
-                          <option value="{{ $blok->blok }}" {{ $hasil->blok == $blok->blok ? 'selected' : '' }}>
-                            {{ $blok->blok }}
-                          </option>
-                        @endforeach
-                      </select>
-                    </td>
-                    <td class="px-3 py-2">
-                      <select name="hasil[{{ $index }}][plot]" 
-                              required
-                              class="plot-select w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-500">
-                        <option value="">Pilih</option>
-                        @foreach($plots as $plot)
-                          <option value="{{ $plot->plot }}" {{ $hasil->plot == $plot->plot ? 'selected' : '' }}>
-                            {{ $plot->plot }}
-                          </option>
-                        @endforeach
-                      </select>
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][luasplot]" step="0.01" min="0" 
-                             value="{{ $hasil->luasplot }}"
-                             required
-                             class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                    </td>
-                    <td class="px-3 py-2">
-                      <select name="hasil[{{ $index }}][kodestatus]" 
-                              required
-                              class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                        <option value="PC" {{ $hasil->kodestatus == 'PC' ? 'selected' : '' }}>PC</option>
-                        <option value="RC1" {{ $hasil->kodestatus == 'RC1' ? 'selected' : '' }}>RC1</option>
-                        <option value="RC2" {{ $hasil->kodestatus == 'RC2' ? 'selected' : '' }}>RC2</option>
-                        <option value="RC3" {{ $hasil->kodestatus == 'RC3' ? 'selected' : '' }}>RC3</option>
-                      </select>
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][haritebang]" min="1" 
-                             value="{{ $hasil->haritebang }}"
-                             required
-                             class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][stc]" step="0.01" min="0" 
-                             value="{{ $hasil->stc }}"
-                             required
-                             class="stc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][hc]" step="0.01" min="0" 
-                             value="{{ $hasil->hc }}"
-                             required
-                             class="hc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][bc]" step="0.01" 
-                             value="{{ $hasil->bc }}"
-                             readonly
-                             class="bc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 font-semibold">
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][fbrit]" min="0" 
-                             value="{{ $hasil->fbrit }}"
-                             class="fbrit-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-                    </td>
-                    <td class="px-3 py-2">
-                      <input type="number" name="hasil[{{ $index }}][fbton]" step="0.01" 
-                             value="{{ $hasil->fbton }}"
-                             readonly
-                             class="fbton-input w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 font-semibold">
-                    </td>
-                    <td class="px-3 py-2 text-center">
-                      <input type="checkbox" name="hasil[{{ $index }}][ispremium]" value="1"
-                             {{ $hasil->ispremium ? 'checked' : '' }}
-                             class="w-4 h-4 text-blue-600 rounded">
-                    </td>
-                    <td class="px-3 py-2">
-                      <textarea name="hasil[{{ $index }}][keterangan]" rows="2"
-                                class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 resize-none">{{ $hasil->keterangan }}</textarea>
-                    </td>
-                    <td class="px-3 py-2 text-center">
-                      <button type="button" onclick="removeHasilRow({{ $index }})" 
-                              class="text-red-600 hover:text-red-800">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                @endforeach
-              </tbody>
-            </table>
-          </div>
-
-          <button type="button" 
-                  id="add-hasil-row" 
-                  class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Tambah Plot
-          </button>
-        </div>
-      </div>
-
-      <!-- Buttons -->
-      <div class="mt-8 flex justify-center space-x-4">
-        <button type="button" 
-                onclick="window.location.href = '{{ route('input.rkh-panen.show', $rkhPanen->rkhpanenno) }}';" 
-                class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-          Kembali
-        </button>
+      <!-- Actions -->
+      <div class="flex justify-end gap-3">
+        <a href="{{ route('input.rkh-panen.show', $rkhPanen->rkhpanenno) }}" 
+           class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-medium">
+          Batal
+        </a>
         
         <button type="submit" 
-                id="submit-btn" 
-                class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-3 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center">
-          <svg class="w-5 h-5 mr-2" id="submit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-          <svg class="animate-spin w-5 h-5 mr-2 hidden" id="loading-spinner" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span id="submit-text">Simpan Hasil Panen</span>
+                :disabled="isSubmitting"
+                :class="isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
+                class="bg-green-600 text-white px-6 py-2.5 rounded-lg font-medium">
+          <span x-show="!isSubmitting">Simpan</span>
+          <span x-show="isSubmitting" class="flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Menyimpan...
+          </span>
         </button>
       </div>
-    </div>
-  </form>
+    </form>
+
+  </div>
 
   <script>
-    // Global data
-    window.bloksData = @json($bloks ?? []);
-    window.plotsData = @json($plots ?? []);
-    let hasilRowIndex = {{ $rkhPanen->results->count() }};
+    function hasilPanenForm() {
+      return {
+        isSubmitting: false,
+        totalSTC: '0.00',
+        totalHC: '0.00',
+        totalBC: '0.00',
+        totalFbRit: 0,
+        totalFbTon: '0.00',
 
-    // Hasil row template
-    function createHasilRow(index) {
-      return `
-        <tr data-index="${index}" class="hover:bg-gray-50">
-          <td class="px-3 py-2">
-            <select name="hasil[${index}][blok]" required
-                    class="blok-select w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-              <option value="">Pilih</option>
-              ${window.bloksData.map(b => `<option value="${b.blok}">${b.blok}</option>`).join('')}
-            </select>
-          </td>
-          <td class="px-3 py-2">
-            <select name="hasil[${index}][plot]" required
-                    class="plot-select w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-              <option value="">Pilih</option>
-              ${window.plotsData.map(p => `<option value="${p.plot}">${p.plot}</option>`).join('')}
-            </select>
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][luasplot]" step="0.01" min="0" required
-                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-          </td>
-          <td class="px-3 py-2">
-            <select name="hasil[${index}][kodestatus]" required
-                    class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-              <option value="PC">PC</option>
-              <option value="RC1">RC1</option>
-              <option value="RC2">RC2</option>
-              <option value="RC3">RC3</option>
-            </select>
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][haritebang]" min="1" value="1" required
-                   class="w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][stc]" step="0.01" min="0" required
-                   class="stc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][hc]" step="0.01" min="0" required
-                   class="hc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][bc]" step="0.01" readonly
-                   class="bc-input w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 font-semibold">
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][fbrit]" min="0"
-                   class="fbrit-input w-full text-xs border border-gray-300 rounded px-2 py-1.5">
-          </td>
-          <td class="px-3 py-2">
-            <input type="number" name="hasil[${index}][fbton]" step="0.01" readonly
-                   class="fbton-input w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 font-semibold">
-          </td>
-          <td class="px-3 py-2 text-center">
-            <input type="checkbox" name="hasil[${index}][ispremium]" value="1"
-                   class="w-4 h-4 text-blue-600 rounded">
-          </td>
-          <td class="px-3 py-2">
-            <textarea name="hasil[${index}][keterangan]" rows="2"
-                      class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 resize-none"></textarea>
-          </td>
-          <td class="px-3 py-2 text-center">
-            <button type="button" onclick="removeHasilRow(${index})" 
-                    class="text-red-600 hover:text-red-800">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
-            </button>
-          </td>
-        </tr>
-      `;
-    }
+        init() {
+          // Listen untuk update dari child rows
+          this.$el.addEventListener('update-totals', () => this.updateTotals());
+          
+          // Initial calculation setelah semua row ter-render
+          this.$nextTick(() => {
+            setTimeout(() => this.updateTotals(), 100);
+          });
+        },
 
-    // Add row
-    document.getElementById('add-hasil-row').addEventListener('click', function() {
-      const tbody = document.getElementById('hasil-rows');
-      tbody.insertAdjacentHTML('beforeend', createHasilRow(hasilRowIndex));
-      hasilRowIndex++;
-    });
+        updateTotals() {
+          let stc = 0, hc = 0, bc = 0, rit = 0, ton = 0;
+          
+          // Loop semua row yang punya Alpine data
+          document.querySelectorAll('tbody tr[x-data]').forEach(row => {
+            const alpine = Alpine.$data(row);
+            if (alpine) {
+              // Parse setiap nilai dengan hati-hati
+              const stcVal = parseFloat(alpine.stc) || 0;
+              const hcVal = parseFloat(alpine.hc) || 0;
+              const bcVal = parseFloat(alpine.bc) || 0;
+              const ritVal = parseInt(alpine.fbrit) || 0;
+              const tonVal = parseFloat(alpine.fbton) || 0;
+              
+              stc += stcVal;
+              hc += hcVal;
+              bc += bcVal;
+              rit += ritVal;
+              ton += tonVal;
+            }
+          });
 
-    // Remove row
-    function removeHasilRow(index) {
-      const row = document.querySelector(`tr[data-index="${index}"]`);
-      if (row) row.remove();
-    }
+          // Update display
+          this.totalSTC = stc.toFixed(2);
+          this.totalHC = hc.toFixed(2);
+          this.totalBC = bc.toFixed(2);
+          this.totalFbRit = rit;
+          this.totalFbTon = ton.toFixed(2);
+        },
 
-    // Auto-calculate BC (STC - HC)
-    document.addEventListener('input', function(e) {
-      if (e.target.classList.contains('stc-input') || e.target.classList.contains('hc-input')) {
-        const row = e.target.closest('tr');
-        const stc = parseFloat(row.querySelector('.stc-input').value) || 0;
-        const hc = parseFloat(row.querySelector('.hc-input').value) || 0;
-        const bcInput = row.querySelector('.bc-input');
-        bcInput.value = (stc - hc).toFixed(2);
-      }
-    });
+        async submitForm() {
+          if (this.isSubmitting) return;
 
-    // Auto-calculate FB TON (RIT * 5)
-    document.addEventListener('input', function(e) {
-      if (e.target.classList.contains('fbrit-input')) {
-        const row = e.target.closest('tr');
-        const fbrit = parseInt(row.querySelector('.fbrit-input').value) || 0;
-        const fbtonInput = row.querySelector('.fbton-input');
-        fbtonInput.value = (fbrit * 5).toFixed(2);
-      }
-    });
+          const form = document.getElementById('hasilForm');
+          const hcInputs = form.querySelectorAll('input[name*="[hc]"]');
+          let hasEmpty = false;
+          
+          // Validasi semua HC harus diisi
+          hcInputs.forEach(input => {
+            const value = parseFloat(input.value);
+            if (!input.value || isNaN(value) || value <= 0) {
+              hasEmpty = true;
+              input.classList.add('border-red-500', 'ring-2', 'ring-red-300');
+            } else {
+              input.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+            }
+          });
 
-    // Form submission
-    document.getElementById('hasil-panen-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      // Validation
-      const rows = document.querySelectorAll('#hasil-rows tr');
-      if (rows.length === 0) {
-        alert('Minimal harus ada 1 plot hasil panen!');
-        return;
-      }
-      
-      // Show loading
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-      document.getElementById('submit-text').textContent = 'Menyimpan...';
-      document.getElementById('submit-icon').classList.add('hidden');
-      document.getElementById('loading-spinner').classList.remove('hidden');
-      
-      const formData = new FormData(this);
-      
-      fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Show success modal
-          const modalEl = document.querySelector('[x-data*="showModal"]');
-          if (modalEl && modalEl._x_dataStack) {
-            modalEl._x_dataStack[0].showModal = true;
-            modalEl._x_dataStack[0].modalMessage = data.message;
+          if (hasEmpty) {
+            alert('Semua field HC (Hectare Cutting) wajib diisi dengan nilai lebih dari 0');
+            return;
           }
-        } else {
-          alert(data.message || 'Terjadi kesalahan');
-          // Reset button
-          submitBtn.disabled = false;
-          document.getElementById('submit-text').textContent = 'Simpan Hasil Panen';
-          document.getElementById('submit-icon').classList.remove('hidden');
-          document.getElementById('loading-spinner').classList.add('hidden');
+
+          if (!confirm('Simpan hasil panen ini?')) return;
+
+          this.isSubmitting = true;
+
+          try {
+            const response = await fetch('{{ route("input.rkh-panen.updateHasil", $rkhPanen->rkhpanenno) }}', {
+              method: 'POST',
+              headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+              },
+              body: new FormData(form)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              window.location.href = data.redirect_url || '{{ route("input.rkh-panen.show", $rkhPanen->rkhpanenno) }}';
+            } else {
+              alert('Gagal: ' + (data.message || 'Terjadi kesalahan'));
+              this.isSubmitting = false;
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menyimpan');
+            this.isSubmitting = false;
+          }
         }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan sistem');
-        submitBtn.disabled = false;
-        document.getElementById('submit-text').textContent = 'Simpan Hasil Panen';
-        document.getElementById('submit-icon').classList.remove('hidden');
-        document.getElementById('loading-spinner').classList.add('hidden');
-      });
-    });
+      };
+    }
+
+    function hasilRow(index, stcValue) {
+      return {
+        stc: parseFloat(stcValue) || 0,
+        hc: 0,
+        bc: 0,
+        fbrit: 0,
+        fbton: 0,
+
+        init() {
+          // Load nilai existing dari input/select
+          const hcInput = document.querySelector(`input[name="hasil[${index}][hc]"]`);
+          const ritSelect = document.querySelector(`select[name="hasil[${index}][fbrit]"]`);
+          const tonInput = document.querySelector(`input[name="hasil[${index}][fbton]"]`);
+          
+          if (hcInput?.value) {
+            this.hc = parseFloat(hcInput.value) || 0;
+          }
+          if (ritSelect?.value) {
+            this.fbrit = parseInt(ritSelect.value) || 0;
+          }
+          if (tonInput?.value) {
+            this.fbton = parseFloat(tonInput.value) || 0;
+          }
+          
+          this.calculateBC();
+          
+          // Trigger initial total update
+          this.$dispatch('update-totals');
+        },
+
+        onHcChange() {
+          // Otomatis batasi HC tidak boleh lebih dari STC (tanpa alert)
+          const hcNum = parseFloat(this.hc) || 0;
+          if (hcNum > this.stc) {
+            this.hc = this.stc;
+          }
+          this.calculateBC();
+          this.$dispatch('update-totals');
+        },
+
+        onFbRitChange() {
+          // Auto calculate fbton dari fbrit (5 ton per rit)
+          this.fbton = this.fbrit * 5;
+          this.$dispatch('update-totals');
+        },
+
+        calculateBC() {
+          const hcNum = parseFloat(this.hc) || 0;
+          this.bc = this.stc - hcNum;
+        }
+      };
+    }
   </script>
 
 </x-layout>

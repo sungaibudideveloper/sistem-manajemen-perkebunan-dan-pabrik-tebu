@@ -1,6 +1,4 @@
-// ============================================
-// FILE 3: app/Models/RkhPanenResult.php
-// ============================================
+<?php
 
 namespace App\Models;
 
@@ -9,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class RkhPanenResult extends Model
 {
     protected $table = 'rkhpanenresult';
-    
+    public $incrementing = false;
     public $timestamps = false;
 
     protected $fillable = [
@@ -17,6 +15,7 @@ class RkhPanenResult extends Model
         'rkhpanenno',
         'blok',
         'plot',
+        'batchno',
         'luasplot',
         'kodestatus',
         'haritebang',
@@ -31,6 +30,7 @@ class RkhPanenResult extends Model
 
     protected $casts = [
         'luasplot' => 'decimal:2',
+        'haritebang' => 'integer',
         'stc' => 'decimal:2',
         'hc' => 'decimal:2',
         'bc' => 'decimal:2',
@@ -39,31 +39,198 @@ class RkhPanenResult extends Model
         'ispremium' => 'boolean',
     ];
 
+    // Composite primary key
+    protected $primaryKey = ['companycode', 'rkhpanenno', 'plot'];
+
+    // =====================================
+    // RELATIONSHIPS
+    // =====================================
+
     /**
-     * Relationship: Belongs to RKH Panen Header
+     * RKH Panen Header
      */
-    public function rkhpanen()
+    public function header()
     {
         return $this->belongsTo(RkhPanenHdr::class, 'rkhpanenno', 'rkhpanenno')
-            ->where('companycode', $this->companycode);
+                    ->where('companycode', $this->companycode);
     }
 
     /**
-     * Relationship: Belongs to Plot (if you have Plot model)
+     * Blok Info
      */
-    public function plotDetail()
+    public function blokInfo()
     {
-        return $this->belongsTo(\App\Models\Plot::class, 'plot', 'plot')
-            ->where('companycode', $this->companycode);
+        return $this->belongsTo(Blok::class, 'blok', 'blok')
+                    ->where('companycode', $this->companycode);
     }
 
     /**
-     * Scope: Filter by petak baru (haritebang = 1)
+     * Plot Info (from masterlist)
      */
-    public function scopePetakBaru($query)
+    public function plotInfo()
     {
-        return $query->where('haritebang', 1);
+        return $this->belongsTo(Masterlist::class, 'plot', 'plot')
+                    ->where('companycode', $this->companycode);
     }
+
+    /**
+     * Batch Info
+     */
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class, 'batchno', 'batchno');
+    }
+
+    // =====================================
+    // ACCESSORS & ATTRIBUTES
+    // =====================================
+
+    /**
+     * Kodestatus Badge Color
+     */
+    public function getKodestatusColorAttribute()
+    {
+        return match($this->kodestatus) {
+            'PC' => 'green',
+            'RC1' => 'blue',
+            'RC2' => 'yellow',
+            'RC3' => 'red',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * Kodestatus Label
+     */
+    public function getKodestatusLabelAttribute()
+    {
+        return match($this->kodestatus) {
+            'PC' => 'Plant Cane',
+            'RC1' => 'Ratoon 1',
+            'RC2' => 'Ratoon 2',
+            'RC3' => 'Ratoon 3',
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * Premium Badge
+     */
+    public function getPremiumBadgeAttribute()
+    {
+        return $this->ispremium ? 'Premium' : 'Non-Premium';
+    }
+
+    /**
+     * Plot Full Name (Blok-Plot)
+     */
+    public function getPlotFullNameAttribute()
+    {
+        return "{$this->blok}-{$this->plot}";
+    }
+
+    /**
+     * Is Petak Baru (hari tebang ke-1)
+     */
+    public function isPetakBaru()
+    {
+        return $this->haritebang == 1;
+    }
+
+    /**
+     * Has Data (hasil sudah diinput)
+     */
+    public function hasData()
+    {
+        return !is_null($this->hc) && $this->hc > 0;
+    }
+
+    /**
+     * Is Empty (waiting for input)
+     */
+    public function isEmpty()
+    {
+        return is_null($this->hc);
+    }
+
+    /**
+     * Get completion percentage (hc/stc)
+     */
+    public function getCompletionPercentageAttribute()
+    {
+        if (is_null($this->stc) || $this->stc == 0) {
+            return 0;
+        }
+        return round(($this->hc / $this->stc) * 100, 2);
+    }
+
+    /**
+     * Calculate productivity (ton/ha)
+     * Note: fbton adalah field balance di lapangan (belum sampai pabrik)
+     * Untuk productivity aktual, nanti dari data timbangan
+     */
+    public function getEstimatedProductivityAttribute()
+    {
+        if (is_null($this->hc) || $this->hc == 0) {
+            return 0;
+        }
+        return round($this->fbton / $this->hc, 2);
+    }
+
+    // =====================================
+    // HELPER METHODS
+    // =====================================
+
+    /**
+     * Auto-calculate BC (Balance Cutting)
+     */
+    public function calculateBc()
+    {
+        $this->bc = ($this->stc ?? 0) - ($this->hc ?? 0);
+        return $this;
+    }
+
+    /**
+     * Auto-calculate FBTon (Field Balance Ton)
+     * 1 RIT = 5 ton (sesuai business flow)
+     */
+    public function calculateFbton()
+    {
+        $this->fbton = ($this->fbrit ?? 0) * 5;
+        return $this;
+    }
+
+    /**
+     * Get status indicator (empty/partial/complete)
+     */
+    public function getStatusIndicator()
+    {
+        if ($this->isEmpty()) {
+            return [
+                'label' => 'Belum Input',
+                'color' => 'gray',
+                'icon' => 'clock'
+            ];
+        }
+
+        if ($this->bc > 0) {
+            return [
+                'label' => 'Partial',
+                'color' => 'yellow',
+                'icon' => 'refresh'
+            ];
+        }
+
+        return [
+            'label' => 'Selesai',
+            'color' => 'green',
+            'icon' => 'check'
+        ];
+    }
+
+    // =====================================
+    // SCOPES
+    // =====================================
 
     /**
      * Scope: Filter by blok
@@ -74,15 +241,15 @@ class RkhPanenResult extends Model
     }
 
     /**
-     * Scope: Filter by kode status
+     * Scope: Filter by kodestatus
      */
-    public function scopeByKodeStatus($query, $kodestatus)
+    public function scopeByKodestatus($query, $kodestatus)
     {
         return $query->where('kodestatus', $kodestatus);
     }
 
     /**
-     * Scope: Premium only
+     * Scope: Only premium
      */
     public function scopePremium($query)
     {
@@ -90,7 +257,7 @@ class RkhPanenResult extends Model
     }
 
     /**
-     * Scope: Non-premium only
+     * Scope: Only non-premium
      */
     public function scopeNonPremium($query)
     {
@@ -98,99 +265,43 @@ class RkhPanenResult extends Model
     }
 
     /**
-     * Get formatted plot (Blok-Plot)
+     * Scope: Petak baru (hari tebang ke-1)
      */
-    public function getFormattedPlotAttribute()
+    public function scopePetakBaru($query)
     {
-        return $this->blok . '-' . $this->plot;
+        return $query->where('haritebang', 1);
     }
 
     /**
-     * Calculate BC (Balance Cutting) automatically
-     * BC = STC - HC
+     * Scope: Has data (hasil sudah diinput)
      */
-    public function calculateBc()
+    public function scopeWithData($query)
     {
-        $this->bc = $this->stc - $this->hc;
-        return $this->bc;
+        return $query->whereNotNull('hc')
+                     ->where('hc', '>', 0);
     }
 
     /**
-     * Calculate FB TON automatically
-     * FB TON = FB RIT × 5
+     * Scope: Empty (waiting for input)
      */
-    public function calculateFbTon()
+    public function scopeEmpty($query)
     {
-        $this->fbton = $this->fbrit * 5;
-        return $this->fbton;
+        return $query->whereNull('hc');
     }
 
     /**
-     * Auto-calculate before saving
+     * Scope: Incomplete (still has balance)
      */
-    protected static function boot()
+    public function scopeIncomplete($query)
     {
-        parent::boot();
-
-        static::saving(function ($model) {
-            // Auto-calculate BC if STC and HC are set
-            if ($model->stc !== null && $model->hc !== null) {
-                $model->bc = $model->stc - $model->hc;
-            }
-
-            // Auto-calculate FB TON if FB RIT is set
-            if ($model->fbrit !== null) {
-                $model->fbton = $model->fbrit * 5;
-            }
-        });
+        return $query->where('bc', '>', 0);
     }
 
     /**
-     * Get status badge for premium/non-premium
+     * Scope: Completed (no balance)
      */
-    public function getPremiumBadgeAttribute()
+    public function scopeCompleted($query)
     {
-        return $this->ispremium ? 
-            '<span class="badge bg-yellow-500">Premium</span>' : 
-            '<span class="badge bg-gray-500">Non-Premium</span>';
-    }
-
-    /**
-     * Get kode status full name
-     */
-    public function getKodeStatusFullAttribute()
-    {
-        return match($this->kodestatus) {
-            'PC' => 'Plant Cane',
-            'RC1' => 'Ratoon Cane 1',
-            'RC2' => 'Ratoon Cane 2',
-            'RC3' => 'Ratoon Cane 3',
-            default => $this->kodestatus,
-        };
-    }
-
-    /**
-     * Check if plot is petak baru
-     */
-    public function isPetakBaru()
-    {
-        return $this->haritebang === 1;
-    }
-
-    /**
-     * Get progress percentage (HC / STC * 100)
-     */
-    public function getProgressPercentageAttribute()
-    {
-        if ($this->stc <= 0) return 0;
-        return round(($this->hc / $this->stc) * 100, 2);
-    }
-
-    /**
-     * Check if plot sudah selesai
-     */
-    public function isCompleted()
-    {
-        return $this->bc <= 0;
+        return $query->where('bc', '<=', 0);
     }
 }

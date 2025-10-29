@@ -1,19 +1,16 @@
 <?php
 
-// ============================================
-// FILE 1: app/Models/RkhPanenHdr.php
-// ============================================
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class RkhPanenHdr extends Model
 {
     protected $table = 'rkhpanenhdr';
-    
-    protected $primaryKey = null;
+    protected $primaryKey = 'rkhpanenno';
     public $incrementing = false;
+    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [
@@ -21,8 +18,6 @@ class RkhPanenHdr extends Model
         'rkhpanenno',
         'rkhdate',
         'mandorpanenid',
-        'targettoday',
-        'targetha',
         'keterangan',
         'status',
         'inputby',
@@ -31,137 +26,55 @@ class RkhPanenHdr extends Model
         'updatedat',
     ];
 
-    protected $casts = [
-        'rkhdate' => 'date',
-        'targettoday' => 'decimal:2',
-        'targetha' => 'decimal:2',
-        'createdat' => 'datetime',
-        'updatedat' => 'datetime',
-    ];
-
-    /**
-     * Get the route key for the model.
-     */
-    public function getRouteKeyName()
+    // ✅ Relationship ke User (Mandor) - Keep this
+    public function mandor()
     {
-        return 'rkhpanenno';
+        return $this->belongsTo(User::class, 'mandorpanenid', 'userid');
     }
 
-    /**
-     * Relationship: RKH Panen has many Kontraktor Lists
-     */
-    public function kontraktors()
-    {
-        return $this->hasMany(RkhPanenLst::class, 'rkhpanenno', 'rkhpanenno')
-            ->where('companycode', $this->companycode);
-    }
+    // ✅ HAPUS eloquent relationship, pakai Query Builder
+    // public function kontraktors() { ... } // DELETE INI
 
-    /**
-     * Relationship: RKH Panen has many Results
-     */
+    // ✅ Relationship ke Results - Keep this (single key, no problem)
     public function results()
     {
         return $this->hasMany(RkhPanenResult::class, 'rkhpanenno', 'rkhpanenno')
-            ->where('companycode', $this->companycode);
+                    ->where('rkhpanenresult.companycode', $this->companycode);
     }
 
-    /**
-     * Relationship: Belongs to Mandor (User)
-     */
-    public function mandor()
+    // ✅ NEW: Getter method pakai Query Builder
+    public function getKontraktorsAttribute()
     {
-        return $this->belongsTo(\App\Models\User::class, 'mandorpanenid', 'userid');
+        return DB::table('rkhpanenlst')
+            ->where('companycode', $this->companycode)
+            ->where('rkhpanenno', $this->rkhpanenno)
+            ->get();
     }
 
-    /**
-     * Scope: Filter by date
-     */
-    public function scopeByDate($query, $date)
-    {
-        return $query->whereDate('rkhdate', $date);
-    }
-
-    /**
-     * Scope: Filter by company
-     */
-    public function scopeByCompany($query, $companycode)
-    {
-        return $query->where('companycode', $companycode);
-    }
-
-    /**
-     * Scope: Filter by status
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Get total rencana netto from all kontraktors
-     */
+    // ✅ Helper method untuk total rencana netto
     public function getTotalRencanaNetto()
     {
-        return $this->kontraktors()->sum('rencananetto');
+        return DB::table('rkhpanenlst')
+            ->where('companycode', $this->companycode)
+            ->where('rkhpanenno', $this->rkhpanenno)
+            ->sum('rencananetto') ?? 0;
     }
 
-    /**
-     * Get total rencana hektar from all kontraktors
-     */
+    // ✅ Helper method untuk total rencana ha
     public function getTotalRencanaHa()
     {
-        return $this->kontraktors()->sum('rencanaha');
+        return DB::table('rkhpanenlst')
+            ->where('companycode', $this->companycode)
+            ->where('rkhpanenno', $this->rkhpanenno)
+            ->sum('rencanaha') ?? 0;
     }
 
-    /**
-     * Get total hasil HC from results
-     */
-    public function getTotalHasilHc()
+    // ✅ Helper method untuk count kontraktor
+    public function getKontraktorCountAttribute()
     {
-        return $this->results()->sum('hc');
-    }
-
-    /**
-     * Get total field balance TON from results
-     */
-    public function getTotalFieldBalanceTon()
-    {
-        return $this->results()->sum('fbton');
-    }
-
-    /**
-     * Get petak baru (haritebang = 1)
-     */
-    public function getPetakBaru()
-    {
-        return $this->results()->where('haritebang', 1)->get();
-    }
-
-    /**
-     * Check if RKH has hasil input
-     */
-    public function hasHasil()
-    {
-        return $this->results()->exists();
-    }
-
-    /**
-     * Get formatted RKH date
-     */
-    public function getFormattedDateAttribute()
-    {
-        return $this->rkhdate ? $this->rkhdate->format('d/m/Y') : '-';
-    }
-
-    /**
-     * Get status badge color
-     */
-    public function getStatusBadgeColorAttribute()
-    {
-        return match($this->status) {
-            'DRAFT' => 'bg-gray-500',
-            'COMPLETED' => 'bg-green-500',
-            default => 'bg-blue-500',
-        };
+        return DB::table('rkhpanenlst')
+            ->where('companycode', $this->companycode)
+            ->where('rkhpanenno', $this->rkhpanenno)
+            ->count();
     }
 }
