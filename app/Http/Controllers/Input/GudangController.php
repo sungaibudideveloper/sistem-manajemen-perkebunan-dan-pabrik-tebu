@@ -411,9 +411,9 @@ class GudangController extends Controller
         }
 
         // Gunakan DB Transaction untuk keamanan
-        DB::beginTransaction();
+        // DB::beginTransaction();
         
-        try {
+        // try {
             // Delete existing records
             usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->delete();
             $companyinv = company::where('companycode', session('companycode'))->first();
@@ -433,7 +433,7 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                    DB::rollback();
+                    // DB::rollback();
                     Cache::forget($lockKey);
                     dd(
                         'MODE EDIT - Nouse sudah ada',
@@ -463,7 +463,7 @@ class GudangController extends Controller
                 $responseData = $response->json();
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $row) {
+                foreach ($responseData['stockitem'] as $row) {
                     $itemcode = $row['Itemcode'] ?? null;
                     if ($itemcode) {
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
@@ -505,23 +505,18 @@ class GudangController extends Controller
                 // Update header status
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
-                DB::commit();
+                // DB::commit();
                 Cache::forget($lockKey);
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
-                DB::rollback();
+                // DB::rollback();
                 Cache::forget($lockKey);
-                // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
-                // Development:
-                // dd($response->json(), $response->body(), $response->status());
-                
-                // Production:
-                return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
+                return redirect()->back()->with('error', 'API Error: ' . ($responseData['message'] ?? 'Unknown error'));
             }
             
-        } catch (\Exception $e) {
-            DB::rollback();
+        // } catch (\Exception $e) {
+            // DB::rollback();
             Cache::forget($lockKey);
             Log::error('Submit error', [
                 'message' => $e->getMessage(),
@@ -529,7 +524,7 @@ class GudangController extends Controller
             ]);
             
             return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
-        }
+        // }
     }
 
 
