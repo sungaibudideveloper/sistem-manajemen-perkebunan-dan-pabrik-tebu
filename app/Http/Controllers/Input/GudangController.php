@@ -303,11 +303,9 @@ class GudangController extends Controller
         $first = $details->first();
         
         if (strtoupper($first->flagstatus) != 'ACTIVE') {
-            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
         } 
         if ($details->whereNotNull('nouse')->count() >= 1){
-            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
@@ -355,8 +353,7 @@ class GudangController extends Controller
                     $unit   = $request->unit[$lkhno][$itemcode][$key] ?? null;
                     $luas   = $request->luas[$lkhno][$itemcode][$key] ?? 0;
                     $qtyraw    = $luas * $dosage ?? 0;
-                    $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
-                    // $qty=round($qtyraw / 0.25) * 0.25;
+                    $qty=round($qtyraw / 0.25) * 0.25;
 
                     $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                     $existing    = $existingData->get($existingKey);
@@ -433,13 +430,9 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                    DB::rollback();
-                    Cache::forget($lockKey);
-                    dd(
-                        'MODE EDIT - Nouse sudah ada',
-                        'First data:', $first,
-                        'Details count:', $details->whereNotNull('nouse')->count()
-                    );
+                dd($response->status(),
+                    $response->body(),
+                    $first );
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
@@ -503,12 +496,12 @@ class GudangController extends Controller
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
                 DB::commit();
-                Cache::forget($lockKey);
+                
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
                 DB::rollback();
-                Cache::forget($lockKey);
+                
                 // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
                 // Development:
                 // dd($response->json(), $response->body(), $response->status());
@@ -519,7 +512,7 @@ class GudangController extends Controller
             
         } catch (\Exception $e) {
             DB::rollback();
-            Cache::forget($lockKey);
+            
             Log::error('Submit error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
