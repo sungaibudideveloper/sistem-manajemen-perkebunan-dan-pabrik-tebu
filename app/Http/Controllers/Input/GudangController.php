@@ -502,12 +502,12 @@ class GudangController extends Controller
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
                 DB::commit();
-                
+                Cache::forget($lockKey);
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
                 DB::rollback();
-                
+                Cache::forget($lockKey);
                 // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
                 // Development:
                 // dd($response->json(), $response->body(), $response->status());
@@ -518,7 +518,7 @@ class GudangController extends Controller
             
         } catch (\Exception $e) {
             DB::rollback();
-            
+            Cache::forget($lockKey);
             Log::error('Submit error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
