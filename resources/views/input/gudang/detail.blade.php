@@ -8,7 +8,7 @@
 $returEligible = collect($detailmaterial)
     ->filter(fn($d) => (float)($d->qtyretur ?? 0) > 0 && empty($d->noretur))
     ->count();
-    
+
 @endphp
 
 <style>
@@ -372,6 +372,8 @@ table th, table td {
         // recalculate total
         const fmt3 = n => (Number(n)||0).toFixed(3);
 
+        const roundTo25 = (num) => Math.round(num / 0.25) * 0.25;
+
 function recalcTotals(){
   const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
 
@@ -383,9 +385,10 @@ function recalcTotals(){
     const name     = $opt.data('itemname') || '';
     const unit     = $tr.find('.selected-unit').val() || $opt.data('measure') || '';
 
-    const dosage   = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
-    const luas     = parseFloat($tr.find('.selected-luas').val()) || 0;
-    const qty      = dosage * luas;
+    const dosage    = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
+    const luas      = parseFloat($tr.find('.selected-luas').val()) || 0;
+    const qtyRaw    = dosage * luas;
+    const qty       = roundTo25(qtyRaw);
 
     (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
     totals[code].qty   += qty;
@@ -454,7 +457,11 @@ $(document).on('input', '.selected-dosage', function(){
         function recalcRowQty(row){
           const dosage = parseFloat(String(row.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
           const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
-          const qty    = dosage * luas;
+          const qtyRaw    = dosage * luas;
+          const qty    = roundTo25(qtyRaw);
+
+         console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
+
           row.find('.labelqty').text(qty.toFixed(3));
         }
         
