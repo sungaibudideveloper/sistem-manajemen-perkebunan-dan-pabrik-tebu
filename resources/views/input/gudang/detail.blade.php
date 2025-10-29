@@ -372,7 +372,10 @@ table th, table td {
         // recalculate total
         const fmt3 = n => (Number(n)||0).toFixed(3);
 
-        const roundTo25 = (num) => Math.round(num / 0.25) * 0.25;
+        const roundTo25 = (num) => {
+            return num > 0 ? Math.max(0.25, Math.round(num / 0.25) * 0.25) : 0;
+        };
+        
 
 function recalcTotals(){
   const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
