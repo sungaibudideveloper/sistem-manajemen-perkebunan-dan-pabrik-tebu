@@ -8,7 +8,7 @@
 $returEligible = collect($detailmaterial)
     ->filter(fn($d) => (float)($d->qtyretur ?? 0) > 0 && empty($d->noretur))
     ->count();
-    dd($details[0]);
+
 @endphp
 
 <style>
