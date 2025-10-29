@@ -55,7 +55,11 @@
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white">
             @forelse($hasilRows as $index => $row)
-            <tr class="hover:bg-gray-50" x-data="hasilRow({{ $index }}, {{ $row->stc ?? 0 }})">
+            <tr class="hover:bg-gray-50" 
+                x-data="hasilRow({{ $index }}, {{ $row->stc }}, {{ $row->hc ?? 0 }}, {{ $row->fbrit ?? 0 }}, {{ $row->fbton ?? 0 }})"
+                x-init="initRow()">
+              
+              <!-- Hidden input untuk plot identifier -->
               <input type="hidden" name="hasil[{{ $index }}][plot]" value="{{ $row->plot }}">
               
               <td class="px-4 py-3 text-gray-700 font-medium">{{ $index + 1 }}</td>
@@ -71,15 +75,15 @@
               <td class="px-4 py-3 text-center text-gray-700 font-medium">{{ $row->haritebang }}</td>
               <td class="px-4 py-3 text-right text-gray-700">{{ number_format($row->luasplot ?? 0, 2) }}</td>
               
-              <!-- STC (Read-only) -->
+              <!-- ✅ STC (Read-only, dari database) -->
               <td class="px-4 py-3 text-right">
                 <input type="text" 
-                       :value="stc.toFixed(2)"
+                       :value="stcDisplay"
                        readonly
                        class="w-24 text-right bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-orange-700 cursor-not-allowed">
               </td>
               
-              <!-- HC (Required, Empty by default) -->
+              <!-- ✅ HC (Required, user input) -->
               <td class="px-4 py-3 text-right">
                 <input type="number" 
                        name="hasil[{{ $index }}][hc]" 
@@ -89,15 +93,14 @@
                        min="0.01"
                        :max="stc"
                        required
-                       @if($row->hc > 0) value="{{ $row->hc }}" @endif
                        class="w-24 text-right border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-green-700 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                       placeholder="">
+                       placeholder="0.00">
               </td>
               
-              <!-- BC (Auto-calculated) -->
+              <!-- ✅ BC (Auto-calculated dari STC - HC) -->
               <td class="px-4 py-3 text-right">
                 <input type="text" 
-                       :value="bc.toFixed(2)"
+                       :value="bcDisplay"
                        readonly
                        class="w-24 text-right bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-sm font-semibold text-gray-700 cursor-not-allowed">
               </td>
@@ -109,7 +112,7 @@
                         @change="onFbRitChange()"
                         class="w-20 text-center border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
                   @for($i = 0; $i <= 20; $i++)
-                    <option value="{{ $i }}" {{ old('hasil.'.$index.'.fbrit', $row->fbrit ?? 0) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                    <option value="{{ $i }}">{{ $i }}</option>
                   @endfor
                 </select>
               </td>
@@ -158,11 +161,11 @@
             <tr>
               <td colspan="5" class="px-4 py-3 text-right text-gray-800">TOTAL:</td>
               <td class="px-4 py-3 text-right text-gray-800">{{ number_format($hasilRows->sum('luasplot'), 2) }}</td>
-              <td class="px-4 py-3 text-right text-orange-700" x-text="totalSTC">0.00</td>
-              <td class="px-4 py-3 text-right text-green-700" x-text="totalHC">0.00</td>
-              <td class="px-4 py-3 text-right text-gray-800" x-text="totalBC">0.00</td>
+              <td class="px-4 py-3 text-right text-orange-700" x-text="totalSTCDisplay">0.00</td>
+              <td class="px-4 py-3 text-right text-green-700" x-text="totalHCDisplay">0.00</td>
+              <td class="px-4 py-3 text-right text-gray-800" x-text="totalBCDisplay">0.00</td>
               <td class="px-4 py-3 text-center text-gray-800 border-l-2 border-gray-200" x-text="totalFbRit">0</td>
-              <td class="px-4 py-3 text-right text-blue-700" x-text="totalFbTon">0.00</td>
+              <td class="px-4 py-3 text-right text-blue-700" x-text="totalFbTonDisplay">0.00</td>
               <td colspan="2"></td>
             </tr>
           </tfoot>
@@ -209,11 +212,17 @@
     function hasilPanenForm() {
       return {
         isSubmitting: false,
-        totalSTC: '0.00',
-        totalHC: '0.00',
-        totalBC: '0.00',
+        totalSTC: 0,
+        totalHC: 0,
+        totalBC: 0,
         totalFbRit: 0,
-        totalFbTon: '0.00',
+        totalFbTon: 0,
+
+        // Computed displays
+        get totalSTCDisplay() { return this.totalSTC.toFixed(2); },
+        get totalHCDisplay() { return this.totalHC.toFixed(2); },
+        get totalBCDisplay() { return this.totalBC.toFixed(2); },
+        get totalFbTonDisplay() { return this.totalFbTon.toFixed(2); },
 
         init() {
           // Listen untuk update dari child rows
@@ -221,7 +230,7 @@
           
           // Initial calculation setelah semua row ter-render
           this.$nextTick(() => {
-            setTimeout(() => this.updateTotals(), 100);
+            setTimeout(() => this.updateTotals(), 150);
           });
         },
 
@@ -232,27 +241,20 @@
           document.querySelectorAll('tbody tr[x-data]').forEach(row => {
             const alpine = Alpine.$data(row);
             if (alpine) {
-              // Parse setiap nilai dengan hati-hati
-              const stcVal = parseFloat(alpine.stc) || 0;
-              const hcVal = parseFloat(alpine.hc) || 0;
-              const bcVal = parseFloat(alpine.bc) || 0;
-              const ritVal = parseInt(alpine.fbrit) || 0;
-              const tonVal = parseFloat(alpine.fbton) || 0;
-              
-              stc += stcVal;
-              hc += hcVal;
-              bc += bcVal;
-              rit += ritVal;
-              ton += tonVal;
+              stc += parseFloat(alpine.stc) || 0;
+              hc += parseFloat(alpine.hc) || 0;
+              bc += parseFloat(alpine.bc) || 0;
+              rit += parseInt(alpine.fbrit) || 0;
+              ton += parseFloat(alpine.fbton) || 0;
             }
           });
 
-          // Update display
-          this.totalSTC = stc.toFixed(2);
-          this.totalHC = hc.toFixed(2);
-          this.totalBC = bc.toFixed(2);
+          // Update totals
+          this.totalSTC = stc;
+          this.totalHC = hc;
+          this.totalBC = bc;
           this.totalFbRit = rit;
-          this.totalFbTon = ton.toFixed(2);
+          this.totalFbTon = ton;
         },
 
         async submitForm() {
@@ -262,7 +264,7 @@
           const hcInputs = form.querySelectorAll('input[name*="[hc]"]');
           let hasEmpty = false;
           
-          // Validasi semua HC harus diisi
+          // ✅ Validasi semua HC harus diisi dengan nilai > 0
           hcInputs.forEach(input => {
             const value = parseFloat(input.value);
             if (!input.value || isNaN(value) || value <= 0) {
@@ -274,7 +276,7 @@
           });
 
           if (hasEmpty) {
-            alert('Semua field HC (Hectare Cutting) wajib diisi dengan nilai lebih dari 0');
+            alert('❌ Semua field HC (Hectare Cutting) wajib diisi dengan nilai lebih dari 0');
             return;
           }
 
@@ -297,54 +299,60 @@
             if (data.success) {
               window.location.href = data.redirect_url || '{{ route("input.rkh-panen.show", $rkhPanen->rkhpanenno) }}';
             } else {
-              alert('Gagal: ' + (data.message || 'Terjadi kesalahan'));
+              alert('❌ Gagal: ' + (data.message || 'Terjadi kesalahan'));
               this.isSubmitting = false;
             }
           } catch (error) {
             console.error('Error:', error);
-            alert('Terjadi kesalahan saat menyimpan');
+            alert('❌ Terjadi kesalahan saat menyimpan');
             this.isSubmitting = false;
           }
         }
       };
     }
 
-    function hasilRow(index, stcValue) {
+    /**
+     * ✅ FIXED: Alpine component untuk setiap row
+     * @param {number} index - Row index
+     * @param {number} stcValue - STC dari database (TIDAK BOLEH DIUBAH)
+     * @param {number} existingHc - HC yang sudah ada (jika edit)
+     * @param {number} existingFbRit - FB Rit yang sudah ada
+     * @param {number} existingFbTon - FB Ton yang sudah ada
+     */
+    function hasilRow(index, stcValue, existingHc = 0, existingFbRit = 0, existingFbTon = 0) {
       return {
+        // ✅ STC adalah konstanta, TIDAK BOLEH DIUBAH
         stc: parseFloat(stcValue) || 0,
-        hc: 0,
+        
+        // User inputs
+        hc: parseFloat(existingHc) || 0,
+        fbrit: parseInt(existingFbRit) || 0,
+        fbton: parseFloat(existingFbTon) || 0,
+        
+        // Calculated
         bc: 0,
-        fbrit: 0,
-        fbton: 0,
 
-        init() {
-          // Load nilai existing dari input/select
-          const hcInput = document.querySelector(`input[name="hasil[${index}][hc]"]`);
-          const ritSelect = document.querySelector(`select[name="hasil[${index}][fbrit]"]`);
-          const tonInput = document.querySelector(`input[name="hasil[${index}][fbton]"]`);
-          
-          if (hcInput?.value) {
-            this.hc = parseFloat(hcInput.value) || 0;
-          }
-          if (ritSelect?.value) {
-            this.fbrit = parseInt(ritSelect.value) || 0;
-          }
-          if (tonInput?.value) {
-            this.fbton = parseFloat(tonInput.value) || 0;
-          }
-          
+        // Display helpers
+        get stcDisplay() { return this.stc.toFixed(2); },
+        get bcDisplay() { return this.bc.toFixed(2); },
+
+        initRow() {
+          // Calculate initial BC
           this.calculateBC();
           
-          // Trigger initial total update
-          this.$dispatch('update-totals');
+          // Trigger parent total update
+          this.$nextTick(() => {
+            this.$dispatch('update-totals');
+          });
         },
 
         onHcChange() {
-          // Otomatis batasi HC tidak boleh lebih dari STC (tanpa alert)
+          // ✅ Auto-limit HC: tidak boleh lebih dari STC
           const hcNum = parseFloat(this.hc) || 0;
           if (hcNum > this.stc) {
-            this.hc = this.stc;
+            this.hc = this.stc; // Auto-adjust
           }
+          
           this.calculateBC();
           this.$dispatch('update-totals');
         },
@@ -356,8 +364,9 @@
         },
 
         calculateBC() {
+          // ✅ BC = STC - HC (STC tetap konstan)
           const hcNum = parseFloat(this.hc) || 0;
-          this.bc = this.stc - hcNum;
+          this.bc = Math.max(0, this.stc - hcNum);
         }
       };
     }

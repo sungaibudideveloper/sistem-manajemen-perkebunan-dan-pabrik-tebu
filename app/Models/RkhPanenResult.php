@@ -4,11 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Model RkhPanenResult (SIMPLIFIED)
+ * 
+ * PENTING: Model ini punya composite primary key (companycode, rkhpanenno, plot)
+ * Jadi JANGAN pakai method Eloquent seperti save(), update(), delete()
+ * Pakai Query Builder (DB::table('rkhpanenresult')) untuk semua operasi CRUD
+ * 
+ * Model ini HANYA untuk relationship dan accessor saja
+ */
 class RkhPanenResult extends Model
 {
     protected $table = 'rkhpanenresult';
     public $incrementing = false;
     public $timestamps = false;
+
+    // JANGAN pakai primaryKey untuk composite key
+    protected $primaryKey = null;
 
     protected $fillable = [
         'companycode',
@@ -39,55 +51,37 @@ class RkhPanenResult extends Model
         'ispremium' => 'boolean',
     ];
 
-    // Composite primary key
-    protected $primaryKey = ['companycode', 'rkhpanenno', 'plot'];
-
     // =====================================
-    // RELATIONSHIPS
+    // RELATIONSHIPS (Read-only)
     // =====================================
 
-    /**
-     * RKH Panen Header
-     */
     public function header()
     {
         return $this->belongsTo(RkhPanenHdr::class, 'rkhpanenno', 'rkhpanenno')
                     ->where('companycode', $this->companycode);
     }
 
-    /**
-     * Blok Info
-     */
     public function blokInfo()
     {
         return $this->belongsTo(Blok::class, 'blok', 'blok')
                     ->where('companycode', $this->companycode);
     }
 
-    /**
-     * Plot Info (from masterlist)
-     */
     public function plotInfo()
     {
         return $this->belongsTo(Masterlist::class, 'plot', 'plot')
                     ->where('companycode', $this->companycode);
     }
 
-    /**
-     * Batch Info
-     */
     public function batch()
     {
         return $this->belongsTo(Batch::class, 'batchno', 'batchno');
     }
 
     // =====================================
-    // ACCESSORS & ATTRIBUTES
+    // ACCESSORS (Read-only attributes)
     // =====================================
 
-    /**
-     * Kodestatus Badge Color
-     */
     public function getKodestatusColorAttribute()
     {
         return match($this->kodestatus) {
@@ -99,9 +93,6 @@ class RkhPanenResult extends Model
         };
     }
 
-    /**
-     * Kodestatus Label
-     */
     public function getKodestatusLabelAttribute()
     {
         return match($this->kodestatus) {
@@ -113,49 +104,31 @@ class RkhPanenResult extends Model
         };
     }
 
-    /**
-     * Premium Badge
-     */
     public function getPremiumBadgeAttribute()
     {
         return $this->ispremium ? 'Premium' : 'Non-Premium';
     }
 
-    /**
-     * Plot Full Name (Blok-Plot)
-     */
     public function getPlotFullNameAttribute()
     {
         return "{$this->blok}-{$this->plot}";
     }
 
-    /**
-     * Is Petak Baru (hari tebang ke-1)
-     */
     public function isPetakBaru()
     {
         return $this->haritebang == 1;
     }
 
-    /**
-     * Has Data (hasil sudah diinput)
-     */
     public function hasData()
     {
         return !is_null($this->hc) && $this->hc > 0;
     }
 
-    /**
-     * Is Empty (waiting for input)
-     */
     public function isEmpty()
     {
         return is_null($this->hc);
     }
 
-    /**
-     * Get completion percentage (hc/stc)
-     */
     public function getCompletionPercentageAttribute()
     {
         if (is_null($this->stc) || $this->stc == 0) {
@@ -164,11 +137,6 @@ class RkhPanenResult extends Model
         return round(($this->hc / $this->stc) * 100, 2);
     }
 
-    /**
-     * Calculate productivity (ton/ha)
-     * Note: fbton adalah field balance di lapangan (belum sampai pabrik)
-     * Untuk productivity aktual, nanti dari data timbangan
-     */
     public function getEstimatedProductivityAttribute()
     {
         if (is_null($this->hc) || $this->hc == 0) {
@@ -177,32 +145,6 @@ class RkhPanenResult extends Model
         return round($this->fbton / $this->hc, 2);
     }
 
-    // =====================================
-    // HELPER METHODS
-    // =====================================
-
-    /**
-     * Auto-calculate BC (Balance Cutting)
-     */
-    public function calculateBc()
-    {
-        $this->bc = ($this->stc ?? 0) - ($this->hc ?? 0);
-        return $this;
-    }
-
-    /**
-     * Auto-calculate FBTon (Field Balance Ton)
-     * 1 RIT = 5 ton (sesuai business flow)
-     */
-    public function calculateFbton()
-    {
-        $this->fbton = ($this->fbrit ?? 0) * 5;
-        return $this;
-    }
-
-    /**
-     * Get status indicator (empty/partial/complete)
-     */
     public function getStatusIndicator()
     {
         if ($this->isEmpty()) {
@@ -229,77 +171,50 @@ class RkhPanenResult extends Model
     }
 
     // =====================================
-    // SCOPES
+    // SCOPES (untuk Query Builder style)
     // =====================================
 
-    /**
-     * Scope: Filter by blok
-     */
     public function scopeByBlok($query, $blok)
     {
         return $query->where('blok', $blok);
     }
 
-    /**
-     * Scope: Filter by kodestatus
-     */
     public function scopeByKodestatus($query, $kodestatus)
     {
         return $query->where('kodestatus', $kodestatus);
     }
 
-    /**
-     * Scope: Only premium
-     */
     public function scopePremium($query)
     {
         return $query->where('ispremium', 1);
     }
 
-    /**
-     * Scope: Only non-premium
-     */
     public function scopeNonPremium($query)
     {
         return $query->where('ispremium', 0);
     }
 
-    /**
-     * Scope: Petak baru (hari tebang ke-1)
-     */
     public function scopePetakBaru($query)
     {
         return $query->where('haritebang', 1);
     }
 
-    /**
-     * Scope: Has data (hasil sudah diinput)
-     */
     public function scopeWithData($query)
     {
         return $query->whereNotNull('hc')
                      ->where('hc', '>', 0);
     }
 
-    /**
-     * Scope: Empty (waiting for input)
-     */
     public function scopeEmpty($query)
     {
         return $query->whereNull('hc');
     }
 
-    /**
-     * Scope: Incomplete (still has balance)
-     */
     public function scopeIncomplete($query)
     {
         return $query->where('bc', '>', 0);
     }
 
-    /**
-     * Scope: Completed (no balance)
-     */
     public function scopeCompleted($query)
     {
         return $query->where('bc', '<=', 0);

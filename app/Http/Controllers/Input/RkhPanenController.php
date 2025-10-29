@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
-// Models
+// Models (hanya untuk yang punya single primary key)
 use App\Models\RkhPanenHdr;
 use App\Models\RkhPanenLst;
-use App\Models\RkhPanenResult;
 use App\Models\User;
 
 class RkhPanenController extends Controller
@@ -55,23 +54,19 @@ class RkhPanenController extends Controller
                 'kontraktor_summary.kontraktor_count'
             ]);
 
-        // Apply search filter
         if ($search) {
             $query->where('h.rkhpanenno', 'like', '%' . $search . '%');
         }
 
-        // Apply status filter
         if ($filterStatus) {
             $query->where('h.status', $filterStatus);
         }
 
-        // Apply date filter
         if (empty($allDate)) {
             $dateToFilter = $filterDate ?: Carbon::today()->format('Y-m-d');
             $query->whereDate('h.rkhdate', $dateToFilter);
         }
 
-        // Order and paginate
         $query->orderBy('h.rkhdate', 'desc')->orderBy('h.rkhpanenno', 'desc');
         $rkhPanenData = $query->paginate($perPage);
 
@@ -104,7 +99,6 @@ class RkhPanenController extends Controller
         $targetDate = Carbon::parse($selectedDate);
         $companycode = Session::get('companycode');
 
-        // Load form data
         $formData = $this->loadCreateFormData($companycode);
 
         return view('input.rkh-panen.create', array_merge([
@@ -119,7 +113,6 @@ class RkhPanenController extends Controller
     public function store(Request $request)
     {
         try {
-            // Validate request
             $this->validateRkhPanenRequest($request);
 
             $rkhpanenno = null;
@@ -144,7 +137,6 @@ class RkhPanenController extends Controller
     {
         $companycode = Session::get('companycode');
         
-        // Get RKH Panen header
         $rkhPanen = RkhPanenHdr::where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->first();
@@ -154,19 +146,23 @@ class RkhPanenController extends Controller
                 ->with('error', 'Data RKH Panen tidak ditemukan');
         }
 
-        // Get kontraktors pakai Query Builder
         $rencana = DB::table('rkhpanenlst')
             ->where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->get();
 
-        // Get hasil (results with data)
-        $hasil = $rkhPanen->results()->whereNotNull('hc')->get();
+        $hasil = DB::table('rkhpanenresult')
+            ->where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->whereNotNull('hc')
+            ->get();
 
-        // Get petak baru (haritebang = 1)
-        $petakBaru = $rkhPanen->results()->where('haritebang', 1)->get();
+        $petakBaru = DB::table('rkhpanenresult')
+            ->where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->where('haritebang', 1)
+            ->get();
 
-        // Calculate totals pakai Query Builder
         $totals = [
             'rencana_netto' => DB::table('rkhpanenlst')
                 ->where('companycode', $companycode)
@@ -176,11 +172,26 @@ class RkhPanenController extends Controller
                 ->where('companycode', $companycode)
                 ->where('rkhpanenno', $rkhpanenno)
                 ->sum('rencanaha'),
-            'hasil_hc' => $rkhPanen->results->sum('hc'),
-            'hasil_stc' => $rkhPanen->results->sum('stc'),
-            'hasil_bc' => $rkhPanen->results->sum('bc'),
-            'field_balance_rit' => $rkhPanen->results->sum('fbrit'),
-            'field_balance_ton' => $rkhPanen->results->sum('fbton'),
+            'hasil_hc' => DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('hc'),
+            'hasil_stc' => DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('stc'),
+            'hasil_bc' => DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('bc'),
+            'field_balance_rit' => DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('fbrit'),
+            'field_balance_ton' => DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('fbton'),
         ];
 
         return view('input.rkh-panen.show', [
@@ -213,8 +224,8 @@ class RkhPanenController extends Controller
                 ->with('error', 'Data RKH Panen tidak ditemukan');
         }
 
-        // Get pre-generated result rows (empty, waiting for input)
-        $hasilRows = RkhPanenResult::with('blokInfo')
+        // Get pre-generated result rows (Query Builder)
+        $hasilRows = DB::table('rkhpanenresult')
             ->where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->orderBy('blok')
@@ -234,7 +245,6 @@ class RkhPanenController extends Controller
     public function updateHasil(Request $request, $rkhpanenno)
     {
         try {
-            // Validate request
             $this->validateHasilRequest($request);
 
             $companycode = Session::get('companycode');
@@ -246,13 +256,15 @@ class RkhPanenController extends Controller
             return $this->handleUpdateHasilResponse($request, $rkhpanenno, true);
 
         } catch (\Exception $e) {
-            Log::error("Update Hasil Panen Error: " . $e->getMessage());
+            Log::error("Update Hasil Panen Error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->handleUpdateHasilResponse($request, $rkhpanenno, false, $e->getMessage());
         }
     }
 
     // =====================================
-    // SECTION 5: DELETE
+    // SECTION 5: DELETE & COMPLETE
     // =====================================
 
     public function destroy($rkhpanenno)
@@ -262,8 +274,9 @@ class RkhPanenController extends Controller
         try {
             DB::beginTransaction();
             
-            // Delete results first
-            RkhPanenResult::where('companycode', $companycode)
+            // Delete results (Query Builder)
+            DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
                 ->where('rkhpanenno', $rkhpanenno)
                 ->delete();
             
@@ -300,20 +313,58 @@ class RkhPanenController extends Controller
         }
     }
 
+    /**
+     * Complete RKH Panen (ubah status jadi COMPLETED)
+     */
+    public function complete($rkhpanenno)
+    {
+        $companycode = Session::get('companycode');
+        
+        try {
+            $rkhPanen = RkhPanenHdr::where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->first();
+
+            if (!$rkhPanen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RKH Panen tidak ditemukan'
+                ], 404);
+            }
+
+            // Update status jadi COMPLETED
+            $rkhPanen->update([
+                'status' => 'COMPLETED',
+                'updateby' => Auth::user()->userid,
+                'updatedat' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'RKH Panen berhasil diselesaikan'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Complete RKH Panen Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyelesaikan RKH Panen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     // =====================================
     // PRIVATE HELPER METHODS
     // =====================================
 
     private function loadCreateFormData($companycode)
     {
-        // Get mandor panen
         $mandorPanen = User::where('companycode', $companycode)
             ->where('idjabatan', 5)
             ->where('isactive', 1)
             ->orderBy('name')
             ->get();
 
-        // Get kontraktors
         $kontraktors = DB::table('kontraktor')
             ->select('id as kontraktorid', 'namakontraktor')
             ->where('companycode', $companycode)
@@ -321,7 +372,6 @@ class RkhPanenController extends Controller
             ->orderBy('namakontraktor')
             ->get();
 
-        // Get VALID plots - SIMPLIFIED (pakai masterlist + batch saja)
         $plots = DB::table('masterlist')
             ->select(
                 'masterlist.plot',
@@ -338,7 +388,7 @@ class RkhPanenController extends Controller
             ->orderBy('masterlist.blok')
             ->orderBy('masterlist.plot')
             ->get()
-            ->groupBy('blok'); // Group for optgroup
+            ->groupBy('blok');
 
         return [
             'mandorPanen' => $mandorPanen,
@@ -358,7 +408,7 @@ class RkhPanenController extends Controller
         };
         
         if (!$lastPanenDate) {
-            return 1; // First harvest (hari tebang ke-1)
+            return 1;
         }
         
         $lastDate = Carbon::parse($lastPanenDate);
@@ -384,7 +434,7 @@ class RkhPanenController extends Controller
             'kontraktors.*.tenagamuatjumlah' => 'nullable|integer|min:0',
             'kontraktors.*.armadawl' => 'nullable|integer|min:0',
             'kontraktors.*.armadaumum' => 'nullable|integer|min:0',
-            'kontraktors.*.lokasiplot' => 'required|string', // Comma separated
+            'kontraktors.*.lokasiplot' => 'required|string',
         ]);
     }
 
@@ -393,10 +443,10 @@ class RkhPanenController extends Controller
         $request->validate([
             'hasil' => 'required|array|min:1',
             'hasil.*.plot' => 'required|string|max:5',
-            'hasil.*.hc' => 'required|numeric|min:0.01', // ✅ HC wajib diisi
+            'hasil.*.hc' => 'required|numeric|min:0.01',
             'hasil.*.fbrit' => 'nullable|integer|min:0',
             'hasil.*.fbton' => 'nullable|numeric|min:0',
-            'hasil.*.ispremium' => 'nullable|boolean',
+            'hasil.*.ispremium' => 'nullable',
             'hasil.*.keterangan' => 'nullable|string|max:200',
         ]);
     }
@@ -406,7 +456,6 @@ class RkhPanenController extends Controller
         $companycode = Session::get('companycode');
         $tanggal = Carbon::parse($request->input('rkhdate'))->format('Y-m-d');
 
-        // Generate unique RKH Panen No
         $rkhpanenno = $this->generateRkhPanenNo($tanggal, $companycode);
 
         // Insert header
@@ -421,7 +470,7 @@ class RkhPanenController extends Controller
             'createdat' => now(),
         ]);
 
-        // Insert kontraktors (COMMA-SEPARATED lokasiplot)
+        // Insert kontraktors
         foreach ($request->kontraktors as $kontraktor) {
             RkhPanenLst::create([
                 'companycode' => $companycode,
@@ -437,10 +486,9 @@ class RkhPanenController extends Controller
                 'armadaumum' => $kontraktor['armadaumum'] ?? 0,
                 'mesinpanen' => isset($kontraktor['mesinpanen']) ? 1 : 0,
                 'grabloader' => isset($kontraktor['grabloader']) ? 1 : 0,
-                'lokasiplot' => $kontraktor['lokasiplot'], // COMMA-SEPARATED
+                'lokasiplot' => $kontraktor['lokasiplot'],
             ]);
 
-            // AUTO-GENERATE EMPTY ROWS IN rkhpanenresult (NORMALIZED)
             $this->generateEmptyResultRows(
                 $rkhpanenno,
                 $companycode,
@@ -452,9 +500,6 @@ class RkhPanenController extends Controller
         return $rkhpanenno;
     }
 
-    /**
-     * ⭐ Generate empty result rows for each plot
-     */
     private function generateEmptyResultRows($rkhpanenno, $companycode, $lokasiplotStr, $rkhdate)
     {
         $plotArray = array_map('trim', explode(',', $lokasiplotStr));
@@ -477,7 +522,10 @@ class RkhPanenController extends Controller
                 )
                 ->first();
 
-            if (!$batchInfo) continue;
+            if (!$batchInfo) {
+                Log::warning("Plot {$plotCode} tidak ditemukan");
+                continue;
+            }
 
             $hariTebang = $this->calculateHariTebang(
                 $batchInfo->lifecyclestatus,
@@ -488,18 +536,19 @@ class RkhPanenController extends Controller
                 $rkhdate
             );
 
-            // ✅ Calculate STC: Luas awal - total HC yang sudah dipanen
+            // Calculate STC: Luas batch - Total HC yang sudah dipanen untuk lifecycle ini
             $totalHcDipanen = DB::table('rkhpanenresult')
                 ->where('companycode', $companycode)
                 ->where('plot', $plotCode)
-                ->where('kodestatus', $batchInfo->lifecyclestatus) // ✅ Filter by lifecycle
+                ->where('kodestatus', $batchInfo->lifecyclestatus)
                 ->whereNotNull('hc')
+                ->where('hc', '>', 0)
                 ->sum('hc');
 
-            $stcHariIni = $batchInfo->batcharea - $totalHcDipanen;
+            $stcValue = max(0, $batchInfo->batcharea - $totalHcDipanen);
 
-            // Insert with auto-calculated STC
-            RkhPanenResult::create([
+            // Insert dengan Query Builder
+            DB::table('rkhpanenresult')->insert([
                 'companycode' => $companycode,
                 'rkhpanenno' => $rkhpanenno,
                 'blok' => $batchInfo->blok,
@@ -507,11 +556,11 @@ class RkhPanenController extends Controller
                 'luasplot' => $batchInfo->batcharea,
                 'kodestatus' => $batchInfo->lifecyclestatus,
                 'haritebang' => $hariTebang,
-                'stc' => $stcHariIni, // ✅ Auto-calculated
-                'hc' => null, // User input nanti
+                'stc' => $stcValue,
+                'hc' => null,
                 'bc' => null,
-                'fbrit' => null,
-                'fbton' => null,
+                'fbrit' => 0,
+                'fbton' => 0,
                 'ispremium' => 0,
                 'keterangan' => null,
             ]);
@@ -520,80 +569,84 @@ class RkhPanenController extends Controller
 
     private function updateHasilRecords($request, $rkhpanenno, $companycode)
     {
-        foreach ($request->hasil as $hasil) {
-            // ✅ Get existing row untuk ambil STC yang sudah ada
-            $existingRow = RkhPanenResult::where('companycode', $companycode)
-                ->where('rkhpanenno', $rkhpanenno)
-                ->where('plot', $hasil['plot'])
-                ->first();
+        $hasilData = $request->input('hasil', []);
+        
+        if (empty($hasilData)) {
+            throw new \Exception('Data hasil kosong');
+        }
 
-            if (!$existingRow) {
-                Log::warning("Plot {$hasil['plot']} tidak ditemukan di RKH {$rkhpanenno}");
+        foreach ($hasilData as $hasil) {
+            if (!is_array($hasil) || !isset($hasil['plot'])) {
                 continue;
             }
 
-            // ✅ STC TIDAK BOLEH DIUBAH - ambil dari database
-            $stc = $existingRow->stc;
+            $plotCode = $hasil['plot'];
             
-            // Parse HC dari input user
+            // Get existing row
+            $existingRow = DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->where('plot', $plotCode)
+                ->first();
+
+            if (!$existingRow) {
+                Log::warning("Plot {$plotCode} tidak ditemukan");
+                continue;
+            }
+
+            // STC tetap dari database
+            $stcOriginal = floatval($existingRow->stc);
             $hc = floatval($hasil['hc'] ?? 0);
             
-            // Calculate BC
-            $bc = $stc - $hc;
+            // Validasi HC tidak boleh lebih dari STC
+            if ($hc > $stcOriginal) {
+                $hc = $stcOriginal;
+            }
             
-            // Calculate FB
+            $bc = max(0, $stcOriginal - $hc);
             $fbrit = intval($hasil['fbrit'] ?? 0);
             $fbton = floatval($hasil['fbton'] ?? ($fbrit * 5));
+            $ispremium = (isset($hasil['ispremium']) && $hasil['ispremium'] == '1') ? 1 : 0;
 
-            // ✅ Update row - STC TETAP tidak berubah
-            $existingRow->update([
-                // 'stc' => $stc,  // ❌ JANGAN UPDATE STC!
-                'hc' => $hc,
-                'bc' => $bc,
-                'fbrit' => $fbrit,
-                'fbton' => $fbton,
-                'ispremium' => isset($hasil['ispremium']) ? 1 : 0,
-                'keterangan' => $hasil['keterangan'] ?? null,
-            ]);
+            // Update dengan Query Builder
+            DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->where('plot', $plotCode)
+                ->update([
+                    'hc' => $hc,
+                    'bc' => $bc,
+                    'fbrit' => $fbrit,
+                    'fbton' => $fbton,
+                    'ispremium' => $ispremium,
+                    'keterangan' => $hasil['keterangan'] ?? null,
+                ]);
 
-            // ✅ UPDATE BATCH - Catat tanggal panen
+            // Update batch jika HC > 0
             if ($hc > 0) {
                 $batchno = DB::table('masterlist')
                     ->where('companycode', $companycode)
-                    ->where('plot', $hasil['plot'])
+                    ->where('plot', $plotCode)
                     ->value('activebatchno');
 
                 if ($batchno) {
-                    $fieldName = 'tanggalpanen' . strtolower($existingRow->kodestatus);
+                    $kodestatus = $existingRow->kodestatus;
+                    $fieldName = 'tanggalpanen' . strtolower($kodestatus);
                     
                     DB::table('batch')
                         ->where('batchno', $batchno)
                         ->update([
                             $fieldName => now(),
-                            'lastactivity' => "PANEN {$existingRow->kodestatus} - " . now()->format('Y-m-d H:i:s'),
+                            'lastactivity' => "PANEN {$kodestatus} - " . now()->format('Y-m-d H:i:s'),
                         ]);
                 }
             }
         }
 
-        // ✅ Cek apakah semua plot sudah diinput (HC terisi semua)
-        $totalPlots = RkhPanenResult::where('companycode', $companycode)
-            ->where('rkhpanenno', $rkhpanenno)
-            ->count();
-
-        $inputtedPlots = RkhPanenResult::where('companycode', $companycode)
-            ->where('rkhpanenno', $rkhpanenno)
-            ->whereNotNull('hc')
-            ->where('hc', '>', 0)
-            ->count();
-
-        // ✅ Update status: COMPLETED hanya jika semua plot sudah diinput
-        $newStatus = ($inputtedPlots >= $totalPlots) ? 'COMPLETED' : 'IN_PROGRESS';
-
+        // Update timestamp saja, JANGAN ubah status
         RkhPanenHdr::where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->update([
-                'status' => $newStatus,
                 'updateby' => Auth::user()->userid,
                 'updatedat' => now(),
             ]);
