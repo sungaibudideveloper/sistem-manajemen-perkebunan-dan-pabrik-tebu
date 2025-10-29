@@ -409,7 +409,7 @@ class GudangController extends Controller
                 'qtydigunakan'   => $detail->qtydigunakan
             ];
         }
-dd('aaa');
+
         // Gunakan DB Transaction untuk keamanan
         DB::beginTransaction();
         
