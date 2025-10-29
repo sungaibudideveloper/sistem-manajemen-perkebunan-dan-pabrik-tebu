@@ -441,7 +441,7 @@ class GudangController extends Controller
                         'Details count:', $details->whereNotNull('nouse')->count()
                     );
             }
-    
+    dd('a', $response);
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
             // DD jika response TIDAK successful
             if (!$response->successful()) {
@@ -456,19 +456,7 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]
                 ]);
-            } else {
-                $responseData = $response->json();
-                
-                // Validasi response
-                if (!isset($responseData['status']) || $responseData['status'] != 1 || !isset($responseData['stockitem'])) {
-                    DB::rollback();
-                    Cache::forget($lockKey);
-                    dd([
-                        'error' => 'Response format salah',
-                        'responseData' => $responseData
-                    ]);
-                }
-            }
+            } 
             
             $responseData = $response->json();
 
