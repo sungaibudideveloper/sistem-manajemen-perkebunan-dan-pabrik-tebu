@@ -409,7 +409,7 @@ class GudangController extends Controller
                 'qtydigunakan'   => $detail->qtydigunakan
             ];
         }
-
+dd('aaa');
         // Gunakan DB Transaction untuk keamanan
         DB::beginTransaction();
         
@@ -419,7 +419,7 @@ class GudangController extends Controller
             $companyinv = company::where('companycode', session('companycode'))->first();
             // Bulk insert
             usemateriallst::insert($insertData);
-dd('a');
+
             // API Call
             if($details->whereNotNull('nouse')->count() < 1) {  
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
