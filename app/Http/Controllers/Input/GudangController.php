@@ -443,24 +443,28 @@ class GudangController extends Controller
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
-            if ($response->successful()) { 
-                Log::info('API success:', $response->json());
-            } else { dd($response->status(),
-                    $response->body(),
-                    $first );
-                Log::error('API error', [
+            // DD jika response TIDAK successful
+            if (!$response->successful()) {
+                dd([
                     'status' => $response->status(),
                     'body' => $response->body(),
-                    'isi' => $first  // ✅ KEMBALIKAN: Log $first untuk debugging
+                    'payload_sent' => [
+                        'company' => $companyinv->companyinventory,
+                        'factory' => $first->factoryinv,
+                        'costcenter' => $request->costcenter,
+                        'isi' => array_values($apiPayload),
+                        'userid' => substr(auth()->user()->userid, 0, 10)
+                    ]
                 ]);
             }
-    
+            
+            $responseData = $response->json();
+
             // Check response
-            if($response->status() == 200 && $response->json()['status'] == 1) {
-                $responseData = $response->json();
+            if($response->status() == 200 && $responseData['status'] == 1) {
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $row) {
+                foreach ($responseData['stockitem'] as $row) {
                     $itemcode = $row['Itemcode'] ?? null;
                     if ($itemcode) {
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
@@ -509,12 +513,11 @@ class GudangController extends Controller
             } else {
                 DB::rollback();
                 Cache::forget($lockKey);
-                // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
-                // Development:
-                // dd($response->json(), $response->body(), $response->status());
-                
-                // Production:
-                return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
+                dd([
+                    'error' => 'Response gagal 516',
+                    'status' => $response->status(),
+                    'responseData' => $responseData
+                ]);
             }
             
         } catch (\Exception $e) {
