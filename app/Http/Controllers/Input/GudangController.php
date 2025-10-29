@@ -309,22 +309,16 @@ class GudangController extends Controller
             throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
-        // Validasi duplikat: lkhno + plot + itemcode
-        foreach ($request->itemcode as $lkhno => $items) {
-            foreach ($items as $itemcode => $plots) {
-                // Group by plot untuk itemcode tertentu di lkhno tertentu
-                $plotsForThisItem = array_keys($plots);
-                $uniquePlots = array_unique($plotsForThisItem);
+        // Validasi duplikat: lkhno + itemcode
+        foreach ($request->itemcodelist as $lkhno => $itemcodes) {
+            $uniqueItems = array_unique($itemcodes);
+            
+            if (count($itemcodes) !== count($uniqueItems)) {
+                $duplicates = array_diff_assoc($itemcodes, $uniqueItems);
+                $duplicateItem = reset($duplicates);
                 
-                if (count($plotsForThisItem) !== count($uniquePlots)) {
-                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
-                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
-                    $duplicatePlot = reset($duplicatePlots);
-                    
-                    Cache::forget($lockKey); // ⚠️ UNLOCK
-                    return redirect()->back()->withInput()
-                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
-                }
+                return redirect()->back()->withInput()
+                    ->with('error', "Duplikat! LKH $lkhno dengan Item $duplicateItem tidak boleh diinput lebih dari 1 kali.");
             }
         }
     
@@ -352,9 +346,8 @@ class GudangController extends Controller
                     $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
                     $unit   = $request->unit[$lkhno][$itemcode][$key] ?? null;
                     $luas   = $request->luas[$lkhno][$itemcode][$key] ?? 0;
-                    $qtyraw    = $luas * $dosage ?? 0;
-                    $qty=round($qtyraw / 0.25) * 0.25;
-
+                    $qty    = $luas * $dosage ?? 0;
+                    
                     $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                     $existing    = $existingData->get($existingKey);
         
@@ -430,9 +423,16 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                dd($response->status(),
-                    $response->body(),
-                    $first );
+                // $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
+                //     ->asJson()
+                //     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
+                //         'connection' => 'TESTING',
+                //         'nouse' => $first->nouse,
+                //         'company' => $companyinv->companyinventory,
+                //         'factory' => $first->factoryinv,
+                //         'isi' => array_values($apiPayload),  
+                //         'userid' => substr(auth()->user()->userid, 0, 10)
+                //     ]);
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
