@@ -411,9 +411,9 @@ class GudangController extends Controller
         }
 
         // Gunakan DB Transaction untuk keamanan
-        // DB::beginTransaction();
+        DB::beginTransaction();
         
-        // try {
+        try {
             // Delete existing records
             usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->delete();
             $companyinv = company::where('companycode', session('companycode'))->first();
@@ -433,7 +433,7 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                    // DB::rollback();
+                    DB::rollback();
                     Cache::forget($lockKey);
                     dd(
                         'MODE EDIT - Nouse sudah ada',
@@ -457,10 +457,11 @@ class GudangController extends Controller
                     ]
                 ]);
             }
-    
+            
+            $responseData = $response->json();
+
             // Check response
-            if($response->status() == 200 && $response->json()['status'] == 1) {
-                $responseData = $response->json();
+            if($response->status() == 200 && $responseData['status'] == 1) {
                 
                 $itemPriceMap = [];
                 foreach ($responseData['stockitem'] as $row) {
@@ -505,18 +506,22 @@ class GudangController extends Controller
                 // Update header status
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
-                // DB::commit();
+                DB::commit();
                 Cache::forget($lockKey);
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
-                // DB::rollback();
+                DB::rollback();
                 Cache::forget($lockKey);
-                return redirect()->back()->with('error', 'API Error: ' . ($responseData['message'] ?? 'Unknown error'));
+                dd([
+                    'error' => 'Response gagal 516',
+                    'status' => $response->status(),
+                    'responseData' => $responseData
+                ]);
             }
             
-        // } catch (\Exception $e) {
-            // DB::rollback();
+        } catch (\Exception $e) {
+            DB::rollback();
             Cache::forget($lockKey);
             Log::error('Submit error', [
                 'message' => $e->getMessage(),
@@ -524,7 +529,7 @@ class GudangController extends Controller
             ]);
             
             return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
-        // }
+        }
     }
 
 
