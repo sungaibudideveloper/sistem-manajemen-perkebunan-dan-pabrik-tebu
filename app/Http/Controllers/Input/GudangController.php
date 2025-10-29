@@ -303,9 +303,11 @@ class GudangController extends Controller
         $first = $details->first();
         
         if (strtoupper($first->flagstatus) != 'ACTIVE') {
+            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
         } 
         if ($details->whereNotNull('nouse')->count() >= 1){
+            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
@@ -430,9 +432,13 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                dd($response->status(),
-                    $response->body(),
-                    $first );
+                    DB::rollback();
+                    Cache::forget($lockKey);
+                    dd(
+                        'MODE EDIT - Nouse sudah ada',
+                        'First data:', $first,
+                        'Details count:', $details->whereNotNull('nouse')->count()
+                    );
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
