@@ -303,22 +303,30 @@ class GudangController extends Controller
         $first = $details->first();
         
         if (strtoupper($first->flagstatus) != 'ACTIVE') {
+            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
         } 
         if ($details->whereNotNull('nouse')->count() >= 1){
+            Cache::forget($lockKey);
             throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
-        // Validasi duplikat: lkhno + itemcode
-        foreach ($request->itemcodelist as $lkhno => $itemcodes) {
-            $uniqueItems = array_unique($itemcodes);
-            
-            if (count($itemcodes) !== count($uniqueItems)) {
-                $duplicates = array_diff_assoc($itemcodes, $uniqueItems);
-                $duplicateItem = reset($duplicates);
+        // Validasi duplikat: lkhno + plot + itemcode
+        foreach ($request->itemcode as $lkhno => $items) {
+            foreach ($items as $itemcode => $plots) {
+                // Group by plot untuk itemcode tertentu di lkhno tertentu
+                $plotsForThisItem = array_keys($plots);
+                $uniquePlots = array_unique($plotsForThisItem);
                 
-                return redirect()->back()->withInput()
-                    ->with('error', "Duplikat! LKH $lkhno dengan Item $duplicateItem tidak boleh diinput lebih dari 1 kali.");
+                if (count($plotsForThisItem) !== count($uniquePlots)) {
+                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+                    $duplicatePlot = reset($duplicatePlots);
+                    
+                    Cache::forget($lockKey); // ⚠️ UNLOCK
+                    return redirect()->back()->withInput()
+                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
+                }
             }
         }
     
@@ -346,8 +354,10 @@ class GudangController extends Controller
                     $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
                     $unit   = $request->unit[$lkhno][$itemcode][$key] ?? null;
                     $luas   = $request->luas[$lkhno][$itemcode][$key] ?? 0;
-                    $qty    = $luas * $dosage ?? 0;
-                    
+                    $qtyraw    = $luas * $dosage ?? 0;
+                    $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
+                    // $qty=round($qtyraw / 0.25) * 0.25;
+
                     $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                     $existing    = $existingData->get($existingKey);
         
@@ -423,37 +433,38 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                // $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
-                //     ->asJson()
-                //     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
-                //         'connection' => 'TESTING',
-                //         'nouse' => $first->nouse,
-                //         'company' => $companyinv->companyinventory,
-                //         'factory' => $first->factoryinv,
-                //         'isi' => array_values($apiPayload),  
-                //         'userid' => substr(auth()->user()->userid, 0, 10)
-                //     ]);
+                    DB::rollback();
+                    Cache::forget($lockKey);
+                    dd(
+                        'MODE EDIT - Nouse sudah ada',
+                        'First data:', $first,
+                        'Details count:', $details->whereNotNull('nouse')->count()
+                    );
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
-            if ($response->successful()) { 
-                Log::info('API success:', $response->json());
-            } else { dd($response->status(),
-                    $response->body(),
-                    $first );
-                Log::error('API error', [
+            // DD jika response TIDAK successful
+            if (!$response->successful()) {
+                dd([
                     'status' => $response->status(),
                     'body' => $response->body(),
-                    'isi' => $first  // ✅ KEMBALIKAN: Log $first untuk debugging
+                    'payload_sent' => [
+                        'company' => $companyinv->companyinventory,
+                        'factory' => $first->factoryinv,
+                        'costcenter' => $request->costcenter,
+                        'isi' => array_values($apiPayload),
+                        'userid' => substr(auth()->user()->userid, 0, 10)
+                    ]
                 ]);
-            }
-    
+            } 
+            
+            $responseData = $response->json();
+
             // Check response
-            if($response->status() == 200 && $response->json()['status'] == 1) {
-                $responseData = $response->json();
+            if($response->status() == 200 && $responseData['status'] == 1) {
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $row) {
+                foreach ($responseData['stockitem'] as $row) {
                     $itemcode = $row['Itemcode'] ?? null;
                     if ($itemcode) {
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
@@ -496,23 +507,22 @@ class GudangController extends Controller
                 usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
                 
                 DB::commit();
-                
+                Cache::forget($lockKey);
                 return redirect()->back()->with('success1', 'Data updated successfully');
                 
             } else {
                 DB::rollback();
-                
-                // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
-                // Development:
-                // dd($response->json(), $response->body(), $response->status());
-                
-                // Production:
-                return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
+                Cache::forget($lockKey);
+                dd([
+                    'error' => 'Response gagal 516',
+                    'status' => $response->status(),
+                    'responseData' => $responseData
+                ]);
             }
             
         } catch (\Exception $e) {
             DB::rollback();
-            
+            Cache::forget($lockKey);
             Log::error('Submit error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
