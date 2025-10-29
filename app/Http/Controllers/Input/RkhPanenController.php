@@ -32,28 +32,47 @@ class RkhPanenController extends Controller
         
         $companycode = Session::get('companycode');
 
-        // Build query
-        $query = RkhPanenHdr::with(['mandor', 'kontraktors', 'results'])
-            ->where('companycode', $companycode);
+        $query = DB::table('rkhpanenhdr as h')
+            ->leftJoin('user as m', 'h.mandorpanenid', '=', 'm.userid')
+            ->leftJoin(
+                DB::raw('(SELECT rkhpanenno, companycode, 
+                        SUM(rencananetto) as total_netto, 
+                        SUM(rencanaha) as total_ha,
+                        COUNT(*) as kontraktor_count
+                        FROM rkhpanenlst 
+                        GROUP BY rkhpanenno, companycode) as kontraktor_summary'),
+                function($join) {
+                    $join->on('h.rkhpanenno', '=', 'kontraktor_summary.rkhpanenno')
+                        ->on('h.companycode', '=', 'kontraktor_summary.companycode');
+                }
+            )
+            ->where('h.companycode', $companycode)
+            ->select([
+                'h.*',
+                'm.name as mandor_name',
+                'kontraktor_summary.total_netto',
+                'kontraktor_summary.total_ha',
+                'kontraktor_summary.kontraktor_count'
+            ]);
 
         // Apply search filter
         if ($search) {
-            $query->where('rkhpanenno', 'like', '%' . $search . '%');
+            $query->where('h.rkhpanenno', 'like', '%' . $search . '%');
         }
 
         // Apply status filter
         if ($filterStatus) {
-            $query->where('status', $filterStatus);
+            $query->where('h.status', $filterStatus);
         }
 
         // Apply date filter
         if (empty($allDate)) {
             $dateToFilter = $filterDate ?: Carbon::today()->format('Y-m-d');
-            $query->whereDate('rkhdate', $dateToFilter);
+            $query->whereDate('h.rkhdate', $dateToFilter);
         }
 
         // Order and paginate
-        $query->orderBy('rkhdate', 'desc')->orderBy('rkhpanenno', 'desc');
+        $query->orderBy('h.rkhdate', 'desc')->orderBy('h.rkhpanenno', 'desc');
         $rkhPanenData = $query->paginate($perPage);
 
         return view('input.rkh-panen.index', [
@@ -126,8 +145,7 @@ class RkhPanenController extends Controller
         $companycode = Session::get('companycode');
         
         // Get RKH Panen header
-        $rkhPanen = RkhPanenHdr::with(['mandor', 'kontraktors', 'results'])
-            ->where('companycode', $companycode)
+        $rkhPanen = RkhPanenHdr::where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->first();
         
@@ -136,21 +154,33 @@ class RkhPanenController extends Controller
                 ->with('error', 'Data RKH Panen tidak ditemukan');
         }
 
-        // Section 1: Rencana (from kontraktors)
-        $rencana = $rkhPanen->kontraktors;
+        // Get kontraktors pakai Query Builder
+        $rencana = DB::table('rkhpanenlst')
+            ->where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->get();
 
-        // Section 2: Hasil Kemarin (all results)
-        $hasil = $rkhPanen->results;
+        // Get hasil (results with data)
+        $hasil = $rkhPanen->results()->whereNotNull('hc')->get();
 
-        // Section 3: Petak Baru (haritebang = 1)
-        $petakBaru = $rkhPanen->getPetakBaru();
+        // Get petak baru (haritebang = 1)
+        $petakBaru = $rkhPanen->results()->where('haritebang', 1)->get();
 
-        // Calculate totals
+        // Calculate totals pakai Query Builder
         $totals = [
-            'rencana_netto' => $rkhPanen->getTotalRencanaNetto(),
-            'rencana_ha' => $rkhPanen->getTotalRencanaHa(),
-            'hasil_hc' => $rkhPanen->getTotalHasilHc(),
-            'field_balance' => $rkhPanen->getTotalFieldBalanceTon(),
+            'rencana_netto' => DB::table('rkhpanenlst')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('rencananetto'),
+            'rencana_ha' => DB::table('rkhpanenlst')
+                ->where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->sum('rencanaha'),
+            'hasil_hc' => $rkhPanen->results->sum('hc'),
+            'hasil_stc' => $rkhPanen->results->sum('stc'),
+            'hasil_bc' => $rkhPanen->results->sum('bc'),
+            'field_balance_rit' => $rkhPanen->results->sum('fbrit'),
+            'field_balance_ton' => $rkhPanen->results->sum('fbton'),
         ];
 
         return view('input.rkh-panen.show', [
@@ -173,7 +203,7 @@ class RkhPanenController extends Controller
     {
         $companycode = Session::get('companycode');
         
-        $rkhPanen = RkhPanenHdr::with(['mandor', 'results'])
+        $rkhPanen = RkhPanenHdr::with(['mandor'])
             ->where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->first();
@@ -183,15 +213,20 @@ class RkhPanenController extends Controller
                 ->with('error', 'Data RKH Panen tidak ditemukan');
         }
 
-        // Get available plots from Section 1 (rkhpanenlst) + join with masterlist
-        $availablePlots = $this->getAvailablePlotsForHasil($rkhpanenno, $companycode);
+        // Get pre-generated result rows (empty, waiting for input)
+        $hasilRows = RkhPanenResult::with('blokInfo')
+            ->where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->orderBy('blok')
+            ->orderBy('plot')
+            ->get();
 
         return view('input.rkh-panen.edit-hasil', [
             'title' => 'Input Hasil Panen',
             'navbar' => 'Panen',
             'nav' => 'RKH Panen',
             'rkhPanen' => $rkhPanen,
-            'availablePlots' => $availablePlots,
+            'hasilRows' => $hasilRows,
             'oldInput' => old(),
         ]);
     }
@@ -273,84 +308,43 @@ class RkhPanenController extends Controller
     {
         // Get mandor panen
         $mandorPanen = User::where('companycode', $companycode)
-            ->whereIn('idjabatan', [5]) // Adjust based on your mandor panen jabatan
+            ->where('idjabatan', 5)
             ->where('isactive', 1)
             ->orderBy('name')
             ->get();
 
-        // Get kontraktors using QB
+        // Get kontraktors
         $kontraktors = DB::table('kontraktor')
+            ->select('id as kontraktorid', 'namakontraktor')
             ->where('companycode', $companycode)
             ->where('isactive', 1)
             ->orderBy('namakontraktor')
             ->get();
 
-        // Get plots with blok info for multiple select
-        $plots = DB::table('plot')
-            ->select('plot.plot', 'plot.blok', 'plot.luasarea', 'blok.namablok')
-            ->join('blok', function($join) use ($companycode) {
-                $join->on('plot.blok', '=', 'blok.blok')
-                     ->where('blok.companycode', '=', $companycode);
-            })
-            ->where('plot.companycode', $companycode)
-            ->orderBy('plot.blok')
-            ->orderBy('plot.plot')
-            ->get();
+        // Get VALID plots - SIMPLIFIED (pakai masterlist + batch saja)
+        $plots = DB::table('masterlist')
+            ->select(
+                'masterlist.plot',
+                'masterlist.blok',
+                'masterlist.activebatchno',
+                'batch.lifecyclestatus',
+                'batch.batcharea'
+            )
+            ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+            ->where('masterlist.companycode', $companycode)
+            ->where('masterlist.isactive', 1)
+            ->where('batch.isactive', 1)
+            ->whereNotNull('masterlist.activebatchno')
+            ->orderBy('masterlist.blok')
+            ->orderBy('masterlist.plot')
+            ->get()
+            ->groupBy('blok'); // Group for optgroup
 
         return [
             'mandorPanen' => $mandorPanen,
             'kontraktors' => $kontraktors,
             'plots' => $plots,
         ];
-    }
-
-    private function getAvailablePlotsForHasil($rkhpanenno, $companycode)
-    {
-        // Get plots from rkhpanenlst (comma separated)
-        $rkhLstData = DB::table('rkhpanenlst')
-            ->where('companycode', $companycode)
-            ->where('rkhpanenno', $rkhpanenno)
-            ->get();
-
-        $availablePlots = [];
-
-        foreach ($rkhLstData as $lst) {
-            if (empty($lst->lokasiplot)) continue;
-
-            $plots = array_map('trim', explode(',', $lst->lokasiplot));
-
-            foreach ($plots as $plotCode) {
-                // Get masterlist info for this plot
-                $masterInfo = DB::table('masterlist')
-                    ->where('companycode', $companycode)
-                    ->where('plot', $plotCode)
-                    ->where('isactive', 1)
-                    ->first();
-
-                if ($masterInfo) {
-                    // Calculate hari tebang
-                    $hariTebang = $this->calculateHariTebang(
-                        $masterInfo->kodestatus,
-                        $masterInfo->tanggalpanenpc,
-                        $masterInfo->tanggalpanenrc1,
-                        $masterInfo->tanggalpanenrc2,
-                        $masterInfo->tanggalpanenrc3,
-                        now()
-                    );
-
-                    $availablePlots[$plotCode] = [
-                        'plot' => $plotCode,
-                        'blok' => $masterInfo->blok,
-                        'batchno' => $masterInfo->batchno,
-                        'kodestatus' => $masterInfo->kodestatus,
-                        'luasplot' => $masterInfo->batcharea,
-                        'haritebang' => $hariTebang,
-                    ];
-                }
-            }
-        }
-
-        return array_values($availablePlots); // Re-index array
     }
 
     private function calculateHariTebang($kodestatus, $tanggalPC, $tanggalRC1, $tanggalRC2, $tanggalRC3, $today)
@@ -364,7 +358,7 @@ class RkhPanenController extends Controller
         };
         
         if (!$lastPanenDate) {
-            return 1; // First harvest
+            return 1; // First harvest (hari tebang ke-1)
         }
         
         $lastDate = Carbon::parse($lastPanenDate);
@@ -398,17 +392,12 @@ class RkhPanenController extends Controller
     {
         $request->validate([
             'hasil' => 'required|array|min:1',
-            'hasil.*.blok' => 'required|string|max:2',
-            'hasil.*.plot' => 'required|string|max:6',
-            'hasil.*.batchno' => 'required|string|max:20',
-            'hasil.*.luasplot' => 'required|numeric|min:0',
-            'hasil.*.kodestatus' => 'required|in:PC,RC1,RC2,RC3',
-            'hasil.*.haritebang' => 'required|integer|min:1',
-            'hasil.*.stc' => 'required|numeric|min:0',
-            'hasil.*.hc' => 'required|numeric|min:0',
+            'hasil.*.plot' => 'required|string|max:5',
+            'hasil.*.hc' => 'required|numeric|min:0.01', // ✅ HC wajib diisi
             'hasil.*.fbrit' => 'nullable|integer|min:0',
+            'hasil.*.fbton' => 'nullable|numeric|min:0',
             'hasil.*.ispremium' => 'nullable|boolean',
-            'hasil.*.keterangan' => 'nullable|string',
+            'hasil.*.keterangan' => 'nullable|string|max:200',
         ]);
     }
 
@@ -420,7 +409,7 @@ class RkhPanenController extends Controller
         // Generate unique RKH Panen No
         $rkhpanenno = $this->generateRkhPanenNo($tanggal, $companycode);
 
-        // Insert header (NO TARGET FIELDS)
+        // Insert header
         RkhPanenHdr::create([
             'companycode' => $companycode,
             'rkhpanenno' => $rkhpanenno,
@@ -450,59 +439,161 @@ class RkhPanenController extends Controller
                 'grabloader' => isset($kontraktor['grabloader']) ? 1 : 0,
                 'lokasiplot' => $kontraktor['lokasiplot'], // COMMA-SEPARATED
             ]);
+
+            // AUTO-GENERATE EMPTY ROWS IN rkhpanenresult (NORMALIZED)
+            $this->generateEmptyResultRows(
+                $rkhpanenno,
+                $companycode,
+                $kontraktor['lokasiplot'],
+                $tanggal
+            );
         }
 
         return $rkhpanenno;
     }
 
-    private function updateHasilRecords($request, $rkhpanenno, $companycode)
+    /**
+     * ⭐ Generate empty result rows for each plot
+     */
+    private function generateEmptyResultRows($rkhpanenno, $companycode, $lokasiplotStr, $rkhdate)
     {
-        // Delete existing hasil
-        RkhPanenResult::where('companycode', $companycode)
-            ->where('rkhpanenno', $rkhpanenno)
-            ->delete();
+        $plotArray = array_map('trim', explode(',', $lokasiplotStr));
 
-        // Insert new hasil (NORMALIZED - 1 row per plot)
-        foreach ($request->hasil as $hasil) {
-            // Calculate BC and FBTON
-            $bc = $hasil['stc'] - $hasil['hc'];
-            $fbton = $bc * 1000;
+        foreach ($plotArray as $plotCode) {
+            $batchInfo = DB::table('masterlist')
+                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                ->where('masterlist.companycode', $companycode)
+                ->where('masterlist.plot', $plotCode)
+                ->where('masterlist.isactive', 1)
+                ->select(
+                    'masterlist.blok',
+                    'batch.batchno',
+                    'batch.batcharea',
+                    'batch.lifecyclestatus',
+                    'batch.tanggalpanenpc',
+                    'batch.tanggalpanenrc1',
+                    'batch.tanggalpanenrc2',
+                    'batch.tanggalpanenrc3'
+                )
+                ->first();
 
+            if (!$batchInfo) continue;
+
+            $hariTebang = $this->calculateHariTebang(
+                $batchInfo->lifecyclestatus,
+                $batchInfo->tanggalpanenpc,
+                $batchInfo->tanggalpanenrc1,
+                $batchInfo->tanggalpanenrc2,
+                $batchInfo->tanggalpanenrc3,
+                $rkhdate
+            );
+
+            // ✅ Calculate STC: Luas awal - total HC yang sudah dipanen
+            $totalHcDipanen = DB::table('rkhpanenresult')
+                ->where('companycode', $companycode)
+                ->where('plot', $plotCode)
+                ->where('kodestatus', $batchInfo->lifecyclestatus) // ✅ Filter by lifecycle
+                ->whereNotNull('hc')
+                ->sum('hc');
+
+            $stcHariIni = $batchInfo->batcharea - $totalHcDipanen;
+
+            // Insert with auto-calculated STC
             RkhPanenResult::create([
                 'companycode' => $companycode,
                 'rkhpanenno' => $rkhpanenno,
-                'blok' => $hasil['blok'],
-                'plot' => $hasil['plot'],
-                'batchno' => $hasil['batchno'], // ⭐ FROM MASTERLIST
-                'luasplot' => $hasil['luasplot'],
-                'kodestatus' => $hasil['kodestatus'],
-                'haritebang' => $hasil['haritebang'],
-                'stc' => $hasil['stc'],
-                'hc' => $hasil['hc'],
+                'blok' => $batchInfo->blok,
+                'plot' => $plotCode,
+                'luasplot' => $batchInfo->batcharea,
+                'kodestatus' => $batchInfo->lifecyclestatus,
+                'haritebang' => $hariTebang,
+                'stc' => $stcHariIni, // ✅ Auto-calculated
+                'hc' => null, // User input nanti
+                'bc' => null,
+                'fbrit' => null,
+                'fbton' => null,
+                'ispremium' => 0,
+                'keterangan' => null,
+            ]);
+        }
+    }
+
+    private function updateHasilRecords($request, $rkhpanenno, $companycode)
+    {
+        foreach ($request->hasil as $hasil) {
+            // ✅ Get existing row untuk ambil STC yang sudah ada
+            $existingRow = RkhPanenResult::where('companycode', $companycode)
+                ->where('rkhpanenno', $rkhpanenno)
+                ->where('plot', $hasil['plot'])
+                ->first();
+
+            if (!$existingRow) {
+                Log::warning("Plot {$hasil['plot']} tidak ditemukan di RKH {$rkhpanenno}");
+                continue;
+            }
+
+            // ✅ STC TIDAK BOLEH DIUBAH - ambil dari database
+            $stc = $existingRow->stc;
+            
+            // Parse HC dari input user
+            $hc = floatval($hasil['hc'] ?? 0);
+            
+            // Calculate BC
+            $bc = $stc - $hc;
+            
+            // Calculate FB
+            $fbrit = intval($hasil['fbrit'] ?? 0);
+            $fbton = floatval($hasil['fbton'] ?? ($fbrit * 5));
+
+            // ✅ Update row - STC TETAP tidak berubah
+            $existingRow->update([
+                // 'stc' => $stc,  // ❌ JANGAN UPDATE STC!
+                'hc' => $hc,
                 'bc' => $bc,
+                'fbrit' => $fbrit,
                 'fbton' => $fbton,
-                'fbrit' => $hasil['fbrit'] ?? null,
                 'ispremium' => isset($hasil['ispremium']) ? 1 : 0,
                 'keterangan' => $hasil['keterangan'] ?? null,
             ]);
 
-            // ⭐ UPDATE MASTERLIST - last panen date
-            $fieldName = 'tanggalpanen' . strtolower($hasil['kodestatus']);
-            
-            DB::table('masterlist')
-                ->where('companycode', $companycode)
-                ->where('plot', $hasil['plot'])
-                ->update([
-                    $fieldName => now(),
-                    'lastactivity' => "PANEN {$hasil['kodestatus']} - " . now()->format('Y-m-d H:i:s'),
-                ]);
+            // ✅ UPDATE BATCH - Catat tanggal panen
+            if ($hc > 0) {
+                $batchno = DB::table('masterlist')
+                    ->where('companycode', $companycode)
+                    ->where('plot', $hasil['plot'])
+                    ->value('activebatchno');
+
+                if ($batchno) {
+                    $fieldName = 'tanggalpanen' . strtolower($existingRow->kodestatus);
+                    
+                    DB::table('batch')
+                        ->where('batchno', $batchno)
+                        ->update([
+                            $fieldName => now(),
+                            'lastactivity' => "PANEN {$existingRow->kodestatus} - " . now()->format('Y-m-d H:i:s'),
+                        ]);
+                }
+            }
         }
 
-        // Update RKH status to COMPLETED
+        // ✅ Cek apakah semua plot sudah diinput (HC terisi semua)
+        $totalPlots = RkhPanenResult::where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->count();
+
+        $inputtedPlots = RkhPanenResult::where('companycode', $companycode)
+            ->where('rkhpanenno', $rkhpanenno)
+            ->whereNotNull('hc')
+            ->where('hc', '>', 0)
+            ->count();
+
+        // ✅ Update status: COMPLETED hanya jika semua plot sudah diinput
+        $newStatus = ($inputtedPlots >= $totalPlots) ? 'COMPLETED' : 'IN_PROGRESS';
+
         RkhPanenHdr::where('companycode', $companycode)
             ->where('rkhpanenno', $rkhpanenno)
             ->update([
-                'status' => 'COMPLETED',
+                'status' => $newStatus,
                 'updateby' => Auth::user()->userid,
                 'updatedat' => now(),
             ]);
@@ -518,7 +609,7 @@ class RkhPanenController extends Controller
         return DB::transaction(function () use ($carbonDate, $day, $month, $year, $companycode) {
             $lastRkh = RkhPanenHdr::where('companycode', $companycode)
                 ->whereDate('rkhdate', $carbonDate)
-                ->where('rkhpanenno', 'like', "RKHPN{$day}{$month}%" . $year)
+                ->where('rkhpanenno', 'like', "RKHP{$day}{$month}%" . $year)
                 ->lockForUpdate()
                 ->orderBy(DB::raw('CAST(SUBSTRING(rkhpanenno, 11, 2) AS UNSIGNED)'), 'desc')
                 ->first();
@@ -530,7 +621,7 @@ class RkhPanenController extends Controller
                 $newNumber = '01';
             }
 
-            return "RKHPN{$day}{$month}{$newNumber}{$year}";
+            return "RKHP{$day}{$month}{$newNumber}{$year}";
         });
     }
 

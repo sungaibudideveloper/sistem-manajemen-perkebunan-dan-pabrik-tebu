@@ -30,6 +30,72 @@
     </div>
   </div>
 
+  <!-- ⭐ PLOT SELECTION MODAL -->
+  <div id="plotModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-xl flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-bold">Pilih Lokasi Plot</h3>
+          <p class="text-xs mt-1 opacity-90">Pilih satu atau lebih plot untuk kontraktor ini</p>
+        </div>
+        <button onclick="closePlotModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto flex-1">
+        <!-- Search Box -->
+        <div class="mb-4">
+          <div class="relative">
+            <input type="text" 
+                   id="plotSearchInput" 
+                   placeholder="Cari plot (contoh: A001, B-002)..." 
+                   class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   oninput="filterPlots()">
+            <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Selected Counter -->
+        <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-blue-800">Plot Terpilih:</span>
+            <span id="selectedCount" class="text-lg font-bold text-blue-600">0</span>
+          </div>
+        </div>
+
+        <!-- Plot Grid (Grouped by Blok) -->
+        <div id="plotGrid" class="space-y-4">
+          <!-- Will be populated by JS -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="border-t border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50 rounded-b-xl">
+        <button onclick="clearPlotSelection()" 
+                class="text-sm text-gray-600 hover:text-gray-800 font-medium">
+          Hapus Semua
+        </button>
+        <div class="flex gap-3">
+          <button onclick="closePlotModal()" 
+                  class="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors">
+            Batal
+          </button>
+          <button onclick="confirmPlotSelection()" 
+                  class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+            Simpan Pilihan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <form id="rkh-panen-form" action="{{ route('input.rkh-panen.store') }}" method="POST">
     @csrf
 
@@ -59,7 +125,7 @@
 
     <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
       
-      <!-- Header Info (NO TARGET FIELDS) -->
+      <!-- Header Info -->
       <div class="bg-white rounded-lg shadow-md p-4 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           
@@ -190,23 +256,168 @@
     </div>
   </form>
 
-  <!-- Choices.js -->
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-
   <script>
     // Global data
     window.kontraktorsData = @json($kontraktors ?? []);
     window.plotsData = @json($plots ?? []);
     let rowIndex = 0;
-    let choicesInstances = {};
+    let currentEditingRow = null;
+    let selectedPlots = {}; // Store selected plots per row
 
-    // YPH options (10, 20, 30, ... 200)
+    // YPH options (10-200, interval 10, default 80)
     function generateYphOptions(defaultValue = 80) {
       let options = '';
       for (let i = 10; i <= 200; i += 10) {
         options += `<option value="${i}" ${i === defaultValue ? 'selected' : ''}>${i}</option>`;
       }
       return options;
+    }
+
+    // ⭐ PLOT MODAL FUNCTIONS
+    function openPlotModal(rowIdx) {
+      currentEditingRow = rowIdx;
+      const modal = document.getElementById('plotModal');
+      modal.classList.remove('hidden');
+      
+      // Initialize selected plots for this row
+      if (!selectedPlots[rowIdx]) {
+        selectedPlots[rowIdx] = [];
+      }
+      
+      renderPlotGrid();
+      updateSelectedCount();
+    }
+
+    function closePlotModal() {
+      document.getElementById('plotModal').classList.add('hidden');
+      document.getElementById('plotSearchInput').value = '';
+      currentEditingRow = null;
+    }
+
+    function renderPlotGrid() {
+      const grid = document.getElementById('plotGrid');
+      const searchTerm = document.getElementById('plotSearchInput').value.toLowerCase();
+      let html = '';
+
+      Object.keys(window.plotsData).forEach(blokCode => {
+        const plots = window.plotsData[blokCode];
+        const filteredPlots = plots.filter(p => 
+          p.plot.toLowerCase().includes(searchTerm) || 
+          `${p.blok}-${p.plot}`.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredPlots.length > 0) {
+          html += `
+            <div class="border border-gray-300 rounded-lg overflow-hidden">
+              <div class="bg-gray-100 px-4 py-2 border-b border-gray-300">
+                <h4 class="font-semibold text-gray-800">Blok ${blokCode}</h4>
+              </div>
+              <div class="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          `;
+
+          filteredPlots.forEach(p => {
+            const isSelected = selectedPlots[currentEditingRow]?.includes(p.plot);
+            html += `
+              <button type="button" 
+                      onclick="togglePlot('${p.plot}')"
+                      class="plot-item ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'} 
+                             border-2 rounded-lg px-3 py-2 text-sm font-medium hover:shadow-md transition-all duration-200">
+                <div class="font-bold">${p.plot}</div>
+                <div class="text-xs opacity-75">${p.lifecyclestatus}</div>
+              </button>
+            `;
+          });
+
+          html += `
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      if (html === '') {
+        html = '<div class="text-center py-8 text-gray-500">Tidak ada plot yang ditemukan</div>';
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function togglePlot(plotCode) {
+      if (!selectedPlots[currentEditingRow]) {
+        selectedPlots[currentEditingRow] = [];
+      }
+
+      const index = selectedPlots[currentEditingRow].indexOf(plotCode);
+      if (index > -1) {
+        selectedPlots[currentEditingRow].splice(index, 1);
+      } else {
+        selectedPlots[currentEditingRow].push(plotCode);
+      }
+
+      renderPlotGrid();
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const count = selectedPlots[currentEditingRow]?.length || 0;
+      document.getElementById('selectedCount').textContent = count;
+    }
+
+    function clearPlotSelection() {
+      selectedPlots[currentEditingRow] = [];
+      renderPlotGrid();
+      updateSelectedCount();
+    }
+
+    function confirmPlotSelection() {
+      const plotCount = selectedPlots[currentEditingRow]?.length || 0;
+      if (plotCount === 0) {
+        alert('Pilih minimal 1 plot!');
+        return;
+      }
+
+      // Update display in table
+      updatePlotDisplay(currentEditingRow);
+      
+      // Update hidden input
+      const hiddenInput = document.querySelector(`input[name="kontraktors[${currentEditingRow}][lokasiplot]"]`);
+      if (hiddenInput) {
+        hiddenInput.value = selectedPlots[currentEditingRow].join(',');
+      }
+
+      closePlotModal();
+    }
+
+    function updatePlotDisplay(rowIdx) {
+      const displayBtn = document.querySelector(`#plot-display-${rowIdx}`);
+      if (displayBtn) {
+        const count = selectedPlots[rowIdx]?.length || 0;
+        const plots = selectedPlots[rowIdx] || [];
+        
+        if (count === 0) {
+          displayBtn.innerHTML = `
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Pilih Plot
+          `;
+          displayBtn.className = 'w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded text-xs font-medium transition-colors flex items-center justify-center';
+        } else {
+          const displayText = count <= 3 ? plots.join(', ') : `${plots.slice(0, 3).join(', ')} +${count - 3}`;
+          displayBtn.innerHTML = `
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="truncate">${displayText}</span>
+            <span class="ml-2 px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-bold">${count}</span>
+          `;
+          displayBtn.className = 'w-full px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-300 rounded text-xs font-medium transition-colors flex items-center';
+        }
+      }
+    }
+
+    function filterPlots() {
+      renderPlotGrid();
     }
 
     // Kontraktor row template
@@ -273,15 +484,16 @@
                    class="grabloader-check w-4 h-4 text-blue-600 rounded" disabled>
           </td>
           <td class="px-3 py-2 border-r border-gray-200">
-            <select name="kontraktors[${index}][lokasiplot]" 
-                    id="lokasi-plot-${index}"
-                    class="lokasi-plot-select"
-                    multiple 
-                    required>
-              ${window.plotsData.map(p => 
-                `<option value="${p.plot}">${p.blok}-${p.plot} (${p.luasarea} ha)</option>`
-              ).join('')}
-            </select>
+            <input type="hidden" name="kontraktors[${index}][lokasiplot]" value="" required>
+            <button type="button" 
+                    id="plot-display-${index}"
+                    onclick="openPlotModal(${index})"
+                    class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded text-xs font-medium transition-colors flex items-center justify-center">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Pilih Plot
+            </button>
           </td>
           <td class="px-3 py-2 text-center">
             <button type="button" onclick="removeRow(${index})" 
@@ -299,19 +511,7 @@
     document.getElementById('add-kontraktor-row').addEventListener('click', function() {
       const tbody = document.getElementById('kontraktor-rows');
       tbody.insertAdjacentHTML('beforeend', createKontraktorRow(rowIndex));
-      
-      // Initialize Choices.js for the new select
-      const selectElement = document.getElementById(`lokasi-plot-${rowIndex}`);
-      choicesInstances[rowIndex] = new Choices(selectElement, {
-        removeItemButton: true,
-        searchEnabled: true,
-        searchPlaceholderValue: 'Cari plot...',
-        noResultsText: 'Plot tidak ditemukan',
-        itemSelectText: 'Klik untuk pilih',
-        placeholder: true,
-        placeholderValue: 'Pilih lokasi plot...',
-      });
-      
+      selectedPlots[rowIndex] = [];
       rowIndex++;
     });
 
@@ -319,12 +519,8 @@
     function removeRow(index) {
       const row = document.querySelector(`tr[data-index="${index}"]`);
       if (row) {
-        // Destroy Choices instance
-        if (choicesInstances[index]) {
-          choicesInstances[index].destroy();
-          delete choicesInstances[index];
-        }
         row.remove();
+        delete selectedPlots[index];
         calculateTotals();
       }
     }
@@ -382,79 +578,83 @@
     });
 
     // Form submission
-    document.getElementById('rkh-panen-form').addEventListener('submit', function(e) {
-      e.preventDefault();
+  document.getElementById('rkh-panen-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validation
+    const rows = document.querySelectorAll('#kontraktor-rows tr');
+    if (rows.length === 0) {
+      alert('Minimal harus ada 1 kontraktor!');
+      return;
+    }
+
+    // Validate each row has plots selected
+    let allValid = true;
+    rows.forEach((row, idx) => {
+      const rowIndex = row.dataset.index;
       
-      // Validation
-      const rows = document.querySelectorAll('#kontraktor-rows tr');
-      if (rows.length === 0) {
-        alert('Minimal harus ada 1 kontraktor!');
+      // ⭐ Validate kontraktor selected
+      const kontraktorSelect = row.querySelector(`select[name="kontraktors[${rowIndex}][kontraktorid]"]`);
+      if (!kontraktorSelect || !kontraktorSelect.value) {
+        alert(`Kontraktor baris ${parseInt(idx) + 1} belum dipilih!`);
+        allValid = false;
         return;
       }
       
-      // Convert Choices.js values to comma-separated string
-      Object.keys(choicesInstances).forEach(index => {
-        const choicesInstance = choicesInstances[index];
-        const selectedValues = choicesInstance.getValue(true); // Get array of values
-        
-        // Create hidden input with comma-separated values
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = `kontraktors[${index}][lokasiplot]`;
-        hiddenInput.value = selectedValues.join(',');
-        this.appendChild(hiddenInput);
-        
-        // Remove the original multiple select from form data
-        const originalSelect = document.querySelector(`select[name="kontraktors[${index}][lokasiplot]"]`);
-        if (originalSelect) {
-          originalSelect.removeAttribute('name');
+      // Validate plots selected
+      if (!selectedPlots[rowIndex] || selectedPlots[rowIndex].length === 0) {
+        alert(`Kontraktor baris ${parseInt(idx) + 1} belum memilih plot!`);
+        allValid = false;
+        return;
+      }
+    });
+
+    if (!allValid) return;
+    
+    // Show loading
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    document.getElementById('submit-text').textContent = 'Menyimpan...';
+    document.getElementById('submit-icon').classList.add('hidden');
+    document.getElementById('loading-spinner').classList.remove('hidden');
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success modal
+        const modalEl = document.querySelector('[x-data*="showModal"]');
+        if (modalEl && modalEl._x_dataStack) {
+          modalEl._x_dataStack[0].showModal = true;
+          modalEl._x_dataStack[0].modalMessage = data.message;
         }
-      });
-      
-      // Show loading
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-      document.getElementById('submit-text').textContent = 'Menyimpan...';
-      document.getElementById('submit-icon').classList.add('hidden');
-      document.getElementById('loading-spinner').classList.remove('hidden');
-      
-      const formData = new FormData(this);
-      
-      fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Show success modal
-          const modalEl = document.querySelector('[x-data*="showModal"]');
-          if (modalEl && modalEl._x_dataStack) {
-            modalEl._x_dataStack[0].showModal = true;
-            modalEl._x_dataStack[0].modalMessage = data.message;
-          }
-        } else {
-          alert(data.message || 'Terjadi kesalahan');
-          // Reset button
-          submitBtn.disabled = false;
-          document.getElementById('submit-text').textContent = 'Simpan RKH Panen';
-          document.getElementById('submit-icon').classList.remove('hidden');
-          document.getElementById('loading-spinner').classList.add('hidden');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan sistem');
+      } else {
+        alert(data.message || 'Terjadi kesalahan');
+        // Reset button
         submitBtn.disabled = false;
         document.getElementById('submit-text').textContent = 'Simpan RKH Panen';
         document.getElementById('submit-icon').classList.remove('hidden');
         document.getElementById('loading-spinner').classList.add('hidden');
-      });
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Terjadi kesalahan sistem');
+      submitBtn.disabled = false;
+      document.getElementById('submit-text').textContent = 'Simpan RKH Panen';
+      document.getElementById('submit-icon').classList.remove('hidden');
+      document.getElementById('loading-spinner').classList.add('hidden');
     });
+  });
 
     // Add first row on load
     document.addEventListener('DOMContentLoaded', function() {

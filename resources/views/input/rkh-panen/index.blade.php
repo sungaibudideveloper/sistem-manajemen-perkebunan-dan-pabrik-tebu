@@ -89,7 +89,7 @@
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">No RKH</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tanggal</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mandor</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Target (Ton/Ha)</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Rencana (Ton/Ha)</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kontraktor</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
@@ -98,51 +98,43 @@
         <tbody class="bg-white divide-y divide-gray-200">
           @forelse($rkhPanenData as $rkh)
           <tr class="hover:bg-gray-50 transition-colors">
-            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $rkh->rkhpanenno }}</td>
+            <td class="px-4 py-3 text-sm font-medium">
+              <a href="{{ route('input.rkh-panen.show', $rkh->rkhpanenno) }}" 
+                 class="text-blue-600 hover:text-blue-800 hover:underline font-semibold">
+                {{ $rkh->rkhpanenno }}
+              </a>
+            </td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ \Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y') }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ $rkh->mandor->name ?? '-' }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">
-              {{ number_format($rkh->targettoday ?? 0, 2) }} ton / {{ number_format($rkh->targetha ?? 0, 2) }} ha
+              <div class="flex flex-col">
+                <span class="font-semibold text-green-700">{{ number_format($rkh->total_netto ?? 0, 2) }} ton</span>
+                <span class="text-xs text-gray-500">{{ number_format($rkh->total_ha ?? 0, 2) }} ha</span>
+              </div>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">
-              <span class="font-medium">{{ $rkh->kontraktors->count() }}</span> kontraktor
+              <span class="font-medium">{{ $rkh->kontraktor_count ?? 0 }}</span> kontraktor
             </td>
             <td class="px-4 py-3">
               <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                     {{ $rkh->status == 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                    {{ $rkh->status == 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
                 {{ $rkh->status }}
               </span>
             </td>
             <td class="px-4 py-3 text-center">
               <div class="flex justify-center gap-2">
-                <!-- View Report -->
-                <a href="{{ route('input.rkh-panen.show', $rkh->rkhpanenno) }}" 
-                   class="text-blue-600 hover:text-blue-800 transition-colors" 
-                   title="Lihat Report">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
-                </a>
-
-                <!-- Input Hasil (if not completed) -->
-                @if($rkh->status != 'COMPLETED')
+                <!-- Edit Hasil (only for MOBILE_UPLOAD status) -->
+                @if($rkh->status == 'MOBILE_UPLOAD')
                 <a href="{{ route('input.rkh-panen.editHasil', $rkh->rkhpanenno) }}" 
-                   class="text-green-600 hover:text-green-800 transition-colors" 
-                   title="Input Hasil">
+                  class="text-green-600 hover:text-green-800 transition-colors" 
+                  title="Input Hasil">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                   </svg>
                 </a>
-                @else
-                <span class="text-gray-400" title="Sudah Completed">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </span>
                 @endif
 
-                <!-- Delete (if draft) -->
+                <!-- Delete (only for DRAFT status) -->
                 @if($rkh->status == 'DRAFT')
                 <button onclick="confirmDelete('{{ $rkh->rkhpanenno }}')" 
                         class="text-red-600 hover:text-red-800 transition-colors" 
@@ -151,6 +143,11 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
                 </button>
+                @endif
+
+                <!-- No Actions Available -->
+                @if($rkh->status != 'DRAFT' && $rkh->status != 'MOBILE_UPLOAD')
+                <span class="text-gray-400 text-xs">No actions</span>
                 @endif
               </div>
             </td>
@@ -257,14 +254,32 @@
     function executeDelete() {
       if (!deleteRkhNo) return;
 
-      fetch(`/input/rkh-panen/${deleteRkhNo}`, {
+      console.log('Deleting:', deleteRkhNo);
+      
+      // ✅ FIX: Gunakan route() helper seperti RencanaKerjaHarian
+      const deleteUrl = '{{ route("input.rkh-panen.destroy", ":rkhpanenno") }}'.replace(':rkhpanenno', deleteRkhNo);
+      console.log('Delete URL:', deleteUrl);
+
+      fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          return response.text().then(text => {
+            console.error('Error response:', text);
+            throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+          });
+        }
+        
+        return response.json();
+      })
       .then(data => {
         if (data.success) {
           window.location.reload();
@@ -274,7 +289,7 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Terjadi kesalahan saat menghapus data');
+        alert('Terjadi kesalahan saat menghapus data: ' + error.message);
       })
       .finally(() => {
         document.getElementById('deleteModal').classList.add('hidden');

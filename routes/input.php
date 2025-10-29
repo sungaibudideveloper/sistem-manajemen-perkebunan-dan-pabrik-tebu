@@ -123,24 +123,24 @@ Route::middleware('auth')->group(function () {
         });
 });
 
+// =====================================
+// RKH PANEN ROUTES
+// =====================================
 Route::middleware('auth')->group(function () {
-    // Main CRUD routes
-    Route::get('input/rkh-panen', [RkhPanenController::class, 'index'])
-        ->name('input.rkh-panen.index');
-    Route::get('input/rkh-panen/create', [RkhPanenController::class, 'create'])
-        ->name('input.rkh-panen.create');
-    Route::post('input/rkh-panen/store', [RkhPanenController::class, 'store'])
-        ->name('input.rkh-panen.store');
-    Route::get('input/rkh-panen/{rkhpanenno}/show', [RkhPanenController::class, 'show'])
-        ->name('input.rkh-panen.show');
-    Route::delete('input/rkh-panen/{rkhpanenno}', [RkhPanenController::class, 'destroy'])
-        ->name('input.rkh-panen.destroy');
-    
-    // Hasil Panen routes
-    Route::get('input/rkh-panen/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])
-        ->name('input.rkh-panen.editHasil');
-    Route::put('input/rkh-panen/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])
-        ->name('input.rkh-panen.updateHasil');
+    Route::prefix('input/rkh-panen')
+        ->name('input.rkh-panen.')
+        ->group(function () {
+            
+            Route::get('/', [RkhPanenController::class, 'index'])->name('index');
+            Route::get('/create', [RkhPanenController::class, 'create'])->name('create');
+            Route::post('/store', [RkhPanenController::class, 'store'])->name('store');
+            Route::get('/{rkhpanenno}/show', [RkhPanenController::class, 'show'])->name('show');
+            Route::delete('/{rkhpanenno}', [RkhPanenController::class, 'destroy'])->name('destroy');
+            
+            // Hasil Panen routes
+            Route::get('/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])->name('editHasil');
+            Route::put('/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])->name('updateHasil');
+        });
 });
 
 // =====================================
