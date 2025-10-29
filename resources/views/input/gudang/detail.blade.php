@@ -459,6 +459,9 @@ $(document).on('input', '.selected-dosage', function(){
           const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
           const qtyRaw    = dosage * luas;
           const qty    = roundTo25(qtyRaw);
+
+         console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
+
           row.find('.labelqty').text(qty.toFixed(3));
         }
         
