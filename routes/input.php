@@ -140,6 +140,9 @@ Route::middleware('auth')->group(function () {
             // Hasil Panen routes
             Route::get('/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])->name('editHasil');
             Route::put('/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])->name('updateHasil');
+            
+            // Complete RKH Panen
+            Route::post('/{rkhpanenno}/complete', [RkhPanenController::class, 'complete'])->name('complete');
         });
 });
 

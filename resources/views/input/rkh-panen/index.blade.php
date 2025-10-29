@@ -51,6 +51,7 @@
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="">Semua Status</option>
             <option value="DRAFT" {{ $filterStatus == 'DRAFT' ? 'selected' : '' }}>Draft</option>
+            <option value="MOBILE_UPLOAD" {{ $filterStatus == 'MOBILE_UPLOAD' ? 'selected' : '' }}>Mobile Upload</option>
             <option value="COMPLETED" {{ $filterStatus == 'COMPLETED' ? 'selected' : '' }}>Completed</option>
           </select>
         </div>
@@ -105,7 +106,7 @@
               </a>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ \Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y') }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ $rkh->mandor->name ?? '-' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ $rkh->mandor_name ?? '-' }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">
               <div class="flex flex-col">
                 <span class="font-semibold text-green-700">{{ number_format($rkh->total_netto ?? 0, 2) }} ton</span>
@@ -116,14 +117,24 @@
               <span class="font-medium">{{ $rkh->kontraktor_count ?? 0 }}</span> kontraktor
             </td>
             <td class="px-4 py-3">
-              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                    {{ $rkh->status == 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                {{ $rkh->status }}
-              </span>
+              @if($rkh->status == 'COMPLETED')
+                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  COMPLETED
+                </span>
+              @elseif($rkh->status == 'MOBILE_UPLOAD')
+                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                  MOBILE UPLOAD
+                </span>
+              @else
+                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                  {{ $rkh->status }}
+                </span>
+              @endif
             </td>
             <td class="px-4 py-3 text-center">
               <div class="flex justify-center gap-2">
-                <!-- Edit Hasil (only for MOBILE_UPLOAD status) -->
+                
+                <!-- Edit Hasil (for MOBILE_UPLOAD status) -->
                 @if($rkh->status == 'MOBILE_UPLOAD')
                 <a href="{{ route('input.rkh-panen.editHasil', $rkh->rkhpanenno) }}" 
                   class="text-green-600 hover:text-green-800 transition-colors" 
@@ -132,6 +143,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                   </svg>
                 </a>
+
+                <!-- Complete (for MOBILE_UPLOAD status) -->
+                <button onclick="confirmComplete('{{ $rkh->rkhpanenno }}')" 
+                        class="text-blue-600 hover:text-blue-800 transition-colors" 
+                        title="Selesaikan">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </button>
                 @endif
 
                 <!-- Delete (only for DRAFT status) -->
@@ -146,8 +166,8 @@
                 @endif
 
                 <!-- No Actions Available -->
-                @if($rkh->status != 'DRAFT' && $rkh->status != 'MOBILE_UPLOAD')
-                <span class="text-gray-400 text-xs">No actions</span>
+                @if($rkh->status == 'COMPLETED')
+                <span class="text-gray-400 text-xs">-</span>
                 @endif
               </div>
             </td>
@@ -194,7 +214,6 @@
           <input type="date" 
                  name="date" 
                  required
-                 min="{{ date('Y-m-d') }}"
                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
         </div>
         
@@ -243,22 +262,54 @@
     </div>
   </div>
 
+  <!-- Complete Confirmation Modal -->
+  <div id="completeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+      <div class="flex items-center mb-4">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Selesaikan RKH Panen</h3>
+          <p class="text-sm text-gray-600 mt-1">Apakah Anda yakin ingin menyelesaikan RKH Panen ini?</p>
+        </div>
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button type="button" 
+                onclick="executeComplete()"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          Ya, Selesaikan
+        </button>
+        <button type="button" 
+                onclick="document.getElementById('completeModal').classList.add('hidden')"
+                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+          Batal
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let deleteRkhNo = null;
+    let completeRkhNo = null;
 
     function confirmDelete(rkhpanenno) {
       deleteRkhNo = rkhpanenno;
       document.getElementById('deleteModal').classList.remove('hidden');
     }
 
+    function confirmComplete(rkhpanenno) {
+      completeRkhNo = rkhpanenno;
+      document.getElementById('completeModal').classList.remove('hidden');
+    }
+
     function executeDelete() {
       if (!deleteRkhNo) return;
 
-      console.log('Deleting:', deleteRkhNo);
-      
-      // ✅ FIX: Gunakan route() helper seperti RencanaKerjaHarian
       const deleteUrl = '{{ route("input.rkh-panen.destroy", ":rkhpanenno") }}'.replace(':rkhpanenno', deleteRkhNo);
-      console.log('Delete URL:', deleteUrl);
 
       fetch(deleteUrl, {
         method: 'DELETE',
@@ -268,18 +319,7 @@
           'Content-Type': 'application/json',
         }
       })
-      .then(response => {
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          return response.text().then(text => {
-            console.error('Error response:', text);
-            throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
-          });
-        }
-        
-        return response.json();
-      })
+      .then(response => response.json())
       .then(data => {
         if (data.success) {
           window.location.reload();
@@ -289,11 +329,42 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Terjadi kesalahan saat menghapus data: ' + error.message);
+        alert('Terjadi kesalahan saat menghapus data');
       })
       .finally(() => {
         document.getElementById('deleteModal').classList.add('hidden');
         deleteRkhNo = null;
+      });
+    }
+
+    function executeComplete() {
+      if (!completeRkhNo) return;
+
+      const completeUrl = '{{ route("input.rkh-panen.complete", ":rkhpanenno") }}'.replace(':rkhpanenno', completeRkhNo);
+
+      fetch(completeUrl, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Gagal menyelesaikan RKH Panen');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat menyelesaikan RKH Panen');
+      })
+      .finally(() => {
+        document.getElementById('completeModal').classList.add('hidden');
+        completeRkhNo = null;
       });
     }
   </script>
