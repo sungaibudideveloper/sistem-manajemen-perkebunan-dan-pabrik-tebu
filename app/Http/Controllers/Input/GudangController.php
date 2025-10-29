@@ -312,24 +312,24 @@ class GudangController extends Controller
         }
     
         // Validasi duplikat: lkhno + plot + itemcode
-        // foreach ($request->itemcode as $lkhno => $items) {
-        //     foreach ($items as $itemcode => $plots) {
-        //         // Group by plot untuk itemcode tertentu di lkhno tertentu
-        //         $plotsForThisItem = array_keys($plots);
-        //         $uniquePlots = array_unique($plotsForThisItem);
+        foreach ($request->itemcode as $lkhno => $items) {
+            foreach ($items as $itemcode => $plots) {
+                // Group by plot untuk itemcode tertentu di lkhno tertentu
+                $plotsForThisItem = array_keys($plots);
+                $uniquePlots = array_unique($plotsForThisItem);
                 
-        //         if (count($plotsForThisItem) !== count($uniquePlots)) {
-        //             // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
-        //             $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
-        //             $duplicatePlot = reset($duplicatePlots);
+                if (count($plotsForThisItem) !== count($uniquePlots)) {
+                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+                    $duplicatePlot = reset($duplicatePlots);
                     
-        //             Cache::forget($lockKey); // ⚠️ UNLOCK
-        //             return redirect()->back()->withInput()
-        //                 ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
-        //         }
-        //     }
-        // }
-    dd('aa');
+                    Cache::forget($lockKey); // ⚠️ UNLOCK
+                    return redirect()->back()->withInput()
+                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
+                }
+            }
+        }
+    
         // Get existing data dengan key lkhno-itemcode
         $existingData = usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->get()->keyBy(function($item) {
             return $item->lkhno . '-' . $item->itemcode;
@@ -443,28 +443,24 @@ class GudangController extends Controller
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
-            // DD jika response TIDAK successful
-            if (!$response->successful()) {
-                dd([
+            if ($response->successful()) { 
+                Log::info('API success:', $response->json());
+            } else { dd($response->status(),
+                    $response->body(),
+                    $first );
+                Log::error('API error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
-                    'payload_sent' => [
-                        'company' => $companyinv->companyinventory,
-                        'factory' => $first->factoryinv,
-                        'costcenter' => $request->costcenter,
-                        'isi' => array_values($apiPayload),
-                        'userid' => substr(auth()->user()->userid, 0, 10)
-                    ]
+                    'isi' => $first  // ✅ KEMBALIKAN: Log $first untuk debugging
                 ]);
-            } 
-            
-            $responseData = $response->json();
-
+            }
+    
             // Check response
-            if($response->status() == 200 && $responseData['status'] == 1) {
+            if($response->status() == 200 && $response->json()['status'] == 1) {
+                $responseData = $response->json();
                 
                 $itemPriceMap = [];
-                foreach ($responseData['stockitem'] as $row) {
+                foreach ($response->json()['stockitem'] as $row) {
                     $itemcode = $row['Itemcode'] ?? null;
                     if ($itemcode) {
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
@@ -513,11 +509,12 @@ class GudangController extends Controller
             } else {
                 DB::rollback();
                 Cache::forget($lockKey);
-                dd([
-                    'error' => 'Response gagal 516',
-                    'status' => $response->status(),
-                    'responseData' => $responseData
-                ]);
+                // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
+                // Development:
+                // dd($response->json(), $response->body(), $response->status());
+                
+                // Production:
+                return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
             }
             
         } catch (\Exception $e) {
