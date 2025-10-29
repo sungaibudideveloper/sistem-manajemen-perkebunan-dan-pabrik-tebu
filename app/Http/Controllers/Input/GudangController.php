@@ -424,16 +424,9 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]); 
             } else {
-                // $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
-                //     ->asJson()
-                //     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/edituse_api', [
-                //         'connection' => 'TESTING',
-                //         'nouse' => $first->nouse,
-                //         'company' => $companyinv->companyinventory,
-                //         'factory' => $first->factoryinv,
-                //         'isi' => array_values($apiPayload),  
-                //         'userid' => substr(auth()->user()->userid, 0, 10)
-                //     ]);
+                dd($response->status(),
+                    $response->body(),
+                    $first );
             }
     
             // ✅ KEMBALIKAN: Log terpisah untuk success/error
