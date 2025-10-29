@@ -419,7 +419,7 @@ class GudangController extends Controller
             $companyinv = company::where('companycode', session('companycode'))->first();
             // Bulk insert
             usemateriallst::insert($insertData);
-
+dd('a');
             // API Call
             if($details->whereNotNull('nouse')->count() < 1) {  
                 $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
@@ -456,14 +456,15 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]
                 ]);
-            }
-    
+            } 
+            
+            $responseData = $response->json();
+
             // Check response
-            if($response->status() == 200 && $response->json()['status'] == 1) {
-                $responseData = $response->json();
+            if($response->status() == 200 && $responseData['status'] == 1) {
                 
                 $itemPriceMap = [];
-                foreach ($response->json()['stockitem'] as $row) {
+                foreach ($responseData['stockitem'] as $row) {
                     $itemcode = $row['Itemcode'] ?? null;
                     if ($itemcode) {
                         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
@@ -512,12 +513,11 @@ class GudangController extends Controller
             } else {
                 DB::rollback();
                 Cache::forget($lockKey);
-                // ✅ PILIHAN: Kembalikan dd() untuk development atau redirect untuk production
-                // Development:
-                // dd($response->json(), $response->body(), $response->status());
-                
-                // Production:
-                return redirect()->back()->with('error', 'API Error: ' . ($response->json()['message'] ?? 'Unknown error'));
+                dd([
+                    'error' => 'Response gagal 516',
+                    'status' => $response->status(),
+                    'responseData' => $responseData
+                ]);
             }
             
         } catch (\Exception $e) {
