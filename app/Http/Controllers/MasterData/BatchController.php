@@ -25,7 +25,7 @@ class BatchController extends Controller
                 $q->where('batchno', 'like', "%{$search}%")
                   ->orWhere('plot', 'like', "%{$search}%")
                   ->orWhere('kodevarietas', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%")
+                  ->orWhere('lifecyclestatus', 'like', "%{$search}%")
                   ->orWhere('plantingrkhno', 'like', "%{$search}%");
             });
         }
@@ -59,8 +59,14 @@ class BatchController extends Controller
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
-            'status' => 'required|in:ACTIVE,HARVESTED',
+            'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
+            'jaraktanam' => 'nullable|integer|min:0',
+            'lastactivity' => 'nullable|string|max:100',
             'plantingrkhno' => 'nullable|string|max:15',
+            'tanggalpanenpc' => 'nullable|date',
+            'tanggalpanenrc1' => 'nullable|date',
+            'tanggalpanenrc2' => 'nullable|date',
+            'tanggalpanenrc3' => 'nullable|date',
         ]);
 
         $exists = Batch::where('batchno', $request->batchno)->exists();
@@ -80,8 +86,15 @@ class BatchController extends Controller
             'batchdate' => $request->input('batchdate'),
             'batcharea' => $request->input('batcharea'),
             'kodevarietas' => $request->input('kodevarietas'),
-            'status' => $request->input('status'),
+            'lifecyclestatus' => $request->input('lifecyclestatus'),
+            'jaraktanam' => $request->input('jaraktanam'),
+            'lastactivity' => $request->input('lastactivity'),
+            'isactive' => 1,
             'plantingrkhno' => $request->input('plantingrkhno'),
+            'tanggalpanenpc' => $request->input('tanggalpanenpc'),
+            'tanggalpanenrc1' => $request->input('tanggalpanenrc1'),
+            'tanggalpanenrc2' => $request->input('tanggalpanenrc2'),
+            'tanggalpanenrc3' => $request->input('tanggalpanenrc3'),
             'inputby' => Auth::user()->userid,
             'createdat' => now(),
         ]);
@@ -103,8 +116,15 @@ class BatchController extends Controller
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
-            'status' => 'required|in:ACTIVE,HARVESTED',
+            'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
+            'jaraktanam' => 'nullable|integer|min:0',
+            'lastactivity' => 'nullable|string|max:100',
+            'isactive' => 'required|boolean',
             'plantingrkhno' => 'nullable|string|max:15',
+            'tanggalpanenpc' => 'nullable|date',
+            'tanggalpanenrc1' => 'nullable|date',
+            'tanggalpanenrc2' => 'nullable|date',
+            'tanggalpanenrc3' => 'nullable|date',
         ]);
         
         // Check duplicate if batchno changed
@@ -126,8 +146,15 @@ class BatchController extends Controller
             'batchdate' => $validated['batchdate'],
             'batcharea' => $validated['batcharea'],
             'kodevarietas' => $validated['kodevarietas'],
-            'status' => $validated['status'],
+            'lifecyclestatus' => $validated['lifecyclestatus'],
+            'jaraktanam' => $validated['jaraktanam'],
+            'lastactivity' => $validated['lastactivity'],
+            'isactive' => $validated['isactive'],
             'plantingrkhno' => $validated['plantingrkhno'],
+            'tanggalpanenpc' => $validated['tanggalpanenpc'],
+            'tanggalpanenrc1' => $validated['tanggalpanenrc1'],
+            'tanggalpanenrc2' => $validated['tanggalpanenrc2'],
+            'tanggalpanenrc3' => $validated['tanggalpanenrc3'],
         ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');

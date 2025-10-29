@@ -7,6 +7,7 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
+      showHarvestDates: {},
       form: { 
         companycode:'{{ session('companycode') }}', 
         batchno: '', 
@@ -14,8 +15,15 @@
         batchdate: '',
         batcharea: '',
         kodevarietas: '',
-        status: 'ACTIVE',
-        plantingrkhno: ''
+        lifecyclestatus: 'PC',
+        jaraktanam: '',
+        lastactivity: '',
+        isactive: '1',
+        plantingrkhno: '',
+        tanggalpanenpc: '',
+        tanggalpanenrc1: '',
+        tanggalpanenrc2: '',
+        tanggalpanenrc3: ''
       },
       resetForm() {
         this.mode = 'create';
@@ -26,8 +34,15 @@
           batchdate: '',
           batcharea: '',
           kodevarietas: '',
-          status: 'ACTIVE',
-          plantingrkhno: ''
+          lifecyclestatus: 'PC',
+          jaraktanam: '',
+          lastactivity: '',
+          isactive: '1',
+          plantingrkhno: '',
+          tanggalpanenpc: '',
+          tanggalpanenrc1: '',
+          tanggalpanenrc2: '',
+          tanggalpanenrc3: ''
         };
         this.open = true;
       }
@@ -90,7 +105,7 @@
                 x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
+                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-2xl">
               <form method="POST"
                 :action="mode === 'edit'
                 ? '{{ url('masterdata/batch') }}/' + form.batchnooriginal
@@ -165,7 +180,7 @@
                       </div>
                     </div>
 
-                    {{-- Row 3: Kode Varietas, Status --}}
+                    {{-- Row 3: Kode Varietas, Lifecycle Status --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="kodevarietas" class="block text-sm font-medium text-gray-700">Kode Varietas</label>
@@ -175,23 +190,84 @@
                               maxlength="10">
                       </div>
                       <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="status" id="status" x-model="form.status" 
-                               x-init="form.status = '{{ old('status') }}'"
+                        <label for="lifecyclestatus" class="block text-sm font-medium text-gray-700">Lifecycle Status</label>
+                        <select name="lifecyclestatus" id="lifecyclestatus" x-model="form.lifecyclestatus" 
+                               x-init="form.lifecyclestatus = '{{ old('lifecyclestatus') }}'"
                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="HARVESTED">HARVESTED</option>
+                          <option value="PC">PC</option>
+                          <option value="RC1">RC1</option>
+                          <option value="RC2">RC2</option>
+                          <option value="RC3">RC3</option>
                         </select>
                       </div>
                     </div>
 
-                    {{-- Planting RKH No --}}
+                    {{-- Row 4: Jarak Tanam, Is Active (only show on edit) --}}
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label for="jaraktanam" class="block text-sm font-medium text-gray-700">Jarak Tanam (cm)</label>
+                        <input type="number" name="jaraktanam" id="jaraktanam" x-model="form.jaraktanam" 
+                              x-init="form.jaraktanam = '{{ old('jaraktanam') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              min="0">
+                      </div>
+                      <div x-show="mode === 'edit'">
+                        <label for="isactive" class="block text-sm font-medium text-gray-700">Status Batch</label>
+                        <select name="isactive" id="isactive" x-model="form.isactive" 
+                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                          <option value="1">Active</option>
+                          <option value="0">Closed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {{-- Row 5: Planting RKH No, Last Activity --}}
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
+                        <input type="text" name="plantingrkhno" id="plantingrkhno" x-model="form.plantingrkhno" 
+                              x-init="form.plantingrkhno = '{{ old('plantingrkhno') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              maxlength="15">
+                      </div>
+                      <div>
+                        <label for="lastactivity" class="block text-sm font-medium text-gray-700">Last Activity</label>
+                        <input type="text" name="lastactivity" id="lastactivity" x-model="form.lastactivity" 
+                              x-init="form.lastactivity = '{{ old('lastactivity') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              maxlength="100">
+                      </div>
+                    </div>
+
+                    {{-- Tanggal Panen Section --}}
                     <div>
-                      <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
-                      <input type="text" name="plantingrkhno" id="plantingrkhno" x-model="form.plantingrkhno" 
-                            x-init="form.plantingrkhno = '{{ old('plantingrkhno') }}'"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            maxlength="15">
+                      <h4 class="text-sm font-medium text-gray-700 mb-2">Tanggal Panen</h4>
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <label for="tanggalpanenpc" class="block text-sm font-medium text-gray-700">PC</label>
+                          <input type="date" name="tanggalpanenpc" id="tanggalpanenpc" x-model="form.tanggalpanenpc" 
+                                x-init="form.tanggalpanenpc = '{{ old('tanggalpanenpc') }}'"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                          <label for="tanggalpanenrc1" class="block text-sm font-medium text-gray-700">RC1</label>
+                          <input type="date" name="tanggalpanenrc1" id="tanggalpanenrc1" x-model="form.tanggalpanenrc1" 
+                                x-init="form.tanggalpanenrc1 = '{{ old('tanggalpanenrc1') }}'"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                          <label for="tanggalpanenrc2" class="block text-sm font-medium text-gray-700">RC2</label>
+                          <input type="date" name="tanggalpanenrc2" id="tanggalpanenrc2" x-model="form.tanggalpanenrc2" 
+                                x-init="form.tanggalpanenrc2 = '{{ old('tanggalpanenrc2') }}'"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                          <label for="tanggalpanenrc3" class="block text-sm font-medium text-gray-700">RC3</label>
+                          <input type="date" name="tanggalpanenrc3" id="tanggalpanenrc3" x-model="form.tanggalpanenrc3" 
+                                x-init="form.tanggalpanenrc3 = '{{ old('tanggalpanenrc3') }}'"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                      </div>
                     </div>
 
                   </div>
@@ -226,8 +302,9 @@
                         <th class="py-2 px-4 border-b">Batch Date</th>
                         <th class="py-2 px-4 border-b">Area (ha)</th>
                         <th class="py-2 px-4 border-b">Varietas</th>
+                        <th class="py-2 px-4 border-b">Lifecycle</th>
                         <th class="py-2 px-4 border-b">Status</th>
-                        <th class="py-2 px-4 border-b">Planting RKH</th>
+                        <th class="py-2 px-4 border-b">Tanggal Panen</th>
                         <th class="py-2 px-4 border-b">Aksi</th>
                     </tr>
                 </thead>
@@ -241,15 +318,38 @@
                             <td class="py-2 px-4 border-b">{{ $data->batcharea ? number_format($data->batcharea, 2) : '-' }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->kodevarietas ?? '-' }}</td>
                             <td class="py-2 px-4 border-b">
-                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                                    {{ $data->status }}
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {{ $data->lifecyclestatus === 'PC' ? 'bg-green-100 text-green-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC1' ? 'bg-blue-100 text-blue-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC2' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                                    {{ $data->lifecyclestatus }}
                                 </span>
                             </td>
-                            <td class="py-2 px-4 border-b">{{ $data->plantingrkhno ?? '-' }}</td>
+                            <td class="py-2 px-4 border-b">
+                                @if($data->isactive)
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Closed</span>
+                                @endif
+                            </td>
+                            <td class="py-2 px-4 border-b">
+                                <button @click="showHarvestDates['{{ $data->batchno }}'] = !showHarvestDates['{{ $data->batchno }}']" 
+                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-xs font-medium transition-colors">
+                                    <span x-show="!showHarvestDates['{{ $data->batchno }}']">View Dates</span>
+                                    <span x-show="showHarvestDates['{{ $data->batchno }}']" x-cloak>Hide Dates</span>
+                                </button>
+                                <div x-show="showHarvestDates['{{ $data->batchno }}']" x-cloak class="mt-2 text-xs space-y-1 bg-gray-50 p-2 rounded border">
+                                    <div><strong>PC:</strong> {{ $data->tanggalpanenpc ? \Carbon\Carbon::parse($data->tanggalpanenpc)->format('d/m/Y') : '-' }}</div>
+                                    <div><strong>RC1:</strong> {{ $data->tanggalpanenrc1 ? \Carbon\Carbon::parse($data->tanggalpanenrc1)->format('d/m/Y') : '-' }}</div>
+                                    <div><strong>RC2:</strong> {{ $data->tanggalpanenrc2 ? \Carbon\Carbon::parse($data->tanggalpanenrc2)->format('d/m/Y') : '-' }}</div>
+                                    <div><strong>RC3:</strong> {{ $data->tanggalpanenrc3 ? \Carbon\Carbon::parse($data->tanggalpanenrc3)->format('d/m/Y') : '-' }}</div>
+                                </div>
+                            </td>
                             {{-- Edit Button (Modal)--}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
-                                  @if(hasPermission('Edit Blok'))
+                                  @if(hasPermission('Edit Batch'))
                                   <button
                                     @click="
                                       mode = 'edit';
@@ -260,8 +360,15 @@
                                       form.batchdate = '{{ $data->batchdate }}';
                                       form.batcharea = '{{ $data->batcharea }}';
                                       form.kodevarietas = '{{ $data->kodevarietas }}';
-                                      form.status = '{{ $data->status }}';
+                                      form.lifecyclestatus = '{{ $data->lifecyclestatus }}';
+                                      form.jaraktanam = '{{ $data->jaraktanam }}';
+                                      form.lastactivity = '{{ $data->lastactivity }}';
+                                      form.isactive = '{{ $data->isactive }}';
                                       form.plantingrkhno = '{{ $data->plantingrkhno }}';
+                                      form.tanggalpanenpc = '{{ $data->tanggalpanenpc }}';
+                                      form.tanggalpanenrc1 = '{{ $data->tanggalpanenrc1 }}';
+                                      form.tanggalpanenrc2 = '{{ $data->tanggalpanenrc2 }}';
+                                      form.tanggalpanenrc3 = '{{ $data->tanggalpanenrc3 }}';
                                       open = true
                                     "
                                     class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
