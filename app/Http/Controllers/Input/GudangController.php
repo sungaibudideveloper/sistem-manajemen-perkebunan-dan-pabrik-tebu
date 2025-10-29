@@ -309,16 +309,22 @@ class GudangController extends Controller
             throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
         }
     
-        // Validasi duplikat: lkhno + itemcode
-        foreach ($request->itemcodelist as $lkhno => $itemcodes) {
-            $uniqueItems = array_unique($itemcodes);
-            
-            if (count($itemcodes) !== count($uniqueItems)) {
-                $duplicates = array_diff_assoc($itemcodes, $uniqueItems);
-                $duplicateItem = reset($duplicates);
+        // Validasi duplikat: lkhno + plot + itemcode
+        foreach ($request->itemcode as $lkhno => $items) {
+            foreach ($items as $itemcode => $plots) {
+                // Group by plot untuk itemcode tertentu di lkhno tertentu
+                $plotsForThisItem = array_keys($plots);
+                $uniquePlots = array_unique($plotsForThisItem);
                 
-                return redirect()->back()->withInput()
-                    ->with('error', "Duplikat! LKH $lkhno dengan Item $duplicateItem tidak boleh diinput lebih dari 1 kali.");
+                if (count($plotsForThisItem) !== count($uniquePlots)) {
+                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+                    $duplicatePlot = reset($duplicatePlots);
+                    
+                    Cache::forget($lockKey); // ⚠️ UNLOCK
+                    return redirect()->back()->withInput()
+                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
+                }
             }
         }
     
