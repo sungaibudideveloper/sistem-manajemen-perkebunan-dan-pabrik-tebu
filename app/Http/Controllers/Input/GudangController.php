@@ -456,6 +456,18 @@ class GudangController extends Controller
                         'userid' => substr(auth()->user()->userid, 0, 10)
                     ]
                 ]);
+            } else {
+                $responseData = $response->json();
+                
+                // Validasi response
+                if (!isset($responseData['status']) || $responseData['status'] != 1 || !isset($responseData['stockitem'])) {
+                    DB::rollback();
+                    Cache::forget($lockKey);
+                    dd([
+                        'error' => 'Response format salah',
+                        'responseData' => $responseData
+                    ]);
+                }
             }
             
             $responseData = $response->json();
