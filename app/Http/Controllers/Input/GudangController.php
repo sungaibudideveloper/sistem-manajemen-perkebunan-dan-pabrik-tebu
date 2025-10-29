@@ -355,7 +355,8 @@ class GudangController extends Controller
                     $unit   = $request->unit[$lkhno][$itemcode][$key] ?? null;
                     $luas   = $request->luas[$lkhno][$itemcode][$key] ?? 0;
                     $qtyraw    = $luas * $dosage ?? 0;
-                    $qty=round($qtyraw / 0.25) * 0.25;
+                    $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
+                    // $qty=round($qtyraw / 0.25) * 0.25;
 
                     $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                     $existing    = $existingData->get($existingKey);
