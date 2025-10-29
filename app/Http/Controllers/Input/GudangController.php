@@ -312,24 +312,24 @@ class GudangController extends Controller
         }
     
         // Validasi duplikat: lkhno + plot + itemcode
-        foreach ($request->itemcode as $lkhno => $items) {
-            foreach ($items as $itemcode => $plots) {
-                // Group by plot untuk itemcode tertentu di lkhno tertentu
-                $plotsForThisItem = array_keys($plots);
-                $uniquePlots = array_unique($plotsForThisItem);
+        // foreach ($request->itemcode as $lkhno => $items) {
+        //     foreach ($items as $itemcode => $plots) {
+        //         // Group by plot untuk itemcode tertentu di lkhno tertentu
+        //         $plotsForThisItem = array_keys($plots);
+        //         $uniquePlots = array_unique($plotsForThisItem);
                 
-                if (count($plotsForThisItem) !== count($uniquePlots)) {
-                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
-                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
-                    $duplicatePlot = reset($duplicatePlots);
+        //         if (count($plotsForThisItem) !== count($uniquePlots)) {
+        //             // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+        //             $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+        //             $duplicatePlot = reset($duplicatePlots);
                     
-                    Cache::forget($lockKey); // ⚠️ UNLOCK
-                    return redirect()->back()->withInput()
-                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
-                }
-            }
-        }
-    
+        //             Cache::forget($lockKey); // ⚠️ UNLOCK
+        //             return redirect()->back()->withInput()
+        //                 ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
+        //         }
+        //     }
+        // }
+    dd('aa');
         // Get existing data dengan key lkhno-itemcode
         $existingData = usemateriallst::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->get()->keyBy(function($item) {
             return $item->lkhno . '-' . $item->itemcode;
