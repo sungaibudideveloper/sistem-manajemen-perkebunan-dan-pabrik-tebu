@@ -370,7 +370,7 @@ table th, table td {
     
     <script>
         // recalculate total
-        const fmt3 = n => (Number(n)||0).toFixed(3);
+        const fmt2 = n => (Number(n)||0).toFixed(2);
 
         const roundTo25 = (num) => {
             return num > 0 ? Math.max(0.25, Math.round(num / 0.25) * 0.25) : 0;
@@ -395,7 +395,7 @@ function recalcTotals(){
 
     (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
     totals[code].qty   += qty;
-    totals[code].parts.push(fmt3(qty));
+    totals[code].parts.push(fmt2(qty));
   });
 
   // render ulang tbody totals (pakai id yg ditambah di atas)
@@ -405,7 +405,7 @@ function recalcTotals(){
         <td class="py-2 px-3 font-medium">${code}</td>
         <td class="py-2 px-3">${r.itemname || '-'}</td>
         <td class="py-2 px-3">${r.unit || '-'}</td>
-        <td class="py-2 px-3 text-right">${fmt3(r.qty)}</td>
+        <td class="py-2 px-3 text-right">${fmt2(r.qty)}</td>
         <td class="py-2 px-3 text-center text-gray-500">${r.parts.join(' + ')}</td>
       </tr>
     `).join('')
@@ -465,7 +465,7 @@ $(document).on('input', '.selected-dosage', function(){
 
          console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
 
-          row.find('.labelqty').text(qty.toFixed(3));
+          row.find('.labelqty').text(qty.toFixed(2));
         }
         
         $(document).ready(function(){
