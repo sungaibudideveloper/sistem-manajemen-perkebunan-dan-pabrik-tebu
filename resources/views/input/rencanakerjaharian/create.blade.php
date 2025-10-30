@@ -141,7 +141,7 @@
             />
           </div>
 
-          <!-- ✅ Keterangan - TEXTAREA (Multi-line) -->
+          <!-- Keterangan -->
           <div>
             <label for="keterangan" class="block text-sm font-semibold text-gray-700 mb-1">
               Keterangan Dokumen
@@ -186,7 +186,7 @@
             </div>
           </div>
 
-          <!-- ✅ Card 2: Info Pekerja - FINAL VERSION with SELECT dropdown -->
+          <!-- Card 2: Info Pekerja -->
           <div x-data="workerInfoCard()" class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center">
@@ -206,21 +206,17 @@
                 </div>
               </template>
 
-              <!-- ✅ 2 COLUMN GRID -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <template x-for="(worker, activityCode) in workers" :key="activityCode">
                   <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
                     
-                    <!-- ✅ Activity Info - SINGLE LINE, BIGGER TEXT -->
                     <div class="mb-3">
                       <p class="text-sm font-semibold text-purple-900 truncate" 
                         x-text="`${activityCode} - ${worker.activityname}`"
                         :title="`${activityCode} - ${worker.activityname}`"></p>
                     </div>
 
-                    <!-- ✅ INLINE Worker Inputs with SELECT (L, P, Tot side by side) -->
                     <div class="flex items-end gap-2">
-                      <!-- Laki-laki -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-0.5">L</label>
                         <select 
@@ -236,7 +232,6 @@
                         </select>
                       </div>
 
-                      <!-- Perempuan -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-0.5">P</label>
                         <select 
@@ -252,7 +247,6 @@
                         </select>
                       </div>
 
-                      <!-- Total -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-0.5">Tot</label>
                         <input 
@@ -265,7 +259,6 @@
                       </div>
                     </div>
 
-                    <!-- Hidden inputs -->
                     <input type="hidden" :name="`workers[${activityCode}][laki]`" x-model="worker.laki">
                     <input type="hidden" :name="`workers[${activityCode}][perempuan]`" x-model="worker.perempuan">
                     <input type="hidden" :name="`workers[${activityCode}][total]`" x-model="worker.total">
@@ -278,7 +271,7 @@
         </div>
       </div>
 
-      <!-- TABLE (Unchanged) -->
+      <!-- TABLE -->
       <div class="bg-white rounded-xl border border-gray-300 shadow-md">
         <div class="overflow-x-auto">
           <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
@@ -286,6 +279,7 @@
               <col style="width: 40px">
               <col style="width: 180px">
               <col style="width: 60px">
+              <col style="width: 80px">
               <col style="width: 80px">
               <col style="width: 80px">
               <col style="width: 120px">
@@ -298,6 +292,7 @@
                 <th class="py-3 px-2 text-xs font-semibold">Aktivitas</th>
                 <th class="py-3 px-2 text-xs font-semibold">Blok</th>
                 <th class="py-3 px-2 text-xs font-semibold">Plot</th>
+                <th class="py-3 px-2 text-xs font-semibold">Info Panen</th>
                 <th class="py-3 px-2 text-xs font-semibold">Luas<br>(ha)</th>
                 <th class="py-3 px-2 text-xs font-semibold">Material</th>
                 <th class="py-3 px-2 text-xs font-semibold">Kendaraan</th>
@@ -387,6 +382,61 @@
                       <input type="hidden" name="rows[{{ $i }}][plot]" x-model="selected.plot">
                       @include('input.rencanakerjaharian.modal-plot')
                     </div>
+                  </td>
+
+                  <!-- Info Panen -->
+                  <td class="px-2 py-3" x-data="panenInfoPicker({{ $i }})" x-init="init()">
+                    <!-- ✅ SHOW DASH ONLY when NO panen activity -->
+                    <div x-show="!isPanenActivity" class="text-center text-xs text-gray-400">-</div>
+                    
+                    <!-- ✅ SHOW INFO ONLY when IS panen activity -->
+                    <div x-show="isPanenActivity" x-cloak class="text-xs space-y-1">
+                      <!-- Loading State -->
+                      <div x-show="isLoading" class="text-center py-2">
+                        <svg class="animate-spin h-5 w-5 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+
+                      <!-- Panen Info Display -->
+                      <div x-show="!isLoading && panenInfo.batchno">
+                        <!-- Lifecycle Status Badge -->
+                        <div class="flex items-center justify-center">
+                          <span 
+                            class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                            :class="{
+                              'bg-yellow-100 text-yellow-800': panenInfo.kodestatus === 'PC',
+                              'bg-green-100 text-green-800': panenInfo.kodestatus === 'RC1',
+                              'bg-blue-100 text-blue-800': panenInfo.kodestatus === 'RC2',
+                              'bg-purple-100 text-purple-800': panenInfo.kodestatus === 'RC3'
+                            }"
+                            x-text="panenInfo.kodestatus"
+                          ></span>
+                        </div>
+
+                        <!-- Tanggal Panen -->
+                        <div class="text-gray-700">
+                          <span class="font-semibold">Tgl:</span>
+                          <span x-text="panenInfo.tanggalpanen || '-'"></span>
+                        </div>
+
+                        <!-- Luas Sisa -->
+                        <div class="text-gray-700">
+                          <span class="font-semibold">Sisa:</span>
+                          <span x-text="panenInfo.luassisa + ' Ha'"></span>
+                        </div>
+                      </div>
+
+                      <!-- Error State -->
+                      <div x-show="!isLoading && !panenInfo.batchno && isPanenActivity && currentPlot" class="text-center text-red-600 text-[10px] py-2">
+                        <span>Batch tidak tersedia</span>
+                      </div>
+                    </div>
+
+                    <!-- Hidden inputs for panen data -->
+                    <input type="hidden" name="rows[{{ $i }}][batchno]" x-model="panenInfo.batchno">
+                    <input type="hidden" name="rows[{{ $i }}][kodestatus]" x-model="panenInfo.kodestatus">
                   </td>
 
                   <!-- Luas -->
@@ -485,7 +535,9 @@
   </form>
 
 <script>
-// ===== GLOBAL DATA =====
+// ============================================================
+// GLOBAL DATA INITIALIZATION
+// ============================================================
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
@@ -501,7 +553,139 @@ window.currentUser = {
   idjabatan: {{ Auth::user()->idjabatan ?? 'null' }}
 };
 
-// ===== WORKER INFO CARD =====
+window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
+
+// ✅ FIXED: Base URL for panen info (use placeholder)
+window.PANEN_INFO_URL = "{{ route('input.rencanakerjaharian.getPanenInfo', ['plot' => 'PLOT_PLACEHOLDER']) }}".replace('PLOT_PLACEHOLDER', '');
+
+// ============================================================
+// ALPINE.JS COMPONENTS
+// ============================================================
+
+/**
+ * Panen Info Picker Component
+ * Handles display of harvest information for panen activities
+ */
+function panenInfoPicker(rowIndex) {
+  return {
+    rowIndex: rowIndex,
+    currentPlot: '',
+    currentActivityCode: '',
+    isPanenActivity: false,
+    isLoading: false,
+    panenInfo: {
+      batchno: '',
+      kodestatus: '',
+      tanggalpanen: '',
+      luassisa: 0
+    },
+    
+    init() {
+      this.watchPlotChanges();
+      this.watchActivityChanges();
+    },
+    
+    watchPlotChanges() {
+      const plotInput = document.querySelector(`input[name="rows[${this.rowIndex}][plot]"]`);
+      if (!plotInput) return;
+      
+      const observer = new MutationObserver(() => {
+        const newPlot = plotInput.value || '';
+        if (this.currentPlot !== newPlot) {
+          this.currentPlot = newPlot;
+          // ✅ Only update if panen activity is selected
+          if (this.isPanenActivity) {
+            this.updatePanenInfo();
+          }
+        }
+      });
+      
+      observer.observe(plotInput, { attributes: true, attributeFilter: ['value'] });
+      this.currentPlot = plotInput.value || '';
+    },
+    
+    watchActivityChanges() {
+      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
+      if (!activityInput) return;
+      
+      const observer = new MutationObserver(() => {
+        const newActivity = activityInput.value || '';
+        if (this.currentActivityCode !== newActivity) {
+          this.currentActivityCode = newActivity;
+          this.checkIfPanenActivity();
+          
+          // ✅ Only fetch if it's panen activity AND plot is selected
+          if (this.isPanenActivity && this.currentPlot) {
+            this.updatePanenInfo();
+          } else if (!this.isPanenActivity) {
+            // Reset when switching from panen to non-panen activity
+            this.resetPanenInfo();
+          }
+        }
+      });
+      
+      observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
+      this.currentActivityCode = activityInput.value || '';
+      this.checkIfPanenActivity();
+    },
+    
+    checkIfPanenActivity() {
+      this.isPanenActivity = window.PANEN_ACTIVITIES.includes(this.currentActivityCode);
+      
+      if (!this.isPanenActivity) {
+        this.resetPanenInfo();
+      }
+    },
+    
+    async updatePanenInfo() {
+      // ✅ Guard: Don't fetch if not panen activity or no plot selected
+      if (!this.isPanenActivity || !this.currentPlot) {
+        this.resetPanenInfo();
+        return;
+      }
+      
+      this.isLoading = true;
+      
+      try {
+        const response = await fetch(window.PANEN_INFO_URL + this.currentPlot);
+        const data = await response.json();
+        
+        if (data.success) {
+          this.panenInfo = {
+            batchno: data.batchno,
+            kodestatus: data.kodestatus,
+            tanggalpanen: data.tanggalpanen,
+            luassisa: parseFloat(data.luassisa).toFixed(2)
+          };
+        } else {
+          this.resetPanenInfo();
+          showToast(data.message || 'Gagal memuat info panen', 'warning', 3000);
+        }
+      } catch (error) {
+        console.error('Error fetching panen info:', error);
+        this.resetPanenInfo();
+        showToast('Error memuat info panen', 'error', 3000);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    resetPanenInfo() {
+      this.isLoading = false;
+      this.panenInfo = {
+        batchno: '',
+        kodestatus: '',
+        tanggalpanen: '',
+        luassisa: 0
+      };
+    }
+  };
+}
+
+/**
+ * Worker Info Card Component
+ * Manages worker count inputs per activity
+ */
 function workerInfoCard() {
   return {
     workers: {},
@@ -519,14 +703,14 @@ function workerInfoCard() {
         .filter(act => act && act.activitycode)
         .map(act => act.activitycode);
       
-      // Remove workers that are no longer in activities
+      // Remove workers for activities that are no longer selected
       Object.keys(this.workers).forEach(activityCode => {
         if (!currentActivityCodes.includes(activityCode)) {
           delete this.workers[activityCode];
         }
       });
       
-      // Add new activities with EMPTY values (not 0)
+      // Add new workers for newly selected activities
       Object.values(activities).forEach(activity => {
         if (activity && activity.activitycode && !this.workers[activity.activitycode]) {
           this.workers[activity.activitycode] = {
@@ -540,22 +724,23 @@ function workerInfoCard() {
     },
     
     updateWorkerTotal(activityCode) {
-      if (this.workers[activityCode]) {
-        const laki = parseInt(this.workers[activityCode].laki) || 0;
-        const perempuan = parseInt(this.workers[activityCode].perempuan) || 0;
-        
-        // ✅ Calculate total only if both have values
-        if (this.workers[activityCode].laki !== '' || this.workers[activityCode].perempuan !== '') {
-          this.workers[activityCode].total = laki + perempuan;
-        } else {
-          this.workers[activityCode].total = '';
-        }
+      if (!this.workers[activityCode]) return;
+      
+      const laki = parseInt(this.workers[activityCode].laki) || 0;
+      const perempuan = parseInt(this.workers[activityCode].perempuan) || 0;
+      
+      if (this.workers[activityCode].laki !== '' || this.workers[activityCode].perempuan !== '') {
+        this.workers[activityCode].total = laki + perempuan;
+      } else {
+        this.workers[activityCode].total = '';
       }
     }
   };
 }
 
-// ===== ALPINE STORES =====
+// ============================================================
+// ALPINE STORES INITIALIZATION
+// ============================================================
 document.addEventListener('alpine:init', () => {
   Alpine.store('modal', {
     showModal: false,
@@ -579,6 +764,7 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.store('uniqueCombinations', {
     combinations: new Map(),
+    
     setCombination(rowIndex, blok, plot, activity) {
       if (blok && plot && activity) {
         this.combinations.set(rowIndex, { blok, plot, activity });
@@ -586,45 +772,68 @@ document.addEventListener('alpine:init', () => {
         this.combinations.delete(rowIndex);
       }
     },
+    
     isDuplicate(currentRowIndex, blok, plot, activity) {
       if (!blok || !plot || !activity) return false;
+      
       for (const [rowIndex, combo] of this.combinations) {
         if (rowIndex !== currentRowIndex && 
-            combo.blok === blok && combo.plot === plot && combo.activity === activity) {
+            combo.blok === blok && 
+            combo.plot === plot && 
+            combo.activity === activity) {
           return true;
         }
       }
       return false;
     },
+    
     getAllDuplicates() {
       const duplicates = new Map();
       const combinations = {};
+      
       for (const [rowIndex, combo] of this.combinations) {
         const key = `${combo.blok}|${combo.plot}|${combo.activity}`;
         if (!combinations[key]) combinations[key] = [];
         combinations[key].push(rowIndex);
       }
+      
       for (const [key, rowIndexes] of Object.entries(combinations)) {
         if (rowIndexes.length > 1) {
           const [blok, plot, activity] = key.split('|');
           duplicates.set(key, { blok, plot, activity, rows: rowIndexes });
         }
       }
+      
       return duplicates;
     },
-    clear() { this.combinations.clear(); }
+    
+    clear() { 
+      this.combinations.clear(); 
+    }
   });
 });
 
-// ===== FORM HANDLER =====
+// ============================================================
+// FORM HANDLER
+// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
+  initializeRowValidation();
+  initializeValidationStyles();
+  initializeFormSubmit();
+});
+
+function initializeRowValidation() {
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   rows.forEach((row, index) => {
     attachUniqueValidationListeners(row, index);
   });
-  initializeValidationStyles();
+}
 
-  document.getElementById('rkh-form').addEventListener('submit', function(e) {
+function initializeFormSubmit() {
+  const form = document.getElementById('rkh-form');
+  if (!form) return;
+  
+  form.addEventListener('submit', function(e) {
     e.preventDefault();
     clearValidationErrors();
     
@@ -634,35 +843,41 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    showLoadingState();
-    const formData = new FormData(this);
-
-    fetch(this.action, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showModal('success', data.message);
-      } else {
-        const errors = data.errors ? Object.values(data.errors).flat() : [];
-        showModal('error', data.message || 'Terjadi kesalahan saat menyimpan data', errors);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      showModal('error', 'Terjadi kesalahan sistem');
-    })
-    .finally(() => hideLoadingState());
+    submitForm(this);
   });
-});
+}
 
-// ===== VALIDATION =====
+function submitForm(form) {
+  showLoadingState();
+  const formData = new FormData(form);
+
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showModal('success', data.message);
+    } else {
+      const errors = data.errors ? Object.values(data.errors).flat() : [];
+      showModal('error', data.message || 'Terjadi kesalahan saat menyimpan data', errors);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showModal('error', 'Terjadi kesalahan sistem');
+  })
+  .finally(() => hideLoadingState());
+}
+
+// ============================================================
+// VALIDATION FUNCTIONS
+// ============================================================
 function attachUniqueValidationListeners(row, rowIndex) {
   const blokInput = row.querySelector('input[name$="[blok]"]');
   const plotInput = row.querySelector('input[name$="[plot]"]');
@@ -680,7 +895,7 @@ function attachUniqueValidationListeners(row, rowIndex) {
       const isDuplicate = Alpine.store('uniqueCombinations').isDuplicate(rowIndex, blok, plot, activity);
       if (isDuplicate) {
         highlightDuplicateRow(rowIndex);
-        showToast(`Kombinasi duplikat terdeteksi`, 'warning');
+        showToast('Kombinasi duplikat terdeteksi', 'warning', 3000);
       }
     }
     updateAllDuplicateHighlights();
@@ -700,10 +915,12 @@ function attachUniqueValidationListeners(row, rowIndex) {
 function validateFormWithWorkerCard() {
   const errors = [];
   
+  // Validate mandor
   if (!document.querySelector('input[name="mandor_id"]').value) {
     errors.push('Silakan pilih Mandor terlebih dahulu');
   }
 
+  // Validate rows
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
@@ -746,7 +963,7 @@ function validateFormWithWorkerCard() {
     }
   });
 
-  // ✅ UPDATED: Validate workers (EMPTY not allowed, but 0 is OK)
+  // Validate workers
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -754,13 +971,13 @@ function validateFormWithWorkerCard() {
       const laki = workers[activityCode].laki;
       const perempuan = workers[activityCode].perempuan;
       
-      // Check if BOTH are empty
       if (laki === '' && perempuan === '') {
         errors.push(`Aktivitas "${activityCode}": Jumlah pekerja harus diisi (boleh 0, tapi tidak boleh kosong)`);
       }
     });
   }
 
+  // Check for duplicates
   const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
   if (duplicates.size > 0) {
     for (const [key, duplicateInfo] of duplicates) {
@@ -815,7 +1032,16 @@ function clearDuplicateHighlight(rowIndex) {
   });
 }
 
-// ===== UI HELPERS =====
+function clearValidationErrors() {
+  document.querySelectorAll('.border-red-500').forEach(field => {
+    field.classList.remove('border-red-500', 'bg-red-50');
+    field.classList.add('border-gray-200');
+  });
+}
+
+// ============================================================
+// UI HELPER FUNCTIONS
+// ============================================================
 function showLoadingState() {
   const submitBtn = document.getElementById('submit-btn');
   submitBtn.disabled = true;
@@ -850,15 +1076,7 @@ function showValidationModal(errors) {
   window.dispatchEvent(new CustomEvent('validation-error', { detail: { errors: errors } }));
 }
 
-function clearValidationErrors() {
-  document.querySelectorAll('.border-red-500').forEach(field => {
-    field.classList.remove('border-red-500', 'bg-red-50');
-    field.classList.add('border-gray-200');
-  });
-}
-
 function showToast(message, type = 'info', duration = 4000) {
-  // Remove existing toast
   const existingToast = document.querySelector('.validation-toast');
   if (existingToast && existingToast.parentElement) {
     existingToast.parentElement.removeChild(existingToast);
@@ -867,15 +1085,16 @@ function showToast(message, type = 'info', duration = 4000) {
   const toast = document.createElement('div');
   toast.className = 'validation-toast fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform';
 
-  let bgColor, icon;
-  switch (type) {
-    case 'warning': bgColor = 'bg-orange-500'; icon = '⚠️'; break;
-    case 'error':   bgColor = 'bg-red-500';    icon = '❌'; break;
-    case 'success': bgColor = 'bg-green-500';  icon = '✅'; break;
-    default:        bgColor = 'bg-blue-500';   icon = 'ℹ️';
-  }
+  const config = {
+    warning: { bg: 'bg-orange-500', icon: '⚠️' },
+    error: { bg: 'bg-red-500', icon: '❌' },
+    success: { bg: 'bg-green-500', icon: '✅' },
+    info: { bg: 'bg-blue-500', icon: 'ℹ️' }
+  };
 
-  toast.classList.add(bgColor, 'text-white');
+  const { bg, icon } = config[type] || config.info;
+  toast.classList.add(bg, 'text-white');
+  
   toast.innerHTML = `
     <div class="flex items-start">
       <span class="text-lg mr-3">${icon}</span>
@@ -885,16 +1104,13 @@ function showToast(message, type = 'info', duration = 4000) {
     </div>
   `;
 
-  // Guard sebelum pakai .style
   if (!document.body) return;
   document.body.appendChild(toast);
   if (!toast) return;
 
-  // Initial styles
   toast.style.transform = 'translateX(100%)';
   toast.style.opacity = '0';
 
-  // Animate in (double RAF)
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (document.body.contains(toast)) {
@@ -904,7 +1120,6 @@ function showToast(message, type = 'info', duration = 4000) {
     });
   });
 
-  // Auto-hide
   if (duration > 0) {
     setTimeout(() => {
       if (!document.body.contains(toast)) return;
@@ -915,15 +1130,6 @@ function showToast(message, type = 'info', duration = 4000) {
       }, 300);
     }, duration);
   }
-}
-
-
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
 }
 
 function initializeValidationStyles() {
@@ -939,6 +1145,14 @@ function initializeValidationStyles() {
   }
 }
 
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 function cleanupValidationListeners() {
   document.querySelectorAll('input[uniqueValidationObserver]').forEach(input => {
     if (input.uniqueValidationObserver) {
@@ -948,9 +1162,9 @@ function cleanupValidationListeners() {
   });
 }
 
-window.addEventListener('beforeunload', cleanupValidationListeners);
-
-// ===== ABSEN SUMMARY =====
+// ============================================================
+// ABSEN SUMMARY UPDATE
+// ============================================================
 function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
   if (!selectedMandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
@@ -976,7 +1190,9 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
 
-// ===== PLOT AUTO-UPDATE =====
+// ============================================================
+// PLOT AUTO-UPDATE
+// ============================================================
 window.addEventListener('plot-changed', function(e) {
   updateLuasFromPlot(e.detail.plotCode, e.detail.rowIndex);
 });
@@ -998,7 +1214,9 @@ function updateLuasFromPlot(plotCode, rowIndex) {
   }
 }
 
-// ===== MATERIAL PICKER =====
+// ============================================================
+// MATERIAL PICKER
+// ============================================================
 function materialPicker(rowIndex) {
   return {
     open: false,
@@ -1050,7 +1268,7 @@ function materialPicker(rowIndex) {
     
     updateHiddenInputs() {
       this.ensureHiddenInputsExist();
-      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(6)`);
+      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(7)`);
       if (!materialCell) return;
       
       const inputs = {
@@ -1063,7 +1281,7 @@ function materialPicker(rowIndex) {
     },
     
     ensureHiddenInputsExist() {
-      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(6)`);
+      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(7)`);
       if (!materialCell) return;
       
       if (!materialCell.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`)) {
@@ -1100,6 +1318,11 @@ function materialPicker(rowIndex) {
     }
   }
 }
+
+// ============================================================
+// CLEANUP
+// ============================================================
+window.addEventListener('beforeunload', cleanupValidationListeners);
 </script>
 
 </x-layout>

@@ -63,63 +63,65 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
 });
 
 // =====================================
-// RENCANA KERJA HARIAN ROUTES - UPDATED WITH OPERATOR REPORT
+// RENCANA KERJA HARIAN ROUTES
 // =====================================
 Route::middleware('auth')->group(function () {
-    // RKH Routes Group
     Route::prefix('input/kerjaharian/rencanakerjaharian')
         ->name('input.rencanakerjaharian.')
         ->controller(RencanaKerjaHarianController::class)
         ->group(function () {
 
-            // LKH Submit route (changed from lock to submit)
-            Route::post('/lkh/submit', [RencanaKerjaHarianController::class, 'submitLKH'])->name('submitLKH');
+            // LKH Submit route
+            Route::post('/lkh/submit', 'submitLKH')->name('submitLKH');
 
             // LKH Approval Detail route
-            Route::get('/lkh/{lkhno}/approval-detail', [RencanaKerjaHarianController::class, 'getLkhApprovalDetail'])->name('getLkhApprovalDetail');
+            Route::get('/lkh/{lkhno}/approval-detail', 'getLkhApprovalDetail')->name('getLkhApprovalDetail');
 
-            // Existing routes remain the same
-            Route::get('/', [RencanaKerjaHarianController::class, 'index'])->name('index');
-            Route::get('/create', [RencanaKerjaHarianController::class, 'create'])->name('create');
-            Route::post('/store', [RencanaKerjaHarianController::class, 'store'])->name('store');
-            Route::get('/{rkhno}/edit', [RencanaKerjaHarianController::class, 'edit'])->name('edit');
-            Route::put('/{rkhno}', [RencanaKerjaHarianController::class, 'update'])->name('update');
-            Route::get('/{rkhno}/show', [RencanaKerjaHarianController::class, 'show'])->name('show');
-            Route::delete('/{rkhno}', [RencanaKerjaHarianController::class, 'destroy'])->name('destroy');
+            // Main CRUD routes
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/{rkhno}/edit', 'edit')->name('edit');
+            Route::put('/{rkhno}', 'update')->name('update');
+            Route::get('/{rkhno}/show', 'show')->name('show');
+            Route::delete('/{rkhno}', 'destroy')->name('destroy');
 
             // LKH related routes
-            Route::get('/{rkhno}/lkh', [RencanaKerjaHarianController::class, 'getLKHData'])->name('getLKHData');
-            Route::get('/lkh/{lkhno}/show', [RencanaKerjaHarianController::class, 'showLKH'])->name('showLKH');
-            Route::get('/lkh/{lkhno}/edit', [RencanaKerjaHarianController::class, 'editLKH'])->name('editLKH');
-            Route::put('/lkh/{lkhno}', [RencanaKerjaHarianController::class, 'updateLKH'])->name('updateLKH');
+            Route::get('/{rkhno}/lkh', 'getLKHData')->name('getLKHData');
+            Route::get('/lkh/{lkhno}/show', 'showLKH')->name('showLKH');
+            Route::get('/lkh/{lkhno}/edit', 'editLKH')->name('editLKH');
+            Route::put('/lkh/{lkhno}', 'updateLKH')->name('updateLKH');
 
             // RKH Approval routes
-            Route::get('/pending-approvals', [RencanaKerjaHarianController::class, 'getPendingApprovals'])->name('getPendingApprovals');
-            Route::post('/process-approval', [RencanaKerjaHarianController::class, 'processApproval'])->name('processApproval');
-            Route::get('/{rkhno}/approval-detail', [RencanaKerjaHarianController::class, 'getApprovalDetail'])->name('getApprovalDetail');
+            Route::get('/pending-approvals', 'getPendingApprovals')->name('getPendingApprovals');
+            Route::post('/process-approval', 'processApproval')->name('processApproval');
+            Route::get('/{rkhno}/approval-detail', 'getApprovalDetail')->name('getApprovalDetail');
 
             // LKH Approval routes
-            Route::get('/pending-lkh-approvals', [RencanaKerjaHarianController::class, 'getPendingLKHApprovals'])->name('getPendingLKHApprovals');
-            Route::post('/process-lkh-approval', [RencanaKerjaHarianController::class, 'processLKHApproval'])->name('processLKHApproval');
+            Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
+            Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
 
-            // ✅ NEW: Operator Report routes
-            Route::get('/operators-for-date', [RencanaKerjaHarianController::class, 'getOperatorsForDate'])->name('getOperatorsForDate');
-            Route::post('/generate-operator-report', [RencanaKerjaHarianController::class, 'generateOperatorReport'])->name('generateOperatorReport');
-            Route::get('/operator-report', [RencanaKerjaHarianController::class, 'showOperatorReport'])->name('operator-report');
-            Route::get('/operator-report-data', [RencanaKerjaHarianController::class, 'getOperatorReportData'])->name('operator-report-data');
+            // Operator Report routes
+            Route::get('/operators-for-date', 'getOperatorsForDate')->name('getOperatorsForDate');
+            Route::post('/generate-operator-report', 'generateOperatorReport')->name('generateOperatorReport');
+            Route::get('/operator-report', 'showOperatorReport')->name('operator-report');
+            Route::get('/operator-report-data', 'getOperatorReportData')->name('operator-report-data');
+
+            // Panen Info route
+            Route::get('/batch/panen-info/{plot}', 'getPanenInfo')->name('getPanenInfo');
 
             // Other utility routes
-            Route::post('/update-status', [RencanaKerjaHarianController::class, 'updateStatus'])->name('updateStatus');
-            Route::get('/load-absen-by-date', [RencanaKerjaHarianController::class, 'loadAbsenByDate'])->name('loadAbsenByDate');
-            Route::post('/generate-dth', [RencanaKerjaHarianController::class, 'generateDTH'])->name('generateDTH');
-            Route::post('/generate-rekap-lkh', [RencanaKerjaHarianController::class, 'generateRekapLKH'])->name('generateRekapLKH');
-            Route::get('/dth-report', [RencanaKerjaHarianController::class, 'showDTHReport'])->name('dth-report');
-            Route::get('/rekap-lkh-report', [RencanaKerjaHarianController::class, 'showRekapLKHReport'])->name('rekap-lkh-report');
-            Route::post('/{rkhno}/generate-lkh', [RencanaKerjaHarianController::class, 'manualGenerateLkh'])->name('manualGenerateLkh');
-            Route::get('/dth-data', [RencanaKerjaHarianController::class, 'getDTHData'])->name('dth-data');
-            Route::get('/lkh-rekap-data', [RencanaKerjaHarianController::class, 'getLKHRekapData'])->name('lkh-rekap-data');
-            Route::get('/{rkhno}/material-usage', [RencanaKerjaHarianController::class, 'getMaterialUsageApi'])->name('getMaterialUsage');
-            Route::post('/generate-material-usage', [RencanaKerjaHarianController::class, 'generateMaterialUsage'])->name('generateMaterialUsage');
+            Route::post('/update-status', 'updateStatus')->name('updateStatus');
+            Route::get('/load-absen-by-date', 'loadAbsenByDate')->name('loadAbsenByDate');
+            Route::post('/generate-dth', 'generateDTH')->name('generateDTH');
+            Route::post('/generate-rekap-lkh', 'generateRekapLKH')->name('generateRekapLKH');
+            Route::get('/dth-report', 'showDTHReport')->name('dth-report');
+            Route::get('/rekap-lkh-report', 'showRekapLKHReport')->name('rekap-lkh-report');
+            Route::post('/{rkhno}/generate-lkh', 'manualGenerateLkh')->name('manualGenerateLkh');
+            Route::get('/dth-data', 'getDTHData')->name('dth-data');
+            Route::get('/lkh-rekap-data', 'getLKHRekapData')->name('lkh-rekap-data');
+            Route::get('/{rkhno}/material-usage', 'getMaterialUsageApi')->name('getMaterialUsage');
+            Route::post('/generate-material-usage', 'generateMaterialUsage')->name('generateMaterialUsage');
         });
 });
 
