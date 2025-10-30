@@ -91,7 +91,7 @@ class MapsController extends Controller
         ];
         
         // Always return the HTML view (whether accessed directly or via API)
-        return view('dashboard.maps.mapsapi', $data);
+        return view('dashboard.maps.index', $data);
     }
 
     public function callmapsapi(Request $request) 
