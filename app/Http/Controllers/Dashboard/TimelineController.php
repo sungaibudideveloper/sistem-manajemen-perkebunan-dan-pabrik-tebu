@@ -21,7 +21,7 @@ class TimelineController extends Controller
       $title = "Dashboard Timeline";
       $nav = "Timeline";
 
-      return view('dashboard\timeline\index')->with([
+      return view('dashboard.timeline.index')->with([
         'title' => $title,
         'nav'   => $nav
       ]);
