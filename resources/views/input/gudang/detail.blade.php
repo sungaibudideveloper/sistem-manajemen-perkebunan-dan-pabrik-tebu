@@ -204,7 +204,7 @@ table th, table td {
         <td class="py-2 px-2">
             <div class="flex justify-end items-center">
                 <input type="text"name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
-                    value="{{ number_format($d->dosageperha, 3) }}"
+                    value="{{ number_format($d->dosageperha, 2) }}"
                     class="w-full selected-dosage border-none bg-yellow-100 text-xs text-right w-20">
                 <span class="ml-2 w-8 text-left">{{ $d->unit }}</span>
             </div>
@@ -270,7 +270,7 @@ table th, table td {
                 }
         
                 $totals[$code]['qty'] += $qty;
-                $totals[$code]['parts'][] = number_format($qty, 3);
+                $totals[$code]['parts'][] = number_format($qty, 2);
             }
         @endphp
         
@@ -291,7 +291,7 @@ table th, table td {
                         <td class="py-2 px-3 font-medium">{{ $code }}</td>
                         <td class="py-2 px-3">{{ $row['itemname'] }}</td>
                         <td class="py-2 px-3">{{ $row['unit'] }}</td>
-                        <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 3) }}</td>
+                        <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 2) }}</td>
                         <td class="py-2 px-3 text-center text-gray-500">
                             {{ implode(' + ', $row['parts']) }}
                         </td>
@@ -301,7 +301,7 @@ table th, table td {
         </table>
         
         
-        <div class="flex justify-center mt-4">
+        <div class="flex justify-center mt-4 no-print">
         <select @if( !empty($details[0]->costcenter)) disabled @endif
             name="costcenter"
             class="w-full max-w-md border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
