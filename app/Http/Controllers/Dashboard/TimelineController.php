@@ -27,4 +27,15 @@ class TimelineController extends Controller
       ]);
     }
 
+    public function plot()
+    {
+      $title = "Dashboard Timeline";
+      $nav = "Timeline";
+
+      return view('dashboard.timeline-plot.index')->with([
+        'title' => $title,
+        'nav'   => $nav
+      ]);
+    }
+
 }
