@@ -19,6 +19,10 @@ class LkhDetailPlot extends Model
         'luashasil',
         'luassisa',
         'createdat',
+        'updatedat',
+        'batchno',
+        'kodestatus',
+        'subkontraktorid',
     ];
     
     protected $casts = [

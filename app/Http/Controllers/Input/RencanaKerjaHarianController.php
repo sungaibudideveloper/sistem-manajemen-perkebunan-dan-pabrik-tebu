@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 // Models
 use App\Models\User;
@@ -624,7 +625,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Show LKH report
-     * FIXED: Updated to use new table structure
+     * UPDATED: Support both normal and panen activities
      */
     public function showLKH($lkhno)
     {
@@ -638,28 +639,138 @@ class RencanaKerjaHarianController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            // FIXED: Get details from new tables
-            $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
-            $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
-            $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
-            $approvals = $this->getLkhApprovalsData($lkhData);
+            // ✅ Detect if this is panen activity
+            $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
+            $isPanenActivity = in_array($lkhData->activitycode, $panenActivities);
 
-            return view('input.rencanakerjaharian.lkh-report', [
-                'title' => 'Laporan Kegiatan Harian (LKH)',
-                'navbar' => 'Input',
-                'nav' => 'Rencana Kerja Harian',
-                'lkhData' => $lkhData,
-                'lkhPlotDetails' => $lkhPlotDetails,
-                'lkhWorkerDetails' => $lkhWorkerDetails,
-                'lkhMaterialDetails' => $lkhMaterialDetails,
-                'approvals' => $approvals
-            ]);
+            if ($isPanenActivity) {
+                // ✅ Load panen data from NEW UNIFIED STRUCTURE
+                $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
+                $approvals = $this->getLkhApprovalsData($lkhData);
+
+                return view('input.rencanakerjaharian.lkh-report-panen', [
+                    'title' => 'Laporan Kegiatan Harian (LKH) - Panen',
+                    'navbar' => 'Input',
+                    'nav' => 'Rencana Kerja Harian',
+                    'lkhData' => $lkhData,
+                    'lkhPanenDetails' => $lkhPanenDetails,
+                    'approvals' => $approvals
+                ]);
+            } else {
+                // ✅ Load normal activity data (existing code)
+                $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
+                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
+                $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
+                $approvals = $this->getLkhApprovalsData($lkhData);
+
+                return view('input.rencanakerjaharian.lkh-report', [
+                    'title' => 'Laporan Kegiatan Harian (LKH)',
+                    'navbar' => 'Input',
+                    'nav' => 'Rencana Kerja Harian',
+                    'lkhData' => $lkhData,
+                    'lkhPlotDetails' => $lkhPlotDetails,
+                    'lkhWorkerDetails' => $lkhWorkerDetails,
+                    'lkhMaterialDetails' => $lkhMaterialDetails,
+                    'approvals' => $approvals
+                ]);
+            }
 
         } catch (\Exception $e) {
             \Log::error("Error showing LKH: " . $e->getMessage());
             return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'Terjadi kesalahan saat menampilkan LKH: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get LKH panen details for show
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    private function getLkhPanenDetailsForShow($companycode, $lkhno)
+    {
+        $lkhDate = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->value('lkhdate');
+        
+        return DB::table('lkhdetailplot as ldp')
+            ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
+            ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
+                $join->on('ldp.subkontraktorid', '=', 'sk.id')
+                    ->where('sk.companycode', '=', $companycode);
+            })
+            ->where('ldp.companycode', $companycode)
+            ->where('ldp.lkhno', $lkhno)
+            ->select([
+                'ldp.plot',
+                'ldp.blok',
+                'ldp.batchno',
+                'ldp.kodestatus',
+                'ldp.luasrkh',
+                'ldp.luashasil',
+                'ldp.createdat',
+                'ldp.subkontraktorid',
+                'ldp.fieldbalancerit',
+                'ldp.fieldbalanceton',
+                'sk.namasubkontraktor as subkontraktor_nama',
+                'b.batcharea',
+                'b.tanggalpanenpc',
+                'b.tanggalpanenrc1',
+                'b.tanggalpanenrc2',
+                'b.tanggalpanenrc3',
+                
+                // ✅ STC = Luas batch - Total sudah dipanen sampai KEMARIN
+                // (bukan termasuk hari ini, karena HC hari ini belum dikurangi)
+                DB::raw("(
+                    COALESCE(b.batcharea, 0) - 
+                    COALESCE((
+                        SELECT SUM(ldp2.luashasil)
+                        FROM lkhdetailplot ldp2
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        WHERE ldp2.companycode = ldp.companycode
+                        AND ldp2.batchno = ldp.batchno
+                        AND ldp2.kodestatus = ldp.kodestatus
+                        AND lh2.lkhdate < '{$lkhDate}'
+                    ), 0)
+                ) as stc"),
+                
+                // ✅ HC = Hasil panen hari ini
+                DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
+                
+                // ✅ BC = STC - HC (hitung manual, JANGAN pakai luassisa)
+                DB::raw("(
+                    (
+                        COALESCE(b.batcharea, 0) - 
+                        COALESCE((
+                            SELECT SUM(ldp2.luashasil)
+                            FROM lkhdetailplot ldp2
+                            JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                            WHERE ldp2.companycode = ldp.companycode
+                            AND ldp2.batchno = ldp.batchno
+                            AND ldp2.kodestatus = ldp.kodestatus
+                            AND lh2.lkhdate < '{$lkhDate}'
+                        ), 0)
+                    ) - COALESCE(ldp.luashasil, 0)
+                ) as bc"),
+                
+                // ✅ Hari tebang calculation
+                DB::raw("CASE 
+                    WHEN ldp.kodestatus = 'PC' AND b.tanggalpanenpc IS NOT NULL 
+                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenpc) + 1
+                    WHEN ldp.kodestatus = 'RC1' AND b.tanggalpanenrc1 IS NOT NULL 
+                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc1) + 1
+                    WHEN ldp.kodestatus = 'RC2' AND b.tanggalpanenrc2 IS NOT NULL 
+                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc2) + 1
+                    WHEN ldp.kodestatus = 'RC3' AND b.tanggalpanenrc3 IS NOT NULL 
+                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc3) + 1
+                    ELSE NULL
+                END as haritebang")
+            ])
+            ->orderBy('ldp.blok')
+            ->orderBy('ldp.plot')
+            ->get();
     }
 
     /**
@@ -2433,6 +2544,12 @@ public function loadAbsenByDate(Request $request)
                 ->select(['tenagakerjaid', 'nama', 'nik'])
                 ->orderBy('nama')
                 ->get(),
+            'kontraktorData' => DB::table('kontraktor')
+                ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->orderBy('namakontraktor')
+                ->get(),
+            'batchData' => [],
         ];
     }
 
@@ -2464,6 +2581,7 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Validate RKH request
+     * UPDATED: Add panen validation
      */
     private function validateRkhRequest($request)
     {
@@ -2476,24 +2594,31 @@ public function loadAbsenByDate(Request $request)
             'rows.*.plot'            => 'required|string',
             'rows.*.nama'            => 'required|string',
             'rows.*.luas'            => 'required|numeric|min:0',
-            
+            'rows.*.batchno'         => 'nullable|string',
+            'rows.*.kodestatus'      => 'nullable|string|in:PC,RC1,RC2,RC3',
             'rows.*.usingvehicle'    => 'required|in:0,1',
             'rows.*.usinghelper'     => 'required|in:0,1',
             'rows.*.helperid'        => 'nullable|string',
             'rows.*.operatorid'      => 'nullable|string',
             'rows.*.material_group_id' => 'nullable|integer',
-            
-            'workers'                  => 'required|array|min:1',
+            'workers'                  => 'required|array|min:0',
             'workers.*.laki'           => 'nullable|integer|min:0',
             'workers.*.perempuan'      => 'nullable|integer|min:0',
-            'workers.*.total'          => 'required|integer|min:1',
+            'workers.*.total'          => 'required|integer|min:0',
         ]);
 
+        // Existing validations...
         $plantingErrors = $this->validatePlantingPlots($request->input('rows', []), Session::get('companycode'));
-
         if (!empty($plantingErrors)) {
             throw ValidationException::withMessages([
                 'planting_validation' => $plantingErrors
+            ]);
+        }
+        
+        $panenErrors = $this->validatePanenPlots($request->input('rows', []), Session::get('companycode'));
+        if (!empty($panenErrors)) {
+            throw ValidationException::withMessages([
+                'panen_validation' => $panenErrors
             ]);
         }
     }
@@ -2508,7 +2633,6 @@ public function loadAbsenByDate(Request $request)
 
         $rkhno = $this->generateUniqueRkhNoWithLock($tanggal);
 
-        // ✅ UBAH: Pass workers instead of rows
         $activitiesWorkers = $this->groupRowsByActivity($request->workers);
 
         $totalLuas = collect($request->rows)->sum('luas');
@@ -2648,12 +2772,13 @@ public function loadAbsenByDate(Request $request)
     private function buildRkhDetails($rows, $companycode, $rkhno, $tanggal)
     {
         $details = [];
+        $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
         
         foreach ($rows as $row) {
             $activity = Activity::where('activitycode', $row['nama'])->first();
             $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
 
-            $details[] = [
+            $detailData = [
                 'companycode'         => $companycode,
                 'rkhno'               => $rkhno,
                 'rkhdate'             => $tanggal,
@@ -2669,9 +2794,49 @@ public function loadAbsenByDate(Request $request)
                 'usinghelper'         => $row['usinghelper'] ?? 0,
                 'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
             ];
+
+            // Batch data for panen activities
+            if (in_array($row['nama'], $panenActivities)) {
+                $batchInfo = $this->getBatchInfoForPlot($companycode, $row['plot']);
+                
+                if ($batchInfo) {
+                    $detailData['batchno'] = $batchInfo->batchno;
+                    $detailData['kodestatus'] = $batchInfo->kodestatus;
+                } else {
+                    \Log::warning("Plot {$row['plot']} tidak memiliki batch info untuk panen activity {$row['nama']}");
+                    $detailData['batchno'] = null;
+                    $detailData['kodestatus'] = null;
+                }
+            }
+            
+            $details[] = $detailData;
         }
         
         return $details;
+    }
+
+    /**
+     * Get batch info for specific plot (for panen activities)
+     * NEW METHOD: Get active batch and lifecycle status
+     * 
+     * @param string $companycode
+     * @param string $plot
+     * @return object|null
+     */
+    private function getBatchInfoForPlot($companycode, $plot)
+    {
+        return DB::table('masterlist')
+            ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+            ->where('masterlist.companycode', $companycode)
+            ->where('masterlist.plot', $plot)
+            ->where('masterlist.isactive', 1)
+            ->where('batch.isactive', 1)
+            ->select([
+                'batch.batchno',
+                'batch.lifecyclestatus as kodestatus',
+                'batch.batcharea'
+            ])
+            ->first();
     }
 
     /**
@@ -2825,11 +2990,11 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Get RKH details for display
+     * UPDATED: Include batch data for panen activities
      */
     private function getRkhDetails($companycode, $rkhno)
     {
         return DB::table('rkhlst as r')
-            // ✅ NEW: Join with worker table
             ->leftJoin('rkhlstworker as w', function($join) {
                 $join->on('r.companycode', '=', 'w.companycode')
                     ->on('r.rkhno', '=', 'w.rkhno')
@@ -2842,11 +3007,12 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk', 'r.operatorid', '=', 'tk.tenagakerjaid')
             ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
+            // ✅ NEW: Join batch for panen activities
+            ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
                 'r.*', 
-                // ✅ NEW: Get worker data from rkhlstworker
                 'w.jumlahlaki',
                 'w.jumlahperempuan',
                 'w.jumlahtenagakerja',
@@ -2855,7 +3021,11 @@ public function loadAbsenByDate(Request $request)
                 'a.jenistenagakerja',
                 'tk.nama as operator_name',
                 'tk.nik as operator_nik',
-                'tk_helper.nama as helper_name'
+                'tk_helper.nama as helper_name',
+                // ✅ NEW: Batch info
+                'b.batchno as batch_number',
+                'b.lifecyclestatus as batch_lifecycle',
+                'b.batcharea'
             ])
             ->get();
     }
@@ -2866,7 +3036,6 @@ public function loadAbsenByDate(Request $request)
     private function getRkhDetailsForEdit($companycode, $rkhno)
     {
         return DB::table('rkhlst as r')
-            // ✅ NEW: Join with worker table
             ->leftJoin('rkhlstworker as w', function($join) {
                 $join->on('r.companycode', '=', 'w.companycode')
                     ->on('r.rkhno', '=', 'w.rkhno')
@@ -2879,11 +3048,12 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk_operator', 'r.operatorid', '=', 'tk_operator.tenagakerjaid')
             ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
+            // ✅ NEW: Join batch for panen activities
+            ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
                 'r.*', 
-                // ✅ NEW: Get worker data from rkhlstworker
                 'w.jumlahlaki',
                 'w.jumlahperempuan',
                 'w.jumlahtenagakerja',
@@ -2891,7 +3061,11 @@ public function loadAbsenByDate(Request $request)
                 'a.activityname', 
                 'a.jenistenagakerja',
                 'tk_operator.nama as operator_name',
-                'tk_helper.nama as helper_name'
+                'tk_helper.nama as helper_name',
+                // ✅ NEW: Batch info
+                'b.batchno as batch_number',
+                'b.lifecyclestatus as batch_lifecycle',
+                'b.batcharea'
             ])
             ->get();
     }
@@ -4078,6 +4252,153 @@ public function loadAbsenByDate(Request $request)
                         $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} masih memiliki batch aktif. Tidak dapat ditanam ulang.";
                     }
                 }
+            }
+        }
+        
+        return $errors;
+    }
+
+    /**
+     * Get panen info for specific plot
+     * API Endpoint untuk info panen batch saat create RKH
+     * 
+     * @param string $plot
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPanenInfo($plot)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            
+            // Get active batch for this plot
+            $masterlist = DB::table('masterlist')
+                ->where('companycode', $companycode)
+                ->where('plot', $plot)
+                ->where('isactive', 1)
+                ->first();
+            
+            if (!$masterlist || !$masterlist->activebatchno) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Plot tidak memiliki batch aktif'
+                ]);
+            }
+            
+            // Get batch details
+            $batch = DB::table('batch')
+                ->where('companycode', $companycode)
+                ->where('batchno', $masterlist->activebatchno)
+                ->where('isactive', 1)
+                ->first();
+            
+            if (!$batch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batch tidak ditemukan'
+                ]);
+            }
+            
+            // Get lifecycle status
+            $kodestatus = $batch->lifecyclestatus ?? 'PC';
+            
+            // Get tanggal panen based on current cycle
+            $tanggalField = 'tanggalpanen' . strtolower($kodestatus);
+            $tanggalPanen = $batch->$tanggalField ?? null;
+            
+            // ✅ FIXED: Calculate STC = Luas batch - Total sudah dipanen SAMPAI KEMARIN
+            // (bukan dari field luassisa!)
+            $totalSudahPanen = DB::table('lkhdetailplot as ldp')
+                ->join('lkhhdr as lh', function($join) {
+                    $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                        ->on('ldp.companycode', '=', 'lh.companycode');
+                })
+                ->where('ldp.companycode', $companycode)
+                ->where('ldp.batchno', $batch->batchno)
+                ->where('ldp.kodestatus', $kodestatus)
+                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d')) // SAMPAI KEMARIN
+                ->sum('ldp.luashasil');
+            
+            $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
+            
+            return response()->json([
+                'success' => true,
+                'batchno' => $batch->batchno,
+                'kodestatus' => $kodestatus,
+                'tanggalpanen' => $tanggalPanen ? Carbon::parse($tanggalPanen)->format('d/m/Y') : '-',
+                'batcharea' => number_format($batch->batcharea, 2),
+                'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
+                'luassisa' => number_format($luasSisa, 2), // ✅ Ini STC untuk hari ini
+                'plot' => $plot
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error getting panen info for plot {$plot}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat info panen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate panen plots
+     * Check if luas input <= luas sisa and batch exists
+     * 
+     * @param array $rows
+     * @param string $companycode
+     * @return array
+     */
+    private function validatePanenPlots($rows, $companycode)
+    {
+        $errors = [];
+        $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
+        
+        foreach ($rows as $index => $row) {
+            // Skip if not panen activity
+            if (!in_array($row['nama'] ?? '', $panenActivities)) {
+                continue;
+            }
+            
+            $plot = $row['plot'] ?? '';
+            $luas = (float) ($row['luas'] ?? 0);
+            
+            if (!$plot || $luas <= 0) {
+                continue;
+            }
+            
+            // Get batch info
+            $masterlist = DB::table('masterlist')
+                ->where('companycode', $companycode)
+                ->where('plot', $plot)
+                ->first();
+            
+            if (!$masterlist || !$masterlist->activebatchno) {
+                $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} tidak memiliki batch aktif untuk dipanen.";
+                continue;
+            }
+            
+            $batch = DB::table('batch')
+                ->where('companycode', $companycode)
+                ->where('batchno', $masterlist->activebatchno)
+                ->first();
+            
+            if (!$batch) {
+                $errors[] = "Baris " . ($index + 1) . ": Batch tidak ditemukan untuk plot {$plot}.";
+                continue;
+            }
+            
+            // Check luas sisa
+            $kodestatus = $batch->lifecyclestatus ?? 'PC';
+            $luasSudahPanen = DB::table('lkhdetailpanen')
+                ->where('companycode', $companycode)
+                ->where('batchno', $batch->batchno)
+                ->where('kodestatus', $kodestatus)
+                ->sum('luashasilpanen');
+            
+            $luasSisa = $batch->batcharea - $luasSudahPanen;
+            
+            if ($luas > $luasSisa) {
+                $errors[] = "Baris " . ($index + 1) . ": Luas panen ({$luas} Ha) melebihi luas sisa (" . number_format($luasSisa, 2) . " Ha) untuk plot {$plot}.";
             }
         }
         
