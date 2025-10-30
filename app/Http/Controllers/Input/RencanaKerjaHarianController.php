@@ -72,7 +72,7 @@ class RencanaKerjaHarianController extends Controller
         $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
         $rkhData = $query->paginate($perPage);
 
-        // ✅ NEW: Add progress status untuk setiap RKH
+        // NEW: Add progress status untuk setiap RKH
         $rkhData->getCollection()->transform(function ($rkh) use ($companycode) {
             $rkh->lkh_progress_status = $this->getRkhProgressStatus($rkh->rkhno, $companycode);
             return $rkh;
@@ -639,12 +639,12 @@ class RencanaKerjaHarianController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            // ✅ Detect if this is panen activity
+            // Detect if this is panen activity
             $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
             $isPanenActivity = in_array($lkhData->activitycode, $panenActivities);
 
             if ($isPanenActivity) {
-                // ✅ Load panen data from NEW UNIFIED STRUCTURE
+                // Load panen data from NEW UNIFIED STRUCTURE
                 $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
 
@@ -657,7 +657,7 @@ class RencanaKerjaHarianController extends Controller
                     'approvals' => $approvals
                 ]);
             } else {
-                // ✅ Load normal activity data (existing code)
+                // Load normal activity data (existing code)
                 $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
                 $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
                 $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
@@ -721,7 +721,7 @@ class RencanaKerjaHarianController extends Controller
                 'b.tanggalpanenrc2',
                 'b.tanggalpanenrc3',
                 
-                // ✅ STC = Luas batch - Total sudah dipanen sampai KEMARIN
+                // STC = Luas batch - Total sudah dipanen sampai KEMARIN
                 // (bukan termasuk hari ini, karena HC hari ini belum dikurangi)
                 DB::raw("(
                     COALESCE(b.batcharea, 0) - 
@@ -736,10 +736,10 @@ class RencanaKerjaHarianController extends Controller
                     ), 0)
                 ) as stc"),
                 
-                // ✅ HC = Hasil panen hari ini
+                // HC = Hasil panen hari ini
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
-                // ✅ BC = STC - HC (hitung manual, JANGAN pakai luassisa)
+                // BC = STC - HC (hitung manual, JANGAN pakai luassisa)
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
@@ -755,7 +755,7 @@ class RencanaKerjaHarianController extends Controller
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
-                // ✅ Hari tebang calculation
+                // Hari tebang calculation
                 DB::raw("CASE 
                     WHEN ldp.kodestatus = 'PC' AND b.tanggalpanenpc IS NOT NULL 
                         THEN DATEDIFF('{$lkhDate}', b.tanggalpanenpc) + 1
@@ -836,7 +836,7 @@ class RencanaKerjaHarianController extends Controller
             $lkhData = $this->validateLkhForUpdate($companycode, $lkhno);
             
             // Update LKH using new structure
-            $this->updateLkhRecordNew($request, $lkhno, $lkhData, $currentUser);
+            $this->updateLkhRecord($request, $lkhno, $lkhData, $currentUser);
 
             DB::commit();
 
@@ -1380,7 +1380,7 @@ class RencanaKerjaHarianController extends Controller
             ->where('ldm.lkhno', $lkhno)
             ->select([
                 'ldm.id',
-                'ldm.plot', // ✅ FIXED: Add plot field
+                'ldm.plot', // FIXED: Add plot field
                 'ldm.itemcode',
                 'ldm.qtyditerima',
                 'ldm.qtysisa', 
@@ -1392,13 +1392,13 @@ class RencanaKerjaHarianController extends Controller
                 'h.itemname',
                 'h.measure as satuan'
             ])
-            ->orderBy('ldm.plot') // ✅ FIXED: Order by plot for better display
+            ->orderBy('ldm.plot') // FIXED: Order by plot for better display
             ->orderBy('ldm.itemcode')
             ->get()
             ->map(function($material) {
                 return (object)[
                     'id' => $material->id,
-                    'plot' => (string)($material->plot ?? '-'), // ✅ FIXED: Include plot in mapping
+                    'plot' => (string)($material->plot ?? '-'), // FIXED: Include plot in mapping
                     'itemcode' => (string)($material->itemcode ?? ''),
                     'itemname' => (string)($material->itemname ?? 'Unknown Item'),
                     'qtyditerima' => floatval($material->qtyditerima ?? 0),
@@ -1428,7 +1428,7 @@ class RencanaKerjaHarianController extends Controller
             ->where('ldm.lkhno', $lkhno)
             ->select([
                 'ldm.id',
-                'ldm.plot', // ✅ FIXED: Include plot field for consistency
+                'ldm.plot', // FIXED: Include plot field for consistency
                 'ldm.itemcode',
                 'ldm.qtyditerima',
                 'ldm.qtysisa', 
@@ -1440,7 +1440,7 @@ class RencanaKerjaHarianController extends Controller
                 'h.itemname',
                 'h.measure as satuan'
             ])
-            ->orderBy('ldm.plot') // ✅ FIXED: Order by plot for better display
+            ->orderBy('ldm.plot') // FIXED: Order by plot for better display
             ->orderBy('ldm.itemcode')
             ->get();
     }
@@ -1591,7 +1591,7 @@ class RencanaKerjaHarianController extends Controller
      * Update LKH record using new table structure
      * NEW METHOD: Handle 3 separate detail tables
      */
-    private function updateLkhRecordNew($request, $lkhno, $lkhData, $currentUser)
+    private function updateLkhRecord($request, $lkhno, $lkhData, $currentUser)
     {
         $companycode = Session::get('companycode');
         
@@ -1605,7 +1605,7 @@ class RencanaKerjaHarianController extends Controller
         $totalSisa = collect($request->plots ?? [])->sum('luassisa');
         
         // Calculate total upah from workers
-        $totalUpah = $this->calculateTotalUpahNew($request->workers ?? [], $lkhData);
+        $totalUpah = $this->calculateTotalUpah($request->workers ?? [], $lkhData);
 
         // Update header
         DB::table('lkhhdr')
@@ -1653,7 +1653,7 @@ class RencanaKerjaHarianController extends Controller
      * Calculate total upah for new structure
      * NEW METHOD
      */
-    private function calculateTotalUpahNew($workers, $lkhData)
+    private function calculateTotalUpah($workers, $lkhData)
     {
         $totalUpah = 0;
 
@@ -2294,7 +2294,7 @@ public function loadAbsenByDate(Request $request)
     
     // Query data absen yang sudah APPROVED saja
     $absenData = DB::table('absenhdr as h')
-        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+        ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // REMOVED companycode join
         ->join('tenagakerja as t', function($join) use ($companycode) {
             $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
                  ->where('t.companycode', '=', $companycode)
@@ -2302,7 +2302,7 @@ public function loadAbsenByDate(Request $request)
         })
         ->where('h.companycode', $companycode)
         ->whereDate('h.uploaddate', $date)
-        ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+        ->where('l.approval_status', 'APPROVED') // HANYA yang APPROVED
         ->when($mandorId, function($query) use ($mandorId) {
             return $query->where('h.mandorid', $mandorId);
         })
@@ -2466,7 +2466,7 @@ public function loadAbsenByDate(Request $request)
     private function getAttendanceData($companycode, $date)
     {
         return DB::table('absenhdr as h')
-            ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // ✅ REMOVED companycode join
+            ->join('absenlst as l', 'h.absenno', '=', 'l.absenno') // REMOVED companycode join
             ->join('tenagakerja as t', function($join) use ($companycode) {
                 $join->on('l.tenagakerjaid', '=', 't.tenagakerjaid')
                     ->where('t.companycode', '=', $companycode)
@@ -2474,7 +2474,7 @@ public function loadAbsenByDate(Request $request)
             })
             ->where('h.companycode', $companycode)
             ->whereDate('h.uploaddate', Carbon::parse($date ?? Carbon::today()))
-            ->where('l.approval_status', 'APPROVED') // ✅ HANYA yang APPROVED
+            ->where('l.approval_status', 'APPROVED') // HANYA yang APPROVED
             ->select([
                 'h.mandorid',
                 'l.tenagakerjaid', 
@@ -2530,12 +2530,39 @@ public function loadAbsenByDate(Request $request)
             'mandors' => User::getMandorByCompany($companycode),
             'activities' => Activity::with(['group', 'jenistenagakerja'])->where('active', 1)->orderBy('activitycode')->get(),
             'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
-            'masterlist' => Masterlist::where('companycode', $companycode)->orderBy('plot')->get(),
+
+            'masterlist' => DB::table('masterlist as m')->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')->where('m.companycode', $companycode)->select([
+                'm.companycode',
+                'm.plot',
+                'm.blok',
+                'm.activebatchno',
+                'm.isactive',
+                'b.lifecyclestatus',
+                'b.batcharea'
+            ])
+            ->orderBy('m.plot')
+            ->get(),
+
             'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
             'absentenagakerja' => $absenModel->getDataAbsenFull($companycode, $targetDate),
             'herbisidagroups' => $herbisidadosages->getFullHerbisidaGroupData($companycode),
             'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
-            'masterlistData' => Masterlist::where('companycode', $companycode)->orderBy('plot')->get(),
+
+            'masterlistData' => DB::table('masterlist as m')
+            ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+            ->where('m.companycode', $companycode)
+            ->select([
+                'm.companycode',
+                'm.plot',
+                'm.blok',
+                'm.activebatchno',
+                'm.isactive',
+                'b.lifecyclestatus',
+                'b.batcharea'
+            ])
+            ->orderBy('m.plot')
+            ->get(),
+
             'plotsData' => DB::table('plot')->where('companycode', $companycode)->get(),
             'operatorsData' => $this->getOperatorsWithVehicles($companycode),
             'helpersData' => TenagaKerja::where('companycode', $companycode)
@@ -2672,7 +2699,7 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
         $tanggal = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
 
-        // ✅ UBAH: Pass workers instead of rows
+        // UBAH: Pass workers instead of rows
         $activitiesWorkers = $this->groupRowsByActivity($request->workers);
 
         $totalLuas = collect($request->rows)->sum('luas');
@@ -3007,7 +3034,7 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk', 'r.operatorid', '=', 'tk.tenagakerjaid')
             ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
-            // ✅ NEW: Join batch for panen activities
+            // NEW: Join batch for panen activities
             ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3022,7 +3049,7 @@ public function loadAbsenByDate(Request $request)
                 'tk.nama as operator_name',
                 'tk.nik as operator_nik',
                 'tk_helper.nama as helper_name',
-                // ✅ NEW: Batch info
+                // NEW: Batch info
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea'
@@ -3048,7 +3075,7 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk_operator', 'r.operatorid', '=', 'tk_operator.tenagakerjaid')
             ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
-            // ✅ NEW: Join batch for panen activities
+            // NEW: Join batch for panen activities
             ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3062,7 +3089,7 @@ public function loadAbsenByDate(Request $request)
                 'a.jenistenagakerja',
                 'tk_operator.nama as operator_name',
                 'tk_helper.nama as helper_name',
-                // ✅ NEW: Batch info
+                // NEW: Batch info
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea'
@@ -3493,167 +3520,6 @@ public function loadAbsenByDate(Request $request)
             'levels' => $levels
         ];
     }
-
-
-    
-
-   
-
-    
-    
-
-   
-    /**
-     * Get LKH details for show
-     */
-    private function getLkhDetailsForShow($lkhno)
-    {
-        return DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.tenagakerjaid')
-            ->where('l.lkhno', $lkhno)
-            ->select([
-                'l.*',
-                't.nama as workername',
-                't.nik as noktp'
-            ])
-            ->orderBy('l.tenagakerjaurutan')
-            ->get();
-    }
-
-   
-
-
-    /**
-     * Get LKH details for edit
-     */
-    private function getLkhDetailsForEdit($lkhno)
-    {
-        return DB::table('lkhlst as l')
-            ->leftJoin('tenagakerja as t', 'l.idtenagakerja', '=', 't.tenagakerjaid')
-            ->where('l.lkhno', $lkhno)
-            ->select([
-                'l.*',
-                't.nama as workername',
-                't.nik as noktp'
-            ])
-            ->orderBy('l.tenagakerjaurutan')
-            ->get();
-    }
-
-   
-
-  
-
-    
-    /**
-     * Update LKH record
-     */
-    private function updateLkhRecord($request, $lkhno, $lkhData, $currentUser)
-    {
-        $companycode = Session::get('companycode');
-        
-        // Calculate totals
-        $totalWorkers = count($request->workers);
-        $totalHasil = collect($request->workers)->sum('hasil');
-        $totalSisa = collect($request->workers)->sum('sisa');
-        $totalUpah = $this->calculateTotalUpah($request->workers, $lkhData);
-
-        // Update header
-        DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->update([
-                'totalworkers' => $totalWorkers,
-                'totalhasil' => $totalHasil,
-                'totalsisa' => $totalSisa,
-                'totalupahall' => $totalUpah,
-                'keterangan' => $request->keterangan,
-                'updateby' => $currentUser->userid,
-                'updatedat' => now()
-            ]);
-
-        // Update details
-        DB::table('lkhlst')->where('lkhno', $lkhno)->delete();
-        $details = $this->buildLkhDetails($request->workers, $lkhno, $lkhData);
-        DB::table('lkhlst')->insert($details);
-    }
-
-    /**
-     * Calculate total upah for LKH
-     */
-    private function calculateTotalUpah($workers, $lkhData)
-    {
-        $totalUpah = 0;
-
-        foreach ($workers as $worker) {
-            if ($lkhData->jenistenagakerja == 1) {
-                // Harian: upah harian + premi + overtime
-                $upahHarian = $worker['upahharian'] ?? 0;
-                $premi = $worker['premi'] ?? 0;
-                $totalUpah += $upahHarian + $premi;
-            } else {
-                // Borongan: hasil * cost per ha
-                $hasil = $worker['hasil'] ?? 0;
-                $costPerHa = $worker['costperha'] ?? 0;
-                $totalUpah += $hasil * $costPerHa;
-            }
-        }
-
-        return $totalUpah;
-    }
-
-    /**
-     * Build LKH detail records
-     */
-    private function buildLkhDetails($workers, $lkhno, $lkhData)
-    {
-        $details = [];
-        foreach ($workers as $index => $worker) {
-            $detail = [
-                'lkhno' => $lkhno,
-                'tenagakerjaurutan' => $index + 1,
-                'tenagakerjaid' => $worker['tenagakerjaid'],
-                'blok' => $worker['blok'],
-                'plot' => $worker['plot'],
-                'luasplot' => $worker['luasplot'],
-                'hasil' => $worker['hasil'],
-                'sisa' => $worker['sisa'],
-                'materialused' => $worker['materialused'] ?? null,
-                'createdat' => now()
-            ];
-
-            if ($lkhData->jenistenagakerja == 1) {
-                // Tenaga Harian fields
-                $detail['jammasuk'] = $worker['jammasuk'] ?? null;
-                $detail['jamselesai'] = $worker['jamselesai'] ?? null;
-                $detail['overtimehours'] = $worker['overtimehours'] ?? 0;
-                $detail['premi'] = $worker['premi'] ?? 0;
-                $detail['upahharian'] = $worker['upahharian'] ?? 0;
-                $detail['totalupahharian'] = ($worker['upahharian'] ?? 0) + ($worker['premi'] ?? 0);
-                $detail['costperha'] = 0;
-                $detail['totalbiayaborongan'] = 0;
-            } else {
-                // Tenaga Borongan fields
-                $detail['jammasuk'] = null;
-                $detail['jamselesai'] = null;
-                $detail['overtimehours'] = 0;
-                $detail['premi'] = 0;
-                $detail['upahharian'] = 0;
-                $detail['totalupahharian'] = 0;
-                $detail['costperha'] = $worker['costperha'] ?? 0;
-                $detail['totalbiayaborongan'] = ($worker['hasil'] ?? 0) * ($worker['costperha'] ?? 0);
-            }
-
-            $details[] = $detail;
-        }
-
-        return $details;
-    }
-
-   
-
-
-
 
 
     /**
@@ -4305,7 +4171,7 @@ public function loadAbsenByDate(Request $request)
             $tanggalField = 'tanggalpanen' . strtolower($kodestatus);
             $tanggalPanen = $batch->$tanggalField ?? null;
             
-            // ✅ FIXED: Calculate STC = Luas batch - Total sudah dipanen SAMPAI KEMARIN
+            // FIXED: Calculate STC = Luas batch - Total sudah dipanen SAMPAI KEMARIN
             // (bukan dari field luassisa!)
             $totalSudahPanen = DB::table('lkhdetailplot as ldp')
                 ->join('lkhhdr as lh', function($join) {
@@ -4327,7 +4193,7 @@ public function loadAbsenByDate(Request $request)
                 'tanggalpanen' => $tanggalPanen ? Carbon::parse($tanggalPanen)->format('d/m/Y') : '-',
                 'batcharea' => number_format($batch->batcharea, 2),
                 'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
-                'luassisa' => number_format($luasSisa, 2), // ✅ Ini STC untuk hari ini
+                'luassisa' => number_format($luasSisa, 2), // Ini STC untuk hari ini
                 'plot' => $plot
             ]);
             
