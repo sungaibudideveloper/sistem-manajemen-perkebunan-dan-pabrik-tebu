@@ -72,7 +72,7 @@ public function plot(Request $request)
         // Sesuaikan dengan struktur data Anda
         return $item->activity_type ?? 'PC'; // default PC jika tidak ada
     });
-    
+    dd('a', $plotHeaders);
     return view('dashboard.timeline-plot.index', [
         'title' => $title,
         'nav' => $nav,
