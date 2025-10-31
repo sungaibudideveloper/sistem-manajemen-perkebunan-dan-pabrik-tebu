@@ -1,142 +1,206 @@
+
 <x-layout>
-    <x-slot:title>{{ $title }}</x-slot>
+    <x-slot:title>{{ $title }} yo</x-slot>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
-    
     <style>
-        .table-timeline {
-            font-size: 11px;
-            border-collapse: collapse;
-        }
-        .table-timeline th, .table-timeline td {
-            border: 1px solid #333;
-            padding: 4px 6px;
-            text-align: center;
-        }
-        .table-timeline th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        .header-main {
-            background-color: #fff;
-            border: 2px solid #333;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .status-ontime { color: #28a745; }
-        .status-late { color: #dc3545; }
-    </style>
+ h1 {
+     text-align: center;
+     color: #333;
+     margin-bottom: 40px;
+ }
+ table {
+     width: 100%;
+     border-collapse: collapse;
+     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+ }
+ th, td {
+     border: 1px solid #ddd;
+     padding: 12px;
+ }
+ tr:hover {
+     background-color: #e9f4ff;
+ }
+ .status-ontime {
+     color: #28a745;
+     font-weight: bold;
+ }
+ .status-late {
+     color: #dc3545;
+     font-weight: bold;
+ }
+ .status-early {
+     color: #17a2b8;
+     font-weight: bold;
+ }
+       </style>
+    <div class="mx-auto px-6">
+    <div x-data="{ modalOpen: false, detail: {} }">
+         <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+             <thead class="bg-blue-600 text-white">
+                 <tr>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Aktivitas</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tgl Mulai (Target)</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tgl Selesai (Target)</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Durasi Target (hari)</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tepat Waktu (%)</th>
+                     <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Biaya Langsung (Rp.)</th>
+                 </tr>
+             </thead>
+             <tbody >
+                 <template x-for="activity in [
+                     {no:1, nama:'Pembukaan Lahan', targetStart:'01 Jan 2025', targetEnd:'07 Jan 2025', durasiTarget:7, persen:'89', biaya:'20.000.000'},
+                     {no:2, nama:'Penanaman', targetStart:'08 Jan 2025', targetEnd:'15 Jan 2025', durasiTarget:8, persen:'97', biaya:'25.000.000'},
+                     {no:3, nama:'Pemupukan Pertama', targetStart:'20 Jan 2025', targetEnd:'22 Jan 2025', durasiTarget:3, persen:'100', biaya:'30.000.000'},
+                     {no:4, nama:'Pemeliharaan', targetStart:'25 Jan 2025', targetEnd:'30 Apr 2025', durasiTarget:96, persen:'100', biaya:'40.000.000'},
+                     {no:5, nama:'Pemupukan Kedua', targetStart:'10 Mei 2025', targetEnd:'12 Mei 2025', durasiTarget:3, persen:'97', biaya:'10.000.000'},
+                     {no:6, nama:'Panen', targetStart:'15 Jul 2025', targetEnd:'20 Jul 2025', durasiTarget:6, persen:'99', biaya:'10.000.000'}
+                 ]">
+                     <tr @click="detail = activity; modalOpen = true" class="hover:bg-blue-100 cursor-pointer">
+                         <td class="py-2 px-4 text-right" x-text="activity.no"></td>
+                         <td class="py-2 px-4" x-text="activity.nama"></td>
+                         <td class="py-2 px-4 text-center pr-3" x-text="activity.targetStart"></td>
+                         <td class="py-2 px-4 text-center pr-3" x-text="activity.targetEnd"></td>
+                         <td class="py-2 px-4 text-right pr-3" x-text="activity.durasiTarget"></td>
+                         <td class="py-2 px-4 font-semibold text-right pr-3" :class="{
+                                'text-green-500': activity.persen >= 98,
+                                'text-red-500': activity.persen < 90,
+                                'text-blue-500': activity.persen >= 90 && activity.persen <= 97
+                            }" x-text="`${activity.persen} %`"></td>
+                          <td class="py-2 px-4 text-right pr-3" x-text="activity.biaya"></td>
+                     </tr>
+                 </template>
+             </tbody>
+         </table>
 
-    <div class="mx-auto px-6 py-4">
-        <!-- Header Kegiatan -->
-        <div class="header-main">
-            <div class="flex justify-between items-start">
-                <div>
-                    <img src="/path/to/logo.png" alt="Logo" class="h-16">
-                </div>
-                <div class="text-center flex-1">
-                    <h1 class="text-2xl font-bold">KEGIATAN PASCA PANEN PT. TBL</h1>
-                    <p class="text-sm mt-2">BULAN: <strong>{{ date('F Y') }}</strong></p>
-                    <p class="text-sm">DIVISI: <strong>1</strong></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabel Timeline -->
-        <div class="overflow-x-auto">
-            <table class="table-timeline w-full bg-white shadow-lg">
-                <thead>
-                    <!-- Header Kategori Kegiatan -->
-                    <tr>
-                        <th rowspan="3" class="w-20">PLOT</th>
-                        <th colspan="6">REPLANTING</th>
-                        <th colspan="8">KEGIATAN PANEN</th>
-                        <th colspan="3">HASIL SORTANCE PK</th>
-                        <th rowspan="2" colspan="2">SALAH</th>
-                        <th rowspan="2" colspan="2">KEPRAS</th>
-                        <th colspan="4">HASIL TTL</th>
-                        <th colspan="2">REALISASI TANAM</th>
-                        <th colspan="2">REALISASI PANEN</th>
-                    </tr>
-                    
-                    <!-- Sub-header -->
-                    <tr>
-                        <!-- REPLANTING -->
-                        <th>TUMBA</th>
-                        <th>MENANAM</th>
-                        <th>PLANNING</th>
-                        <th>SUMPIT/BS</th>
-                        <th>TUMBUK</th>
-                        <th>MENEBAS</th>
-                        
-                        <!-- KEGIATAN PANEN -->
-                        <th>BABAD</th>
-                        <th>RAWAT PASAR</th>
-                        <th>TANAM</th>
-                        <th>PANEN</th>
-                        <th>RAWAT PRODUKSI</th>
-                        <th>EGREK</th>
-                        <th>PANEN RENDAH</th>
-                        <th>LATE PB</th>
-                        
-                        <!-- HASIL SORTANCE -->
-                        <th>CUP</th>
-                        <th>SALDO</th>
-                        <th>KEPRAS</th>
-                        
-                        <!-- Lanjutan kolom -->
-                        <th colspan="4">TTL 1-3</th>
-                        <th>HA</th>
-                        <th>%</th>
-                        <th>HA</th>
-                        <th>%</th>
-                    </tr>
-                    
-                    <!-- Tanggal (bisa dinamis per hari) -->
-                    <tr>
-                        @for($i = 1; $i <= 29; $i++)
-                            <th class="text-xs">{{ $i }}</th>
-                        @endfor
-                    </tr>
-                </thead>
-                
-                <tbody>
-                    @foreach($plotHeaders as $index => $plot)
-                    <tr class="hover:bg-blue-50">
-                        <td class="font-semibold text-left">{{ $plot->plot }}</td>
-                        
-                        <!-- Data kegiatan per tanggal (sample, sesuaikan dengan data real) -->
-                        @php
-                            // Ambil data kegiatan untuk plot ini
-                            $plotActivities = $details->where('plot', $plot->plot);
-                        @endphp
-                        
-                        @for($day = 1; $day <= 29; $day++)
-                            <td class="text-xs">
-                                @php
-                                    // Cek apakah ada kegiatan di tanggal ini
-                                    $activity = $plotActivities->first(function($item) use ($day) {
-                                        return date('j', strtotime($item->tanggal ?? '')) == $day;
-                                    });
-                                @endphp
-                                
-                                @if($activity)
-                                    <span class="status-ontime">✓</span>
-                                @else
-                                    -
-                                @endif
-                            </td>
-                        @endfor
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Legend -->
-        <div class="mt-4 flex gap-4 text-sm">
-            <div><span class="status-ontime">✓</span> = Tepat Waktu</div>
-            <div><span class="status-late">✗</span> = Terlambat</div>
-        </div>
+         <!-- Modal -->
+         <div x-data="{ detailModalOpen: false, detailAktivitas: '', detailData: [] }">
+  <div x-show="modalOpen" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center px-4 py-8 z-50" style="display: none;">
+    <div class="bg-white rounded-lg shadow-xl p-8 w-full h-full max-w-screen-xl max-h-screen overflow-auto">
+      <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold" x-text="`${detail.nama} - Per Blok`"></h2>
+          <button @click="modalOpen = false" class="p-2 hover:bg-gray-200 rounded-md">
+              <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                  viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M6 18 17.94 6M18 18 6.06 6" />
+              </svg>
+          </button>
+      </div>
+      <table class="min-w-full border-collapse">
+        <tr class="cursor-pointer hover:bg-gray-100">
+        </tr>
+        <thead class="bg-gray-200">
+          <tr>
+            <th colspan="3">Blok A</th>
+          </tr>
+          <tr>
+            <th align="center">Tgl Mulai : 01 Jan 2025</th>
+            <th align="center">Tgl Selesai : 07 Jan 2025</th>
+            <th colspan="2" align="center">Durasi Target : 7</th>
+          </tr>
+          <tr>
+            <th class="py-3 px-4">Aktifitas</th>
+            <th class="py-3 px-4">Tepat Waktu (%)</th>
+            <th class="py-3 px-4">Biaya Langsung (Rp.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="activity in [
+            {nama: 'Perencanaan Kegiatan Pembersihan Lahan', persen:98, biaya:'0'},
+            {nama: 'Penebasan dan Penumpukan', persen:98, biaya:'2.000.000'},
+            {nama: 'Penumbangan Tegakan dan Penumpukan', persen:70, biaya:'2.000.000'},
+            {nama: 'Pembentukan Lahan Tanam', persen:70, biaya:'2.000.000'},
+            {nama: 'Pembentukan Badan Jalan', persen:92, biaya:'2.000.000'},
+            {nama: 'Pembuatan Jembatan', persen:95, biaya:'2.000.000'},
+            {nama: 'Pembuatan Gorong Gorong', persen:95, biaya:'2.000.000'},
+            {nama: 'Pembuatan Parit dan Kanal', persen:99, biaya:'2.000.000'},
+            {nama: 'Pembuatan Embung', persen:99, biaya:'2.000.000'}
+          ]">
+            <tr class="cursor-pointer hover:bg-gray-100" @click="detailAktivitas = activity.nama; detailModalOpen = true; detailData = generateDetailData()">
+              <td class="py-2 px-4 text-left font-semibold" x-text="activity.nama"></td>
+              <td class="py-2 px-4 font-semibold text-right"
+                :class="{
+                  'text-green-500': activity.persen >= 98,
+                  'text-red-500': activity.persen < 90,
+                  'text-blue-500': activity.persen >=90 && activity.persen <=97
+                }"
+                x-text="`${activity.persen}%`">
+              </td>
+              <td class="py-2 px-4 text-right" x-text="activity.biaya"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
     </div>
+  </div>
+
+  <!-- Nested Modal (Detail Aktivitas) -->
+  <div x-show="detailModalOpen" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center px-4 py-8 z-50" style="display: none;">
+    <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-7xl max-h-screen overflow-auto">
+      <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold" x-text="detailAktivitas"></h2>
+          <button @click="detailModalOpen = false" class="p-2 hover:bg-gray-200 rounded-md">
+              <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                  viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M6 18 17.94 6M18 18 6.06 6" />
+              </svg>
+          </button>
+      </div>
+      <table class="min-w-full border-collapse">
+        <thead class="bg-gray-300">
+          <tr>
+            <th align="center">Blok : A</th>
+            <th align="center">Tgl Mulai : 01 Jan 2025</th>
+            <th align="center">Tgl Selesai : 07 Jan 2025</th>
+            <th colspan="2" align="center">Durasi Target : 7</th>
+          </tr>
+          <tr>
+            <th class="py-3 px-4 text-center">Plot</th>
+            <th class="py-3 px-4 text-center">Tgl Mulai (Realisasi)</th>
+            <th class="py-3 px-4 text-center">Tgl Selesai (Realisasi)</th>
+            <th class="py-3 px-4 text-right">Durasi Realisasi (hari)</th>
+            <th class="py-3 px-4 text-right">Biaya Langsung (Rp.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="item in detailData">
+            <tr class="hover:bg-gray-50">
+              <td class="py-2 px-4 text-center" x-text="item.plot"></td>
+              <td class="py-2 px-4 text-center" x-text="item.realStart"></td>
+              <td class="py-2 px-4 text-center" x-text="item.realEnd"></td>
+              <td class="py-2 px-4 text-right" x-text="item.durasiReal"></td>
+              <td class="py-2 px-4 text-right" x-text="item.biayaLangsung"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  function generateDetailData() {
+    const data = [];
+    for (let i = 1; i <= 30; i++) {
+      data.push({
+        plot: `A${('00'+i).slice(-3)}`,
+        targetStart: '01 Jan 2025',
+        targetEnd: Math.floor(Math.random()*5)+1+' Jan 2025',
+        durasiTarget: Math.floor(Math.random()*5)+1,
+        realStart: '01 Jan 2025',
+        realEnd: '07 Jan 2025',
+        durasiReal: 7,
+        biayaLangsung: Math.floor(Math.random()*50000)+1,
+      });
+    }
+    return data;
+  }
+</script>
+     </div>
+
 </x-layout>
