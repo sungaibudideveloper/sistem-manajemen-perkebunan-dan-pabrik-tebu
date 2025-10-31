@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
+use App\Models\usematerialhdr;
 
 class TimelineController extends Controller
 {
@@ -68,11 +69,10 @@ public function plot(Request $request)
     
     // Group activities by PC/RC (dari details)
     $activities = $details->groupBy(function($item) {
-        // Asumsi: ada field yang menandakan PC/RC, misal 'activity_type' atau 'kategori'
-        // Sesuaikan dengan struktur data Anda
+
         return $item->activity_type ?? 'PC'; // default PC jika tidak ada
     });
-    dd('a', $plotHeaders);
+    
     return view('dashboard.timeline-plot.index', [
         'title' => $title,
         'nav' => $nav,
