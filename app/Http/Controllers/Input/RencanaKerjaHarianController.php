@@ -2822,13 +2822,20 @@ public function loadAbsenByDate(Request $request)
                 'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
             ];
 
-            // Batch data for panen activities
+            // FIXED: Batch data for panen activities using new structure
             if (in_array($row['nama'], $panenActivities)) {
                 $batchInfo = $this->getBatchInfoForPlot($companycode, $row['plot']);
                 
                 if ($batchInfo) {
                     $detailData['batchno'] = $batchInfo->batchno;
-                    $detailData['kodestatus'] = $batchInfo->kodestatus;
+                    $detailData['kodestatus'] = $batchInfo->lifecyclestatus; // ✅ Ambil dari lifecyclestatus
+                    
+                    \Log::info("Batch info attached to RKH detail", [
+                        'plot' => $row['plot'],
+                        'batchno' => $batchInfo->batchno,
+                        'lifecyclestatus' => $batchInfo->lifecyclestatus,
+                        'batcharea' => $batchInfo->batcharea
+                    ]);
                 } else {
                     \Log::warning("Plot {$row['plot']} tidak memiliki batch info untuk panen activity {$row['nama']}");
                     $detailData['batchno'] = null;
@@ -2860,8 +2867,9 @@ public function loadAbsenByDate(Request $request)
             ->where('batch.isactive', 1)
             ->select([
                 'batch.batchno',
-                'batch.lifecyclestatus as kodestatus',
-                'batch.batcharea'
+                'batch.lifecyclestatus',
+                'batch.batcharea',
+                'batch.tanggalpanen'
             ])
             ->first();
     }
@@ -3991,13 +3999,6 @@ public function loadAbsenByDate(Request $request)
     }
 
 
-
-
-
-
-    /*     * Section: Planting Activity Batch Creation
-     */
-
     /**
      * Handle batch creation for planting activities
      * NEW METHOD: Add to bottom of controller class
@@ -4018,17 +4019,42 @@ public function loadAbsenByDate(Request $request)
         
         foreach ($plantingPlots as $plotData) {
             try {
-                // Generate batch number
-                $batchNo = $this->generateBatchNo($companycode, $plotData->plot);
+                // Tentukan lifecycle status dari plot sebelumnya
+                $previousBatch = DB::table('batch')
+                    ->where('companycode', $companycode)
+                    ->where('plot', $plotData->plot)
+                    ->where('isactive', 0)
+                    ->orderBy('createdat', 'desc')
+                    ->first();
+                
+                $newLifecycleStatus = 'PC'; // Default
+                if ($previousBatch) {
+                    $newLifecycleStatus = match($previousBatch->lifecyclestatus) {
+                        'PC' => 'RC1',
+                        'RC1' => 'RC2',
+                        'RC2' => 'RC3',
+                        'RC3' => 'PC',
+                        default => 'PC'
+                    };
+                }
+                
+                // FIXED: Generate batch number dengan batchdate, bukan today
+                $batchNo = $this->generateBatchNo($companycode, $plotData->rkhdate);
                 
                 // Create batch record
                 DB::table('batch')->insert([
                     'batchno' => $batchNo,
                     'companycode' => $companycode,
                     'plot' => $plotData->plot,
-                    'batchdate' => $plotData->rkhdate,
-                    'batcharea' => $plotData->luasarea,
+                    'lifecyclestatus' => $newLifecycleStatus,
                     'plantingrkhno' => $rkhno,
+                    'batchdate' => $plotData->rkhdate, // ✅ Pakai rkhdate
+                    'tanggalpanen' => null,
+                    'batcharea' => $plotData->luasarea,
+                    'kodevarietas' => null,
+                    'pkp' => null,
+                    'lastactivity' => '2.2.7',
+                    'isactive' => 1,
                     'inputby' => Auth::user()->userid,
                     'createdat' => now()
                 ]);
@@ -4037,20 +4063,18 @@ public function loadAbsenByDate(Request $request)
                 DB::table('masterlist')->updateOrInsert(
                     ['companycode' => $companycode, 'plot' => $plotData->plot],
                     [
-                        'batchno' => $batchNo,
-                        'batchdate' => $plotData->rkhdate,
-                        'batcharea' => $plotData->luasarea,
-                        'kodestatus' => 'PC',
-                        'cyclecount' => DB::raw('COALESCE(cyclecount, 0) + 1'),
+                        'activebatchno' => $batchNo,
                         'isactive' => 1
                     ]
                 );
                 
-                $createdBatches[] = $batchNo;
+                $createdBatches[] = "{$batchNo} (Plot: {$plotData->plot})";
                 
                 \Log::info("Batch created successfully", [
                     'batchno' => $batchNo,
                     'plot' => $plotData->plot,
+                    'lifecycle' => $newLifecycleStatus,
+                    'batchdate' => $plotData->rkhdate,
                     'rkhno' => $rkhno
                 ]);
                 
@@ -4065,20 +4089,27 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Generate unique batch number
-     * NEW METHOD: Add to bottom of controller class
+     * Format: BATCH[YYMMDD][SEQUENCE]
+     * Example: BATCH240801001
+     * Sequence resets per tanggal (batchdate, bukan createdat)
+     * 
+     * @param string $companycode
+     * @param string $batchdate (Format: Y-m-d)
+     * @param string $plot (not used, kept for backward compatibility)
+     * @return string
      */
-    private function generateBatchNo($companycode, $plot)
+    private function generateBatchNo($companycode, $batchdate, $plot = null)
     {
-        $date = date('dm');
-        $year = date('y');
+        $date = date('ymd', strtotime($batchdate)); // YYMMDD format
         
-        // Get sequence for today
+        // FIXED: Get sequence for THIS SPECIFIC DATE (not today)
         $sequence = DB::table('batch')
             ->where('companycode', $companycode)
-            ->whereDate('batchdate', date('Y-m-d'))
+            ->whereDate('batchdate', $batchdate) // ✅ Per batchdate
             ->count() + 1;
         
-        return "BATCH{$date}{$plot}{$year}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+        // Format: BATCH + YYMMDD + 3-digit sequence
+        return "BATCH{$date}" . str_pad($sequence, 3, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -4137,42 +4168,28 @@ public function loadAbsenByDate(Request $request)
             $companycode = Session::get('companycode');
             
             // Get active batch for this plot
-            $masterlist = DB::table('masterlist')
-                ->where('companycode', $companycode)
-                ->where('plot', $plot)
-                ->where('isactive', 1)
+            $batch = DB::table('masterlist')
+                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                ->where('masterlist.companycode', $companycode)
+                ->where('masterlist.plot', $plot)
+                ->where('masterlist.isactive', 1)
+                ->where('batch.isactive', 1)
+                ->select([
+                    'batch.batchno',
+                    'batch.lifecyclestatus',
+                    'batch.batcharea',
+                    'batch.tanggalpanen' // Single field
+                ])
                 ->first();
             
-            if (!$masterlist || !$masterlist->activebatchno) {
+            if (!$batch) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Plot tidak memiliki batch aktif'
                 ]);
             }
             
-            // Get batch details
-            $batch = DB::table('batch')
-                ->where('companycode', $companycode)
-                ->where('batchno', $masterlist->activebatchno)
-                ->where('isactive', 1)
-                ->first();
-            
-            if (!$batch) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Batch tidak ditemukan'
-                ]);
-            }
-            
-            // Get lifecycle status
-            $kodestatus = $batch->lifecyclestatus ?? 'PC';
-            
-            // Get tanggal panen based on current cycle
-            $tanggalField = 'tanggalpanen' . strtolower($kodestatus);
-            $tanggalPanen = $batch->$tanggalField ?? null;
-            
-            // FIXED: Calculate STC = Luas batch - Total sudah dipanen SAMPAI KEMARIN
-            // (bukan dari field luassisa!)
+            // Calculate STC = batcharea - total sudah panen SAMPAI KEMARIN
             $totalSudahPanen = DB::table('lkhdetailplot as ldp')
                 ->join('lkhhdr as lh', function($join) {
                     $join->on('ldp.lkhno', '=', 'lh.lkhno')
@@ -4180,8 +4197,7 @@ public function loadAbsenByDate(Request $request)
                 })
                 ->where('ldp.companycode', $companycode)
                 ->where('ldp.batchno', $batch->batchno)
-                ->where('ldp.kodestatus', $kodestatus)
-                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d')) // SAMPAI KEMARIN
+                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
                 ->sum('ldp.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
@@ -4189,11 +4205,11 @@ public function loadAbsenByDate(Request $request)
             return response()->json([
                 'success' => true,
                 'batchno' => $batch->batchno,
-                'kodestatus' => $kodestatus,
-                'tanggalpanen' => $tanggalPanen ? Carbon::parse($tanggalPanen)->format('d/m/Y') : '-',
+                'lifecyclestatus' => $batch->lifecyclestatus,
+                'tanggalpanen' => $batch->tanggalpanen ? Carbon::parse($batch->tanggalpanen)->format('d/m/Y') : 'Belum Panen',
                 'batcharea' => number_format($batch->batcharea, 2),
                 'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
-                'luassisa' => number_format($luasSisa, 2), // Ini STC untuk hari ini
+                'luassisa' => number_format($luasSisa, 2),
                 'plot' => $plot
             ]);
             
@@ -4220,7 +4236,6 @@ public function loadAbsenByDate(Request $request)
         $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
         
         foreach ($rows as $index => $row) {
-            // Skip if not panen activity
             if (!in_array($row['nama'] ?? '', $panenActivities)) {
                 continue;
             }
@@ -4232,36 +4247,32 @@ public function loadAbsenByDate(Request $request)
                 continue;
             }
             
-            // Get batch info
-            $masterlist = DB::table('masterlist')
-                ->where('companycode', $companycode)
-                ->where('plot', $plot)
+            // Get active batch
+            $batch = DB::table('masterlist')
+                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                ->where('masterlist.companycode', $companycode)
+                ->where('masterlist.plot', $plot)
+                ->where('masterlist.isactive', 1)
+                ->where('batch.isactive', 1)
                 ->first();
             
-            if (!$masterlist || !$masterlist->activebatchno) {
+            if (!$batch) {
                 $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} tidak memiliki batch aktif untuk dipanen.";
                 continue;
             }
             
-            $batch = DB::table('batch')
-                ->where('companycode', $companycode)
-                ->where('batchno', $masterlist->activebatchno)
-                ->first();
+            // Calculate luas sisa (STC)
+            $totalSudahPanen = DB::table('lkhdetailplot')
+                ->join('lkhhdr', function($join) {
+                    $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                        ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+                })
+                ->where('lkhdetailplot.companycode', $companycode)
+                ->where('lkhdetailplot.batchno', $batch->batchno)
+                ->whereDate('lkhhdr.lkhdate', '<', now()->format('Y-m-d'))
+                ->sum('lkhdetailplot.luashasil');
             
-            if (!$batch) {
-                $errors[] = "Baris " . ($index + 1) . ": Batch tidak ditemukan untuk plot {$plot}.";
-                continue;
-            }
-            
-            // Check luas sisa
-            $kodestatus = $batch->lifecyclestatus ?? 'PC';
-            $luasSudahPanen = DB::table('lkhdetailpanen')
-                ->where('companycode', $companycode)
-                ->where('batchno', $batch->batchno)
-                ->where('kodestatus', $kodestatus)
-                ->sum('luashasilpanen');
-            
-            $luasSisa = $batch->batcharea - $luasSudahPanen;
+            $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
             
             if ($luas > $luasSisa) {
                 $errors[] = "Baris " . ($index + 1) . ": Luas panen ({$luas} Ha) melebihi luas sisa (" . number_format($luasSisa, 2) . " Ha) untuk plot {$plot}.";

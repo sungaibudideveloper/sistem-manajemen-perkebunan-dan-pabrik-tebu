@@ -262,7 +262,7 @@ class LkhGeneratorService
             
             if ($isPanenActivity) {
                 $plotDetail['batchno'] = $activity->batchno ?? null;
-                $plotDetail['kodestatus'] = $activity->kodestatus ?? null;
+                $plotDetail['kodestatus'] = $activity->lifecyclestatus ?? null; // GANTI ke lifecyclestatus
             }
             
             LkhDetailPlot::create($plotDetail);
