@@ -35,9 +35,9 @@ public function plot(Request $request)
     $nav = "Timeline";
     
     $rkhno = $request->rkhno ?? 'RKH21050234';
-    dd('aaa');
+    
     // Get data from usematerialhdr
-    $usematerialhdr = new usematerialhdr;
+    $usematerialhdr = new usematerialhdr; dd('aaa', $details, $detailsPLots);
     $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
     $detailsPlots = Arr::pluck($details, 'plot');
     
