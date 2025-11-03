@@ -164,13 +164,26 @@
                 <td class="p-3 border-b text-center">{{ $item->kodestatus }}</td>
                 <td class="p-3 border-b">{{ $item->kodevarietas }}</td>
                 <td class="p-3 border-b text-right">{{ $item->luasrkh }}</td>
-                <td class="p-3 border-b tj-result bg-blue-50 font-semibold text-right">
-                  {{ isset($existTJ) ? number_format($existTJ, 2, ',', '.') : '' }}
+                <td class="p-3 border-b bg-blue-50 font-semibold text-right">
+                  <input
+                    type="number" step="1" min="0"
+                    class="tj-result w-24 text-right border rounded px-2 py-1 bg-white"
+                    value="{{ old("rows.$loop->index.tj", isset($existTJ) ? (int)$existTJ : '') }}"
+                    name="rows[{{ $loop->index }}][tj]"
+                  >
                 </td>
-                <td class="p-3 border-b tc-result bg-green-50 font-semibold text-right">
-                  {{ isset($existTC) ? number_format($existTC, 2, ',', '.') : '' }}
+                <td class="p-3 border-b bg-green-50 font-semibold text-right">
+                  <input
+                    type="number" step="1" min="0"
+                    class="tc-result w-24 text-right border rounded px-2 py-1 bg-white"
+                    value="{{ old("rows.$loop->index.tc", isset($existTC) ? (int)$existTC : '') }}"
+                    name="rows[{{ $loop->index }}][tc]"
+                  >
                 </td>
-                <td class="p-3 border-b pias-formula text-left text-sm no-print"></td>
+                <td class="p-3 border-b pias-formula text-left text-sm no-print">
+                  <input type="hidden" name="rows[{{ $loop->index }}][blok]" value="{{ $item->blok }}">
+                  <input type="hidden" name="rows[{{ $loop->index }}][plot]" value="{{ $item->plot }}">
+                </td>
               </tr>
             @endforeach
           </tbody>
@@ -427,8 +440,12 @@
         const aTJ = allocTJ[i]|0, aTC = allocTC[i]|0;
         sumAllocTJ += aTJ; sumAllocTC += aTC;
 
-        if (m.tjEl) m.tjEl.textContent = fmt0(aTJ);
-        if (m.tcEl) m.tcEl.textContent = fmt0(aTC);
+        // if (m.tjEl) m.tjEl.textContent = fmt0(aTJ);
+        // if (m.tcEl) m.tcEl.textContent = fmt0(aTC);
+
+      if (m.tjEl) (m.tjEl.tagName === 'INPUT') ? m.tjEl.value = String(aTJ) : m.tjEl.textContent = fmt0(aTJ);
+      if (m.tcEl) (m.tcEl.tagName === 'INPUT') ? m.tcEl.value = String(aTC) : m.tcEl.textContent = fmt0(aTC);
+
       }
 
       if (sumTJCell)  sumTJCell.textContent  = fmt0(sumAllocTJ);
@@ -497,6 +514,42 @@
       mq.addEventListener?.('change', e => { if (e.matches && hasBoth()) render(); });
     }
   });
+
+  // tambahan untuk update
+  function sumInputs(sel){ return [...document.querySelectorAll(sel)]
+  .reduce((a,el)=> a + (parseFloat(el.value)||0), 0); }
+
+function recalcTotalsFromInputs(){
+  const stokTJ = parseFloat(inputTJ.value)||0;
+  const stokTC = parseFloat(inputTC.value)||0;
+  const sumTJ  = sumInputs('.tj-result');
+  const sumTC  = sumInputs('.tc-result');
+
+  if (sumTJCell)  sumTJCell.textContent  = fmt0(sumTJ);
+  if (sumTCCell)  sumTCCell.textContent  = fmt0(sumTC);
+  sisaTJEl.textContent = fmt0(Math.floor(stokTJ) - sumTJ);
+  sisaTCEl.textContent = fmt0(Math.floor(stokTC) - sumTC);
+
+  const okTJ = sumTJ >= sumNeedTJIntConst;   // sudah dihitung sebelumnya
+  const okTC = sumTC >= sumNeedTCIntConst;
+  statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
+  statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
+  statusTJ.className = `text-center text-sm font-medium rounded-md py-1 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+  statusTC.className = `text-center text-sm font-medium rounded-md py-1 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+}
+
+
+plotTable.addEventListener('change', (e)=>{
+  if (e.target.matches('.tj-result, .tc-result')) recalcTotalsFromInputs();
+});
+
+
+inputTJ.addEventListener('change', recalcTotalsFromInputs);
+inputTC.addEventListener('change', recalcTotalsFromInputs);
+
+setTimeout(recalcTotalsFromInputs, 250);
+
+
 </script>
 
 

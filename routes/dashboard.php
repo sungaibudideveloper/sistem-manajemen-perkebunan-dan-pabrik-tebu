@@ -21,6 +21,8 @@ Route::match(['POST', 'GET'], 'dashboard/hpt',  [DashboardController::class, 'hp
 
 Route::match(['POST', 'GET'], 'dashboard/timeline',  [TimelineController::class, 'index'])
     ->name('dashboard.timeline');//->middleware('permission:Dashboard HPT');
+Route::match(['POST', 'GET'], 'dashboard/timeline-plot',  [TimelineController::class, 'plot'])
+    ->name('dashboard.timeline-plot');//->middleware('permission:Dashboard HPT');
 
     Route::match(['POST', 'GET'], 'dashboard/maps',  [MapsController::class, 'index'])
     ->name('dashboard.maps');

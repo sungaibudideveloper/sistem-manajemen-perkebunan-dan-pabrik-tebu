@@ -13,17 +13,26 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
- * FIXED LkhGeneratorService
+ * CLEAN LkhGeneratorService - Unified Structure
  * 
- * Generate LKH from fully approved RKH using new split table design:
- * - lkhdetailplot (plot assignments & areas) - Generated immediately
- * - lkhdetailworker (worker assignments & wages) - Assigned by mandor via handheld
+ * Generate LKH from fully approved RKH using unified structure:
+ * - ALL activities use: lkhdetailplot + lkhdetailworker + lkhdetailmaterial
+ * - Panen activities: jenistenagakerja = 5 (kontraktor), with batchno & kodestatus in plot details
+ * - Normal activities: jenistenagakerja = 1 (harian) or 2 (borongan)
  * 
- * FIXED: Removed deprecated columns (jammulaikerja, jamselesaikerja, totalovertimehours)
+ * NO MORE separate panen logic - everything flows the same way!
  */
 class LkhGeneratorService
 {
     protected $wageCalculationService;
+    
+    // Activity type constants
+    const PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
+    const JENIS_HARIAN = 1;
+    const JENIS_BORONGAN = 2;
+    const JENIS_OPERATOR = 3;
+    const JENIS_HELPER = 4;
+    const JENIS_KONTRAKTOR = 5; // For panen
 
     public function __construct(WageCalculationService $wageCalculationService = null)
     {
@@ -32,8 +41,7 @@ class LkhGeneratorService
 
     /**
      * Generate LKH from fully approved RKH
-     * NEW LOGIC: 1 LKH = 1 Mandor = 1 Kegiatan = Many Plot
-     * UPDATED: Using split tables - Only plots generated, workers assigned by mandor
+     * UNIFIED: Single flow for all activity types
      * 
      * @param string $rkhno
      * @return array
@@ -43,7 +51,7 @@ class LkhGeneratorService
         try {
             DB::beginTransaction();
 
-            // 1. Validasi RKH exist dan sudah fully approved
+            // 1. Validate RKH exists and fully approved
             $rkh = Rkhhdr::where('rkhno', $rkhno)->first();
             if (!$rkh) {
                 throw new \Exception("RKH {$rkhno} not found");
@@ -53,13 +61,13 @@ class LkhGeneratorService
                 throw new \Exception("RKH {$rkhno} belum fully approved");
             }
 
-            // 2. Cek apakah LKH sudah pernah di-generate
+            // 2. Check if LKH already generated
             $existingLkh = Lkhhdr::where('rkhno', $rkhno)->exists();
             if ($existingLkh) {
                 throw new \Exception("LKH untuk RKH {$rkhno} sudah pernah di-generate");
             }
 
-            // 3. Ambil detail aktivitas dari RKH dan group by activitycode + jenistenagakerja
+            // 3. Get RKH activities
             $rkhActivities = Rkhlst::where('rkhno', $rkhno)
                 ->where('companycode', $rkh->companycode)
                 ->get();
@@ -68,38 +76,51 @@ class LkhGeneratorService
                 throw new \Exception("Tidak ada aktivitas ditemukan untuk RKH {$rkhno}");
             }
 
-            // 4. Group aktivitas berdasarkan activitycode + jenistenagakerja
-            $groupedActivities = $rkhActivities->groupBy(function($item) {
-                return $item->activitycode . '|' . $item->jenistenagakerja;
-            });
+            // 4. Group activities by activitycode + jenistenagakerja
+            // Panen activities will use jenistenagakerja from detection
+            $groupedActivities = $this->groupActivitiesForLkh($rkhActivities);
 
             $generatedLkh = [];
             $lkhIndex = 1;
 
-            // 5. Generate LKH untuk setiap group (1 LKH per kegiatan + jenis tenaga kerja)
-            foreach ($groupedActivities as $groupKey => $activities) {
-                $firstActivity = $activities->first();
+            // 5. Generate LKH for each group
+            foreach ($groupedActivities as $groupKey => $groupActivities) {
+                $firstActivity = $groupActivities->first();
                 
-                // Parse group key
                 [$activitycode, $jenistenagakerja] = explode('|', $groupKey);
                 
-                $lkhno = $this->generateLkhNumber($rkhno, $lkhIndex);
+                $lkhno = $this->generateLkhNumber($rkh->rkhno, $lkhIndex);
                 
                 // Generate LKH Header
-                $lkhHeaderResult = $this->createLkhHeader($rkh, $lkhno, $activitycode, $jenistenagakerja, $activities);
+                $lkhHeaderResult = $this->createLkhHeader(
+                    $rkh, 
+                    $lkhno, 
+                    $activitycode, 
+                    $jenistenagakerja, 
+                    $groupActivities
+                );
                 
-                // Generate LKH Detail Plots (Workers akan diassign oleh mandor)
-                $plotResult = $this->createLkhDetailPlots($lkhno, $activities, $rkh->companycode);
+                // Generate LKH Detail Plots (with batch info for panen)
+                $plotResult = $this->createLkhDetailPlots(
+                    $lkhno, 
+                    $groupActivities, 
+                    $rkh->companycode,
+                    $activitycode
+                );
+                
+                $isPanen = in_array($activitycode, self::PANEN_ACTIVITIES);
                 
                 $generatedLkh[] = [
                     'lkhno' => $lkhno,
                     'activitycode' => $activitycode,
+                    'type' => $isPanen ? 'PANEN' : 'NORMAL',
                     'plots' => $lkhHeaderResult['plots_summary'],
                     'plots_count' => count($plotResult),
                     'jenistenagakerja' => $jenistenagakerja,
+                    'jenis_label' => $this->getJenisLabel($jenistenagakerja),
                     'total_luas' => $lkhHeaderResult['total_luas'],
                     'planned_workers' => $lkhHeaderResult['planned_workers'],
-                    'status' => 'EMPTY'
+                    'status' => 'DRAFT'
                 ];
 
                 $lkhIndex++;
@@ -114,7 +135,7 @@ class LkhGeneratorService
 
             return [
                 'success' => true,
-                'message' => 'LKH berhasil di-generate otomatis (plots only, workers assigned by mandor)',
+                'message' => 'LKH berhasil di-generate otomatis',
                 'generated_lkh' => $generatedLkh,
                 'total_lkh' => count($generatedLkh)
             ];
@@ -137,8 +158,29 @@ class LkhGeneratorService
     }
 
     /**
-     * Create LKH Header
-     * FIXED: Removed deprecated columns (jammulaikerja, jamselesaikerja, totalovertimehours)
+     * Group activities for LKH generation
+     * Panen activities use jenistenagakerja = 5 (kontraktor)
+     * Normal activities use their original jenistenagakerja
+     * 
+     * @param \Illuminate\Support\Collection $activities
+     * @return \Illuminate\Support\Collection
+     */
+    private function groupActivitiesForLkh($activities)
+    {
+        return $activities->groupBy(function($item) {
+            // Detect if panen activity
+            $isPanen = in_array($item->activitycode, self::PANEN_ACTIVITIES);
+            
+            // For panen, always use jenistenagakerja = 5 (kontraktor)
+            // For normal, use original jenistenagakerja
+            $jenistenagakerja = $isPanen ? self::JENIS_KONTRAKTOR : $item->jenistenagakerja;
+            
+            return $item->activitycode . '|' . $jenistenagakerja;
+        });
+    }
+
+    /**
+     * Create LKH Header (unified for all activity types)
      * 
      * @param Rkhhdr $rkh
      * @param string $lkhno
@@ -149,18 +191,15 @@ class LkhGeneratorService
      */
     private function createLkhHeader($rkh, $lkhno, $activitycode, $jenistenagakerja, $activities)
     {
-        // Get approval requirements untuk activity ini
         $approvalData = $this->getApprovalRequirements($rkh->companycode, $activitycode);
         
-        // Calculate totals dari semua plot dalam group ini - FIXED: ensure proper numeric conversion
         $totalLuas = $activities->sum(function($activity) {
             return (float) $activity->luasarea;
         });
+        
         $totalWorkersPlanned = $activities->sum('jumlahtenagakerja');
         $plotList = $activities->pluck('plot')->unique()->join(', ');
-        $blokList = $activities->pluck('blok')->unique()->join(', ');
         
-        // FIXED: Removed deprecated columns from LKH header creation
         $lkhHeaderData = array_merge([
             'lkhno' => $lkhno,
             'rkhno' => $rkh->rkhno,
@@ -174,7 +213,7 @@ class LkhGeneratorService
             'totalhasil' => 0.00,
             'totalsisa' => $totalLuas,
             'totalupahall' => 0.00,
-            'status' => 'EMPTY', 
+            'status' => 'DRAFT', 
             'issubmit' => 0,
             'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',
@@ -194,19 +233,20 @@ class LkhGeneratorService
 
     /**
      * Create LKH Detail Plot records
-     * FIXED: Proper area conversion and data type handling
+     * UNIFIED: Includes batch info for panen activities
      * 
      * @param string $lkhno
      * @param \Illuminate\Support\Collection $activities
      * @param string $companycode
+     * @param string $activitycode
      * @return array
      */
-    private function createLkhDetailPlots($lkhno, $activities, $companycode)
+    private function createLkhDetailPlots($lkhno, $activities, $companycode, $activitycode)
     {
         $plotDetails = [];
+        $isPanenActivity = in_array($activitycode, self::PANEN_ACTIVITIES);
         
         foreach ($activities as $activity) {
-            // FIXED: Ensure proper numeric conversion and validation
             $luasArea = (float) $activity->luasarea;
             
             $plotDetail = [
@@ -214,11 +254,16 @@ class LkhGeneratorService
                 'lkhno' => $lkhno,
                 'blok' => $activity->blok,
                 'plot' => $activity->plot,
-                'luasrkh' => $luasArea,  // FIXED: use converted float value
+                'luasrkh' => $luasArea,
                 'luashasil' => 0.00,
-                'luassisa' => $luasArea, // FIXED: initialize with luasarea, not null
+                'luassisa' => $luasArea,
                 'createdat' => now()
             ];
+            
+            if ($isPanenActivity) {
+                $plotDetail['batchno'] = $activity->batchno ?? null;
+                $plotDetail['kodestatus'] = $activity->lifecyclestatus ?? null; // GANTI ke lifecyclestatus
+            }
             
             LkhDetailPlot::create($plotDetail);
             $plotDetails[] = $plotDetail;
@@ -244,6 +289,30 @@ class LkhGeneratorService
     }
 
     /**
+     * Get jenis tenaga kerja label
+     * 
+     * @param int $jenistenagakerja
+     * @return string
+     */
+    private function getJenisLabel($jenistenagakerja)
+    {
+        switch ($jenistenagakerja) {
+            case self::JENIS_HARIAN:
+                return 'Harian';
+            case self::JENIS_BORONGAN:
+                return 'Borongan';
+            case self::JENIS_OPERATOR:
+                return 'Operator';
+            case self::JENIS_HELPER:
+                return 'Helper';
+            case self::JENIS_KONTRAKTOR:
+                return 'Kontraktor (Panen)';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    /**
      * Check if RKH is fully approved
      * 
      * @param Rkhhdr $rkh
@@ -251,12 +320,10 @@ class LkhGeneratorService
      */
     private function isRkhFullyApproved($rkh)
     {
-        // Jika tidak ada requirement approval, anggap sudah approved
         if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
             return true;
         }
 
-        // Check berdasarkan jumlah approval yang diperlukan
         switch ($rkh->jumlahapproval) {
             case 1:
                 return $rkh->approval1flag === '1';
@@ -272,11 +339,14 @@ class LkhGeneratorService
     }
 
     /**
-     * Get approval requirements untuk activity
+     * Get approval requirements for activity
+     * 
+     * @param string $companycode
+     * @param string $activitycode
+     * @return array
      */
     private function getApprovalRequirements($companycode, $activitycode)
     {
-        // Get activity group dari activity code
         $activity = DB::table('activity')->where('activitycode', $activitycode)->first();
         
         if (!$activity || !$activity->activitygroup) {
@@ -288,7 +358,6 @@ class LkhGeneratorService
             ];
         }
 
-        // Get approval settings berdasarkan activity group
         $approvalSetting = DB::table('approval')
             ->where('companycode', $companycode)
             ->where('activitygroup', $activity->activitygroup)
@@ -313,7 +382,7 @@ class LkhGeneratorService
 
     /**
      * Get LKH summary for specific RKH
-     * UPDATED: Use new column names (luasrkh instead of luasplot)
+     * UNIFIED: Works for all activity types
      * 
      * @param string $rkhno
      * @return array
@@ -329,22 +398,37 @@ class LkhGeneratorService
             'by_status' => $lkhList->groupBy('status')->map(function ($group) {
                 return $group->count();
             })->toArray(),
-            'by_jenistenaga' => $lkhList->groupBy('jenistenagakerja')->map(function ($group) {
-                return $group->count();
+            'by_jenis' => $lkhList->groupBy('jenistenagakerja')->map(function ($group) {
+                return [
+                    'count' => $group->count(),
+                    'label' => $this->getJenisLabel($group->first()->jenistenagakerja)
+                ];
             })->toArray(),
             'details' => $lkhList->map(function ($lkh) {
-                // Get plots for this LKH from lkhdetailplot
+                // Get plots (with batch info for panen)
                 $plots = LkhDetailPlot::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
-                    ->select('blok', 'plot', 'luasrkh')
                     ->get()
                     ->map(function($item) {
-                        return $item->blok . '-' . $item->plot . ' (' . $item->luasrkh . ' ha)';
+                        $plotInfo = $item->blok . '-' . $item->plot . ' (' . $item->luasrkh . ' ha)';
+                        
+                        // Add batch info if exists (for panen)
+                        if ($item->batchno) {
+                            $plotInfo .= ' [' . $item->batchno . '-' . $item->kodestatus . ']';
+                        }
+                        
+                        return $plotInfo;
                     })
                     ->join(', ');
 
-                // Get worker assignments count (akan diisi oleh mandor)
+                // Get workers count
                 $assignedWorkers = LkhDetailWorker::where('companycode', $lkh->companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->count();
+
+                // Get material count
+                $materialCount = DB::table('lkhdetailmaterial')
+                    ->where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->count();
 
@@ -352,10 +436,11 @@ class LkhGeneratorService
                     'lkhno' => $lkh->lkhno,
                     'activitycode' => $lkh->activitycode,
                     'activityname' => $lkh->activity->activityname ?? 'Unknown',
+                    'jenis_label' => $this->getJenisLabel($lkh->jenistenagakerja),
                     'plots' => $plots ?: 'No plots assigned',
                     'status' => $lkh->status,
-                    'jenistenagakerja' => $lkh->jenistenagakerja,
                     'workers_assigned' => $assignedWorkers,
+                    'material_count' => $materialCount,
                     'totalhasil' => $lkh->totalhasil,
                     'totalsisa' => $lkh->totalsisa,
                     'totalupah' => $lkh->totalupahall
@@ -368,9 +453,7 @@ class LkhGeneratorService
 
     /**
      * Calculate and update LKH wages
-     * Using WageCalculationService for complex calculations
-     * Called when mandor completes work assignment via handheld
-     * UPDATED: Use new column names (luashasil, luasrkh)
+     * Works for harian, borongan, and kontraktor
      * 
      * @param string $lkhno
      * @return array
@@ -380,13 +463,11 @@ class LkhGeneratorService
         try {
             DB::beginTransaction();
 
-            // Get LKH data
             $lkh = Lkhhdr::where('lkhno', $lkhno)->first();
             if (!$lkh) {
                 throw new \Exception("LKH {$lkhno} not found");
             }
 
-            // Get assigned workers (assigned by mandor via handheld)
             $workers = LkhDetailWorker::where('companycode', $lkh->companycode)
                 ->where('lkhno', $lkhno)
                 ->get();
@@ -394,27 +475,26 @@ class LkhGeneratorService
             if ($workers->isEmpty()) {
                 return [
                     'success' => false,
-                    'message' => 'No workers assigned to this LKH by mandor'
+                    'message' => 'No workers assigned to this LKH'
                 ];
             }
 
-            // Get plot data for borongan calculations - UPDATED: filter by company
             $plots = LkhDetailPlot::where('companycode', $lkh->companycode)
                 ->where('lkhno', $lkhno)
                 ->get();
+            
             $plotsData = $plots->map(function($plot) {
                 return [
                     'blok' => $plot->blok,
                     'plot' => $plot->plot,
-                    'luashasil' => $plot->luashasil,    // CHANGED: was luasactual
-                    'luasrkh' => $plot->luasrkh         // CHANGED: was luastargeted
+                    'luashasil' => $plot->luashasil,
+                    'luasrkh' => $plot->luasrkh
                 ];
             })->toArray();
 
             $totalWages = 0;
             $calculatedWorkers = 0;
 
-            // Calculate wages for each worker
             foreach ($workers as $worker) {
                 $workerData = [
                     'tenagakerjaid' => $worker->tenagakerjaid,
@@ -433,7 +513,6 @@ class LkhGeneratorService
                 );
 
                 if ($wageResult['success']) {
-                    // Update worker record with calculated wages
                     $worker->update([
                         'upahharian' => $wageResult['upahharian'],
                         'upahperjam' => $wageResult['upahperjam'],
@@ -449,7 +528,6 @@ class LkhGeneratorService
                 }
             }
 
-            // Update LKH header with totals
             $lkh->update([
                 'totalworkers' => $workers->count(),
                 'totalupahall' => $totalWages,
@@ -515,7 +593,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Regenerate LKH (untuk kasus khusus)
+     * Regenerate LKH (for special cases)
      * 
      * @param string $rkhno
      * @param bool $forceRegenerate
@@ -530,24 +608,32 @@ class LkhGeneratorService
         try {
             DB::beginTransaction();
 
-            // Hapus LKH yang sudah ada beserta detail tables
+            // Delete existing LKH and all details
             $existingLkh = Lkhhdr::where('rkhno', $rkhno)->get();
             foreach ($existingLkh as $lkh) {
-                // Hapus detail workers (if any assigned by mandor)
+                // Delete workers
                 LkhDetailWorker::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
-                // Hapus detail plots
+                
+                // Delete plots
                 LkhDetailPlot::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
-                // Hapus header
+                
+                // Delete materials
+                DB::table('lkhdetailmaterial')
+                    ->where('companycode', $lkh->companycode)
+                    ->where('lkhno', $lkh->lkhno)
+                    ->delete();
+                
+                // Delete header
                 $lkh->delete();
             }
 
             DB::commit();
 
-            // Generate ulang
+            // Generate new LKH
             return $this->generateLkhFromRkh($rkhno);
 
         } catch (\Exception $e) {

@@ -1,3 +1,4 @@
+// resources/js/pages/absen-mandor.tsx - FULL CODE WITH ZOOM FIX
 import React, { useState, useEffect } from 'react';
 import Camera from '../components/camera';
 import {
@@ -365,7 +366,41 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
+      {/* ✅ ZOOM FIX STYLES */}
+      <style>{`
+        /* Prevent iOS zoom on input focus */
+        input[type="date"],
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+          font-size: 16px !important;
+          touch-action: manipulation;
+        }
+        
+        /* Prevent horizontal scroll */
+        body {
+          overflow-x: hidden;
+        }
+        
+        /* Ensure proper mobile viewport */
+        * {
+          box-sizing: border-box;
+        }
+        
+        /* Spin animation */
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div style={{ 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: '32px 24px',
+        width: '100%'
+      }}>
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
           <button
@@ -388,7 +423,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
             Kembali ke Beranda
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>
                 Sistem Absensi
@@ -405,7 +440,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
             borderRadius: '8px',
             border: '1px solid #e5e7eb'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
               <div>
                 <h3 style={{ fontWeight: '600', color: 'black' }}>
                   {formatDate(new Date().toISOString().split('T')[0])}
@@ -444,10 +485,10 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - FIXED RESPONSIVE GRID */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 500px), 1fr))',
           gap: '32px'
         }}>
           
@@ -498,11 +539,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                         justifyContent: 'space-between',
                         padding: '16px',
                         borderBottom: '1px solid #f3f4f6',
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.2s',
+                        flexWrap: 'wrap',
+                        gap: '12px'
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <div style={{ fontWeight: '500', color: 'black' }}>{worker.nama}</div>
                           {worker.hasHadir && (
                             <span style={{
@@ -523,7 +566,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                       </div>
                       
                       {isToday && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {!worker.hasHadir ? (
                             <button 
                               onClick={() => handleWorkerSelect(worker, 'HADIR')}
@@ -538,7 +581,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 fontSize: '14px',
-                                transition: 'background-color 0.2s'
+                                transition: 'background-color 0.2s',
+                                touchAction: 'manipulation'
                               }}
                             >
                               <FiHome style={{ width: '16px', height: '16px' }} />
@@ -580,7 +624,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                               borderRadius: '8px',
                               cursor: worker.hasHadir ? 'pointer' : 'not-allowed',
                               fontSize: '14px',
-                              transition: 'background-color 0.2s'
+                              transition: 'background-color 0.2s',
+                              touchAction: 'manipulation'
                             }}
                             title={!worker.hasHadir ? "Harus absen HADIR terlebih dahulu" : ""}
                           >
@@ -622,19 +667,27 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 </h2>
               </div>
               
-              {/* Date Filter */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              {/* Date Filter - FIXED INPUT */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                marginBottom: '16px',
+                flexWrap: 'wrap'
+              }}>
                 <FiCalendar style={{ width: '16px', height: '16px', color: '#6b7280' }} />
                 <input
                   type="date"
                   value={attendanceDate}
                   onChange={(e) => setAttendanceDate(e.target.value)}
                   style={{
-                    padding: '8px 12px',
-                    fontSize: '14px',
+                    padding: '10px 12px',
+                    fontSize: '16px',
                     border: '1px solid #d1d5db',
                     borderRadius: '8px',
-                    outline: 'none'
+                    outline: 'none',
+                    minWidth: '150px',
+                    touchAction: 'manipulation'
                   }}
                 />
                 <span style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -642,8 +695,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 </span>
               </div>
 
-              {/* Status Tabs */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Status Tabs - FIXED WRAPPING */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                flexWrap: 'wrap',
+                justifyContent: 'flex-start'
+              }}>
                 {[
                   { key: 'all', label: 'Semua', icon: FiUsers },
                   { key: 'hadir', label: 'HADIR', icon: FiHome },
@@ -671,7 +729,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                         backgroundColor: isActive ? '#2563eb' : '#f3f4f6',
-                        color: isActive ? 'white' : '#6b7280'
+                        color: isActive ? 'white' : '#6b7280',
+                        touchAction: 'manipulation'
                       }}
                     >
                       <Icon style={{ width: '12px', height: '12px' }} />
@@ -679,7 +738,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                       <span style={{
                         padding: '2px 6px',
                         borderRadius: '9999px',
-                        fontSize: '12px',
+                        fontSize: '11px',
                         backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#e5e7eb'
                       }}>
                         {count}
@@ -714,11 +773,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '16px',
-                        borderBottom: '1px solid #f3f4f6'
+                        borderBottom: '1px solid #f3f4f6',
+                        flexWrap: 'wrap',
+                        gap: '12px'
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                           <div style={{ fontWeight: '500', color: 'black' }}>{record.tenaga_kerja.nama}</div>
                           {getTypeBadge(record.absentype)}
                           {getStatusBadge(record.approval_status)}
@@ -750,7 +811,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                         )}
                       </div>
                       
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => setViewingPhoto(record.fotoabsen)}
                           style={{
@@ -764,7 +825,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                             borderRadius: '8px',
                             cursor: 'pointer',
                             fontSize: '14px',
-                            transition: 'background-color 0.2s'
+                            transition: 'background-color 0.2s',
+                            touchAction: 'manipulation'
                           }}
                         >
                           <FiEye style={{ width: '16px', height: '16px' }} />
@@ -785,7 +847,8 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                               borderRadius: '8px',
                               cursor: 'pointer',
                               fontSize: '14px',
-                              transition: 'background-color 0.2s'
+                              transition: 'background-color 0.2s',
+                              touchAction: 'manipulation'
                             }}
                           >
                             <FiEdit3 style={{ width: '16px', height: '16px' }} />
@@ -831,7 +894,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           requireGPS={selectedAbsenType === 'LOKASI'}
         />
 
-        {/* ✅ PHOTO VIEWER MODAL - AUTO FIT (FIXED PORTRAIT) */}
+        {/* Photo Viewer Modal - FIXED */}
         {viewingPhoto && (
           <div 
             style={{
@@ -854,11 +917,12 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 maxHeight: '90vh',
                 width: '100%',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header - Fixed Top */}
+              {/* Header */}
               <div style={{
                 padding: '16px 20px',
                 borderBottom: '1px solid #e5e7eb',
@@ -866,10 +930,7 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 backgroundColor: 'white',
-                borderTopLeftRadius: '12px',
-                borderTopRightRadius: '12px',
-                flexShrink: 0,
-                zIndex: 10
+                flexShrink: 0
               }}>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'black', margin: 0 }}>
                   Foto Absensi
@@ -885,25 +946,23 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#6b7280',
-                    transition: 'color 0.2s'
+                    transition: 'color 0.2s',
+                    touchAction: 'manipulation'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#374151'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
                 >
                   <FiX style={{ width: '24px', height: '24px' }} />
                 </button>
               </div>
 
-              {/* Photo Container - Auto Fit dengan proper height calculation */}
+              {/* Photo Container */}
               <div style={{
                 backgroundColor: '#000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '20px',
-                overflow: 'hidden',
-                height: 'calc(90vh - 130px)',
-                flexShrink: 0
+                overflow: 'auto',
+                flex: '1 1 auto'
               }}>
                 <img
                   src={viewingPhoto}
@@ -919,15 +978,13 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                 />
               </div>
 
-              {/* Footer - Fixed Bottom */}
+              {/* Footer */}
               <div style={{
                 padding: '16px 20px',
                 borderTop: '1px solid #e5e7eb',
                 display: 'flex',
                 justifyContent: 'center',
                 backgroundColor: 'white',
-                borderBottomLeftRadius: '12px',
-                borderBottomRightRadius: '12px',
                 flexShrink: 0
               }}>
                 <button
@@ -944,10 +1001,9 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    transition: 'background-color 0.2s'
+                    transition: 'background-color 0.2s',
+                    touchAction: 'manipulation'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 >
                   <FiX style={{ width: '16px', height: '16px' }} />
                   Tutup
@@ -991,13 +1047,6 @@ const AbsenMandor: React.FC<AbsenMandorProps> = ({
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
 use App\Models\Masterlist;
+use App\Models\Batch;
 
 class MasterListController extends Controller
 {
@@ -18,15 +19,14 @@ class MasterListController extends Controller
         $search  = $request->input('search');
         $companycode = Session::get('companycode');
     
-        $query = Masterlist::where('companycode', $companycode);
+        $query = Masterlist::where('companycode', $companycode)
+            ->with('activeBatch'); // Eager load active batch relationship
     
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('plot', 'like', "%{$search}%")
                   ->orWhere('blok', 'like', "%{$search}%")
-                  ->orWhere('batchno', 'like', "%{$search}%")
-                  ->orWhere('kodestatus', 'like', "%{$search}%")
-                  ->orWhere('kodevarietas', 'like', "%{$search}%");
+                  ->orWhere('activebatchno', 'like', "%{$search}%");
             });
         }
 
@@ -55,19 +55,7 @@ class MasterListController extends Controller
         $request->validate([
             'plot' => 'required|string|max:5',
             'blok' => 'nullable|string|max:2',
-            'batchno' => 'required|string|max:20',
-            'batchdate' => 'nullable|date',
-            'batcharea' => 'nullable|numeric|min:0',
-            'tanggalulangtahun' => 'nullable|date',
-            'kodevarietas' => 'nullable|string|max:10',
-            'kodestatus' => 'nullable|string|max:3',
-            'cyclecount' => 'nullable|integer|min:0',
-            'jaraktanam' => 'nullable|integer|min:0',
-            'lastactivity' => 'nullable|string|max:100',
-            'tanggalpanenpc' => 'nullable|date',
-            'tanggalpanenrc1' => 'nullable|date',
-            'tanggalpanenrc2' => 'nullable|date',
-            'tanggalpanenrc3' => 'nullable|date',
+            'activebatchno' => 'nullable|string|max:20',
         ]);
 
         $exists = Masterlist::where('companycode', $companycode)
@@ -82,23 +70,26 @@ class MasterListController extends Controller
                 ]);
         }
 
+        // Validate activebatchno if provided
+        if ($request->activebatchno) {
+            $batchExists = Batch::where('batchno', $request->activebatchno)
+                ->where('companycode', $companycode)
+                ->exists();
+            
+            if (!$batchExists) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors([
+                        'activebatchno' => 'Batch number does not exist'
+                    ]);
+            }
+        }
+
         Masterlist::create([
             'companycode' => $companycode,
             'plot' => $request->input('plot'),
             'blok' => $request->input('blok'),
-            'batchno' => $request->input('batchno'),
-            'batchdate' => $request->input('batchdate'),
-            'batcharea' => $request->input('batcharea'),
-            'tanggalulangtahun' => $request->input('tanggalulangtahun'),
-            'kodevarietas' => $request->input('kodevarietas'),
-            'kodestatus' => $request->input('kodestatus'),
-            'cyclecount' => $request->input('cyclecount', 0),
-            'jaraktanam' => $request->input('jaraktanam'),
-            'lastactivity' => $request->input('lastactivity'),
-            'tanggalpanenpc' => $request->input('tanggalpanenpc'),
-            'tanggalpanenrc1' => $request->input('tanggalpanenrc1'),
-            'tanggalpanenrc2' => $request->input('tanggalpanenrc2'),
-            'tanggalpanenrc3' => $request->input('tanggalpanenrc3'),
+            'activebatchno' => $request->input('activebatchno'),
             'isactive' => 1,
         ]);
 
@@ -122,19 +113,8 @@ class MasterListController extends Controller
         $validated = $request->validate([
             'plot' => 'required|string|max:5',
             'blok' => 'nullable|string|max:2',
-            'batchno' => 'required|string|max:20',
-            'batchdate' => 'nullable|date',
-            'batcharea' => 'nullable|numeric|min:0',
-            'tanggalulangtahun' => 'nullable|date',
-            'kodevarietas' => 'nullable|string|max:10',
-            'kodestatus' => 'nullable|string|max:3',
-            'cyclecount' => 'nullable|integer|min:0',
-            'jaraktanam' => 'nullable|integer|min:0',
-            'lastactivity' => 'nullable|string|max:100',
-            'tanggalpanenpc' => 'nullable|date',
-            'tanggalpanenrc1' => 'nullable|date',
-            'tanggalpanenrc2' => 'nullable|date',
-            'tanggalpanenrc3' => 'nullable|date',
+            'activebatchno' => 'nullable|string|max:20',
+            'isactive' => 'required|boolean',
         ]);
         
         // Check duplicate if plot changed
@@ -151,26 +131,30 @@ class MasterListController extends Controller
                     ]);
             }
         }
+
+        // Validate activebatchno if provided
+        if ($request->activebatchno) {
+            $batchExists = Batch::where('batchno', $request->activebatchno)
+                ->where('companycode', $companycode)
+                ->where('plot', $request->plot)
+                ->exists();
+            
+            if (!$batchExists) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors([
+                        'activebatchno' => 'Batch number does not exist for this plot'
+                    ]);
+            }
+        }
         
         Masterlist::where('companycode', $companycode)
              ->where('plot', $plot)
              ->update([
-                'companycode' => $companycode,
                 'plot' => $validated['plot'],
                 'blok' => $validated['blok'],
-                'batchno' => $validated['batchno'],
-                'batchdate' => $validated['batchdate'],
-                'batcharea' => $validated['batcharea'],
-                'tanggalulangtahun' => $validated['tanggalulangtahun'],
-                'kodevarietas' => $validated['kodevarietas'],
-                'kodestatus' => $validated['kodestatus'],
-                'cyclecount' => $validated['cyclecount'],
-                'jaraktanam' => $validated['jaraktanam'],
-                'lastactivity' => $validated['lastactivity'],
-                'tanggalpanenpc' => $validated['tanggalpanenpc'],
-                'tanggalpanenrc1' => $validated['tanggalpanenrc1'],
-                'tanggalpanenrc2' => $validated['tanggalpanenrc2'],
-                'tanggalpanenrc3' => $validated['tanggalpanenrc3'],
+                'activebatchno' => $validated['activebatchno'],
+                'isactive' => $validated['isactive'],
              ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');

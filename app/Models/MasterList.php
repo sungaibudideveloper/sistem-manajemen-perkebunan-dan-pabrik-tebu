@@ -7,51 +7,57 @@ use Illuminate\Database\Eloquent\Model;
 class Masterlist extends Model
 {
     protected $table = 'masterlist';
-
-    public $timestamps = false;
-
-    protected $primaryKey = ['companycode', 'plot', 'batchno'];
     public $incrementing = false;
-    protected $keyType = 'string';
+    public $timestamps = false;
 
     protected $fillable = [
         'companycode',
-        'blok',
         'plot',
-        'batchno',
-        'batchdate',
-        'batcharea',
-        'tanggalulangtahun',
-        'kodevarietas',
-        'kodestatus',
-        'jaraktanam',
-        'lastactivity',
-        'tanggalpanenpc',
-        'tanggalpanenrc1',
-        'tanggalpanenrc2',
-        'tanggalpanenrc3',
+        'blok',
+        'activebatchno',
         'isactive',
     ];
 
     protected $casts = [
-        'batchdate' => 'date',
-        'tanggalulangtahun' => 'date',
-        'tanggalpanenpc' => 'date',
-        'tanggalpanenrc1' => 'date',
-        'tanggalpanenrc2' => 'date',
-        'tanggalpanenrc3' => 'date',
-        'batcharea' => 'float',
-        'jaraktanam' => 'integer',
         'isactive' => 'boolean',
     ];
 
-    /**
-     * Override default behavior for composite keys (manual handling required in queries).
-     */
-    protected function setKeysForSaveQuery($query)
+    // Relationship to active batch
+    public function activeBatch()
     {
-        return $query->where('companycode', $this->getAttribute('companycode'))
-                     ->where('plot', $this->getAttribute('plot'))
-                     ->where('batchno', $this->getAttribute('batchno'));
+        return $this->belongsTo(Batch::class, 'activebatchno', 'batchno');
+    }
+
+    // Relationship to company
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('isactive', 1);
+    }
+
+    public function scopeByCompany($query, $companycode)
+    {
+        return $query->where('companycode', $companycode);
+    }
+
+    public function scopeByBlok($query, $blok)
+    {
+        return $query->where('blok', $blok);
+    }
+
+    // Helper methods
+    public function getCurrentLifecycleAttribute(): ?string
+    {
+        return $this->activeBatch?->lifecyclestatus;
+    }
+
+    public function hasActiveBatch(): bool
+    {
+        return !is_null($this->activebatchno);
     }
 }

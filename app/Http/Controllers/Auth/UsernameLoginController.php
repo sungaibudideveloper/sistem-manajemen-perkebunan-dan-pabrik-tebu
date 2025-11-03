@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+
+use App\Http\Controllers\Controller;
+use App\Http\Middleware\CheckPermission;
 
 class UsernameLoginController extends Controller
 {
@@ -52,6 +55,13 @@ class UsernameLoginController extends Controller
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        
+        // Clear cache only if user exists
+        if ($user) {
+            CheckPermission::clearUserCache($user);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

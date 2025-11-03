@@ -7,24 +7,12 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      showHarvestDates: {},
       form: { 
         companycode:'{{ session('companycode') }}', 
         plot: '', 
         blok: '',
-        batchno: '',
-        batchdate: '',
-        batcharea: '',
-        tanggalulangtahun: '',
-        kodevarietas: '',
-        kodestatus: 'PC',
-        cyclecount: '0',
-        jaraktanam: '',
-        lastactivity: '',
-        tanggalpanenpc: '',
-        tanggalpanenrc1: '',
-        tanggalpanenrc2: '',
-        tanggalpanenrc3: ''
+        activebatchno: '',
+        isactive: '1'
       },
       resetForm() {
         this.mode = 'create';
@@ -32,19 +20,8 @@
           companycode:'{{ session('companycode') }}', 
           plot: '', 
           blok: '',
-          batchno: '',
-          batchdate: '',
-          batcharea: '',
-          tanggalulangtahun: '',
-          kodevarietas: '',
-          kodestatus: 'PC',
-          cyclecount: '0',
-          jaraktanam: '',
-          lastactivity: '',
-          tanggalpanenpc: '',
-          tanggalpanenrc1: '',
-          tanggalpanenrc2: '',
-          tanggalpanenrc3: ''
+          activebatchno: '',
+          isactive: '1'
         };
         this.open = true;
       }
@@ -53,7 +30,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      {{-- Create Button (Modal)--}}
+      {{-- Create Button --}}
       @if(hasPermission('Create MasterList'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
@@ -78,7 +55,7 @@
         />
       </form>
 
-      {{-- Item Per Page: --}}
+      {{-- Item Per Page --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
         <select 
@@ -90,11 +67,9 @@
             <option value="50" {{ (int)request('perPage', $perPage) === 50 ? 'selected' : '' }}>50</option>
         </select>
       </form>
-    
 
-      {{-- Modal - Form --}}
+      {{-- Modal Form --}}
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        {{-- Modal - Backdrop --}}
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
 
@@ -107,7 +82,7 @@
                 x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-2xl">
+                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
               <form method="POST"
                 :action="mode === 'edit'
                 ? '{{ url('masterdata/master-list') }}/' + form.companycodeoriginal +'/'+ form.plotoriginal
@@ -121,7 +96,7 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Master List' : 'Create Master List'">
                   </h3>
                   <div class="mt-4 space-y-4">
-                    {{-- Company Code - Hidden untuk create, readonly untuk edit --}}
+                    {{-- Company Code --}}
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
                       <template x-if="mode === 'create'">
@@ -137,13 +112,12 @@
                           <input type="hidden" name="companycode" x-model="form.companycode">
                           <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700 font-medium"
                                x-text="form.companycode"></div>
-                          <span class="block text-xs text-gray-500 mt-1">Company code tidak dapat diubah</span>
                         </div>
                       </template>
                     </div>
 
-                    {{-- Row 1: Plot, Blok, Batch No --}}
-                    <div class="grid grid-cols-3 gap-4">
+                    {{-- Row 1: Plot, Blok --}}
+                    <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="plot" class="block text-sm font-medium text-gray-700">Plot</label>
                         <input type="text" name="plot" id="plot" x-model="form.plot" 
@@ -163,112 +137,30 @@
                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
                               maxlength="2">
                       </div>
-                      <div>
-                        <label for="batchno" class="block text-sm font-medium text-gray-700">Batch No</label>
-                        <input type="text" name="batchno" id="batchno" x-model="form.batchno" 
-                              x-init="form.batchno = '{{ old('batchno') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              maxlength="20" required>
-                      </div>
                     </div>
 
-                    {{-- Row 2: Batch Date, Batch Area, Anniversary Date --}}
-                    <div class="grid grid-cols-3 gap-4">
-                      <div>
-                        <label for="batchdate" class="block text-sm font-medium text-gray-700">Batch Date</label>
-                        <input type="date" name="batchdate" id="batchdate" x-model="form.batchdate" 
-                              x-init="form.batchdate = '{{ old('batchdate') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                      </div>
-                      <div>
-                        <label for="batcharea" class="block text-sm font-medium text-gray-700">Batch Area (ha)</label>
-                        <input type="number" step="0.01" name="batcharea" id="batcharea" x-model="form.batcharea" 
-                              x-init="form.batcharea = '{{ old('batcharea') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              min="0">
-                      </div>
-                      <div>
-                        <label for="tanggalulangtahun" class="block text-sm font-medium text-gray-700">Tanggal Ulang Tahun</label>
-                        <input type="date" name="tanggalulangtahun" id="tanggalulangtahun" x-model="form.tanggalulangtahun" 
-                              x-init="form.tanggalulangtahun = '{{ old('tanggalulangtahun') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                      </div>
-                    </div>
-
-                    {{-- Row 3: Kode Varietas, Status, Cycle Count, Jarak Tanam --}}
-                    <div class="grid grid-cols-4 gap-4">
-                      <div>
-                        <label for="kodevarietas" class="block text-sm font-medium text-gray-700">Kode Varietas</label>
-                        <input type="text" name="kodevarietas" id="kodevarietas" x-model="form.kodevarietas" 
-                              x-init="form.kodevarietas = '{{ old('kodevarietas') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              maxlength="10">
-                      </div>
-                      <div>
-                        <label for="kodestatus" class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="kodestatus" id="kodestatus" x-model="form.kodestatus" 
-                               x-init="form.kodestatus = '{{ old('kodestatus') }}'"
-                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                          <option value="PC">PC</option>
-                          <option value="RC1">RC1</option>
-                          <option value="RC2">RC2</option>
-                          <option value="RC3">RC3</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label for="cyclecount" class="block text-sm font-medium text-gray-700">Cycle Count</label>
-                        <input type="number" name="cyclecount" id="cyclecount" x-model="form.cyclecount" 
-                              x-init="form.cyclecount = '{{ old('cyclecount') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              min="0">
-                      </div>
-                      <div>
-                        <label for="jaraktanam" class="block text-sm font-medium text-gray-700">Jarak Tanam (cm)</label>
-                        <input type="number" name="jaraktanam" id="jaraktanam" x-model="form.jaraktanam" 
-                              x-init="form.jaraktanam = '{{ old('jaraktanam') }}'"
-                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                              min="0">
-                      </div>
-                    </div>
-
-                    {{-- Last Activity --}}
+                    {{-- Row 2: Active Batch No --}}
                     <div>
-                      <label for="lastactivity" class="block text-sm font-medium text-gray-700">Last Activity</label>
-                      <input type="text" name="lastactivity" id="lastactivity" x-model="form.lastactivity" 
-                            x-init="form.lastactivity = '{{ old('lastactivity') }}'"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            maxlength="100">
+                      <label for="activebatchno" class="block text-sm font-medium text-gray-700">Active Batch No</label>
+                      <input type="text" name="activebatchno" id="activebatchno" x-model="form.activebatchno" 
+                            x-init="form.activebatchno = '{{ old('activebatchno') }}'"
+                            @input="form.activebatchno = form.activebatchno.toUpperCase()"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
+                            maxlength="20">
+                      <p class="mt-1 text-xs text-gray-500">Batch yang sedang aktif untuk plot ini</p>
+                      @error('activebatchno')
+                      <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                      @enderror
                     </div>
 
-                    {{-- Tanggal Panen Section --}}
-                    <div>
-                      <h4 class="text-sm font-medium text-gray-700 mb-2">Tanggal Panen</h4>
-                      <div class="grid grid-cols-2 gap-4">
-                        <div>
-                          <label for="tanggalpanenpc" class="block text-sm font-medium text-gray-700">PC</label>
-                          <input type="date" name="tanggalpanenpc" id="tanggalpanenpc" x-model="form.tanggalpanenpc" 
-                                x-init="form.tanggalpanenpc = '{{ old('tanggalpanenpc') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                          <label for="tanggalpanenrc1" class="block text-sm font-medium text-gray-700">RC1</label>
-                          <input type="date" name="tanggalpanenrc1" id="tanggalpanenrc1" x-model="form.tanggalpanenrc1" 
-                                x-init="form.tanggalpanenrc1 = '{{ old('tanggalpanenrc1') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                          <label for="tanggalpanenrc2" class="block text-sm font-medium text-gray-700">RC2</label>
-                          <input type="date" name="tanggalpanenrc2" id="tanggalpanenrc2" x-model="form.tanggalpanenrc2" 
-                                x-init="form.tanggalpanenrc2 = '{{ old('tanggalpanenrc2') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                          <label for="tanggalpanenrc3" class="block text-sm font-medium text-gray-700">RC3</label>
-                          <input type="date" name="tanggalpanenrc3" id="tanggalpanenrc3" x-model="form.tanggalpanenrc3" 
-                                x-init="form.tanggalpanenrc3 = '{{ old('tanggalpanenrc3') }}'"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                      </div>
+                    {{-- Row 3: Is Active (only show on edit) --}}
+                    <div x-show="mode === 'edit'">
+                      <label for="isactive" class="block text-sm font-medium text-gray-700">Status Plot</label>
+                      <select name="isactive" id="isactive" x-model="form.isactive" 
+                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                      </select>
                     </div>
 
                   </div>
@@ -300,12 +192,9 @@
                         <th class="py-2 px-4 border-b">No.</th>
                         <th class="py-2 px-4 border-b">Plot</th>
                         <th class="py-2 px-4 border-b">Blok</th>
-                        <th class="py-2 px-4 border-b">Batch No</th>
-                        <th class="py-2 px-4 border-b">Batch Date</th>
-                        <th class="py-2 px-4 border-b">Area (ha)</th>
+                        <th class="py-2 px-4 border-b">Active Batch</th>
+                        <th class="py-2 px-4 border-b">Batch Info</th>
                         <th class="py-2 px-4 border-b">Status</th>
-                        <th class="py-2 px-4 border-b">Cycle</th>
-                        <th class="py-2 px-4 border-b">Tanggal Panen</th>
                         <th class="py-2 px-4 border-b">Aksi</th>
                     </tr>
                 </thead>
@@ -315,33 +204,48 @@
                         <td class="py-2 px-4 border-b">{{ $masterlist->firstItem() + $index }}</td>
                             <td class="py-2 px-4 border-b font-medium">{{ $data->plot }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->blok ?? '-' }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->batchno }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->batchdate ? \Carbon\Carbon::parse($data->batchdate)->format('d/m/Y') : '-' }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->batcharea ? number_format($data->batcharea, 2) : '-' }}</td>
                             <td class="py-2 px-4 border-b">
-                                @if($data->kodestatus)
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                                        {{ $data->kodestatus }}
-                                    </span>
+                                @if($data->activebatchno)
+                                    <a href="{{ url('masterdata/batch?search=' . $data->activebatchno) }}" 
+                                       class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                        {{ $data->activebatchno }}
+                                    </a>
                                 @else
-                                    -
+                                    <span class="text-gray-400">-</span>
                                 @endif
                             </td>
-                            <td class="py-2 px-4 border-b">{{ $data->cyclecount ?? 0 }}</td>
                             <td class="py-2 px-4 border-b">
-                                <button @click="showHarvestDates['{{ $data->plot }}'] = !showHarvestDates['{{ $data->plot }}']" 
-                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-xs font-medium transition-colors">
-                                    <span x-show="!showHarvestDates['{{ $data->plot }}']">View Dates</span>
-                                    <span x-show="showHarvestDates['{{ $data->plot }}']" x-cloak>Hide Dates</span>
-                                </button>
-                                <div x-show="showHarvestDates['{{ $data->plot }}']" x-cloak class="mt-2 text-xs space-y-1 bg-gray-50 p-2 rounded border">
-                                    <div><strong>PC:</strong> {{ $data->tanggalpanenpc ? \Carbon\Carbon::parse($data->tanggalpanenpc)->format('d/m/Y') : '-' }}</div>
-                                    <div><strong>RC1:</strong> {{ $data->tanggalpanenrc1 ? \Carbon\Carbon::parse($data->tanggalpanenrc1)->format('d/m/Y') : '-' }}</div>
-                                    <div><strong>RC2:</strong> {{ $data->tanggalpanenrc2 ? \Carbon\Carbon::parse($data->tanggalpanenrc2)->format('d/m/Y') : '-' }}</div>
-                                    <div><strong>RC3:</strong> {{ $data->tanggalpanenrc3 ? \Carbon\Carbon::parse($data->tanggalpanenrc3)->format('d/m/Y') : '-' }}</div>
-                                </div>
+                                @if($data->activeBatch)
+                                    <div class="text-xs space-y-1">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span class="text-gray-500">Cycle:</span>
+                                            <span class="px-2 py-1 rounded-full font-medium
+                                                {{ $data->activeBatch->lifecyclestatus === 'PC' ? 'bg-green-100 text-green-800' : '' }}
+                                                {{ $data->activeBatch->lifecyclestatus === 'RC1' ? 'bg-blue-100 text-blue-800' : '' }}
+                                                {{ $data->activeBatch->lifecyclestatus === 'RC2' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                                {{ $data->activeBatch->lifecyclestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                                                {{ $data->activeBatch->lifecyclestatus }}
+                                            </span>
+                                        </div>
+                                        <div class="text-gray-600">
+                                            Area: <span class="font-medium">{{ number_format($data->activeBatch->batcharea, 2) }} ha</span>
+                                        </div>
+                                        <div class="text-gray-600">
+                                            Panen: <span class="font-medium">{{ $data->activeBatch->tanggalpanen ? \Carbon\Carbon::parse($data->activeBatch->tanggalpanen)->format('d/m/Y') : '-' }}</span>
+                                        </div>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 text-xs">No active batch</span>
+                                @endif
                             </td>
-                            {{-- Edit Button (Modal)--}}
+                            <td class="py-2 px-4 border-b">
+                                @if($data->isactive)
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                                @endif
+                            </td>
+                            {{-- Edit Button --}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
                                   @if(hasPermission('Edit MasterList'))
@@ -353,35 +257,15 @@
                                       form.plotoriginal = '{{ $data->plot }}';
                                       form.plot = '{{ $data->plot }}';
                                       form.blok = '{{ $data->blok }}';
-                                      form.batchno = '{{ $data->batchno }}';
-                                      form.batchdate = '{{ $data->batchdate }}';
-                                      form.batcharea = '{{ $data->batcharea }}';
-                                      form.tanggalulangtahun = '{{ $data->tanggalulangtahun }}';
-                                      form.kodevarietas = '{{ $data->kodevarietas }}';
-                                      form.kodestatus = '{{ $data->kodestatus }}';
-                                      form.cyclecount = '{{ $data->cyclecount }}';
-                                      form.jaraktanam = '{{ $data->jaraktanam }}';
-                                      form.lastactivity = '{{ $data->lastactivity }}';
-                                      form.tanggalpanenpc = '{{ $data->tanggalpanenpc }}';
-                                      form.tanggalpanenrc1 = '{{ $data->tanggalpanenrc1 }}';
-                                      form.tanggalpanenrc2 = '{{ $data->tanggalpanenrc2 }}';
-                                      form.tanggalpanenrc3 = '{{ $data->tanggalpanenrc3 }}';
+                                      form.activebatchno = '{{ $data->activebatchno }}';
+                                      form.isactive = '{{ $data->isactive }}';
                                       open = true
                                     "
-                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                                    >
-                                    <svg
-                                      class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                      aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                      width="24" height="24" fill="none"
-                                      viewBox="0 0 24 24">
+                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-outline" />
                                     </svg>
-                                    <svg 
-                                      class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                        aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                        width="24" height="24" fill="currentColor"
-                                        viewBox="0 0 24 24">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-solid" />
                                         <use xlink:href="#icon-edit-solid2" />
                                     </svg>
@@ -390,30 +274,14 @@
                                   @endif
                                   {{-- Delete Button --}}
                                   @if(hasPermission('Hapus MasterList'))
-                                    <form 
-                                      action="{{ url("masterdata/master-list/{$data->companycode}/{$data->plot}") }}" 
-                                      method="POST"
-                                      onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                                      class="inline"
-                                      >
+                                    <form action="{{ url("masterdata/master-list/{$data->companycode}/{$data->plot}") }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="inline">
                                       @csrf
                                       @method('DELETE')
-                                      <button 
-                                        type="submit"
-                                        class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
-                                        >
-                                        <svg
-                                          class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="none"
-                                          viewBox="0 0 24 24">
+                                      <button type="submit" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-outline" />
                                         </svg>
-                                        <svg 
-                                          class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="currentColor"
-                                          viewBox="0 0 24 24">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-solid" />
                                         </svg>
                                       </button>

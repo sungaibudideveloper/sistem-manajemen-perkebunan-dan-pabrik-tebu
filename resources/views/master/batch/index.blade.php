@@ -14,8 +14,12 @@
         batchdate: '',
         batcharea: '',
         kodevarietas: '',
-        status: 'ACTIVE',
-        plantingrkhno: ''
+        lifecyclestatus: 'PC',
+        pkp: '',
+        lastactivity: '',
+        isactive: '1',
+        plantingrkhno: '',
+        tanggalpanen: ''
       },
       resetForm() {
         this.mode = 'create';
@@ -26,8 +30,12 @@
           batchdate: '',
           batcharea: '',
           kodevarietas: '',
-          status: 'ACTIVE',
-          plantingrkhno: ''
+          lifecyclestatus: 'PC',
+          pkp: '',
+          lastactivity: '',
+          isactive: '1',
+          plantingrkhno: '',
+          tanggalpanen: ''
         };
         this.open = true;
       }
@@ -36,7 +44,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      {{-- Create Button (Modal)--}}
+      {{-- Create Button --}}
       @if(hasPermission('Create Batch'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
@@ -61,7 +69,7 @@
         />
       </form>
 
-      {{-- Item Per Page: --}}
+      {{-- Item Per Page --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
         <select 
@@ -73,11 +81,9 @@
             <option value="50" {{ (int)request('perPage', $perPage) === 50 ? 'selected' : '' }}>50</option>
         </select>
       </form>
-    
 
-      {{-- Modal - Form --}}
+      {{-- Modal Form --}}
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        {{-- Modal - Backdrop --}}
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
 
@@ -90,7 +96,7 @@
                 x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-lg">
+                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-2xl">
               <form method="POST"
                 :action="mode === 'edit'
                 ? '{{ url('masterdata/batch') }}/' + form.batchnooriginal
@@ -104,7 +110,7 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Batch' : 'Create Batch'">
                   </h3>
                   <div class="mt-4 space-y-4">
-                    {{-- Company Code - Hidden untuk create, readonly untuk edit --}}
+                    {{-- Company Code --}}
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
                       <template x-if="mode === 'create'">
@@ -120,7 +126,6 @@
                           <input type="hidden" name="companycode" x-model="form.companycode">
                           <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700 font-medium"
                                x-text="form.companycode"></div>
-                          <span class="block text-xs text-gray-500 mt-1">Company code tidak dapat diubah</span>
                         </div>
                       </template>
                     </div>
@@ -165,7 +170,7 @@
                       </div>
                     </div>
 
-                    {{-- Row 3: Kode Varietas, Status --}}
+                    {{-- Row 3: Kode Varietas, Lifecycle Status --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="kodevarietas" class="block text-sm font-medium text-gray-700">Kode Varietas</label>
@@ -175,23 +180,62 @@
                               maxlength="10">
                       </div>
                       <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="status" id="status" x-model="form.status" 
-                               x-init="form.status = '{{ old('status') }}'"
+                        <label for="lifecyclestatus" class="block text-sm font-medium text-gray-700">Lifecycle Status</label>
+                        <select name="lifecyclestatus" id="lifecyclestatus" x-model="form.lifecyclestatus" 
+                               x-init="form.lifecyclestatus = '{{ old('lifecyclestatus') }}'"
                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="HARVESTED">HARVESTED</option>
+                          <option value="PC">PC</option>
+                          <option value="RC1">RC1</option>
+                          <option value="RC2">RC2</option>
+                          <option value="RC3">RC3</option>
                         </select>
                       </div>
                     </div>
 
-                    {{-- Planting RKH No --}}
+                    {{-- Row 4: PKP, Is Active (only show on edit) --}}
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label for="pkp" class="block text-sm font-medium text-gray-700">PKP (Populasi Tanaman/Ha)</label>
+                        <input type="number" name="pkp" id="pkp" x-model="form.pkp" 
+                              x-init="form.pkp = '{{ old('pkp') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              min="0">
+                      </div>
+                      <div x-show="mode === 'edit'">
+                        <label for="isactive" class="block text-sm font-medium text-gray-700">Status Batch</label>
+                        <select name="isactive" id="isactive" x-model="form.isactive" 
+                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                          <option value="1">Active</option>
+                          <option value="0">Closed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {{-- Row 5: Planting RKH No, Last Activity --}}
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
+                        <input type="text" name="plantingrkhno" id="plantingrkhno" x-model="form.plantingrkhno" 
+                              x-init="form.plantingrkhno = '{{ old('plantingrkhno') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              maxlength="15">
+                      </div>
+                      <div>
+                        <label for="lastactivity" class="block text-sm font-medium text-gray-700">Last Activity</label>
+                        <input type="text" name="lastactivity" id="lastactivity" x-model="form.lastactivity" 
+                              x-init="form.lastactivity = '{{ old('lastactivity') }}'"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                              maxlength="100">
+                      </div>
+                    </div>
+
+                    {{-- FIXED: Single Tanggal Panen --}}
                     <div>
-                      <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
-                      <input type="text" name="plantingrkhno" id="plantingrkhno" x-model="form.plantingrkhno" 
-                            x-init="form.plantingrkhno = '{{ old('plantingrkhno') }}'"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            maxlength="15">
+                      <label for="tanggalpanen" class="block text-sm font-medium text-gray-700">Tanggal Panen</label>
+                      <input type="date" name="tanggalpanen" id="tanggalpanen" x-model="form.tanggalpanen" 
+                            x-init="form.tanggalpanen = '{{ old('tanggalpanen') }}'"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                      <p class="mt-1 text-xs text-gray-500">Tanggal panen untuk lifecycle status saat ini</p>
                     </div>
 
                   </div>
@@ -226,8 +270,10 @@
                         <th class="py-2 px-4 border-b">Batch Date</th>
                         <th class="py-2 px-4 border-b">Area (ha)</th>
                         <th class="py-2 px-4 border-b">Varietas</th>
+                        <th class="py-2 px-4 border-b">Lifecycle</th>
+                        <th class="py-2 px-4 border-b">PKP</th>
                         <th class="py-2 px-4 border-b">Status</th>
-                        <th class="py-2 px-4 border-b">Planting RKH</th>
+                        <th class="py-2 px-4 border-b">Tanggal Panen</th>
                         <th class="py-2 px-4 border-b">Aksi</th>
                     </tr>
                 </thead>
@@ -241,15 +287,29 @@
                             <td class="py-2 px-4 border-b">{{ $data->batcharea ? number_format($data->batcharea, 2) : '-' }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->kodevarietas ?? '-' }}</td>
                             <td class="py-2 px-4 border-b">
-                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                                    {{ $data->status }}
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {{ $data->lifecyclestatus === 'PC' ? 'bg-green-100 text-green-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC1' ? 'bg-blue-100 text-blue-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC2' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                    {{ $data->lifecyclestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                                    {{ $data->lifecyclestatus }}
                                 </span>
                             </td>
-                            <td class="py-2 px-4 border-b">{{ $data->plantingrkhno ?? '-' }}</td>
-                            {{-- Edit Button (Modal)--}}
+                            <td class="py-2 px-4 border-b">{{ $data->pkp ?? '-' }}</td>
+                            <td class="py-2 px-4 border-b">
+                                @if($data->isactive)
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Closed</span>
+                                @endif
+                            </td>
+                            <td class="py-2 px-4 border-b">
+                                {{ $data->tanggalpanen ? \Carbon\Carbon::parse($data->tanggalpanen)->format('d/m/Y') : '-' }}
+                            </td>
+                            {{-- Edit Button --}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
-                                  @if(hasPermission('Edit Blok'))
+                                  @if(hasPermission('Edit Batch'))
                                   <button
                                     @click="
                                       mode = 'edit';
@@ -260,24 +320,19 @@
                                       form.batchdate = '{{ $data->batchdate }}';
                                       form.batcharea = '{{ $data->batcharea }}';
                                       form.kodevarietas = '{{ $data->kodevarietas }}';
-                                      form.status = '{{ $data->status }}';
+                                      form.lifecyclestatus = '{{ $data->lifecyclestatus }}';
+                                      form.pkp = '{{ $data->pkp }}';
+                                      form.lastactivity = '{{ $data->lastactivity }}';
+                                      form.isactive = '{{ $data->isactive }}';
                                       form.plantingrkhno = '{{ $data->plantingrkhno }}';
+                                      form.tanggalpanen = '{{ $data->tanggalpanen }}';
                                       open = true
                                     "
-                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                                    >
-                                    <svg
-                                      class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                      aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                      width="24" height="24" fill="none"
-                                      viewBox="0 0 24 24">
+                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-outline" />
                                     </svg>
-                                    <svg 
-                                      class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                        aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                        width="24" height="24" fill="currentColor"
-                                        viewBox="0 0 24 24">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-solid" />
                                         <use xlink:href="#icon-edit-solid2" />
                                     </svg>
@@ -286,30 +341,14 @@
                                   @endif
                                   {{-- Delete Button --}}
                                   @if(hasPermission('Hapus Batch'))
-                                    <form 
-                                      action="{{ url("masterdata/batch/{$data->batchno}") }}" 
-                                      method="POST"
-                                      onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                                      class="inline"
-                                      >
+                                    <form action="{{ url("masterdata/batch/{$data->batchno}") }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="inline">
                                       @csrf
                                       @method('DELETE')
-                                      <button 
-                                        type="submit"
-                                        class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
-                                        >
-                                        <svg
-                                          class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="none"
-                                          viewBox="0 0 24 24">
+                                      <button type="submit" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-outline" />
                                         </svg>
-                                        <svg 
-                                          class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="currentColor"
-                                          viewBox="0 0 24 24">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-solid" />
                                         </svg>
                                       </button>

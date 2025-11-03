@@ -8,6 +8,7 @@
 $returEligible = collect($detailmaterial)
     ->filter(fn($d) => (float)($d->qtyretur ?? 0) > 0 && empty($d->noretur))
     ->count();
+
 @endphp
 
 <style>
@@ -203,7 +204,7 @@ table th, table td {
         <td class="py-2 px-2">
             <div class="flex justify-end items-center">
                 <input type="text"name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
-                    value="{{ number_format($d->dosageperha, 3) }}"
+                    value="{{ number_format($d->dosageperha, 2) }}"
                     class="w-full selected-dosage border-none bg-yellow-100 text-xs text-right w-20">
                 <span class="ml-2 w-8 text-left">{{ $d->unit }}</span>
             </div>
@@ -269,7 +270,7 @@ table th, table td {
                 }
         
                 $totals[$code]['qty'] += $qty;
-                $totals[$code]['parts'][] = number_format($qty, 3);
+                $totals[$code]['parts'][] = number_format($qty, 2);
             }
         @endphp
         
@@ -290,7 +291,7 @@ table th, table td {
                         <td class="py-2 px-3 font-medium">{{ $code }}</td>
                         <td class="py-2 px-3">{{ $row['itemname'] }}</td>
                         <td class="py-2 px-3">{{ $row['unit'] }}</td>
-                        <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 3) }}</td>
+                        <td class="py-2 px-3 text-right">{{ number_format($row['qty'], 2) }}</td>
                         <td class="py-2 px-3 text-center text-gray-500">
                             {{ implode(' + ', $row['parts']) }}
                         </td>
@@ -300,7 +301,25 @@ table th, table td {
         </table>
         
         
-
+        <div class="flex justify-center mt-4 no-print">
+        <select @if( !empty($details[0]->costcenter)) disabled @endif
+            name="costcenter"
+            class="w-full max-w-md border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Pilih cost center"
+            required
+        >
+            @if($costcenter->isEmpty())
+            <option value="">— Cost center tidak tersedia —</option>
+            @else
+            <option value="" disabled {{ old('costcenter') ? '' : 'selected' }}>Pilih cost center…</option>
+            @foreach ($costcenter as $c)
+                <option value="{{ $c['costcentercode'] }}" {{ $details[0]->costcenter == $c['costcentercode'] ? 'selected' : '' }}>
+                    ({{ $c['costcentercode'] }}) {{ $c['costcenterdesc'] }}
+                </option>
+            @endforeach
+            @endif
+        </select>
+        </div>
 
 
 
@@ -338,7 +357,7 @@ table th, table td {
               @csrf
               <input type="hidden" name="rkhno" value="{{ $details[0]->rkhno }}">
               <button type="submit"
-                class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow transition">
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow transition no-print">
                 Retur Semua ({{ $returEligible }})
               </button>
             </form>
@@ -351,7 +370,12 @@ table th, table td {
     
     <script>
         // recalculate total
-        const fmt3 = n => (Number(n)||0).toFixed(3);
+        const fmt2 = n => (Number(n)||0).toFixed(2);
+
+        const roundTo25 = (num) => {
+            return num > 0 ? Math.max(0.25, Math.round(num / 0.25) * 0.25) : 0;
+        };
+        
 
 function recalcTotals(){
   const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
@@ -364,13 +388,14 @@ function recalcTotals(){
     const name     = $opt.data('itemname') || '';
     const unit     = $tr.find('.selected-unit').val() || $opt.data('measure') || '';
 
-    const dosage   = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
-    const luas     = parseFloat($tr.find('.selected-luas').val()) || 0;
-    const qty      = dosage * luas;
+    const dosage    = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
+    const luas      = parseFloat($tr.find('.selected-luas').val()) || 0;
+    const qtyRaw    = dosage * luas;
+    const qty       = roundTo25(qtyRaw);
 
     (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
     totals[code].qty   += qty;
-    totals[code].parts.push(fmt3(qty));
+    totals[code].parts.push(fmt2(qty));
   });
 
   // render ulang tbody totals (pakai id yg ditambah di atas)
@@ -380,7 +405,7 @@ function recalcTotals(){
         <td class="py-2 px-3 font-medium">${code}</td>
         <td class="py-2 px-3">${r.itemname || '-'}</td>
         <td class="py-2 px-3">${r.unit || '-'}</td>
-        <td class="py-2 px-3 text-right">${fmt3(r.qty)}</td>
+        <td class="py-2 px-3 text-right">${fmt2(r.qty)}</td>
         <td class="py-2 px-3 text-center text-gray-500">${r.parts.join(' + ')}</td>
       </tr>
     `).join('')
@@ -435,8 +460,12 @@ $(document).on('input', '.selected-dosage', function(){
         function recalcRowQty(row){
           const dosage = parseFloat(String(row.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
           const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
-          const qty    = dosage * luas;
-          row.find('.labelqty').text(qty.toFixed(3));
+          const qtyRaw    = dosage * luas;
+          const qty    = roundTo25(qtyRaw);
+
+         console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
+
+          row.find('.labelqty').text(qty.toFixed(2));
         }
         
         $(document).ready(function(){

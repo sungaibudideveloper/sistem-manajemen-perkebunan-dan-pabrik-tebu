@@ -25,7 +25,7 @@ class BatchController extends Controller
                 $q->where('batchno', 'like', "%{$search}%")
                   ->orWhere('plot', 'like', "%{$search}%")
                   ->orWhere('kodevarietas', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%")
+                  ->orWhere('lifecyclestatus', 'like', "%{$search}%")
                   ->orWhere('plantingrkhno', 'like', "%{$search}%");
             });
         }
@@ -59,8 +59,11 @@ class BatchController extends Controller
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
-            'status' => 'required|in:ACTIVE,HARVESTED',
+            'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
+            'pkp' => 'nullable|integer|min:0', // FIXED: pkp bukan jaraktanam
+            'lastactivity' => 'nullable|string|max:100',
             'plantingrkhno' => 'nullable|string|max:15',
+            'tanggalpanen' => 'nullable|date', // FIXED: single field
         ]);
 
         $exists = Batch::where('batchno', $request->batchno)->exists();
@@ -80,8 +83,12 @@ class BatchController extends Controller
             'batchdate' => $request->input('batchdate'),
             'batcharea' => $request->input('batcharea'),
             'kodevarietas' => $request->input('kodevarietas'),
-            'status' => $request->input('status'),
+            'lifecyclestatus' => $request->input('lifecyclestatus'),
+            'pkp' => $request->input('pkp'), // FIXED
+            'lastactivity' => $request->input('lastactivity'),
+            'isactive' => 1,
             'plantingrkhno' => $request->input('plantingrkhno'),
+            'tanggalpanen' => $request->input('tanggalpanen'), // FIXED: single field
             'inputby' => Auth::user()->userid,
             'createdat' => now(),
         ]);
@@ -103,8 +110,12 @@ class BatchController extends Controller
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
-            'status' => 'required|in:ACTIVE,HARVESTED',
+            'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
+            'pkp' => 'nullable|integer|min:0', // FIXED
+            'lastactivity' => 'nullable|string|max:100',
+            'isactive' => 'required|boolean',
             'plantingrkhno' => 'nullable|string|max:15',
+            'tanggalpanen' => 'nullable|date', // FIXED: single field
         ]);
         
         // Check duplicate if batchno changed
@@ -126,8 +137,12 @@ class BatchController extends Controller
             'batchdate' => $validated['batchdate'],
             'batcharea' => $validated['batcharea'],
             'kodevarietas' => $validated['kodevarietas'],
-            'status' => $validated['status'],
+            'lifecyclestatus' => $validated['lifecyclestatus'],
+            'pkp' => $validated['pkp'], // FIXED
+            'lastactivity' => $validated['lastactivity'],
+            'isactive' => $validated['isactive'],
             'plantingrkhno' => $validated['plantingrkhno'],
+            'tanggalpanen' => $validated['tanggalpanen'], // FIXED: single field
         ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');
