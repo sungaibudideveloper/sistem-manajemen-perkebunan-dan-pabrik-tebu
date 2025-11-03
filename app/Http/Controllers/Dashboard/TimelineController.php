@@ -16,7 +16,7 @@ class TimelineController extends Controller
             'navbar' => 'Dashboard',
         ]);
 
-    }
+    } 
     public function index()
     {
       $title = "Dashboard Timeline";
@@ -30,7 +30,7 @@ class TimelineController extends Controller
 
    
 public function plot(Request $request)
-{
+{   
     $title = "Dashboard Timeline";
     $nav = "Timeline";
     
@@ -40,7 +40,7 @@ public function plot(Request $request)
     $usematerialhdr = new usematerialhdr;
     $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
     $detailsPlots = Arr::pluck($details, 'plot');
-    
+    dd('aaa');
     // Get GPS and plot data
     $plotData = DB::table('testgpslst as a')
         ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
