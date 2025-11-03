@@ -3,6 +3,7 @@
 use App\Http\Controllers\MobileController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Timbangan;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -16,3 +17,8 @@ Route::post('/getfieldbymapping', [MobileController::class, 'getFieldByMapping']
 Route::post('/checkdataagronomi', [MobileController::class, 'checkDataAgronomi']);
 Route::post('/checkdatahpt', [MobileController::class, 'checkDataHPT']);
 Route::post('/checkdatahpt', [MobileController::class, 'checkDataHPT']);
+Route::post('timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
+
+Route::post('/test-timbangan', function() {
+    return response()->json(['message' => 'API works!']);
+});

@@ -17,6 +17,7 @@ use App\Http\Controllers\React\MandorPageController;
 use App\Http\Controllers\React\ApproverPageController;
 
 use App\Http\Controllers\Api\PerhitunganUpahApiMobile;
+use App\Http\Controllers\Api\Timbangan;
 
 // =============================================================================
 // AUTHENTICATION ROUTES
