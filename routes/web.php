@@ -74,11 +74,34 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
         // USER NOTIFICATION ROUTES (All Users)
         // =============================================================================
         // Clear cache
-        Route::get('utility/clearcache', function () {
-            Artisan::call('config:cache');
+        Route::get('utility/deploy', function () {
+            $output = [];
+            $results = [];
+            
+            // 1. Git Pull
+            chdir(base_path());
+            exec('git pull origin main 2>&1', $output);
+            $results['git_pull'] = implode("\n", $output);
+            
+            // 2. NPM Build
+            $output = [];
+            exec('npm run build 2>&1', $output);
+            $results['npm_build'] = implode("\n", $output);
+            
+            // 3. Clear Cache
+            Artisan::call('config:clear');
             Artisan::call('cache:clear');
-            Artisan::call('view:cache');
-            return "<h6>config cleared, cache cleared, view cache</h6>";
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
+            $results['cache'] = 'All caches cleared';
+            
+            // Display results
+            $html = '<h3>Deployment Completed!</h3>';
+            $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
+            $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
+            $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
+            
+            return $html;
         });
 
         // User notification list
