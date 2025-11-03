@@ -37,10 +37,10 @@ public function plot(Request $request)
     $rkhno = $request->rkhno ?? 'RKH21050234';
     
     // Get data from usematerialhdr
-    $usematerialhdr = new usematerialhdr; 
+    $usematerialhdr = new usematerialhdr; dd('aaa', $details, $detailsPLots);
     $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
     $detailsPlots = Arr::pluck($details, 'plot');
-    dd('aaa', $details, $detailsPLots);
+    
     // Get GPS and plot data
     $plotData = DB::table('testgpslst as a')
         ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
