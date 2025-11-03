@@ -73,7 +73,14 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     // =============================================================================
         // USER NOTIFICATION ROUTES (All Users)
         // =============================================================================
-        
+        // Clear cache
+        Route::get('utility/clearcache', function () {
+            Artisan::call('config:cache');
+            Artisan::call('cache:clear');
+            Artisan::call('view:cache');
+            return "<h6>config cleared, cache cleared, view cache</h6>";
+        });
+
         // User notification list
         Route::get('/notifications', [NotificationController::class, 'index'])
             ->name('notifications.index');
