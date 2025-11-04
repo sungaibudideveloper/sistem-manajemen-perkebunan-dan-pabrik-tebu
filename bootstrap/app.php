@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         Route::middleware('web')->group(base_path('routes/dashboard.php'));
         Route::middleware('web')->group(base_path('routes/process.php'));
         
+        Route::middleware('api')
+            ->prefix('api')
+            ->group(base_path('routes/api.php'));  // <-- Definisi kedua (manual)
 
     },
     )
