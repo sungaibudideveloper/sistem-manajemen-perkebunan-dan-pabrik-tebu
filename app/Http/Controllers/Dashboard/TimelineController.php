@@ -16,7 +16,7 @@ class TimelineController extends Controller
             'navbar' => 'Dashboard',
         ]);
 
-    }
+    } 
     public function index()
     {
       $title = "Dashboard Timeline";
@@ -30,14 +30,14 @@ class TimelineController extends Controller
 
    
 public function plot(Request $request)
-{
+{   
     $title = "Dashboard Timeline";
     $nav = "Timeline";
     
     $rkhno = $request->rkhno ?? 'RKH21050234';
     
     // Get data from usematerialhdr
-    $usematerialhdr = new usematerialhdr;
+    $usematerialhdr = new usematerialhdr; dd('aaa', $details, $detailsPLots);
     $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
     $detailsPlots = Arr::pluck($details, 'plot');
     
