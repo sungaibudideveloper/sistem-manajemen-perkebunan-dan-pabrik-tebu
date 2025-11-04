@@ -529,19 +529,70 @@ function activityPicker(rowIndex) {
     },
 
     clear() {
-      this.selected = { activitycode: '', activityname: '', usingvehicle: null, jenistenagakerja: null };
-      // Reset kendaraan field when clearing
-      const kendaraanField = document.getElementById(`kendaraan-${this.rowIndex}`);
-      if (kendaraanField) {
-        kendaraanField.value = '-';
+      console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
+      
+      //  1. Hapus dari Alpine store (trigger worker card clear)
+      if (this.selected.activitycode) {
+        Alpine.store('activityPerRow').setActivity(this.selected.activitycode, null);
       }
-
-      const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
-      if (jenisField) {
-        jenisField.value = '-';
+      
+      //  2. Clear activity data
+      this.selected = { 
+        activitycode: '', 
+        activityname: '', 
+        usingvehicle: null, 
+        jenistenagakerja: null 
+      };
+      
+      //  3. Clear BLOK
+      const blokComponent = this.$el.closest('tr').querySelector('[x-data*="blokPicker"]');
+      if (blokComponent && blokComponent._x_dataStack && blokComponent._x_dataStack[0]) {
+        blokComponent._x_dataStack[0].selected = { blok: '', id: '' };
+        Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
       }
-
-      this.closeModal()
+      
+      //  4. Clear PLOT
+      const plotComponent = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotComponent && plotComponent._x_dataStack && plotComponent._x_dataStack[0]) {
+        plotComponent._x_dataStack[0].selected = { plot: '' };
+      }
+      
+      //  5. Clear LUAS
+      const luasInput = document.querySelector(`input[name="rows[${this.rowIndex}][luas]"]`);
+      if (luasInput) luasInput.value = '';
+      
+      //  6. Clear MATERIAL
+      const materialComponent = this.$el.closest('tr').querySelector('[x-data*="materialPicker"]');
+      if (materialComponent && materialComponent._x_dataStack && materialComponent._x_dataStack[0]) {
+        const materialData = materialComponent._x_dataStack[0];
+        materialData.currentActivityCode = '';
+        materialData.selectedGroup = null;
+        materialData.updateHiddenInputs();
+      }
+      
+      //  7. Clear KENDARAAN
+      const kendaraanComponent = this.$el.closest('tr').querySelector('[x-data*="kendaraanPicker"]');
+      if (kendaraanComponent && kendaraanComponent._x_dataStack && kendaraanComponent._x_dataStack[0]) {
+        const kendaraanData = kendaraanComponent._x_dataStack[0];
+        kendaraanData.currentActivityCode = '';
+        kendaraanData.selectedOperator = null;
+        kendaraanData.selectedHelper = null;
+        kendaraanData.useHelper = false;
+        kendaraanData.updateHiddenInputs();
+      }
+      
+      //  8. Clear PANEN INFO (if any)
+      const panenComponent = this.$el.closest('tr').querySelector('[x-data*="panenInfoPicker"]');
+      if (panenComponent && panenComponent._x_dataStack && panenComponent._x_dataStack[0]) {
+        panenComponent._x_dataStack[0].resetPanenInfo();
+      }
+      
+      //  9. Clear unique combination store
+      Alpine.store('uniqueCombinations').setCombination(this.rowIndex, '', '', '');
+      
+      console.log(' All fields cleared for row', this.rowIndex);
+      
+      this.closeModal();
     }
   }
 }
