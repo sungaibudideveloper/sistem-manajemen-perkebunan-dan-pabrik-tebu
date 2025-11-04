@@ -35,7 +35,7 @@ class UserManagementController extends Controller
         $search = request('search');
         $perPage = request('perPage', 10);
         $companycode = session('companycode'); // Get from session seperti di TenagaKerjaController
-        
+
         $result = User::with(['jabatan', 'userCompanies'])
             ->when($search, function($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
@@ -50,7 +50,7 @@ class UserManagementController extends Controller
 
         $jabatan = Jabatan::orderBy('namajabatan')->get();
         $companies = Company::orderBy('name')->get(); // Fixed: company.name bukan companyname
-        
+
         return view('master.usermanagement.user.index', [
             'title' => 'User Management',
             'navbar' => 'User Management',
@@ -67,7 +67,7 @@ class UserManagementController extends Controller
     {
         $jabatan = Jabatan::orderBy('namajabatan')->get();
         $companies = Company::orderBy('name')->get();
-        
+
         return view('master.usermanagement.user.create', [
             'title' => 'Create New User',
             'navbar' => 'User Management',
@@ -101,6 +101,7 @@ class UserManagementController extends Controller
                 'inputby' => Auth::user()->userid,
                 'createdat' => now(),
                 'isactive' => $request->isactive ?? 1,
+                'mpassword' => md5($request->password)
             ]);
 
             // Auto-assign user to primary company
@@ -119,7 +120,7 @@ class UserManagementController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                            ->withInput()
                            ->with('error', 'Gagal menambahkan user: ' . $e->getMessage());
@@ -129,7 +130,7 @@ class UserManagementController extends Controller
     public function userEdit($userid)
     {
         $user = User::with(['jabatan', 'userCompanies'])->find($userid);
-        
+
         if (!$user) {
             return redirect()->route('usermanagement.user.index')
                            ->with('error', 'User tidak ditemukan');
@@ -137,13 +138,13 @@ class UserManagementController extends Controller
 
         $jabatan = Jabatan::orderBy('namajabatan')->get();
         $companies = Company::orderBy('name')->get();
-        
+
         // Get effective permissions for display
         $effectivePermissions = $this->getUserEffectivePermissions($userid);
-        
+
         return view('master.usermanagement.user.edit', [
             'title' => 'Edit User: ' . $user->name,
-            'navbar' => 'User Management', 
+            'navbar' => 'User Management',
             'nav' => 'Edit User',
             'user' => $user,
             'jabatan' => $jabatan,
@@ -163,7 +164,7 @@ class UserManagementController extends Controller
 
         try {
             $user = User::find($userid);
-            
+
             if (!$user) {
                 return redirect()->route('usermanagement.user.index')
                             ->with('error', 'User tidak ditemukan');
@@ -184,7 +185,8 @@ class UserManagementController extends Controller
             if ($request->filled('password')) {
                 $request->validate(['password' => 'string|min:6']);
                 $user->update([
-                    'password' => Hash::make($request->password)
+                    'password' => Hash::make($request->password),
+                    'mpassword' => md5($request->password)
                 ]);
             }
 
@@ -207,7 +209,7 @@ class UserManagementController extends Controller
     {
         try {
             $user = User::find($userid);
-            
+
             if (!$user) {
                 return redirect()->route('usermanagement.user.index')
                                ->with('error', 'User tidak ditemukan');
@@ -237,7 +239,7 @@ class UserManagementController extends Controller
         $search = request('search');
         $perPage = request('perPage', 20);
         $categoryFilter = request('categories') ? explode(',', request('categories')) : [];
-        
+
         $result = Permission::when($search, function($query, $search) {
                 return $query->where('permissionname', 'like', "%{$search}%")
                             ->orWhere('category', 'like', "%{$search}%")
@@ -250,7 +252,7 @@ class UserManagementController extends Controller
             ->paginate($perPage);
 
         $categories = Permission::distinct()->pluck('category')->filter()->sort();
-        
+
         return view('master.usermanagement.permissions-masterdata.index', [
             'title' => 'Permission Master Data',
             'navbar' => 'User Management',
@@ -299,7 +301,7 @@ class UserManagementController extends Controller
 
         try {
             $permission = Permission::find($permissionid);
-            
+
             if (!$permission) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission tidak ditemukan');
@@ -326,7 +328,7 @@ class UserManagementController extends Controller
     {
         try {
             $permission = Permission::find($permissionid);
-            
+
             if (!$permission) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission tidak ditemukan');
@@ -335,7 +337,7 @@ class UserManagementController extends Controller
             // Check if permission is being used
             $usageCount = JabatanPermission::where('permissionid', $permissionid)->where('isactive', 1)->count();
             $userUsageCount = UserPermission::where('permissionid', $permissionid)->where('isactive', 1)->count();
-            
+
             if ($usageCount > 0 || $userUsageCount > 0) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
                                ->with('error', 'Permission sedang digunakan dan tidak bisa dihapus');
@@ -361,7 +363,7 @@ class UserManagementController extends Controller
     {
         $search = request('search');
         $perPage = request('perPage', 10);
-        
+
         $result = Jabatan::withCount(['jabatanPermissions' => function($query) {
                 $query->where('isactive', 1);
             }])
@@ -376,7 +378,7 @@ class UserManagementController extends Controller
                                 ->orderBy('permissionname')
                                 ->get()
                                 ->groupBy('category');
-        
+
         return view('master.usermanagement.jabatan.index', [
             'title' => 'Jabatan Management',
             'navbar' => 'User Management',
@@ -409,7 +411,7 @@ class UserManagementController extends Controller
 
             // STEP 2: Aktifkan hanya permissions yang dipilih
             $selectedPermissions = $request->permissions ?? [];
-            
+
             foreach ($selectedPermissions as $permissionid) {
                 JabatanPermission::updateOrCreate([
                     'idjabatan' => $request->idjabatan,
@@ -432,7 +434,7 @@ class UserManagementController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to assign permissions:', ['error' => $e->getMessage()]);
-            
+
             return redirect()->back()
                         ->with('error', 'Gagal memperbarui permissions: ' . $e->getMessage());
         }
@@ -475,7 +477,7 @@ class UserManagementController extends Controller
 
         try {
             $jabatan = Jabatan::find($idjabatan);
-            
+
             if (!$jabatan) {
                 return redirect()->route('usermanagement.jabatan.index')
                             ->with('error', 'Jabatan tidak ditemukan');
@@ -504,7 +506,7 @@ class UserManagementController extends Controller
     {
         try {
             $jabatan = Jabatan::find($idjabatan);
-            
+
             if (!$jabatan) {
                 return response()->json([
                     'success' => false,
@@ -514,7 +516,7 @@ class UserManagementController extends Controller
 
             // Check if jabatan is being used by any users
             $userCount = User::where('idjabatan', $idjabatan)->where('isactive', 1)->count();
-            
+
             if ($userCount > 0) {
                 return response()->json([
                     'success' => false,
@@ -526,7 +528,7 @@ class UserManagementController extends Controller
             $permissionCount = JabatanPermission::where('idjabatan', $idjabatan)
                                             ->where('isactive', 1)
                                             ->count();
-            
+
             if ($permissionCount > 0) {
                 // Deactivate all permissions for this jabatan first
                 JabatanPermission::where('idjabatan', $idjabatan)
@@ -543,7 +545,7 @@ class UserManagementController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to delete jabatan:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus jabatan: ' . $e->getMessage()
@@ -559,7 +561,7 @@ class UserManagementController extends Controller
     {
         $search = request('search');
         $perPage = request('perPage', 15);
-        
+
         // Group by user, aggregate companies
         $result = User::with(['jabatan', 'userCompanies' => function($query) {
                 $query->where('isactive', 1);
@@ -589,9 +591,9 @@ class UserManagementController extends Controller
             })
             ->orderBy('name')
             ->get();
-        
+
         $companies = Company::orderBy('name')->get();
-        
+
         return view('master.usermanagement.user-company-permissions.index', [
             'title' => 'User Company Access',
             'navbar' => 'User Management',
@@ -632,7 +634,7 @@ class UserManagementController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                            ->with('error', 'Gagal menambahkan company access: ' . $e->getMessage());
         }
@@ -679,7 +681,7 @@ class UserManagementController extends Controller
 
             // STEP 2: Aktifkan hanya companies yang dipilih
             $selectedCompanies = $request->companycodes ?? [];
-            
+
             foreach ($selectedCompanies as $companycode) {
                 UserCompany::updateOrCreate([
                     'userid' => $request->userid,
@@ -704,7 +706,7 @@ class UserManagementController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                         ->with('error', 'Gagal memperbarui company access: ' . $e->getMessage());
         }
@@ -718,7 +720,7 @@ class UserManagementController extends Controller
     {
         $search = request('search');
         $perPage = request('perPage', 15);
-        
+
         $result = UserPermission::with(['user.jabatan', 'permissionModel'])
             ->when($search, function($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
@@ -737,7 +739,7 @@ class UserManagementController extends Controller
                                 ->get()
                                 ->groupBy('category');
         $companies = Company::orderBy('name')->get();
-        
+
         return view('master.usermanagement.user-permissions.index', [
             'title' => 'User Permission Overrides',
             'navbar' => 'User Management',
@@ -836,7 +838,7 @@ class UserManagementController extends Controller
     {
         try {
             $user = User::with('jabatan')->find($userid);
-            
+
             if (!$user) {
                 return response()->json(['error' => 'User not found'], 404);
             }
@@ -851,7 +853,7 @@ class UserManagementController extends Controller
                 $permissionCount = JabatanPermission::where('idjabatan', $user->idjabatan)
                                                 ->where('isactive', 1)
                                                 ->count();
-                
+
                 $result['role'] = [
                     'idjabatan' => $user->idjabatan,
                     'namajabatan' => $user->jabatan->namajabatan,
@@ -909,14 +911,14 @@ class UserManagementController extends Controller
     public function testUserPermission($userid, $permission)
     {
         $user = User::find($userid);
-        
+
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
 
         // Use the CheckPermission middleware method
         $middleware = new \App\Http\Middleware\CheckPermission();
-        $hasPermission = method_exists($middleware, 'checkUserPermission') 
+        $hasPermission = method_exists($middleware, 'checkUserPermission')
                         ? $middleware->checkUserPermission($user, $permission)
                         : false;
 
@@ -939,7 +941,7 @@ class UserManagementController extends Controller
         $statusFilter = request('status');
         $categoryFilter = request('category');
         $companycode = session('companycode'); // Filter by session company
-        
+
         $result = SupportTicket::with('company')
             ->where('companycode', $companycode) // FILTER BY COMPANY
             ->when($search, function($query, $search) {
@@ -957,7 +959,7 @@ class UserManagementController extends Controller
             ->paginate($perPage);
 
         $companies = Company::orderBy('name')->get();
-        
+
         // Get statistics - filtered by company
         $stats = [
             'open' => SupportTicket::where('companycode', $companycode)->where('status', 'open')->count(),
@@ -965,7 +967,7 @@ class UserManagementController extends Controller
             'resolved' => SupportTicket::where('companycode', $companycode)->where('status', 'resolved')->count(),
             'total' => SupportTicket::where('companycode', $companycode)->count(),
         ];
-        
+
         return view('master.usermanagement.support-ticket.index', [
             'title' => 'Support Tickets',
             'navbar' => 'User Management',
@@ -1013,16 +1015,16 @@ class UserManagementController extends Controller
         // 3. RATE LIMITING (Backend)
         // ========================================
         $key = 'support-ticket:' . $request->ip();
-        
+
         if (RateLimiter::tooManyAttempts($key, 3)) {
             $seconds = RateLimiter::availableIn($key);
             $minutes = ceil($seconds / 60);
-            
+
             return back()->withErrors([
                 'error' => "Too many ticket submissions. Please try again in {$minutes} minute(s)."
             ])->withInput();
         }
-        
+
         // Increment rate limiter (decay after 1 hour)
         RateLimiter::hit($key, 3600);
 
@@ -1034,7 +1036,7 @@ class UserManagementController extends Controller
             ->where('status', 'open')
             ->where('createdat', '>', now()->subHours(24))
             ->first();
-        
+
         if ($recentTicket) {
             return back()->withErrors([
                 'error' => 'You already have a pending ticket for this issue. Please wait for admin response. Ticket Number: ' . $recentTicket->ticket_number
@@ -1048,7 +1050,7 @@ class UserManagementController extends Controller
             ->where('userid', $validated['username'])
             ->where('companycode', $validated['companycode'])
             ->exists();
-        
+
         if (!$userExists) {
             return back()->withErrors([
                 'error' => 'Username not found in the selected company. Please verify your information.'
@@ -1062,7 +1064,7 @@ class UserManagementController extends Controller
             DB::beginTransaction();
 
             $ticketNumber = \App\Models\SupportTicket::generateTicketNumber($validated['companycode']);
-            
+
             $ticket = \App\Models\SupportTicket::create([
                 'ticket_number' => $ticketNumber,
                 'category' => $validated['category'],
@@ -1087,13 +1089,13 @@ class UserManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('login')->with('success', 
+            return redirect()->route('login')->with('success',
                 'Your request has been submitted successfully. Our admin team will contact you soon. Ticket Number: ' . $ticketNumber
             );
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Failed to create support ticket', [
                 'error' => $e->getMessage(),
                 'username' => $validated['username'],
@@ -1108,7 +1110,7 @@ class UserManagementController extends Controller
 
     /**
      * Verify Google reCAPTCHA v2 response using Guzzle HTTP
-     * 
+     *
      * @param string $response - g-recaptcha-response token
      * @param string $ipAddress - User IP address
      * @return bool
@@ -1121,7 +1123,7 @@ class UserManagementController extends Controller
 
         try {
             $secretKey = config('services.recaptcha.secret_key');
-            
+
             // Send verification request to Google
             $verifyResponse = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
                 'secret' => $secretKey,
@@ -1146,7 +1148,7 @@ class UserManagementController extends Controller
                 'error' => $e->getMessage(),
                 'ip' => $ipAddress,
             ]);
-            
+
             // PRODUCTION: return false (strict)
             // DEVELOPMENT: return true (bypass jika Google down)
             return config('app.env') === 'local';
@@ -1163,7 +1165,7 @@ class UserManagementController extends Controller
 
         try {
             $ticket = SupportTicket::findOrFail($ticket_id);
-            
+
             $updateData = [
                 'status' => $request->status,
                 'priority' => $request->priority ?? $ticket->priority
@@ -1180,7 +1182,7 @@ class UserManagementController extends Controller
             }
 
             // Track resolved/closed status change
-            if (in_array($request->status, ['resolved', 'closed']) && 
+            if (in_array($request->status, ['resolved', 'closed']) &&
                 !in_array($ticket->status, ['resolved', 'closed'])) {
                 $updateData['resolved_by'] = Auth::user()->userid;
                 $updateData['resolved_at'] = now();
@@ -1193,7 +1195,7 @@ class UserManagementController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to update ticket:', ['error' => $e->getMessage()]);
-            
+
             return redirect()->back()
                         ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
         }
@@ -1222,7 +1224,7 @@ class UserManagementController extends Controller
 
     /**
      * Clear permission cache untuk single user
-     * 
+     *
      * @param User $user
      * @param string $reason - Reason untuk logging
      * @return void
@@ -1231,9 +1233,9 @@ class UserManagementController extends Controller
     {
         // Clear permission cache
         CheckPermission::clearUserCache($user);
-        
+
         \App\View\Composers\NavigationComposer::clearNavigationCache($user);
-        
+
         Log::info('Permission & navigation cache cleared', [
             'userid' => $user->userid,
             'jabatan' => $user->idjabatan,
@@ -1244,7 +1246,7 @@ class UserManagementController extends Controller
     /**
      * Clear cache user + company cache sekaligus
      * Dipakai saat company access berubah
-     * 
+     *
      * @param User $user
      * @param string $reason
      * @return void
@@ -1253,13 +1255,13 @@ class UserManagementController extends Controller
     {
         // Clear permission cache
         CheckPermission::clearUserCache($user);
-        
+
         // Clear company cache
         $cacheKey = "user_companies_{$user->userid}";
         \Cache::forget($cacheKey);
 
         \App\View\Composers\NavigationComposer::clearNavigationCache($user);
-        
+
         Log::info('Permission, company & navigation cache cleared', [
             'userid' => $user->userid,
             'reason' => $reason
@@ -1269,7 +1271,7 @@ class UserManagementController extends Controller
     /**
      * Clear cache untuk semua user dalam jabatan tertentu
      * Dipakai saat jabatan permission berubah (mass update)
-     * 
+     *
      * @param int $idjabatan
      * @return int - Jumlah user yang di-clear cache-nya
      */
@@ -1278,26 +1280,26 @@ class UserManagementController extends Controller
         $users = User::where('idjabatan', $idjabatan)
                     ->where('isactive', 1)
                     ->get();
-        
+
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);
-            
+
             // Clear navigation cache per user
             \App\View\Composers\NavigationComposer::clearNavigationCache($user);
         }
-        
+
         Log::info('Bulk cache clear (permissions + navigation) for jabatan', [
             'idjabatan' => $idjabatan,
             'affected_users' => $users->count()
         ]);
-        
+
         return $users->count();
     }
 
     /**
      * Clear cache untuk multiple users sekaligus
      * Berguna untuk bulk operations
-     * 
+     *
      * @param array $userIds
      * @return int - Jumlah user yang di-clear cache-nya
      */
@@ -1306,16 +1308,16 @@ class UserManagementController extends Controller
         $users = User::whereIn('userid', $userIds)
                     ->where('isactive', 1)
                     ->get();
-        
+
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);
         }
-        
+
         Log::info('Bulk cache clear for users', [
             'count' => $users->count(),
             'userids' => $userIds
         ]);
-        
+
         return $users->count();
     }
 }
