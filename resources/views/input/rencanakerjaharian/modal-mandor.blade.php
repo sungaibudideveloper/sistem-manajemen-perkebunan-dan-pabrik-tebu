@@ -96,7 +96,7 @@
     {{-- Footer --}}
     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
       <div class="flex justify-between items-center text-xs text-gray-500">
-        <span x-text="${filteredMandors.length} mandor tersedia"></span>
+        <span x-text="`${filteredMandors.length} mandor tersedia`"></span>
 <button
 type="button"
 @click.stop="clear()"
