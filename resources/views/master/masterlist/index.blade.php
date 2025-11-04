@@ -11,7 +11,6 @@
         companycode:'{{ session('companycode') }}', 
         plot: '', 
         blok: '',
-        tanggalulangtahun: '',
         activebatchno: '',
         isactive: '1'
       },
@@ -21,7 +20,6 @@
           companycode:'{{ session('companycode') }}', 
           plot: '', 
           blok: '',
-          tanggalulangtahun: '',
           activebatchno: '',
           isactive: '1'
         };
@@ -32,7 +30,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      {{-- Create Button (Modal)--}}
+      {{-- Create Button --}}
       @if(hasPermission('Create MasterList'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
@@ -57,7 +55,7 @@
         />
       </form>
 
-      {{-- Item Per Page: --}}
+      {{-- Item Per Page --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
         <select 
@@ -69,11 +67,9 @@
             <option value="50" {{ (int)request('perPage', $perPage) === 50 ? 'selected' : '' }}>50</option>
         </select>
       </form>
-    
 
-      {{-- Modal - Form --}}
+      {{-- Modal Form --}}
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        {{-- Modal - Backdrop --}}
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
 
@@ -100,7 +96,7 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Master List' : 'Create Master List'">
                   </h3>
                   <div class="mt-4 space-y-4">
-                    {{-- Company Code - Hidden untuk create, readonly untuk edit --}}
+                    {{-- Company Code --}}
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
                       <template x-if="mode === 'create'">
@@ -116,7 +112,6 @@
                           <input type="hidden" name="companycode" x-model="form.companycode">
                           <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700 font-medium"
                                x-text="form.companycode"></div>
-                          <span class="block text-xs text-gray-500 mt-1">Company code tidak dapat diubah</span>
                         </div>
                       </template>
                     </div>
@@ -144,15 +139,7 @@
                       </div>
                     </div>
 
-                    {{-- Row 2: Tanggal Ulang Tahun --}}
-                    <div>
-                      <label for="tanggalulangtahun" class="block text-sm font-medium text-gray-700">Tanggal Ulang Tahun</label>
-                      <input type="date" name="tanggalulangtahun" id="tanggalulangtahun" x-model="form.tanggalulangtahun" 
-                            x-init="form.tanggalulangtahun = '{{ old('tanggalulangtahun') }}'"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    {{-- Row 3: Active Batch No --}}
+                    {{-- Row 2: Active Batch No --}}
                     <div>
                       <label for="activebatchno" class="block text-sm font-medium text-gray-700">Active Batch No</label>
                       <input type="text" name="activebatchno" id="activebatchno" x-model="form.activebatchno" 
@@ -166,7 +153,7 @@
                       @enderror
                     </div>
 
-                    {{-- Row 4: Is Active (only show on edit) --}}
+                    {{-- Row 3: Is Active (only show on edit) --}}
                     <div x-show="mode === 'edit'">
                       <label for="isactive" class="block text-sm font-medium text-gray-700">Status Plot</label>
                       <select name="isactive" id="isactive" x-model="form.isactive" 
@@ -205,7 +192,6 @@
                         <th class="py-2 px-4 border-b">No.</th>
                         <th class="py-2 px-4 border-b">Plot</th>
                         <th class="py-2 px-4 border-b">Blok</th>
-                        <th class="py-2 px-4 border-b">Tanggal Ulang Tahun</th>
                         <th class="py-2 px-4 border-b">Active Batch</th>
                         <th class="py-2 px-4 border-b">Batch Info</th>
                         <th class="py-2 px-4 border-b">Status</th>
@@ -218,7 +204,6 @@
                         <td class="py-2 px-4 border-b">{{ $masterlist->firstItem() + $index }}</td>
                             <td class="py-2 px-4 border-b font-medium">{{ $data->plot }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->blok ?? '-' }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->tanggalulangtahun ? \Carbon\Carbon::parse($data->tanggalulangtahun)->format('d/m/Y') : '-' }}</td>
                             <td class="py-2 px-4 border-b">
                                 @if($data->activebatchno)
                                     <a href="{{ url('masterdata/batch?search=' . $data->activebatchno) }}" 
@@ -245,6 +230,9 @@
                                         <div class="text-gray-600">
                                             Area: <span class="font-medium">{{ number_format($data->activeBatch->batcharea, 2) }} ha</span>
                                         </div>
+                                        <div class="text-gray-600">
+                                            Panen: <span class="font-medium">{{ $data->activeBatch->tanggalpanen ? \Carbon\Carbon::parse($data->activeBatch->tanggalpanen)->format('d/m/Y') : '-' }}</span>
+                                        </div>
                                     </div>
                                 @else
                                     <span class="text-gray-400 text-xs">No active batch</span>
@@ -257,7 +245,7 @@
                                     <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Inactive</span>
                                 @endif
                             </td>
-                            {{-- Edit Button (Modal)--}}
+                            {{-- Edit Button --}}
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
                                   @if(hasPermission('Edit MasterList'))
@@ -269,25 +257,15 @@
                                       form.plotoriginal = '{{ $data->plot }}';
                                       form.plot = '{{ $data->plot }}';
                                       form.blok = '{{ $data->blok }}';
-                                      form.tanggalulangtahun = '{{ $data->tanggalulangtahun }}';
                                       form.activebatchno = '{{ $data->activebatchno }}';
                                       form.isactive = '{{ $data->isactive }}';
                                       open = true
                                     "
-                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                                    >
-                                    <svg
-                                      class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                      aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                      width="24" height="24" fill="none"
-                                      viewBox="0 0 24 24">
+                                    class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-outline" />
                                     </svg>
-                                    <svg 
-                                      class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                        aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                        width="24" height="24" fill="currentColor"
-                                        viewBox="0 0 24 24">
+                                    <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                         <use xlink:href="#icon-edit-solid" />
                                         <use xlink:href="#icon-edit-solid2" />
                                     </svg>
@@ -296,30 +274,14 @@
                                   @endif
                                   {{-- Delete Button --}}
                                   @if(hasPermission('Hapus MasterList'))
-                                    <form 
-                                      action="{{ url("masterdata/master-list/{$data->companycode}/{$data->plot}") }}" 
-                                      method="POST"
-                                      onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                                      class="inline"
-                                      >
+                                    <form action="{{ url("masterdata/master-list/{$data->companycode}/{$data->plot}") }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="inline">
                                       @csrf
                                       @method('DELETE')
-                                      <button 
-                                        type="submit"
-                                        class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
-                                        >
-                                        <svg
-                                          class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="none"
-                                          viewBox="0 0 24 24">
+                                      <button type="submit" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-outline" />
                                         </svg>
-                                        <svg 
-                                          class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                          aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="currentColor"
-                                          viewBox="0 0 24 24">
+                                        <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                             <use xlink:href="#icon-trash-solid" />
                                         </svg>
                                       </button>

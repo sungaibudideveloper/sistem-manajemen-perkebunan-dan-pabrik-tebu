@@ -55,7 +55,6 @@ class MasterListController extends Controller
         $request->validate([
             'plot' => 'required|string|max:5',
             'blok' => 'nullable|string|max:2',
-            'tanggalulangtahun' => 'nullable|date',
             'activebatchno' => 'nullable|string|max:20',
         ]);
 
@@ -90,7 +89,6 @@ class MasterListController extends Controller
             'companycode' => $companycode,
             'plot' => $request->input('plot'),
             'blok' => $request->input('blok'),
-            'tanggalulangtahun' => $request->input('tanggalulangtahun'),
             'activebatchno' => $request->input('activebatchno'),
             'isactive' => 1,
         ]);
@@ -115,7 +113,6 @@ class MasterListController extends Controller
         $validated = $request->validate([
             'plot' => 'required|string|max:5',
             'blok' => 'nullable|string|max:2',
-            'tanggalulangtahun' => 'nullable|date',
             'activebatchno' => 'nullable|string|max:20',
             'isactive' => 'required|boolean',
         ]);
@@ -156,7 +153,6 @@ class MasterListController extends Controller
              ->update([
                 'plot' => $validated['plot'],
                 'blok' => $validated['blok'],
-                'tanggalulangtahun' => $validated['tanggalulangtahun'],
                 'activebatchno' => $validated['activebatchno'],
                 'isactive' => $validated['isactive'],
              ]);

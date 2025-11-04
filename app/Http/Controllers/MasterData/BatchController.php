@@ -60,13 +60,10 @@ class BatchController extends Controller
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
             'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
-            'jaraktanam' => 'nullable|integer|min:0',
+            'pkp' => 'nullable|integer|min:0', // FIXED: pkp bukan jaraktanam
             'lastactivity' => 'nullable|string|max:100',
             'plantingrkhno' => 'nullable|string|max:15',
-            'tanggalpanenpc' => 'nullable|date',
-            'tanggalpanenrc1' => 'nullable|date',
-            'tanggalpanenrc2' => 'nullable|date',
-            'tanggalpanenrc3' => 'nullable|date',
+            'tanggalpanen' => 'nullable|date', // FIXED: single field
         ]);
 
         $exists = Batch::where('batchno', $request->batchno)->exists();
@@ -87,14 +84,11 @@ class BatchController extends Controller
             'batcharea' => $request->input('batcharea'),
             'kodevarietas' => $request->input('kodevarietas'),
             'lifecyclestatus' => $request->input('lifecyclestatus'),
-            'jaraktanam' => $request->input('jaraktanam'),
+            'pkp' => $request->input('pkp'), // FIXED
             'lastactivity' => $request->input('lastactivity'),
             'isactive' => 1,
             'plantingrkhno' => $request->input('plantingrkhno'),
-            'tanggalpanenpc' => $request->input('tanggalpanenpc'),
-            'tanggalpanenrc1' => $request->input('tanggalpanenrc1'),
-            'tanggalpanenrc2' => $request->input('tanggalpanenrc2'),
-            'tanggalpanenrc3' => $request->input('tanggalpanenrc3'),
+            'tanggalpanen' => $request->input('tanggalpanen'), // FIXED: single field
             'inputby' => Auth::user()->userid,
             'createdat' => now(),
         ]);
@@ -117,14 +111,11 @@ class BatchController extends Controller
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
             'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
-            'jaraktanam' => 'nullable|integer|min:0',
+            'pkp' => 'nullable|integer|min:0', // FIXED
             'lastactivity' => 'nullable|string|max:100',
             'isactive' => 'required|boolean',
             'plantingrkhno' => 'nullable|string|max:15',
-            'tanggalpanenpc' => 'nullable|date',
-            'tanggalpanenrc1' => 'nullable|date',
-            'tanggalpanenrc2' => 'nullable|date',
-            'tanggalpanenrc3' => 'nullable|date',
+            'tanggalpanen' => 'nullable|date', // FIXED: single field
         ]);
         
         // Check duplicate if batchno changed
@@ -147,14 +138,11 @@ class BatchController extends Controller
             'batcharea' => $validated['batcharea'],
             'kodevarietas' => $validated['kodevarietas'],
             'lifecyclestatus' => $validated['lifecyclestatus'],
-            'jaraktanam' => $validated['jaraktanam'],
+            'pkp' => $validated['pkp'], // FIXED
             'lastactivity' => $validated['lastactivity'],
             'isactive' => $validated['isactive'],
             'plantingrkhno' => $validated['plantingrkhno'],
-            'tanggalpanenpc' => $validated['tanggalpanenpc'],
-            'tanggalpanenrc1' => $validated['tanggalpanenrc1'],
-            'tanggalpanenrc2' => $validated['tanggalpanenrc2'],
-            'tanggalpanenrc3' => $validated['tanggalpanenrc3'],
+            'tanggalpanen' => $validated['tanggalpanen'], // FIXED: single field
         ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');

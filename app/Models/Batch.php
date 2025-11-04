@@ -16,31 +16,25 @@ class Batch extends Model
         'batchno',
         'companycode',
         'plot',
+        'lifecyclestatus',
+        'plantingrkhno',
         'batchdate',
+        'tanggalpanen',
         'batcharea',
         'kodevarietas',
-        'lifecyclestatus',
-        'jaraktanam',
+        'pkp',
         'lastactivity',
         'isactive',
-        'plantingrkhno',
-        'tanggalpanenpc',
-        'tanggalpanenrc1',
-        'tanggalpanenrc2',
-        'tanggalpanenrc3',
         'inputby',
         'createdat',
     ];
 
     protected $casts = [
         'batchdate' => 'date',
+        'tanggalpanen' => 'date',
         'batcharea' => 'decimal:2',
-        'jaraktanam' => 'integer',
+        'pkp' => 'integer',
         'isactive' => 'boolean',
-        'tanggalpanenpc' => 'date',
-        'tanggalpanenrc1' => 'date',
-        'tanggalpanenrc2' => 'date',
-        'tanggalpanenrc3' => 'date',
         'createdat' => 'datetime',
     ];
 
@@ -50,14 +44,7 @@ class Batch extends Model
         return $this->belongsTo(Company::class, 'companycode', 'companycode');
     }
 
-    // Relationship to masterlist (plot)
-    public function masterlist()
-    {
-        return $this->belongsTo(Masterlist::class, 'plot', 'plot')
-                    ->where('companycode', $this->companycode);
-    }
-
-    // Accessor for cyclecount (computed from lifecyclestatus)
+    // Accessor for cyclecount
     public function getCyclecountAttribute(): int
     {
         return match($this->lifecyclestatus) {
@@ -87,76 +74,61 @@ class Batch extends Model
         };
     }
 
-    // Scope untuk filter batch aktif
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('isactive', 1);
     }
 
-    // Scope untuk filter batch closed
     public function scopeClosed($query)
     {
         return $query->where('isactive', 0);
     }
 
-    // Scope untuk filter by lifecycle status
     public function scopeLifecycle($query, $status)
     {
         return $query->where('lifecyclestatus', $status);
     }
 
-    // Scope untuk filter by plot
     public function scopeByPlot($query, $plot)
     {
         return $query->where('plot', $plot);
     }
 
-    // Check if batch is harvestable
+    public function scopeByCompany($query, $companycode)
+    {
+        return $query->where('companycode', $companycode);
+    }
+
+    // Helper methods
     public function isHarvestable(): bool
     {
         return $this->isactive && in_array($this->lifecyclestatus, ['PC', 'RC1', 'RC2', 'RC3']);
     }
 
-    // Check if specific cycle is harvested
-    public function isCycleHarvested($cycle): bool
+    public function isHarvested(): bool
     {
-        $field = 'tanggalpanen' . strtolower($cycle);
-        return !is_null($this->$field);
+        return !is_null($this->tanggalpanen);
     }
 
-    // Get next lifecycle status
     public function getNextLifecycleStatus(): ?string
     {
         return match($this->lifecyclestatus) {
             'PC' => 'RC1',
             'RC1' => 'RC2',
             'RC2' => 'RC3',
-            'RC3' => null, // No next status after RC3
+            'RC3' => 'PC',
             default => null
         };
     }
 
-    // Check if batch can be closed
     public function canBeClosed(): bool
     {
-        return $this->lifecyclestatus === 'RC3' && !is_null($this->tanggalpanenrc3);
+        return $this->isactive && !is_null($this->tanggalpanen);
     }
 
-    // Get harvest date for current lifecycle
-    public function getCurrentHarvestDate(): ?string
+    public function getAgeInDaysAttribute(): int
     {
-        $field = 'tanggalpanen' . strtolower($this->lifecyclestatus);
-        return $this->$field;
-    }
-
-    // Get all harvest dates as array
-    public function getHarvestDatesAttribute(): array
-    {
-        return [
-            'PC' => $this->tanggalpanenpc,
-            'RC1' => $this->tanggalpanenrc1,
-            'RC2' => $this->tanggalpanenrc2,
-            'RC3' => $this->tanggalpanenrc3,
-        ];
+        return now()->diffInDays($this->batchdate);
     }
 }
