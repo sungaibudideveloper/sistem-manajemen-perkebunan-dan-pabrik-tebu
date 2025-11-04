@@ -6,9 +6,9 @@
 
   <!-- HEADER CONTENT -->
   <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
-    <div class="flex justify-between items-start">
+    <div class="flex flex-col lg:flex-row gap-6">
       <!-- KIRI: No RKH, Status, Mandor, Tanggal, Keterangan -->
-      <div class="flex flex-col w-2/3 space-y-4">
+      <div class="flex flex-col flex-1 space-y-4">
         <!-- No RKH -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">
@@ -20,7 +20,7 @@
         </div>
 
         <!-- Status Badges -->
-        <div class="flex items-center space-x-6">
+        <div class="flex flex-wrap items-center gap-4">
           @php
             // Status Approval
             $approvalStatus = 'Waiting';
@@ -78,7 +78,7 @@
         </div>
 
         <!-- Mandor & Date Info -->
-        <div class="grid grid-cols-2 gap-4 max-w-md">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <div class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-2 bg-gray-50">
@@ -98,44 +98,109 @@
         @if($rkhHeader->keterangan)
         <div class="max-w-2xl">
           <label class="block text-sm font-semibold text-gray-700 mb-1">Keterangan Dokumen</label>
-          <div class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-2 bg-gray-50 min-h-[40px]">
+          <div class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-2 bg-gray-50 min-h-[60px]">
             {{ $rkhHeader->keterangan }}
           </div>
         </div>
         @endif
       </div>
 
-      <!-- RIGHT HEADER: Absen Summary -->
-      <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 w-[320px] md:w-[400px] lg:w-[430px]">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center">
-            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-            <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
+      <!-- RIGHT: Cards Section -->
+      <div class="flex flex-col space-y-4 lg:w-[400px]">
+        
+        <!-- Card 1: Data Absen -->
+        <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+              <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-600">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
+            </div>
           </div>
-          <div class="text-right">
-            <p class="text-xs text-gray-600">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
+          <div class="grid grid-cols-3 gap-4 text-center">
+            @php
+              $absenSummary = collect($absentenagakerja ?? [])->where('mandorid', $rkhHeader->mandorid);
+              $lakiCount = $absenSummary->where('gender', 'L')->count();
+              $perempuanCount = $absenSummary->where('gender', 'P')->count();
+              $totalCount = $lakiCount + $perempuanCount;
+            @endphp
+            <div class="bg-blue-50 rounded-lg p-3">
+              <div class="text-lg font-bold">{{ $lakiCount }}</div>
+              <div class="text-xs text-gray-600">Laki-laki</div>
+            </div>
+            <div class="bg-pink-50 rounded-lg p-3">
+              <div class="text-lg font-bold">{{ $perempuanCount }}</div>
+              <div class="text-xs text-gray-600">Perempuan</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3">
+              <div class="text-lg font-bold">{{ $totalCount }}</div>
+              <div class="text-xs text-gray-600">Total</div>
+            </div>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-4 text-center">
-          @php
-            $absenSummary = collect($absentenagakerja ?? [])->where('mandorid', $rkhHeader->mandorid);
-            $lakiCount = $absenSummary->where('gender', 'L')->count();
-            $perempuanCount = $absenSummary->where('gender', 'P')->count();
-            $totalCount = $lakiCount + $perempuanCount;
-          @endphp
-          <div class="bg-blue-50 rounded-lg p-3">
-            <div class="text-lg font-bold">{{ $lakiCount }}</div>
-            <div class="text-xs text-gray-600">Laki-laki</div>
+
+        <!-- Card 2: Info Pekerja (NEW SECTION) -->
+        <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+              <h3 class="text-sm font-bold text-gray-800">Info Pekerja</h3>
+            </div>
+            <span class="text-xs text-gray-600">{{ $workersByActivity->count() }} Aktivitas</span>
           </div>
-          <div class="bg-pink-50 rounded-lg p-3">
-            <div class="text-lg font-bold">{{ $perempuanCount }}</div>
-            <div class="text-xs text-gray-600">Perempuan</div>
-          </div>
-          <div class="bg-green-50 rounded-lg p-3">
-            <div class="text-lg font-bold">{{ $totalCount }}</div>
-            <div class="text-xs text-gray-600">Total</div>
+
+          <div>
+            @if($workersByActivity->isEmpty())
+              <div class="text-center py-8 text-gray-400">
+                <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <p class="text-xs">Tidak ada data pekerja</p>
+              </div>
+            @else
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                @foreach($workersByActivity as $worker)
+                  <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                    
+                    <div class="mb-3">
+                      <p class="text-sm font-semibold text-purple-900 truncate" 
+                        title="{{ $worker->activitycode }} - {{ $worker->activityname }}">
+                        {{ $worker->activitycode }} - {{ $worker->activityname }}
+                      </p>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                      <div class="flex-1">
+                        <label class="text-[10px] text-gray-600 block mb-0.5">L</label>
+                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-gray-100 text-center font-medium">
+                          {{ $worker->jumlahlaki ?? 0 }}
+                        </div>
+                      </div>
+
+                      <div class="flex-1">
+                        <label class="text-[10px] text-gray-600 block mb-0.5">P</label>
+                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-gray-100 text-center font-medium">
+                          {{ $worker->jumlahperempuan ?? 0 }}
+                        </div>
+                      </div>
+
+                      <div class="flex-1">
+                        <label class="text-[10px] text-gray-600 block mb-0.5">Tot</label>
+                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-green-100 text-center font-bold">
+                          {{ $worker->jumlahtenagakerja ?? 0 }}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                @endforeach
+              </div>
+            @endif
           </div>
         </div>
+
       </div>
     </div>
 
@@ -157,34 +222,25 @@
         <table class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
           <colgroup>
             <col style="width: 40px"><!-- No. -->
+            <col style="width: 250px"><!-- Aktivitas -->
             <col style="width: 80px"><!-- Blok -->
             <col style="width: 80px"><!-- Plot -->
-            <col style="width: 250px"><!-- Aktivitas -->
+            <col style="width: 80px"><!-- Info Panen -->
             <col style="width: 80px"><!-- Luas -->
-            <col style="width: 50px"><!-- L -->
-            <col style="width: 50px"><!-- P -->
-            <col style="width: 60px"><!-- Total -->
-            <col style="width: 80px"><!-- Jenis -->
             <col style="width: 120px"><!-- Material -->
             <col style="width: 120px"><!-- Kendaraan -->
           </colgroup>
 
           <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
             <tr>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">No.</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Blok</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Plot</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Aktivitas</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Luas<br>(ha)</th>
-              <th colspan="4" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Tenaga Kerja</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Material</th>
-              <th rowspan="2" class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Kendaraan</th>
-            </tr>
-            <tr class="bg-gray-700">
-              <th class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-center">L</th>
-              <th class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-center">P</th>
-              <th class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-center">Total</th>
-              <th class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-center">Jenis</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">No.</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Aktivitas</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Blok</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Plot</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Info Panen</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Luas<br>(ha)</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Material</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Kendaraan</th>
             </tr>
           </thead>
 
@@ -194,12 +250,6 @@
                 <!-- No -->
                 <td class="px-3 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $index + 1 }}</td>
                 
-                <!-- Blok -->
-                <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->blok ?? '-' }}</td>
-                
-                <!-- Plot -->
-                <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->plot ?? '-' }}</td>
-                
                 <!-- Aktivitas -->
                 <td class="px-3 py-3 text-sm">
                   <div class="flex flex-col">
@@ -207,29 +257,46 @@
                     <span class="text-xs text-gray-600">{{ $detail->activityname ?? '-' }}</span>
                   </div>
                 </td>
+
+                <!-- Blok -->
+                <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->blok ?? '-' }}</td>
+                
+                <!-- Plot -->
+                <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->plot ?? '-' }}</td>
+                
+                <!-- Info Panen -->
+                <td class="px-3 py-3 text-xs text-center">
+                  @if($detail->batchno && $detail->kodestatus)
+                    <div class="space-y-1">
+                      <!-- Lifecycle Status Badge -->
+                      <div class="flex items-center justify-center">
+                        <span 
+                          class="px-2 py-0.5 rounded text-[10px] font-semibold
+                          {{ $detail->kodestatus === 'PC' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                          {{ $detail->kodestatus === 'RC1' ? 'bg-green-100 text-green-800' : '' }}
+                          {{ $detail->kodestatus === 'RC2' ? 'bg-blue-100 text-blue-800' : '' }}
+                          {{ $detail->kodestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                          {{ $detail->kodestatus }}
+                        </span>
+                      </div>
+                      
+                      <!-- Batch Info -->
+                      <div class="text-gray-700">
+                        <span class="font-semibold">Batch:</span>
+                        <span>{{ $detail->batchno }}</span>
+                      </div>
+                    </div>
+                  @else
+                    <span class="text-gray-400">-</span>
+                  @endif
+                </td>
                 
                 <!-- Luas -->
                 <td class="px-3 py-3 text-sm text-right font-medium">
                   {{ $detail->luasarea ? number_format($detail->luasarea, 2) : '-' }}
                 </td>
                 
-                <!-- Tenaga Kerja -->
-                <td class="px-3 py-3 text-sm text-center font-medium bg-blue-50">{{ $detail->jumlahlaki ?? 0 }}</td>
-                <td class="px-3 py-3 text-sm text-center font-medium bg-pink-50">{{ $detail->jumlahperempuan ?? 0 }}</td>
-                <td class="px-3 py-3 text-sm text-center font-bold bg-green-50">{{ ($detail->jumlahlaki ?? 0) + ($detail->jumlahperempuan ?? 0) }}</td>
-                
-                <!-- Jenis Tenaga Kerja -->
-                <td class="px-3 py-3 text-xs text-center">
-                  @if($detail->jenistenagakerja == 1)
-                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Harian</span>
-                  @elseif($detail->jenistenagakerja == 2)
-                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full">Borongan</span>
-                  @else
-                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">-</span>
-                  @endif
-                </td>
-                
-                <!-- Material - UPDATED WITH CLICK FUNCTIONALITY -->
+                <!-- Material -->
                 <td class="px-3 py-3 text-xs text-center">
                   @if($detail->usingmaterial == 1 && $detail->herbisidagroupname)
                     <div 
@@ -247,7 +314,7 @@
                     >
                       <div class="font-semibold">{{ $detail->herbisidagroupname }}</div>
                       <div class="text-[10px] text-green-600 mt-1">
-                        (klik untuk melihat detail)
+                        (klik untuk detail)
                       </div>
                     </div>
                   @elseif($detail->usingmaterial == 1)
@@ -262,18 +329,15 @@
                   @if($detail->usingvehicle == 1)
                     @if($detail->operatorid)
                       @php
-                        // Cari data kendaraan dari operatorsData
                         $operatorData = collect($operatorsData ?? [])->firstWhere('tenagakerjaid', $detail->operatorid);
                       @endphp
                       
                       @if($operatorData)
-                        <!-- Show operator & vehicle details -->
                         <div class="bg-green-100 text-green-800 px-2 py-1 rounded-lg">
                           <div class="font-semibold text-xs">{{ $operatorData->nokendaraan ?? 'N/A' }}</div>
                           <div class="text-sm text-green-600">{{ $detail->operator_name }}</div>
                           <div class="text-xs text-gray-600">ID: {{ $detail->operatorid }}</div>
                           
-                          {{-- Tampilkan helper jika ada --}}
                           @if($detail->usinghelper == 1 && $detail->helperid)
                             <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
                               + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
@@ -281,12 +345,10 @@
                           @endif
                         </div>
                       @else
-                        <!-- Fallback jika data operator tidak ditemukan -->
                         <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
                           <div class="font-semibold text-sm">{{ $detail->operator_name }}</div>
                           <div class="text-xs">ID: {{ $detail->operatorid }}</div>
                           
-                          {{-- Tampilkan helper jika ada --}}
                           @if($detail->usinghelper == 1 && $detail->helperid)
                             <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
                               + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
@@ -295,7 +357,6 @@
                         </div>
                       @endif
                     @else
-                      <!-- Using vehicle but no operator assigned -->
                       <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
                         <div class="font-semibold text-xs">Perlu Operator</div>
                         <div class="text-[10px]">Kendaraan: Ya</div>
@@ -308,7 +369,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="11" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                   <div class="flex flex-col items-center">
                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -323,20 +384,11 @@
           @if($rkhDetails->count() > 0)
           <tfoot class="bg-gray-100">
             <tr class="border-t-2 border-gray-200">
-              <td colspan="4" class="px-3 py-3 text-center text-sm font-bold uppercase tracking-wider text-gray-700 bg-gray-100">Total</td>
+              <td colspan="5" class="px-3 py-3 text-center text-sm font-bold uppercase tracking-wider text-gray-700 bg-gray-100">Total</td>
               <td class="px-3 py-3 text-center text-sm font-bold bg-gray-50">
                 {{ number_format($rkhDetails->sum('luasarea'), 2) }} ha
               </td>
-              <td class="px-3 py-3 text-center text-sm font-bold bg-blue-50">
-                {{ $rkhDetails->sum('jumlahlaki') }}
-              </td>
-              <td class="px-3 py-3 text-center text-sm font-bold bg-pink-50">
-                {{ $rkhDetails->sum('jumlahperempuan') }}
-              </td>
-              <td class="px-3 py-3 text-center text-sm font-bold bg-green-50">
-                {{ $rkhDetails->sum('jumlahlaki') + $rkhDetails->sum('jumlahperempuan') }}
-              </td>
-              <td colspan="3" class="px-3 py-3 bg-gray-100"></td>
+              <td colspan="2" class="px-3 py-3 bg-gray-100"></td>
             </tr>
           </tfoot>
           @endif
@@ -429,7 +481,6 @@
 
   <!-- Material Detail Modal -->
   <div x-data="materialShowModal()" x-cloak>
-    <!-- Modal Overlay -->
     <div
       x-show="open"
       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
@@ -544,7 +595,6 @@
         display: none !important;
       }
       
-      /* Print specific styling */
       table {
         page-break-inside: auto;
       }
@@ -581,7 +631,6 @@
         },
         materialList: [],
 
-        // Method untuk membuka modal dengan data detail
         showMaterialDetail(detail) {
           this.selectedDetail = {
             activitycode: detail.activitycode || '',
@@ -597,7 +646,6 @@
           this.loadMaterialDetail();
         },
 
-        // Load material detail dari server atau data lokal
         async loadMaterialDetail() {
           if (!this.selectedDetail.herbisidagroupid || !this.selectedDetail.activitycode) {
             this.materialList = [];
@@ -607,7 +655,6 @@
           this.loading = true;
           
           try {
-            // Jika ada window.herbisidaData (data lokal), gunakan itu
             if (window.herbisidaData) {
               const materials = window.herbisidaData.filter(item => 
                 item.herbisidagroupid == this.selectedDetail.herbisidagroupid && 
@@ -634,9 +681,8 @@
       }
     }
 
-    // Global function untuk membuka modal material (dipanggil dari tabel)
+    // Global function untuk membuka modal material
     window.openMaterialModal = function(detail) {
-      // Trigger Alpine component
       const modalComponent = document.querySelector('[x-data*="materialShowModal"]');
       if (modalComponent && modalComponent._x_dataStack && modalComponent._x_dataStack[0]) {
         modalComponent._x_dataStack[0].showMaterialDetail(detail);
