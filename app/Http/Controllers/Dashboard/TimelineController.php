@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
 use App\Models\usematerialhdr;
+use App\Models\Batch;
+use Arr;
 
 class TimelineController extends Controller
 {
@@ -29,59 +31,67 @@ class TimelineController extends Controller
     }
 
    
+    // Controller
 public function plot(Request $request)
 {   
-    $title = "Dashboard Timeline";
-    $nav = "Timeline";
+    $companyCode = session('companycode');
     
-    $rkhno = $request->rkhno ?? 'RKH21050234';
-    
-    // Get data from usematerialhdr
-    $usematerialhdr = new usematerialhdr; dd('aaa', $details, $detailsPLots);
-    $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
-    $detailsPlots = Arr::pluck($details, 'plot');
-    
-    // Get GPS and plot data
-    $plotData = DB::table('testgpslst as a')
-        ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
-        ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
+    // 1. Get plot headers (unique plots)
+    $plotHeaders = DB::table('testgpslst as a')
         ->leftJoin('testgpshdr as d', 'a.plot', '=', 'd.plot')
-        ->where('a.companycode', session('companycode'))
-        ->whereIn('a.plot', $detailsPlots)
-        ->select(
-            'a.companycode', 'a.plot', 'a.latitude', 'a.longitude',
-            'd.centerlatitude', 'd.centerlongitude',
-            'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun',
-            'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive',
-            'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status'
-        )
+        ->where('a.companycode', $companyCode)
+        ->select('a.plot', 'd.centerlatitude', 'd.centerlongitude')
+        ->distinct()
+        ->orderBy('a.plot')
         ->get();
     
-    // Get unique plot headers (center coordinates)
-    $plotHeaders = $plotData->map(function($item) {
-        return (object)[
-            'companycode' => $item->companycode,
-            'plot' => $item->plot,
-            'centerlatitude' => $item->centerlatitude,
-            'centerlongitude' => $item->centerlongitude
-        ];
-    })->unique('plot')->values();
+    // 2. Get activities untuk header kolom
+    $activities = DB::table('activity')
+        ->whereIn('activityname2', [
+            'Saldo', 'Brushing', 'Plough I', 'Marrow', 
+            'Plough II', 'Harrow', 'Ridger', 'Basalt', 
+            'Selisih', 'Replanting', 'Pre Dressing', 
+            'Spring', 'Multi', 'Top'
+        ])
+        ->select('activitycode', 'activityname2')
+        ->get()
+        ->keyBy('activityname2');
     
-    // Group activities by PC/RC (dari details)
-    $activities = $details->groupBy(function($item) {
+    // 3. Get activity data per plot (SUM luashasil)
+    $activityData = DB::table('lkhdetailplot as ldp')
+        ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+        ->join('activity as act', 'lh.activitycode', '=', 'act.activitycode')
+        ->whereIn('ldp.plot', $plotHeaders->pluck('plot'))
+        ->select(
+            'ldp.plot',
+            'act.activityname2',
+            DB::raw('SUM(ldp.luashasil) as total_luas')
+        )
+        ->groupBy('ldp.plot', 'act.activityname2')
+        ->get()
+        ->groupBy('plot')
+        ->map(function($items) {
+            return $items->keyBy('activityname2');
+        });
+    
+    // 4. Get plot data untuk map
+    $plotData = DB::table('testgpslst as a')
+        ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
+        ->leftJoin('batch as c', 'b.plot', '=', 'c.plot')
+        ->where('a.companycode', $companyCode)
+        ->select('a.plot', 'a.latitude', 'a.longitude')
+        ->get();
+    
+    dd($activities,$activityData);
 
-        return $item->activity_type ?? 'PC'; // default PC jika tidak ada
-    });
-    
     return view('dashboard.timeline-plot.index', [
-        'title' => $title,
-        'nav' => $nav,
+        'title' => 'Dashboard Timeline',
+        'nav' => 'Timeline',
         'navbar' => 'Timeline',
-        'rkhno' => $rkhno,
         'plotHeaders' => $plotHeaders,
-        'plotData' => $plotData,
         'activities' => $activities,
-        'details' => $details
+        'activityData' => $activityData,
+        'plotData' => $plotData
     ]);
 }
 
