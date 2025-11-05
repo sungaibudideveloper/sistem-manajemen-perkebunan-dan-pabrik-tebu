@@ -2205,6 +2205,7 @@ class RencanaKerjaHarianController extends Controller
         return view('input.rencanakerjaharian.dth-report', ['date' => $date]);
     }
 
+
     /**
      * Generate DTH report
      */

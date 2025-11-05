@@ -516,19 +516,50 @@
                 return;
             }
 
-            let totalL = 0, totalP = 0, totalLuas = 0;
+            // ✅ GROUP by mandor + activity
+            const grouped = {};
+            
+            data.forEach(item => {
+                const key = `${item.mandor_nama}|${item.activityname}`;
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        mandor_nama: item.mandor_nama,
+                        activityname: item.activityname,
+                        plots: [],
+                        bloks: [],
+                        totalLuas: 0,
+                        jumlahlaki: item.jumlahlaki,
+                        jumlahperempuan: item.jumlahperempuan
+                    };
+                }
+                
+                // Collect unique plots and bloks
+                if (!grouped[key].plots.includes(item.plot)) {
+                    grouped[key].plots.push(item.plot);
+                }
+                if (!grouped[key].bloks.includes(item.blok)) {
+                    grouped[key].bloks.push(item.blok);
+                }
+                
+                grouped[key].totalLuas += parseFloat(item.luasarea);
+            });
 
-            data.forEach((item, index) => {
+            let totalL = 0, totalP = 0, totalLuas = 0;
+            let index = 1;
+
+            // ✅ Render grouped data
+            Object.values(grouped).forEach(item => {
                 const row = document.createElement('tr');
                 const total = item.jumlahlaki + item.jumlahperempuan;
 
                 row.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td>${index++}</td>
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
-                    <td>${item.blok}</td>
-                    <td>${item.plot}</td>
-                    <td>${parseFloat(item.luasarea).toFixed(1)}</td>
+                    <td>${item.bloks.join(', ')}</td>
+                    <td>${item.plots.join(', ')}</td>
+                    <td>${item.totalLuas.toFixed(1)}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
@@ -537,7 +568,7 @@
 
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += parseFloat(item.luasarea);
+                totalLuas += item.totalLuas;
             });
 
             // Update totals
@@ -562,19 +593,48 @@
                 return;
             }
 
-            let totalL = 0, totalP = 0, totalLuas = 0;
+            // ✅ GROUP by mandor + activity
+            const grouped = {};
+            
+            data.forEach(item => {
+                const key = `${item.mandor_nama}|${item.activityname}`;
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        mandor_nama: item.mandor_nama,
+                        activityname: item.activityname,
+                        plots: [],
+                        bloks: [],
+                        totalLuas: 0,
+                        jumlahlaki: item.jumlahlaki,
+                        jumlahperempuan: item.jumlahperempuan
+                    };
+                }
+                
+                if (!grouped[key].plots.includes(item.plot)) {
+                    grouped[key].plots.push(item.plot);
+                }
+                if (!grouped[key].bloks.includes(item.blok)) {
+                    grouped[key].bloks.push(item.blok);
+                }
+                
+                grouped[key].totalLuas += parseFloat(item.luasarea);
+            });
 
-            data.forEach((item, index) => {
+            let totalL = 0, totalP = 0, totalLuas = 0;
+            let index = 1;
+
+            Object.values(grouped).forEach(item => {
                 const row = document.createElement('tr');
                 const total = item.jumlahlaki + item.jumlahperempuan;
 
                 row.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td>${index++}</td>
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
-                    <td>${item.blok}</td>
-                    <td>${item.plot}</td>
-                    <td>${parseFloat(item.luasarea).toFixed(1)}</td>
+                    <td>${item.bloks.join(', ')}</td>
+                    <td>${item.plots.join(', ')}</td>
+                    <td>${item.totalLuas.toFixed(1)}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
@@ -583,10 +643,9 @@
 
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += parseFloat(item.luasarea);
+                totalLuas += item.totalLuas;
             });
 
-            // Update totals
             document.getElementById('sum-luas-borongan').textContent = totalLuas.toFixed(1);
             document.getElementById('sum-laki-borongan').textContent = totalL;
             document.getElementById('sum-perempuan-borongan').textContent = totalP;
