@@ -301,7 +301,7 @@
             </thead>
 
             <tbody class="divide-y divide-gray-100">
-              @for ($i = 0; $i < 20; $i++)
+              @for ($i = 0; $i < 30; $i++)
                 @php
                   $detail = $rkhDetails->get($i);
                 @endphp
