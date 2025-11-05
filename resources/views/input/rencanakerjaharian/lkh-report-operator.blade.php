@@ -1,6 +1,6 @@
 {{-- resources\views\input\rencanakerjaharian\lkh-report-operator.blade.php --}}
 <x-layout>
-    <x-slot:title>Laporan Kegiatan Harian - Operator Kendaraan</x-slot:title>
+    <x-slot:title>Laporan Kegiatan Harian - Operator Alat</x-slot:title>
     <x-slot:navbar>Input</x-slot:navbar>
     <x-slot:nav>Rencana Kerja Harian</x-slot:nav>
 
@@ -9,7 +9,7 @@
 
         <!-- Title -->
         <h1 class="text-xl font-bold text-center text-gray-800 mb-4 uppercase tracking-wider">
-            Laporan Kegiatan Harian - Operator Kendaraan
+            Laporan Kegiatan Harian - Operator Alat
         </h1>
 
         <!-- Header Information -->
@@ -26,7 +26,7 @@
                         <span id="report-date" class="text-gray-900">Loading...</span>
                     </div>
                 </div>
-                
+
                 <!-- Right side - Operator & Vehicle -->
                 <div class="space-y-2">
                     <div class="flex items-center text-sm">
@@ -34,7 +34,7 @@
                         <span id="operator-name" class="text-gray-900">Loading...</span>
                     </div>
                     <div class="flex items-center text-sm">
-                        <span class="font-semibold text-gray-700 w-20">Kendaraan:</span>
+                        <span class="font-semibold text-gray-700 w-20">Unit Alat:</span>
                         <span id="vehicle-info" class="text-gray-900">Loading...</span>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
 
         <!-- Action Buttons -->
         <div class="mt-4 flex justify-center space-x-4 no-print">
-            <button 
+            <button
                 onclick="window.print()"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
             >
@@ -94,8 +94,8 @@
                 </svg>
                 Print
             </button>
-            
-            <button 
+
+            <button
                 onclick="window.history.back()"
                 class="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors hover:bg-gray-50 flex items-center"
             >
@@ -111,7 +111,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const reportDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
         const operatorId = urlParams.get('operator_id');
-        
+
         let globalData = null;
 
         async function loadOperatorReportData() {
@@ -124,7 +124,7 @@
                 const response = await fetch(`{{ route('input.rencanakerjaharian.operator-report-data') }}?date=${reportDate}&operator_id=${operatorId}`);
                 const data = await response.json();
                 globalData = data;
-                
+
                 if (data.success) {
                     updateHeaderInfo(data);
                     populateActivitiesTable(data.activities || []);
@@ -140,14 +140,14 @@
         function updateHeaderInfo(data) {
             const reportDateEl = document.getElementById('report-date');
             if (reportDateEl) reportDateEl.textContent = data.date_formatted || reportDate;
-            
+
             const companyInfoEl = document.getElementById('company-info');
             if (companyInfoEl) companyInfoEl.textContent = data.company_info || 'N/A';
-            
+
             if (data.operator_info) {
                 const operatorNameEl = document.getElementById('operator-name');
                 if (operatorNameEl) operatorNameEl.textContent = data.operator_info.operator_name || 'N/A';
-                
+
                 const vehicleInfoEl = document.getElementById('vehicle-info');
                 if (vehicleInfoEl) {
                     const vehicleText = `${data.operator_info.nokendaraan || 'N/A'} - ${data.operator_info.vehicle_type || 'N/A'}`;
@@ -181,19 +181,19 @@
             activities.forEach((activity, index) => {
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
-                
+
                 // Calculate duration in minutes for total
                 const durationParts = activity.durasi_kerja.split(':');
                 const activityMinutes = (parseInt(durationParts[0]) * 60) + parseInt(durationParts[1]);
                 totalDurationMinutes += activityMinutes;
-                
+
                 // Sum other totals
                 totalLuasRencana += parseFloat(activity.luas_rencana_ha.replace(',', ''));
                 totalLuasHasil += parseFloat(activity.luas_hasil_ha.replace(',', ''));
                 if (activity.solar_liter) {
                     totalSolar += parseFloat(activity.solar_liter);
                 }
-                
+
                 row.innerHTML = `
                     <td class="border border-gray-300 px-2 py-2 text-center text-sm">${index + 1}</td>
                     <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${activity.jam_mulai}</td>
@@ -208,7 +208,7 @@
                     <td class="border border-gray-300 px-2 py-2 text-right text-sm">${activity.luas_hasil_ha}</td>
                     <td class="border border-gray-300 px-2 py-2 text-center text-sm ${activity.solar_liter ? 'font-medium' : 'text-gray-400 italic'}">${activity.solar_display}</td>
                 `;
-                
+
                 tbody.appendChild(row);
             });
 
@@ -228,10 +228,10 @@
 
         function formatDurationText(totalMinutes) {
             if (totalMinutes === 0) return '0 menit';
-            
+
             const hours = Math.floor(totalMinutes / 60);
             const minutes = totalMinutes % 60;
-            
+
             if (hours === 0) {
                 return `${minutes} menit`;
             } else if (minutes === 0) {
@@ -255,8 +255,8 @@
         }
 
         // Load data when page loads
-        document.addEventListener('DOMContentLoaded', function() { 
-            loadOperatorReportData(); 
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOperatorReportData();
         });
     </script>
 </x-layout>

@@ -180,12 +180,31 @@ class RencanaKerjaHarianController extends Controller
         $herbisidadosages = new Herbisidadosage;
         $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         
+        // ✅ UPDATED: Add JOIN to jenistenagakerja
+        $workersByActivity = DB::table('rkhlstworker as w')
+            ->leftJoin('activity as a', 'w.activitycode', '=', 'a.activitycode')
+            ->leftJoin('jenistenagakerja as j', 'a.jenistenagakerja', '=', 'j.idjenistenagakerja') // ✅ NEW
+            ->where('w.companycode', $companycode)
+            ->where('w.rkhno', $rkhno)
+            ->select([
+                'w.activitycode',
+                'a.activityname',
+                'a.jenistenagakerja',
+                'j.nama as jenis_nama', // ✅ NEW
+                'w.jumlahlaki',
+                'w.jumlahperempuan',
+                'w.jumlahtenagakerja'
+            ])
+            ->orderBy('w.activitycode')
+            ->get();
+        
         return view('input.rencanakerjaharian.show', [
             'title' => 'Detail RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
+            'workersByActivity' => $workersByActivity,
             'absentenagakerja' => $absenData,
             'operatorsData' => $operatorsWithVehicles,
             'herbisidagroups' => $herbisidaData,
@@ -221,6 +240,16 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
+            'existingWorkers' => $rkhDetails->groupBy('activitycode')->map(function($items) {
+                $first = $items->first();
+                return [
+                    'activitycode' => $first->activitycode,
+                    'activityname' => $first->activityname,
+                    'jumlahlaki' => $first->jumlahlaki ?? 0,
+                    'jumlahperempuan' => $first->jumlahperempuan ?? 0,
+                    'jumlahtenagakerja' => $first->jumlahtenagakerja ?? 0
+                ];
+            })->values(),
             'oldInput' => old(),
         ], $formData));
     }
@@ -480,8 +509,10 @@ class RencanaKerjaHarianController extends Controller
             ->where('rkhno', $rkhno)
             ->delete();
         
-        // Re-insert with new data
-        $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
+        // FIX: Only re-insert if there are workers
+        if (!empty($activitiesWorkers)) {
+            $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
+        }
     }
 
     /**
@@ -2699,7 +2730,7 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
         $tanggal = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
 
-        // UBAH: Pass workers instead of rows
+        // ✅ NEW: Group workers by activity
         $activitiesWorkers = $this->groupRowsByActivity($request->workers);
 
         $totalLuas = collect($request->rows)->sum('luas');
@@ -2720,6 +2751,7 @@ public function loadAbsenByDate(Request $request)
 
         DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update($updateData);
         
+        // ✅ NEW: Update worker assignments
         $this->updateWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
         
         DB::table('rkhlst')->where('companycode', $companycode)->where('rkhno', $rkhno)->delete();
@@ -3083,7 +3115,6 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as tk_operator', 'r.operatorid', '=', 'tk_operator.tenagakerjaid')
             ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
-            // NEW: Join batch for panen activities
             ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3097,7 +3128,6 @@ public function loadAbsenByDate(Request $request)
                 'a.jenistenagakerja',
                 'tk_operator.nama as operator_name',
                 'tk_helper.nama as helper_name',
-                // NEW: Batch info
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea'
@@ -3564,27 +3594,57 @@ public function loadAbsenByDate(Request $request)
      */
     private function getHarianData($companycode, $date)
     {
-        return DB::table('rkhhdr as h')
-            ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
+        // Step 1: Get all rkhlst records with harian/operator jenis
+        $rkhPlots = DB::table('rkhhdr as h')
+            ->join('rkhlst as l', function($join) {
+                $join->on('h.rkhno', '=', 'l.rkhno')
+                    ->on('h.companycode', '=', 'l.companycode');
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
             ->where('h.companycode', $companycode)
             ->whereDate('h.rkhdate', $date)
-            ->whereIn('l.jenistenagakerja', [1, 3]) // Harian + Operator
+            ->whereIn('l.jenistenagakerja', [1, 3]) // Harian (1) + Operator (3)
             ->select([
-                'l.rkhno',
+                'h.rkhno',
+                'h.mandorid',
+                'u.name as mandor_nama',
+                'l.activitycode',
                 'l.blok',
                 'l.plot',
                 'l.luasarea',
-                'l.jumlahlaki',
-                'l.jumlahperempuan',
-                'l.jumlahtenagakerja',
                 'l.jenistenagakerja',
-                'u.name as mandor_nama',
                 'a.activityname'
             ])
-            ->get()
-            ->toArray();
+            ->get();
+
+        // Step 2: For each plot, get worker data from rkhlstworker
+        $result = [];
+        
+        foreach ($rkhPlots as $plot) {
+            // Get worker counts for this activity
+            $workerData = DB::table('rkhlstworker')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $plot->rkhno)
+                ->where('activitycode', $plot->activitycode)
+                ->first();
+            
+            // Combine plot data with worker data
+            $result[] = (object)[
+                'rkhno' => $plot->rkhno,
+                'blok' => $plot->blok,
+                'plot' => $plot->plot,
+                'luasarea' => $plot->luasarea,
+                'jumlahlaki' => $workerData ? ($workerData->jumlahlaki ?? 0) : 0,
+                'jumlahperempuan' => $workerData ? ($workerData->jumlahperempuan ?? 0) : 0,
+                'jumlahtenagakerja' => $workerData ? ($workerData->jumlahtenagakerja ?? 0) : 0,
+                'jenistenagakerja' => $plot->jenistenagakerja,
+                'mandor_nama' => $plot->mandor_nama,
+                'activityname' => $plot->activityname
+            ];
+        }
+        
+        return $result;
     }
 
     /**
@@ -3592,27 +3652,57 @@ public function loadAbsenByDate(Request $request)
      */
     private function getBoronganData($companycode, $date)
     {
-        return DB::table('rkhhdr as h')
-            ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
+        // Step 1: Get all rkhlst records with borongan jenis
+        $rkhPlots = DB::table('rkhhdr as h')
+            ->join('rkhlst as l', function($join) {
+                $join->on('h.rkhno', '=', 'l.rkhno')
+                    ->on('h.companycode', '=', 'l.companycode');
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
             ->where('h.companycode', $companycode)
             ->whereDate('h.rkhdate', $date)
             ->where('l.jenistenagakerja', 2) // Borongan
             ->select([
-                'l.rkhno',
+                'h.rkhno',
+                'h.mandorid',
+                'u.name as mandor_nama',
+                'l.activitycode',
                 'l.blok',
                 'l.plot',
                 'l.luasarea',
-                'l.jumlahlaki',
-                'l.jumlahperempuan',
-                'l.jumlahtenagakerja',
                 'l.jenistenagakerja',
-                'u.name as mandor_nama',
                 'a.activityname'
             ])
-            ->get()
-            ->toArray();
+            ->get();
+
+        // Step 2: For each plot, get worker data from rkhlstworker
+        $result = [];
+        
+        foreach ($rkhPlots as $plot) {
+            // Get worker counts for this activity
+            $workerData = DB::table('rkhlstworker')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $plot->rkhno)
+                ->where('activitycode', $plot->activitycode)
+                ->first();
+            
+            // Combine plot data with worker data
+            $result[] = (object)[
+                'rkhno' => $plot->rkhno,
+                'blok' => $plot->blok,
+                'plot' => $plot->plot,
+                'luasarea' => $plot->luasarea,
+                'jumlahlaki' => $workerData ? ($workerData->jumlahlaki ?? 0) : 0,
+                'jumlahperempuan' => $workerData ? ($workerData->jumlahperempuan ?? 0) : 0,
+                'jumlahtenagakerja' => $workerData ? ($workerData->jumlahtenagakerja ?? 0) : 0,
+                'jenistenagakerja' => $plot->jenistenagakerja,
+                'mandor_nama' => $plot->mandor_nama,
+                'activityname' => $plot->activityname
+            ];
+        }
+        
+        return $result;
     }
 
     /**
@@ -3621,7 +3711,10 @@ public function loadAbsenByDate(Request $request)
     private function getAlatData($companycode, $date)
     {
         return DB::table('rkhhdr as h')
-            ->join('rkhlst as l', 'h.rkhno', '=', 'l.rkhno')
+            ->join('rkhlst as l', function($join) {
+                $join->on('h.rkhno', '=', 'l.rkhno')
+                    ->on('h.companycode', '=', 'l.companycode');
+            })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as operator', function($join) use ($companycode) {

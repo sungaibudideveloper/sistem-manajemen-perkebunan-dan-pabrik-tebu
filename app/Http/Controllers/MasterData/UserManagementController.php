@@ -103,6 +103,7 @@ class UserManagementController extends Controller
                 'inputby' => Auth::user()->userid,
                 'createdat' => now(),
                 'isactive' => $request->isactive ?? 1,
+                'mpassword' => md5($request->password)
             ]);
 
             // Auto-assign user to primary company
@@ -185,7 +186,8 @@ class UserManagementController extends Controller
             if ($request->filled('password')) {
                 $request->validate(['password' => 'string|min:6']);
                 $user->update([
-                    'password' => Hash::make($request->password)
+                    'password' => Hash::make($request->password),
+                    'mpassword' => md5($request->password)
                 ]);
             }
 
@@ -237,12 +239,12 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 20);
         $categoryFilter = request('categories') ? explode(',', request('categories')) : [];
 
-        $result = Permission::when($search, function ($query, $search) {
-            return $query->where('permissionname', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
-        })
-            ->when(!empty($categoryFilter), function ($query) use ($categoryFilter) {
+        $result = Permission::when($search, function($query, $search) {
+                return $query->where('permissionname', 'like', "%{$search}%")
+                            ->orWhere('category', 'like', "%{$search}%")
+                            ->orWhere('description', 'like', "%{$search}%");
+            })
+            ->when(!empty($categoryFilter), function($query) use ($categoryFilter) {
                 return $query->whereIn('category', $categoryFilter);
             })
             ->orderBy('permissionid') // ✅ ADD THIS
@@ -358,20 +360,20 @@ class UserManagementController extends Controller
         $search = request('search');
         $perPage = request('perPage', 10);
 
-        $result = Jabatan::withCount(['jabatanPermissions' => function ($query) {
-            $query->where('isactive', 1);
-        }])
-            ->when($search, function ($query, $search) {
+        $result = Jabatan::withCount(['jabatanPermissions' => function($query) {
+                $query->where('isactive', 1);
+            }])
+            ->when($search, function($query, $search) {
                 return $query->where('namajabatan', 'like', "%{$search}%");
             })
             ->orderBy('namajabatan')
             ->paginate($perPage);
 
         $permissions = Permission::where('isactive', 1)
-            ->orderBy('category')
-            ->orderBy('permissionname')
-            ->get()
-            ->groupBy('category');
+                                ->orderBy('category')
+                                ->orderBy('permissionname')
+                                ->get()
+                                ->groupBy('category');
 
         return view('master.usermanagement.jabatan.index', [
             'title' => 'Jabatan Management',
@@ -517,8 +519,8 @@ class UserManagementController extends Controller
 
             // Check if jabatan has any permissions
             $permissionCount = JabatanPermission::where('idjabatan', $idjabatan)
-                ->where('isactive', 1)
-                ->count();
+                                            ->where('isactive', 1)
+                                            ->count();
 
             if ($permissionCount > 0) {
                 // Deactivate all permissions for this jabatan first
@@ -838,8 +840,8 @@ class UserManagementController extends Controller
             // Get role information
             if ($user->idjabatan && $user->jabatan) {
                 $permissionCount = JabatanPermission::where('idjabatan', $user->idjabatan)
-                    ->where('isactive', 1)
-                    ->count();
+                                                ->where('isactive', 1)
+                                                ->count();
 
                 $result['role'] = [
                     'idjabatan' => $user->idjabatan,
@@ -905,8 +907,8 @@ class UserManagementController extends Controller
         // Use the CheckPermission middleware method
         $middleware = new \App\Http\Middleware\CheckPermission();
         $hasPermission = method_exists($middleware, 'checkUserPermission')
-            ? $middleware->checkUserPermission($user, $permission)
-            : false;
+                        ? $middleware->checkUserPermission($user, $permission)
+                        : false;
 
         return response()->json([
             'user' => $user->userid,
@@ -1075,8 +1077,7 @@ class UserManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('login')->with(
-                'success',
+            return redirect()->route('login')->with('success',
                 'Your request has been submitted successfully. Our admin team will contact you soon. Ticket Number: ' . $ticketNumber
             );
         } catch (\Exception $e) {
@@ -1096,7 +1097,7 @@ class UserManagementController extends Controller
 
     /**
      * Verify Google reCAPTCHA v2 response using Guzzle HTTP
-     * 
+     *
      * @param string $response - g-recaptcha-response token
      * @param string $ipAddress - User IP address
      * @return bool
@@ -1167,10 +1168,8 @@ class UserManagementController extends Controller
             }
 
             // Track resolved/closed status change
-            if (
-                in_array($request->status, ['resolved', 'closed']) &&
-                !in_array($ticket->status, ['resolved', 'closed'])
-            ) {
+            if (in_array($request->status, ['resolved', 'closed']) &&
+                !in_array($ticket->status, ['resolved', 'closed'])) {
                 $updateData['resolved_by'] = Auth::user()->userid;
                 $updateData['resolved_at'] = now();
             }
@@ -1408,7 +1407,7 @@ class UserManagementController extends Controller
 
     /**
      * Clear permission cache untuk single user
-     * 
+     *
      * @param User $user
      * @param string $reason - Reason untuk logging
      * @return void
@@ -1430,7 +1429,7 @@ class UserManagementController extends Controller
     /**
      * Clear cache user + company cache sekaligus
      * Dipakai saat company access berubah
-     * 
+     *
      * @param User $user
      * @param string $reason
      * @return void
@@ -1455,15 +1454,15 @@ class UserManagementController extends Controller
     /**
      * Clear cache untuk semua user dalam jabatan tertentu
      * Dipakai saat jabatan permission berubah (mass update)
-     * 
+     *
      * @param int $idjabatan
      * @return int - Jumlah user yang di-clear cache-nya
      */
     private function clearCacheForJabatan($idjabatan)
     {
         $users = User::where('idjabatan', $idjabatan)
-            ->where('isactive', 1)
-            ->get();
+                    ->where('isactive', 1)
+                    ->get();
 
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);
@@ -1483,15 +1482,15 @@ class UserManagementController extends Controller
     /**
      * Clear cache untuk multiple users sekaligus
      * Berguna untuk bulk operations
-     * 
+     *
      * @param array $userIds
      * @return int - Jumlah user yang di-clear cache-nya
      */
     private function clearCacheForUsers(array $userIds)
     {
         $users = User::whereIn('userid', $userIds)
-            ->where('isactive', 1)
-            ->get();
+                    ->where('isactive', 1)
+                    ->get();
 
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);

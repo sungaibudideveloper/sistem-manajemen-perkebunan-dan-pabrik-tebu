@@ -25,11 +25,11 @@
             <!-- Report Type Selection -->
             <div class="space-y-4">
                 <h3 class="text-sm font-medium text-gray-700">Pilih Jenis Laporan:</h3>
-                
+
                 <!-- Rekap LKH Option -->
                 <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-400 transition-colors">
                     <label class="flex items-start space-x-3 cursor-pointer">
-                        <input type="radio" name="reportType" value="rekap" x-model="selectedReportType" 
+                        <input type="radio" name="reportType" value="rekap" x-model="selectedReportType"
                                class="mt-1 text-gray-600 focus:ring-gray-500">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
@@ -47,12 +47,12 @@
                                class="mt-1 text-gray-600 focus:ring-gray-500">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="font-medium text-gray-900">LKH Operator Kendaraan</span>
+                                <span class="font-medium text-gray-900">LKH Operator Unit Alat</span>
                             </div>
-                            <p class="text-sm text-gray-600 mt-1">Detail aktivitas operator kendaraan termasuk jam kerja, plot, dan pemakaian BBM</p>
+                            <p class="text-sm text-gray-600 mt-1">Detail aktivitas operator alat termasuk jam kerja, plot, dan pemakaian BBM</p>
                         </div>
                     </label>
-                    
+
                     <!-- Operator Selection (shown when operator type is selected) -->
                     <div x-show="selectedReportType === 'operator'" x-transition class="mt-4 ml-8">
                         <label for="operator_select" class="block text-sm font-medium text-gray-700 mb-2">Pilih Operator:</label>
@@ -67,7 +67,7 @@
                                     <option :value="operator.tenagakerjaid" x-text="`${operator.nama} - ${operator.nokendaraan} (${operator.jenis})`"></option>
                                 </template>
                             </select>
-                            
+
                             <!-- Loading spinner -->
                             <div x-show="isLoadingOperators" class="absolute right-3 top-3">
                                 <svg class="animate-spin h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24">
@@ -94,7 +94,7 @@
                         <template x-if="selectedReportType === 'operator'">
                             <div>
                                 <p class="font-medium">Informasi LKH Operator:</p>
-                                <p>Laporan detail aktivitas operator kendaraan termasuk jam kerja, kegiatan per plot, luas area, dan konsumsi BBM.</p>
+                                <p>Laporan detail aktivitas operator unit alat termasuk jam kerja, kegiatan per plot, luas area, dan konsumsi BBM.</p>
                             </div>
                         </template>
                     </div>
@@ -106,7 +106,7 @@
         <div class="flex justify-end space-x-2 p-4 border-t bg-gray-50">
             <button @click="showGenerateRekapLKHModal = false; resetReportModal()"
                     class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded-lg transition-colors">Cancel</button>
-            <button @click="generateSelectedReport()" 
+            <button @click="generateSelectedReport()"
                     :disabled="!canGenerateReport"
                     class="px-6 py-2 text-sm rounded-lg transition-colors"
                     :class="canGenerateReport ? 'bg-gray-800 hover:bg-gray-900 text-white' : 'bg-gray-400 text-gray-200 cursor-not-allowed'">
