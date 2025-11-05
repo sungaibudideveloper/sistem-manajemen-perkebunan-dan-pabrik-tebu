@@ -1,14 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\HPTController;
-use App\Http\Controllers\Input\GudangController;
-use App\Http\Controllers\Input\RencanaKerjaHarianController;
-use App\Http\Controllers\Input\KendaraanController;
-use App\Http\Controllers\Input\GudangBbmController;
 use App\Http\Controllers\Input\PiasController;
+use App\Http\Controllers\Input\GudangController;
+use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Input\RkhPanenController;
+use App\Http\Controllers\Input\GudangBbmController;
+use App\Http\Controllers\Input\KendaraanController;
+use App\Http\Controllers\Input\RencanaKerjaHarianController;
+use App\Http\Controllers\Input\RencanaKerjaMingguanController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -61,6 +62,23 @@ Route::group(['middleware' => ['auth', 'permission:Edit HPT']], function () {
     Route::get('input/hpt/{nosample}/{companycode}/{tanggalpengamatan}/edit', [HPTController::class, 'edit'])
         ->name('input.hpt.edit');
 });
+
+// =====================================
+// RENCANA KERJA MINGGUAN ROUTES
+// =====================================
+Route::group(['middleware' => ['auth', 'permission:Rencana Kerja Mingguan']], function () {
+    Route::match(['GET', 'POST'], 'input/rencana-kerja-mingguan', [RencanaKerjaMingguanController::class, 'index'])->name('input.rencana-kerja-mingguan.index');
+    Route::get('input/rencana-kerja-mingguan/show/{rkmno}', [RencanaKerjaMingguanController::class, 'show'])->name('input.rencana-kerja-mingguan.show');
+    Route::get('input/rencana-kerja-mingguan/excel', [RencanaKerjaMingguanController::class, 'excel'])->name('input.rencana-kerja-mingguan.exportExcel');
+    Route::get('input/rencana-kerja-mingguan/create', [RencanaKerjaMingguanController::class, 'create'])->name('input.rencana-kerja-mingguan.create');
+    Route::post('input/rencana-kerja-mingguan/store', [RencanaKerjaMingguanController::class, 'store'])->name('input.rencana-kerja-mingguan.store');
+    Route::get('/getplot/{blok}', [RencanaKerjaMingguanController::class, 'getPlot'])->name('rkm.getPlot');
+    Route::post('/getdata', [RencanaKerjaMingguanController::class, 'getData'])->name('rkm.getData');
+    Route::put('input/rencana-kerja-mingguan/{rkmno}', [RencanaKerjaMingguanController::class, 'update'])->name('input.rencana-kerja-mingguan.update');
+    Route::get('input/rencana-kerja-mingguan/{rkmno}/edit', [RencanaKerjaMingguanController::class, 'edit'])->name('input.rencana-kerja-mingguan.edit');
+    Route::delete('input/rencana-kerja-mingguan/{rkmno}', [RencanaKerjaMingguanController::class, 'destroy'])->name('input.rencana-kerja-mingguan.destroy');
+});
+
 
 // =====================================
 // RENCANA KERJA HARIAN ROUTES
@@ -132,17 +150,17 @@ Route::middleware('auth')->group(function () {
     Route::prefix('input/rkh-panen')
         ->name('input.rkh-panen.')
         ->group(function () {
-            
+
             Route::get('/', [RkhPanenController::class, 'index'])->name('index');
             Route::get('/create', [RkhPanenController::class, 'create'])->name('create');
             Route::post('/store', [RkhPanenController::class, 'store'])->name('store');
             Route::get('/{rkhpanenno}/show', [RkhPanenController::class, 'show'])->name('show');
             Route::delete('/{rkhpanenno}', [RkhPanenController::class, 'destroy'])->name('destroy');
-            
+
             // Hasil Panen routes
             Route::get('/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])->name('editHasil');
             Route::put('/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])->name('updateHasil');
-            
+
             // Complete RKH Panen
             Route::post('/{rkhpanenno}/complete', [RkhPanenController::class, 'complete'])->name('complete');
         });
