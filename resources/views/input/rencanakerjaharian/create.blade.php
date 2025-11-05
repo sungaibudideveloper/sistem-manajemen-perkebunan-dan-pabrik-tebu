@@ -210,10 +210,24 @@
                 <template x-for="(worker, activityCode) in workers" :key="activityCode">
                   <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
                     
-                    <div class="mb-3">
-                      <p class="text-sm font-semibold text-purple-900 truncate" 
+                    <!-- ✅ Activity Code + Badge (flex row with space-between) -->
+                    <div class="mb-3 flex items-start justify-between">
+                      <p class="text-sm font-semibold text-purple-900 truncate flex-1" 
                         x-text="`${activityCode} - ${worker.activityname}`"
                         :title="`${activityCode} - ${worker.activityname}`"></p>
+                      
+                      <!-- ✅ Badge di kanan atas -->
+                      <span 
+                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ml-2 flex-shrink-0"
+                        :class="{
+                          'bg-blue-100 text-blue-800': worker.jenisId == 1,
+                          'bg-green-100 text-green-800': worker.jenisId == 2,
+                          'bg-yellow-100 text-yellow-800': worker.jenisId == 3,
+                          'bg-purple-100 text-purple-800': worker.jenisId == 4,
+                          'bg-gray-100 text-gray-800': !worker.jenisId
+                        }"
+                        x-text="worker.jenisLabel"
+                      ></span>
                     </div>
 
                     <div class="flex items-end gap-2">
@@ -685,6 +699,7 @@ function panenInfoPicker(rowIndex) {
 /**
  * Worker Info Card Component
  * Manages worker count inputs per activity
+ * UPDATED: Include jenistenagakerja info from database
  */
 function workerInfoCard() {
   return {
@@ -703,18 +718,21 @@ function workerInfoCard() {
         .filter(act => act && act.activitycode)
         .map(act => act.activitycode);
       
-      // Remove workers for activities that are no longer selected
       Object.keys(this.workers).forEach(activityCode => {
         if (!currentActivityCodes.includes(activityCode)) {
           delete this.workers[activityCode];
         }
       });
       
-      // Add new workers for newly selected activities
       Object.values(activities).forEach(activity => {
         if (activity && activity.activitycode && !this.workers[activity.activitycode]) {
+          const fullActivity = window.activitiesData?.find(a => a.activitycode === activity.activitycode);
+          const jenisData = fullActivity?.jenistenagakerja;
+          
           this.workers[activity.activitycode] = {
             activityname: activity.activityname || '',
+            jenisId: typeof jenisData === 'object' ? jenisData?.idjenistenagakerja : jenisData,
+            jenisLabel: typeof jenisData === 'object' ? jenisData?.nama : '-',
             laki: '',
             perempuan: '',
             total: ''

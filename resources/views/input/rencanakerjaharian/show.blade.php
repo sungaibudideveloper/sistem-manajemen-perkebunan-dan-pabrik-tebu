@@ -141,7 +141,7 @@
           </div>
         </div>
 
-        <!-- Card 2: Info Pekerja (NEW SECTION) -->
+        <!-- Card 2: Info Pekerja -->
         <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center">
@@ -164,11 +164,24 @@
                 @foreach($workersByActivity as $worker)
                   <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
                     
-                    <div class="mb-3">
-                      <p class="text-sm font-semibold text-purple-900 truncate" 
+                    <!-- ✅ Activity Code + Badge sebaris -->
+                    <div class="mb-3 flex items-start justify-between">
+                      <p class="text-sm font-semibold text-purple-900 truncate flex-1" 
                         title="{{ $worker->activitycode }} - {{ $worker->activityname }}">
                         {{ $worker->activitycode }} - {{ $worker->activityname }}
                       </p>
+                      
+                      <!-- ✅ Jenis Badge -->
+                      <span 
+                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ml-2 flex-shrink-0
+                        {{ $worker->jenistenagakerja == 1 ? 'bg-blue-100 text-blue-800' : '' }}
+                        {{ $worker->jenistenagakerja == 2 ? 'bg-green-100 text-green-800' : '' }}
+                        {{ $worker->jenistenagakerja == 3 ? 'bg-yellow-100 text-yellow-800' : '' }}
+                        {{ $worker->jenistenagakerja == 4 ? 'bg-purple-100 text-purple-800' : '' }}
+                        {{ !$worker->jenistenagakerja ? 'bg-gray-100 text-gray-800' : '' }}"
+                      >
+                        {{ $worker->jenis_nama ?? '-' }}
+                      </span>
                     </div>
 
                     <div class="flex items-end gap-2">

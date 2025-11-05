@@ -180,14 +180,17 @@ class RencanaKerjaHarianController extends Controller
         $herbisidadosages = new Herbisidadosage;
         $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         
-        // ✅ NEW: Get worker data from rkhlstworker table
+        // ✅ UPDATED: Add JOIN to jenistenagakerja
         $workersByActivity = DB::table('rkhlstworker as w')
             ->leftJoin('activity as a', 'w.activitycode', '=', 'a.activitycode')
+            ->leftJoin('jenistenagakerja as j', 'a.jenistenagakerja', '=', 'j.idjenistenagakerja') // ✅ NEW
             ->where('w.companycode', $companycode)
             ->where('w.rkhno', $rkhno)
             ->select([
                 'w.activitycode',
                 'a.activityname',
+                'a.jenistenagakerja',
+                'j.nama as jenis_nama', // ✅ NEW
                 'w.jumlahlaki',
                 'w.jumlahperempuan',
                 'w.jumlahtenagakerja'
@@ -201,7 +204,7 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
-            'workersByActivity' => $workersByActivity, // ✅ NEW
+            'workersByActivity' => $workersByActivity,
             'absentenagakerja' => $absenData,
             'operatorsData' => $operatorsWithVehicles,
             'herbisidagroups' => $herbisidaData,
