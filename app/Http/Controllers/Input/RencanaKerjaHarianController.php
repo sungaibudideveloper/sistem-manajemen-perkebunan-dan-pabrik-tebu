@@ -2838,6 +2838,7 @@ public function loadAbsenByDate(Request $request)
             $activity = Activity::where('activitycode', $row['nama'])->first();
             $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
 
+            // ✅ FINAL: Initialize ALL columns (including batchno & kodestatus) for EVERY row
             $detailData = [
                 'companycode'         => $companycode,
                 'rkhno'               => $rkhno,
@@ -2853,9 +2854,11 @@ public function loadAbsenByDate(Request $request)
                 'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
                 'usinghelper'         => $row['usinghelper'] ?? 0,
                 'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
+                'batchno'             => null, // ✅ ALWAYS present (consistent structure)
+                'kodestatus'          => null, // ✅ ALWAYS present (consistent structure)
             ];
 
-            // Batch data for panen activities
+            // ✅ Override batch data ONLY for panen activities
             if (in_array($row['nama'], $panenActivities)) {
                 $batchInfo = $this->getBatchInfoForPlot($companycode, $row['plot']);
                 
@@ -2871,8 +2874,7 @@ public function loadAbsenByDate(Request $request)
                     ]);
                 } else {
                     \Log::warning("Plot {$row['plot']} tidak memiliki batch info untuk panen activity {$row['nama']}");
-                    $detailData['batchno'] = null;
-                    $detailData['kodestatus'] = null;
+                    // batchno & kodestatus remain NULL (already set above)
                 }
             }
             
