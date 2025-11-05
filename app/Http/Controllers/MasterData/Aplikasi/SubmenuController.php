@@ -56,7 +56,7 @@ class SubmenuController extends Controller
             return redirect()->back()->with('error', 'Nama submenu sudah ada.');
         }
 
-        if ($request->parentid == null) {
+        if ($request->parentid == null) { 
             $parentid = null; // Set parentid to null if not provided
         } else {
             $parentid = $request->parentid;
