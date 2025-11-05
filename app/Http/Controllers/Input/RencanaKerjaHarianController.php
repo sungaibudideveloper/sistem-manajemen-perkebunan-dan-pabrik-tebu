@@ -2855,13 +2855,13 @@ public function loadAbsenByDate(Request $request)
                 'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
             ];
 
-            // FIXED: Batch data for panen activities using new structure
+            // Batch data for panen activities
             if (in_array($row['nama'], $panenActivities)) {
                 $batchInfo = $this->getBatchInfoForPlot($companycode, $row['plot']);
                 
                 if ($batchInfo) {
                     $detailData['batchno'] = $batchInfo->batchno;
-                    $detailData['kodestatus'] = $batchInfo->lifecyclestatus; // ✅ Ambil dari lifecyclestatus
+                    $detailData['kodestatus'] = $batchInfo->lifecyclestatus;
                     
                     \Log::info("Batch info attached to RKH detail", [
                         'plot' => $row['plot'],
