@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ReportController extends Controller
 {
@@ -186,5 +189,139 @@ class ReportController extends Controller
             return view('report.hpt.index', compact('company', 'nav', 'hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
         }
         return view('report.hpt.index', compact('company', 'nav', 'hpt', 'perPage', 'startDate', 'endDate', 'title', 'search'));
+    }
+
+    public function zpk(Request $request)
+    {
+        $title = "Report ZPK";
+        $nav = "ZPK";
+        $search = $request->input('search', '');
+
+        // $startDate = $request->input('start_date', now()->toDateString());
+        // $endDate = $request->input('end_date', now()->toDateString());
+
+        if ($request->isMethod('post')) {
+            $request->validate([
+                'perPage' => 'required|integer|min:1',
+            ]);
+            $request->session()->put('perPage', $request->input('perPage'));
+        }
+
+        $perPage = $request->session()->get('perPage', 10);
+
+        $querys = DB::table('batch')
+            ->join('lkhdetailplot', 'batch.plot', '=', 'lkhdetailplot.plot')
+            ->join('lkhhdr', 'lkhhdr.lkhno', '=', 'lkhdetailplot.lkhno')
+            ->where('batch.companycode', '=', session('companycode'))
+            ->where('lkhhdr.activitycode', '=', '4.2.1')
+            ->where('batch.isactive', '=', 1);
+        if (!empty($search)) {
+            $querys->where(function ($query) use ($search) {
+                $query->where('kodevarietas', 'like', '%' . $search . '%')
+                    ->orWhere('plot', 'like', '%' . $search . '%')
+                    ->orWhere('kodestatus', 'like', '%' . $search . '%');
+            });
+        }
+
+        $zpk = $querys->select('batch.*', 'lkhhdr.lkhdate')
+            ->paginate($perPage);
+
+        foreach ($zpk as $item) {
+            $item->umur = Carbon::parse($item->batchdate)->diffInMonths(Carbon::now());
+            $tanggaltanam = Carbon::parse($item->batchdate);
+            $item->bulantanam = $tanggaltanam->locale('id')->translatedFormat('F');
+        }
+
+        foreach ($zpk as $index => $item) {
+            $item->no = ($zpk->currentPage() - 1) * $zpk->perPage() + $index + 1;
+        }
+
+        if ($request->ajax()) {
+            return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'zpk'));
+        }
+
+        return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'zpk'));
+    }
+
+    public function excelZPK(Request $request)
+    {
+        // $startDate = $request->input('start_date');
+        // $endDate = $request->input('end_date');
+
+        $querys = DB::table('masterlist')
+            ->join('lkhdetailplot', 'masterlist.plot', '=', 'lkhdetailplot.plot')
+            ->join('lkhhdr', 'lkhhdr.lkhno', '=', 'lkhdetailplot.lkhno')
+            ->where('masterlist.companycode', '=', session('companycode'))
+            ->where('lkhhdr.activitycode', '=', '4.2.2')
+            ->where('masterlist.isactive', '=', 1)
+            ->orderBy('plot', 'desc');
+
+        // if ($startDate) {
+        //     $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
+        // }
+        // if ($endDate) {
+        //     $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
+        // }
+        $zpk = $querys->select('masterlist.*', 'lkhhdr.lkhdate')->get();
+
+        $now = Carbon::now();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->setCellValue('A1', 'Kebun');
+        $sheet->setCellValue('B1', 'Blok');
+        $sheet->setCellValue('C1', 'Plot');
+        $sheet->setCellValue('D1', 'Luas (Ha)');
+        $sheet->setCellValue('E1', 'Bulan Tanam');
+        $sheet->setCellValue('F1', 'Umur');
+        $sheet->setCellValue('G1', 'Kategori');
+        $sheet->setCellValue('H1', 'Varietas');
+        $sheet->setCellValue('I1', 'PKP');
+        $sheet->setCellValue('J1', 'Tanggal ZPK');
+        $sheet->setCellValue('K1', 'Tanggal Panen');
+
+        $sheet->getStyle('A1:K1')->getFont()->setBold(true);
+        $sheet->freezePane('A2');
+
+        $row = 2;
+        foreach ($zpk as $list) {
+
+            $tanggaltanam = Carbon::parse($list->batchdate);
+            $umur = $tanggaltanam->diffInMonths($now);
+            $bulantanam = $tanggaltanam->locale('id')->translatedFormat('F');
+
+            $sheet->setCellValue('A' . $row, $list->companycode);
+            $sheet->setCellValue('B' . $row, $list->blok);
+            $sheet->setCellValue('C' . $row, $list->plot);
+            $sheet->setCellValue('D' . $row, $list->batcharea);
+            $sheet->setCellValue('E' . $row, $bulantanam);
+            $sheet->setCellValue('F' . $row, round($umur) . ' Bulan');
+            $sheet->setCellValue('G' . $row, $list->kodestatus);
+            $sheet->setCellValue('H' . $row, $list->kodevarietas);
+            $sheet->setCellValue('I' . $row, $list->jaraktanam);
+            $sheet->setCellValue('J' . $row, $list->lkhdate ?? '');
+            $sheet->setCellValue('K' . $row, $list->tanggalpanen ?? '');
+
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        // if ($startDate && $endDate) {
+        //     $filename = "AgronomiReport_{$startDate}_sd_{$endDate}.xlsx";
+        // } else {
+        $filename = "ZPKReport.xlsx";
+        // }
+        return response()->stream(
+            function () use ($writer) {
+                $writer->save('php://output');
+            },
+            200,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment;filename="' . $filename . '"',
+                'Cache-Control' => 'max-age=0',
+            ]
+        );
     }
 }

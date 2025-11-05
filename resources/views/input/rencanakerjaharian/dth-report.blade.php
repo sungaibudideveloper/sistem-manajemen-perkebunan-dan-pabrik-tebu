@@ -213,7 +213,7 @@
             .header-left {
                 display: none;
             }
-            
+
             body {
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
@@ -270,7 +270,7 @@
                 <div id="statistics" style="display: flex; gap: 25px; font-size: 10px;">
                     <span>Total Luas: <strong id="stat-total-luas">0</strong> ha</span>
                     <span>Total Tenaga Kerja: <strong id="stat-total-tenaga">0</strong> orang</span>
-                    <span>Total Kendaraan: <strong id="stat-total-kendaraan">0</strong> unit</span>
+                    <span>Total Alat: <strong id="stat-total-kendaraan">0</strong> unit</span>
                 </div>
             </div>
             <div style="text-align: right; font-size: 12px; color: #6b7280;">
@@ -367,7 +367,7 @@
                         <th class="col-blok">Blok</th>
                         <th class="col-plot">Plot</th>
                         <th class="col-luas">Luas (ha)</th>
-                        <th class="col-nokendaraan">No Kendaraan</th>
+                        <th class="col-nokendaraan">No Unit Alat</th>
                         <th class="col-jenis">Jenis</th>
                     </tr>
                 </thead>
@@ -404,7 +404,7 @@
         // Set report date from URL parameter or current date
         const urlParams = new URLSearchParams(window.location.search);
         const reportDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
-        
+
         document.getElementById('report-date').textContent = new Date(reportDate).toLocaleDateString('id-ID', {
             weekday: 'long',
             year: 'numeric',
@@ -417,11 +417,11 @@
             try {
                 const response = await fetch(`{{ route('input.rencanakerjaharian.dth-data') }}?date=${reportDate}`);
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update RKH list dan timestamp
                     updateHeaderInfo(data);
-                    
+
                     populateHarianTable(data.harian);
                     populateBoronganTable(data.borongan);
                     populateAlatTable(data.alat);
@@ -444,13 +444,13 @@
                     rkhListElement.textContent = 'RKH: Tidak ada data';
                 }
             }
-            
+
             // Update print timestamp
             const printTimestamp = document.getElementById('print-timestamp');
             if (printTimestamp) {
                 printTimestamp.textContent = data.generated_at || new Date().toLocaleString('id-ID');
             }
-            
+
             // Update company info
             const companyInfo = document.getElementById('company-info');
             if (companyInfo) {
@@ -460,7 +460,7 @@
                     companyInfo.textContent = 'N/A';
                 }
             }
-            
+
             // Update statistics
             updateStatistics(data);
         }
@@ -495,7 +495,7 @@
             const luasEl = document.getElementById('stat-total-luas');
             const tenagaEl = document.getElementById('stat-total-tenaga');
             const kendaraanEl = document.getElementById('stat-total-kendaraan');
-            
+
             if (luasEl) luasEl.textContent = totalLuas.toFixed(1);
             if (tenagaEl) tenagaEl.textContent = totalTenaga;
             if (kendaraanEl) kendaraanEl.textContent = totalKendaraan;
@@ -516,28 +516,59 @@
                 return;
             }
 
-            let totalL = 0, totalP = 0, totalLuas = 0;
+            // ✅ GROUP by mandor + activity
+            const grouped = {};
+            
+            data.forEach(item => {
+                const key = `${item.mandor_nama}|${item.activityname}`;
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        mandor_nama: item.mandor_nama,
+                        activityname: item.activityname,
+                        plots: [],
+                        bloks: [],
+                        totalLuas: 0,
+                        jumlahlaki: item.jumlahlaki,
+                        jumlahperempuan: item.jumlahperempuan
+                    };
+                }
+                
+                // Collect unique plots and bloks
+                if (!grouped[key].plots.includes(item.plot)) {
+                    grouped[key].plots.push(item.plot);
+                }
+                if (!grouped[key].bloks.includes(item.blok)) {
+                    grouped[key].bloks.push(item.blok);
+                }
+                
+                grouped[key].totalLuas += parseFloat(item.luasarea);
+            });
 
-            data.forEach((item, index) => {
+            let totalL = 0, totalP = 0, totalLuas = 0;
+            let index = 1;
+
+            // ✅ Render grouped data
+            Object.values(grouped).forEach(item => {
                 const row = document.createElement('tr');
                 const total = item.jumlahlaki + item.jumlahperempuan;
-                
+
                 row.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td>${index++}</td>
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
-                    <td>${item.blok}</td>
-                    <td>${item.plot}</td>
-                    <td>${parseFloat(item.luasarea).toFixed(1)}</td>
+                    <td>${item.bloks.join(', ')}</td>
+                    <td>${item.plots.join(', ')}</td>
+                    <td>${item.totalLuas.toFixed(1)}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
                 `;
                 tbody.appendChild(row);
-                
+
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += parseFloat(item.luasarea);
+                totalLuas += item.totalLuas;
             });
 
             // Update totals
@@ -562,31 +593,59 @@
                 return;
             }
 
-            let totalL = 0, totalP = 0, totalLuas = 0;
+            // ✅ GROUP by mandor + activity
+            const grouped = {};
+            
+            data.forEach(item => {
+                const key = `${item.mandor_nama}|${item.activityname}`;
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        mandor_nama: item.mandor_nama,
+                        activityname: item.activityname,
+                        plots: [],
+                        bloks: [],
+                        totalLuas: 0,
+                        jumlahlaki: item.jumlahlaki,
+                        jumlahperempuan: item.jumlahperempuan
+                    };
+                }
+                
+                if (!grouped[key].plots.includes(item.plot)) {
+                    grouped[key].plots.push(item.plot);
+                }
+                if (!grouped[key].bloks.includes(item.blok)) {
+                    grouped[key].bloks.push(item.blok);
+                }
+                
+                grouped[key].totalLuas += parseFloat(item.luasarea);
+            });
 
-            data.forEach((item, index) => {
+            let totalL = 0, totalP = 0, totalLuas = 0;
+            let index = 1;
+
+            Object.values(grouped).forEach(item => {
                 const row = document.createElement('tr');
                 const total = item.jumlahlaki + item.jumlahperempuan;
-                
+
                 row.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td>${index++}</td>
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
-                    <td>${item.blok}</td>
-                    <td>${item.plot}</td>
-                    <td>${parseFloat(item.luasarea).toFixed(1)}</td>
+                    <td>${item.bloks.join(', ')}</td>
+                    <td>${item.plots.join(', ')}</td>
+                    <td>${item.totalLuas.toFixed(1)}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
                 `;
                 tbody.appendChild(row);
-                
+
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += parseFloat(item.luasarea);
+                totalLuas += item.totalLuas;
             });
 
-            // Update totals
             document.getElementById('sum-luas-borongan').textContent = totalLuas.toFixed(1);
             document.getElementById('sum-laki-borongan').textContent = totalL;
             document.getElementById('sum-perempuan-borongan').textContent = totalP;
@@ -610,7 +669,7 @@
 
             data.forEach((item, index) => {
                 const row = document.createElement('tr');
-                
+
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td style="text-align: left;">${item.operator_nama || '-'}</td>

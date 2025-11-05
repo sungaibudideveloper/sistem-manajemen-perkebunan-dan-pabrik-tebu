@@ -1,8 +1,9 @@
 <?php
-use App\Http\Controllers\Report\ReportController;
-use App\Http\Controllers\Report\PivotController;
-use App\Http\Controllers\Input\AgronomiController;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
+use App\Http\Controllers\Report\PivotController;
+use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\Input\AgronomiController;
 
 Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function () {
     Route::match(['GET', 'POST'], '/report/agronomi', [ReportController::class, 'agronomi'])->name('report.agronomi.index');
@@ -11,6 +12,11 @@ Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function 
 Route::group(['middleware' => ['auth', 'permission:Report HPT']], function () {
     Route::match(['GET', 'POST'], 'report/hpt', [ReportController::class, 'hpt'])->name('report.hpt.index');
     Route::get('report/hpt/excel', [HPTController::class, 'excel'])->name('report.hpt.exportExcel');
+});
+
+Route::group(['middleware' => ['auth', 'permission:Report ZPK']], function () {
+    Route::match(['GET', 'POST'], 'report/report-zpk', [ReportController::class, 'zpk'])->name('report.report-zpk.index');
+    Route::get('report/report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report.report-zpk.exportExcel');
 });
 
 Route::get('report/agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi')

@@ -528,13 +528,25 @@ function activityPicker(rowIndex) {
       this.searchQuery = ''
     },
 
-    clear() {
-      console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
+clear() {
+  console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
+  
+  // ✅ CRITICAL FIX: Hapus dari worker card DULU sebelum clear activity
+  if (this.selected.activitycode) {
+    const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+    if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+      const workerCard = workerCardElement._x_dataStack[0];
       
-      //  1. Hapus dari Alpine store (trigger worker card clear)
-      if (this.selected.activitycode) {
-        Alpine.store('activityPerRow').setActivity(this.selected.activitycode, null);
+      // Hapus worker untuk activity ini
+      if (workerCard.workers[this.selected.activitycode]) {
+        delete workerCard.workers[this.selected.activitycode];
+        console.log('✅ Removed worker card for activity:', this.selected.activitycode);
       }
+    }
+    
+    // Hapus dari Alpine store
+    Alpine.store('activityPerRow').setActivity(this.rowIndex, null);
+  }
       
       //  2. Clear activity data
       this.selected = { 
