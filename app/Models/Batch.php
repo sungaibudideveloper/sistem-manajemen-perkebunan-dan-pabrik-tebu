@@ -131,4 +131,20 @@ class Batch extends Model
     {
         return now()->diffInDays($this->batchdate);
     }
+
+    public function getPlotTimeline($company){
+        return \DB::select("
+        SELECT 
+            a.companycode, a.plot, a.latitude, a.longitude,
+            d.centerlatitude, d.centerlongitude,
+            c.batchno, c.batchdate, c.batcharea, c.tanggalpanen,
+            c.kodevarietas, c.lifecyclestatus, c.pkp, c.isactive,
+            b.luasarea, b.jaraktanam AS plot_jaraktanam, b.status
+        FROM testgpslst AS a
+        LEFT JOIN plot AS b ON a.plot = b.plot
+        LEFT JOIN batch AS c ON b.plot = c.plot
+        LEFT JOIN testgpshdr AS d ON a.plot = d.plot
+        WHERE a.companycode = ?
+        ",[$company]);
+    }
 }

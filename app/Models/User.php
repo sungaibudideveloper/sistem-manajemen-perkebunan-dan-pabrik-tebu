@@ -31,7 +31,8 @@ class User extends Authenticatable
         'updatedat',
         'divisionid',
         'token_login',
-        'isactive'
+        'isactive',
+        'mpassword'
     ];
 
     protected $casts = [

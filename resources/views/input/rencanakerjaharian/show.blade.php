@@ -26,14 +26,14 @@
             $approvalStatus = 'Waiting';
             $approvalClass = 'bg-yellow-100 text-yellow-800';
             $approvalCount = '';
-            
+
             if (isset($rkhHeader->jumlahapproval) && $rkhHeader->jumlahapproval > 0) {
               // Count approved levels
               $approvedCount = 0;
               if ($rkhHeader->approval1flag === '1') $approvedCount++;
               if ($rkhHeader->approval2flag === '1') $approvedCount++;
               if ($rkhHeader->approval3flag === '1') $approvedCount++;
-              
+
               if ($rkhHeader->approval1flag === '0' || $rkhHeader->approval2flag === '0' || $rkhHeader->approval3flag === '0') {
                 $approvalStatus = 'Declined';
                 $approvalClass = 'bg-red-100 text-red-800';
@@ -56,19 +56,19 @@
               $approvalStatus = 'No Approval Required';
               $approvalClass = 'bg-gray-100 text-gray-800';
             }
-            
+
             // Status RKH
             $rkhStatus = $rkhHeader->status === 'Completed' ? 'Completed' : 'On Progress';
             $rkhStatusClass = $rkhHeader->status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
           @endphp
-          
+
           <div class="flex items-center space-x-2">
             <span class="text-sm font-medium text-gray-600">Approval Status:</span>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $approvalClass }}">
               {{ $approvalStatus }}
             </span>
           </div>
-          
+
           <div class="flex items-center space-x-2">
             <span class="text-sm font-medium text-gray-600">RKH Status:</span>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $rkhStatusClass }}">
@@ -107,7 +107,7 @@
 
       <!-- RIGHT: Cards Section -->
       <div class="flex flex-col space-y-4 lg:w-[400px]">
-        
+
         <!-- Card 1: Data Absen -->
         <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div class="flex items-center justify-between mb-3">
@@ -230,7 +230,7 @@
           </button>
         </div>
       </div>
-      
+
       <div class="overflow-x-auto px-6 pb-6">
         <table class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
           <colgroup>
@@ -253,7 +253,7 @@
               <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Info Panen</th>
               <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Luas<br>(ha)</th>
               <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Material</th>
-              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Kendaraan</th>
+              <th class="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-center">Alat</th>
             </tr>
           </thead>
 
@@ -262,7 +262,7 @@
               <tr class="hover:bg-blue-50 transition-colors">
                 <!-- No -->
                 <td class="px-3 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $index + 1 }}</td>
-                
+
                 <!-- Aktivitas -->
                 <td class="px-3 py-3 text-sm">
                   <div class="flex flex-col">
@@ -273,17 +273,17 @@
 
                 <!-- Blok -->
                 <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->blok ?? '-' }}</td>
-                
+
                 <!-- Plot -->
                 <td class="px-3 py-3 text-sm text-center font-medium">{{ $detail->plot ?? '-' }}</td>
-                
+
                 <!-- Info Panen -->
                 <td class="px-3 py-3 text-xs text-center">
                   @if($detail->batchno && $detail->kodestatus)
                     <div class="space-y-1">
                       <!-- Lifecycle Status Badge -->
                       <div class="flex items-center justify-center">
-                        <span 
+                        <span
                           class="px-2 py-0.5 rounded text-[10px] font-semibold
                           {{ $detail->kodestatus === 'PC' ? 'bg-yellow-100 text-yellow-800' : '' }}
                           {{ $detail->kodestatus === 'RC1' ? 'bg-green-100 text-green-800' : '' }}
@@ -292,7 +292,7 @@
                           {{ $detail->kodestatus }}
                         </span>
                       </div>
-                      
+
                       <!-- Batch Info -->
                       <div class="text-gray-700">
                         <span class="font-semibold">Batch:</span>
@@ -303,16 +303,16 @@
                     <span class="text-gray-400">-</span>
                   @endif
                 </td>
-                
+
                 <!-- Luas -->
                 <td class="px-3 py-3 text-sm text-right font-medium">
                   {{ $detail->luasarea ? number_format($detail->luasarea, 2) : '-' }}
                 </td>
-                
+
                 <!-- Material -->
                 <td class="px-3 py-3 text-xs text-center">
                   @if($detail->usingmaterial == 1 && $detail->herbisidagroupname)
-                    <div 
+                    <div
                       class="bg-green-100 text-green-800 px-2 py-1 rounded-lg cursor-pointer hover:bg-green-200 transition-colors"
                       onclick="openMaterialModal({
                         activitycode: '{{ $detail->activitycode }}',
@@ -336,7 +336,7 @@
                     <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Tidak</span>
                   @endif
                 </td>
-                
+
                 <!-- Kendaraan -->
                 <td class="px-3 py-3 text-xs text-center">
                   @if($detail->usingvehicle == 1)
@@ -344,13 +344,13 @@
                       @php
                         $operatorData = collect($operatorsData ?? [])->firstWhere('tenagakerjaid', $detail->operatorid);
                       @endphp
-                      
+
                       @if($operatorData)
                         <div class="bg-green-100 text-green-800 px-2 py-1 rounded-lg">
                           <div class="font-semibold text-xs">{{ $operatorData->nokendaraan ?? 'N/A' }}</div>
                           <div class="text-sm text-green-600">{{ $detail->operator_name }}</div>
                           <div class="text-xs text-gray-600">ID: {{ $detail->operatorid }}</div>
-                          
+
                           @if($detail->usinghelper == 1 && $detail->helperid)
                             <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
                               + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
@@ -361,7 +361,7 @@
                         <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
                           <div class="font-semibold text-sm">{{ $detail->operator_name }}</div>
                           <div class="text-xs">ID: {{ $detail->operatorid }}</div>
-                          
+
                           @if($detail->usinghelper == 1 && $detail->helperid)
                             <div class="mt-1 bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-sm">
                               + Helper: {{ $detail->helper_name ?? 'ID: ' . $detail->helperid }}
@@ -372,7 +372,7 @@
                     @else
                       <div class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg">
                         <div class="font-semibold text-xs">Perlu Operator</div>
-                        <div class="text-[10px]">Kendaraan: Ya</div>
+                        <div class="text-[10px]">Alat: Ya</div>
                       </div>
                     @endif
                   @else
@@ -420,21 +420,21 @@
           <div class="font-medium">{{ $rkhHeader->inputby }}</div>
         </div>
       @endif
-      
+
       @if($rkhHeader->createdat)
         <div>
           <span class="text-gray-600">Tanggal Dibuat:</span>
           <div class="font-medium">{{ \Carbon\Carbon::parse($rkhHeader->createdat)->format('d/m/Y H:i') }}</div>
         </div>
       @endif
-      
+
       @if($rkhHeader->updateby)
         <div>
           <span class="text-gray-600">Diubah oleh:</span>
           <div class="font-medium">{{ $rkhHeader->updateby }}</div>
         </div>
       @endif
-      
+
       @if($rkhHeader->updatedat)
         <div>
           <span class="text-gray-600">Tanggal Diubah:</span>
@@ -607,7 +607,7 @@
       .no-print {
         display: none !important;
       }
-      
+
       table {
         page-break-inside: auto;
       }
@@ -654,7 +654,7 @@
             herbisidagroupid: detail.herbisidagroupid || null,
             herbisidagroupname: detail.herbisidagroupname || ''
           };
-          
+
           this.open = true;
           this.loadMaterialDetail();
         },
@@ -666,14 +666,14 @@
           }
 
           this.loading = true;
-          
+
           try {
             if (window.herbisidaData) {
-              const materials = window.herbisidaData.filter(item => 
-                item.herbisidagroupid == this.selectedDetail.herbisidagroupid && 
+              const materials = window.herbisidaData.filter(item =>
+                item.herbisidagroupid == this.selectedDetail.herbisidagroupid &&
                 item.activitycode === this.selectedDetail.activitycode
               );
-              
+
               this.materialList = materials.map(item => ({
                 itemcode: item.itemcode,
                 itemname: item.itemname,
