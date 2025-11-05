@@ -30,7 +30,7 @@
                 d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h2 class="text-lg font-semibold text-gray-900">Pilih Operator & Kendaraan</h2>
+          <h2 class="text-lg font-semibold text-gray-900">Pilih Operator & Unit Alat</h2>
         </div>
         <button @click="open = false" type="button"
           class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200">
@@ -40,16 +40,16 @@
           </svg>
         </button>
       </div>
-      <p class="text-sm text-gray-600 mt-1">Pilih operator untuk aktivitas yang memerlukan kendaraan</p>
+      <p class="text-sm text-gray-600 mt-1">Pilih operator untuk aktivitas yang memerlukan unit alat</p>
     </div>
 
     {{-- Helper Checkbox Section --}}
     <div class="px-6 py-4 bg-purple-50 border-b border-purple-200">
       <div class="flex items-center space-x-4">
         <div class="flex items-center">
-          <input 
-            type="checkbox" 
-            id="useHelper" 
+          <input
+            type="checkbox"
+            id="useHelper"
             x-model="useHelper"
             class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
           >
@@ -103,7 +103,7 @@
     {{-- Content Area --}}
     <div class="flex-1 overflow-y-auto max-h-[400px]">
       <div class="grid" :class="useHelper ? 'md:grid-cols-2' : 'grid-cols-1'">
-        
+
         {{-- Operator List --}}
         <div class="border-r border-gray-200">
           <div class="px-4 py-2 bg-green-100 border-b">
@@ -120,7 +120,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
                 <template x-for="operator in filteredOperators" :key="operator.tenagakerjaid">
-                  <tr 
+                  <tr
                     @click="selectOperator(operator)"
                     class="hover:bg-green-50 cursor-pointer transition-colors duration-150"
                     :class="selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid ? 'bg-green-100' : ''"
@@ -146,7 +146,7 @@
             <template x-if="filteredOperators.length === 0">
               <div class="text-center py-8">
                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 <p class="mt-2 text-sm text-gray-500">Tidak ada operator ditemukan</p>
@@ -171,7 +171,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
                 <template x-for="helper in filteredHelpers" :key="helper.tenagakerjaid">
-                  <tr 
+                  <tr
                     @click="selectHelper(helper)"
                     class="hover:bg-purple-50 cursor-pointer transition-colors duration-150"
                     :class="selectedHelper && selectedHelper.tenagakerjaid === helper.tenagakerjaid ? 'bg-purple-100' : ''"
@@ -194,7 +194,7 @@
             <template x-if="filteredHelpers.length === 0">
               <div class="text-center py-8">
                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
                 <p class="mt-2 text-sm text-gray-500">Tidak ada helper ditemukan</p>
@@ -269,7 +269,7 @@ function kendaraanPicker(rowIndex) {
 
     get canUseVehicle() {
       if (!this.currentActivityCode || !window.activitiesData) return false;
-      
+
       const activity = window.activitiesData.find(act => act.activitycode === this.currentActivityCode);
       return activity && activity.usingvehicle === 1;
     },
@@ -349,17 +349,17 @@ function kendaraanPicker(rowIndex) {
 
     updateHiddenInputs() {
       this.ensureHiddenInputsExist();
-      
+
       // Operator inputs
       const operatorIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][operatorid]"]`);
       const operatorNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][operator_name]"]`);
       const vehicleNoInput = document.querySelector(`input[name="rows[${this.rowIndex}][vehicle_no]"]`);
       const usingVehicleInput = document.querySelector(`input[name="rows[${this.rowIndex}][usingvehicle]"]`);
-      
+
       // Helper inputs
       const helperIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][helperid]"]`);
       const usingHelperInput = document.querySelector(`input[name="rows[${this.rowIndex}][usinghelper]"]`);
-      
+
       // Update operator data
       if (operatorIdInput) {
         operatorIdInput.value = this.selectedOperator ? this.selectedOperator.tenagakerjaid : '';
@@ -373,7 +373,7 @@ function kendaraanPicker(rowIndex) {
       if (usingVehicleInput) {
         usingVehicleInput.value = this.canUseVehicle ? '1' : '0';
       }
-      
+
       // Update helper data
       if (helperIdInput) {
         helperIdInput.value = (this.useHelper && this.selectedHelper) ? this.selectedHelper.tenagakerjaid : '';
@@ -386,7 +386,7 @@ function kendaraanPicker(rowIndex) {
     ensureHiddenInputsExist() {
       const vehicleCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(11)`);
       if (!vehicleCell) return;
-      
+
       // Operator hidden inputs
       ['operatorid', 'operator_name', 'vehicle_no', 'usingvehicle'].forEach(fieldName => {
         if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
@@ -397,7 +397,7 @@ function kendaraanPicker(rowIndex) {
           vehicleCell.appendChild(input);
         }
       });
-      
+
       // Helper hidden inputs
       ['helperid', 'usinghelper'].forEach(fieldName => {
         if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
@@ -412,7 +412,7 @@ function kendaraanPicker(rowIndex) {
 
     init() {
       this.ensureHiddenInputsExist();
-      
+
       // Observer activity input changes
       const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
       if (activityInput) {
@@ -426,12 +426,12 @@ function kendaraanPicker(rowIndex) {
             this.updateHiddenInputs();
           }
         });
-        
+
         observer.observe(activityInput, {
           attributes: true,
           attributeFilter: ['value']
         });
-        
+
         activityInput.addEventListener('input', () => {
           const newActivity = activityInput.value || '';
           if (this.currentActivityCode !== newActivity) {
@@ -442,7 +442,7 @@ function kendaraanPicker(rowIndex) {
             this.updateHiddenInputs();
           }
         });
-        
+
         this.currentActivityCode = activityInput.value || '';
         this.updateHiddenInputs();
       }

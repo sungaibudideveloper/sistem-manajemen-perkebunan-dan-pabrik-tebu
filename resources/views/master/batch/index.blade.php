@@ -11,6 +11,7 @@
         companycode:'{{ session('companycode') }}', 
         batchno: '', 
         plot: '',
+        plottype: '',
         batchdate: '',
         batcharea: '',
         kodevarietas: '',
@@ -27,6 +28,7 @@
           companycode:'{{ session('companycode') }}', 
           batchno: '', 
           plot: '',
+          plottype: '',
           batchdate: '',
           batcharea: '',
           kodevarietas: '',
@@ -44,7 +46,6 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      {{-- Create Button --}}
       @if(hasPermission('Create Batch'))
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
@@ -56,7 +57,6 @@
         </button>
       @endif
         
-        {{-- Search Form --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
         <input
@@ -69,7 +69,6 @@
         />
       </form>
 
-      {{-- Item Per Page --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
         <select 
@@ -82,7 +81,6 @@
         </select>
       </form>
 
-      {{-- Modal Form --}}
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
@@ -110,7 +108,6 @@
                   <h3 class="text-lg font-medium text-gray-900" id="modal-title" x-text="mode === 'edit' ? 'Edit Batch' : 'Create Batch'">
                   </h3>
                   <div class="mt-4 space-y-4">
-                    {{-- Company Code --}}
                     <div>
                       <label for="companycode" class="block text-sm font-medium text-gray-700">Kode Company</label>
                       <template x-if="mode === 'create'">
@@ -130,7 +127,6 @@
                       </template>
                     </div>
 
-                    {{-- Row 1: Batch No, Plot --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="batchno" class="block text-sm font-medium text-gray-700">Batch No</label>
@@ -153,7 +149,18 @@
                       </div>
                     </div>
 
-                    {{-- Row 2: Batch Date, Batch Area --}}
+                    <div>
+                      <label for="plottype" class="block text-sm font-medium text-gray-700">Tipe Plot (Opsional)</label>
+                      <select name="plottype" id="plottype" x-model="form.plottype" 
+                             x-init="form.plottype = '{{ old('plottype') }}'"
+                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">-- Pilih Tipe Plot --</option>
+                        <option value="KBD">KBD - Kebun Bibit</option>
+                        <option value="KTG">KTG - Kebun Tebu Giling</option>
+                      </select>
+                      <p class="mt-1 text-xs text-gray-500">Kosongkan jika tidak yakin</p>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="batchdate" class="block text-sm font-medium text-gray-700">Batch Date</label>
@@ -170,7 +177,6 @@
                       </div>
                     </div>
 
-                    {{-- Row 3: Kode Varietas, Lifecycle Status --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="kodevarietas" class="block text-sm font-medium text-gray-700">Kode Varietas</label>
@@ -192,7 +198,6 @@
                       </div>
                     </div>
 
-                    {{-- Row 4: PKP, Is Active (only show on edit) --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="pkp" class="block text-sm font-medium text-gray-700">PKP (Populasi Tanaman/Ha)</label>
@@ -211,7 +216,6 @@
                       </div>
                     </div>
 
-                    {{-- Row 5: Planting RKH No, Last Activity --}}
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
@@ -229,7 +233,6 @@
                       </div>
                     </div>
 
-                    {{-- FIXED: Single Tanggal Panen --}}
                     <div>
                       <label for="tanggalpanen" class="block text-sm font-medium text-gray-700">Tanggal Panen</label>
                       <input type="date" name="tanggalpanen" id="tanggalpanen" x-model="form.tanggalpanen" 
@@ -258,7 +261,6 @@
       </div>
     </div>
 
-    {{-- Table --}}
     <div class="mx-auto px-4 py-2">
         <div class="overflow-x-auto border border-gray-300 rounded-md">
             <table class="min-w-full bg-white text-sm text-center">
@@ -267,6 +269,7 @@
                         <th class="py-2 px-4 border-b">No.</th>
                         <th class="py-2 px-4 border-b">Batch No</th>
                         <th class="py-2 px-4 border-b">Plot</th>
+                        <th class="py-2 px-4 border-b">Tipe Plot</th>
                         <th class="py-2 px-4 border-b">Batch Date</th>
                         <th class="py-2 px-4 border-b">Area (ha)</th>
                         <th class="py-2 px-4 border-b">Varietas</th>
@@ -280,18 +283,23 @@
                 <tbody>
                     @foreach ($batch as $index => $data)
                         <tr class="hover:bg-gray-50">
-                        <td class="py-2 px-4 border-b">{{ $batch->firstItem() + $index }}</td>
+                            <td class="py-2 px-4 border-b">{{ $batch->firstItem() + $index }}</td>
                             <td class="py-2 px-4 border-b font-medium">{{ $data->batchno }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->plot }}</td>
+                            <td class="py-2 px-4 border-b">
+                                @if($data->plottype)
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full {{ $data->plottype_badge_color }}">
+                                        {{ $data->plottype }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
                             <td class="py-2 px-4 border-b">{{ $data->batchdate ? \Carbon\Carbon::parse($data->batchdate)->format('d/m/Y') : '-' }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->batcharea ? number_format($data->batcharea, 2) : '-' }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->kodevarietas ?? '-' }}</td>
                             <td class="py-2 px-4 border-b">
-                                <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                    {{ $data->lifecyclestatus === 'PC' ? 'bg-green-100 text-green-800' : '' }}
-                                    {{ $data->lifecyclestatus === 'RC1' ? 'bg-blue-100 text-blue-800' : '' }}
-                                    {{ $data->lifecyclestatus === 'RC2' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                    {{ $data->lifecyclestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full {{ $data->lifecycle_badge_color }}">
                                     {{ $data->lifecyclestatus }}
                                 </span>
                             </td>
@@ -306,8 +314,7 @@
                             <td class="py-2 px-4 border-b">
                                 {{ $data->tanggalpanen ? \Carbon\Carbon::parse($data->tanggalpanen)->format('d/m/Y') : '-' }}
                             </td>
-                            {{-- Edit Button --}}
-                              <td class="py-2 px-4 border-b">
+                            <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
                                   @if(hasPermission('Edit Batch'))
                                   <button
@@ -317,6 +324,7 @@
                                       form.batchno = '{{ $data->batchno }}';
                                       form.companycode = '{{ $data->companycode }}';
                                       form.plot = '{{ $data->plot }}';
+                                      form.plottype = '{{ $data->plottype }}';
                                       form.batchdate = '{{ $data->batchdate }}';
                                       form.batcharea = '{{ $data->batcharea }}';
                                       form.kodevarietas = '{{ $data->kodevarietas }}';
@@ -339,7 +347,6 @@
                                     <span class="w-0.5"></span>
                                   </button>
                                   @endif
-                                  {{-- Delete Button --}}
                                   @if(hasPermission('Hapus Batch'))
                                     <form action="{{ url("masterdata/batch/{$data->batchno}") }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="inline">
                                       @csrf
@@ -355,7 +362,7 @@
                                     </form>
                                   @endif
                                 </div>
-                              </td>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -363,7 +370,6 @@
         </div>
     </div>
 
-    {{-- Pagination --}}
     <div class="mx-4 my-1">
         @if ($batch->hasPages())
             {{ $batch->appends(request()->query())->links() }}
@@ -376,7 +382,6 @@
         @endif
     </div>
 
-    {{-- Toast Notification --}}
     @if (session('success'))
       <div x-data x-init="alert('{{ session('success') }}')"></div>
     @endif

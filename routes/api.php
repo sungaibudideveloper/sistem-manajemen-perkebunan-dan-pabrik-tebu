@@ -18,3 +18,7 @@ Route::post('/checkdataagronomi', [MobileController::class, 'checkDataAgronomi']
 Route::post('/checkdatahpt', [MobileController::class, 'checkDataHPT']);
 Route::post('/checkdatahpt', [MobileController::class, 'checkDataHPT']);
 Route::post('timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
+
+Route::get('/test-api', function() {
+    return response()->json(['message' => 'API works', 'time' => now()]);
+});

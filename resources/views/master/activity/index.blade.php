@@ -61,7 +61,7 @@
                             <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                   <div class="flex items-center justify-center">
                                           <button
-                                              onclick="openEditModal('{{ $activity->activitygroup }}','{{ $activity->activitycode }}', '{{ $activity->activityname }}', '{{ $activity->var1 }}', '{{ $activity->satuan1 }}', '{{ $activity->var2 }}', '{{ $activity->satuan2 }}', '{{ $activity->var3 }}', '{{ $activity->satuan3 }}', '{{ $activity->var4 }}', '{{ $activity->satuan4 }}', '{{ $activity->var5 }}', '{{ $activity->satuan5 }}', '{{ $activity->usingmaterial }}', '{{ $activity->usingvehicle }}', '{{ $activity->description }}')"
+                                              onclick="openEditModal('{{ $activity->activitygroup }}','{{ $activity->activitycode }}', '{{ $activity->activityname }}', '{{ $activity->var1 }}', '{{ $activity->satuan1 }}', '{{ $activity->var2 }}', '{{ $activity->satuan2 }}', '{{ $activity->var3 }}', '{{ $activity->satuan3 }}', '{{ $activity->var4 }}', '{{ $activity->satuan4 }}', '{{ $activity->var5 }}', '{{ $activity->satuan5 }}', '{{ $activity->usingmaterial }}', '{{ $activity->usingvehicle }}', '{{ $activity->description }}', '{{ $activity->jenistenagakerja }}')"
                                               class="group flex items-center edit-button"><svg
                                                   class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                                   aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -166,6 +166,11 @@
                                 <label><input type="radio" name="vehicle" value="1" @if(old('vehicle') == 1) checked @endif>Ya</label>
                                 <label><input type="radio" name="vehicle" class="ml-6" value="0" @if(old('vehicle') == 0) checked @else checked @endif>Tidak</label>
                             </div>
+                            <div class="mb-4">
+                                <label class="block text-md">Jenis Tenaga Kerja</label>
+                                <label><input type="radio" name="jenistenagakerja" value="1" @if(old('jenistenagakerja') == 1) checked @else checked @endif>Harian</label>
+                                <label><input type="radio" name="jenistenagakerja" class="ml-6" value="2" @if(old('jenistenagakerja') == 2) checked @endif>Borongan</label>
+                            </div>
                         </div>
 
                         <div>
@@ -191,7 +196,7 @@
                                         </div>
 
                                         <!-- TOMBOL -->
-                                        <div class="flex items-end hidden ">
+                                        <div class="flex items-end hidden item-end">
                                           <button type="button" onclick="deleteAktivitasRow(this)"
                                             class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
                                             <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -293,12 +298,14 @@
         const crudMethod = document.getElementById("crud-method");
 
         function openCreateModal() {
+            resetRow();
+            resetForm();
             modal.classList.remove("invisible");
             modal.classList.add("visible");
             modalTitle.textContent = "Create Data";
             form.action = "{{ route('masterdata.aktivitas.store') }}";
             crudMethod.value = "POST";
-            $('input[name="nama"]').attr('readonly','false');
+            form.querySelector('input[name="kodeaktivitas"]').removeAttribute('readonly');
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
@@ -315,7 +322,7 @@
             }, 300);
         }
 
-        function openEditModal(activitygroup,activitycode,activityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingvehicle,usingmaterial,keterangan) {
+        function openEditModal(activitygroup,activitycode,activityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingmaterial,usingvehicle,keterangan,jenistenagakerja) {
             resetRow();
             modal.classList.remove("invisible");
             modal.classList.add("visible");
@@ -325,9 +332,10 @@
             form.attr('action', editRoute.replace('__activitycode__', activitycode));
             form.find('input[name="kodeaktivitas"]').attr('readonly','true');
             form.find('input[name="_method"]').val('PUT');
-            form.find('input[name="grupaktivitas"]').val(activitygroup).trigger('change');
+            form.find('select[name="grupaktivitas"]').val(activitygroup).trigger('change');
             form.find('input[name="kodeaktivitas"]').val(activitycode)
             form.find('input[name="namaaktivitas"]').val(activityname)
+            
             if( usingmaterial == 1 ){
               form.find('input[name="material"][value="1"]').prop('checked', true)
             }else{
@@ -339,9 +347,17 @@
             }else{
               form.find('input[name="vehicle"][value="0"]').prop('checked', true)
             }
+            
+            if( jenistenagakerja == 1 ){
+              form.find('input[name="jenistenagakerja"][value="1"]').prop('checked', true)
+            }else{
+              form.find('input[name="jenistenagakerja"][value="2"]').prop('checked', true)
+            }
+            
             form.find('input[name="keterangan"]').val(keterangan)
             form.find('input[name="var[]"]').eq(0).val(var1)
             form.find('input[name="satuan[]"]').eq(0).val(satuan1)
+            
             if( var2 != '' ){
               $('#btn-tambah-variable').click();
               form.find('input[name="var[]"]').eq(1).val(var2)
@@ -355,43 +371,20 @@
 
             if( var4 != '' ){
               $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(3).val(var3)
-              form.find('input[name="satuan[]"]').eq(3).val(satuan3)
+              form.find('input[name="var[]"]').eq(3).val(var4)
+              form.find('input[name="satuan[]"]').eq(3).val(satuan4)
             }
 
             if( var5 != '' ){
               $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(4).val(var4)
-              form.find('input[name="satuan[]"]').eq(4).val(satuan4)
+              form.find('input[name="var[]"]').eq(4).val(var5)
+              form.find('input[name="satuan[]"]').eq(4).val(satuan5)
             }
 
             setTimeout(() => {
                 modal.style.opacity = "1";
                 modal.style.transform = "scale(1)";
             }, 50);
-        }
-
-        function deleteRow(kdblok, kdComp, row) {
-            if (confirm("Yakin ingin menghapus data ini?")) {
-                fetch(`{{ route('masterdata.blok.destroy', ['blok' => '__kdblok__', 'companycode' => '__kdComp__']) }}`
-                        .replace('__kdblok__', kdblok)
-                        .replace('__kdComp__', kdComp), {
-                            method: "DELETE",
-                            headers: {
-                                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute(
-                                    'content')
-                            }
-                        })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            row.remove();
-                        } else {
-                            alert("Terjadi kesalahan: " + data.message);
-                        }
-                    })
-                    .catch(error => console.error("Error:", error));
-            }
         }
 
         function resetRow()
@@ -401,6 +394,15 @@
               $('.variable-row').eq(i).remove();
             }
           })
+        }
+
+        function resetForm()
+        {
+            const form = $('#crud-form');
+            form[0].reset();
+            form.find('input[name="material"][value="0"]').prop('checked', true);
+            form.find('input[name="vehicle"][value="0"]').prop('checked', true);
+            form.find('input[name="jenistenagakerja"][value="1"]').prop('checked', true);
         }
 
 
@@ -419,17 +421,16 @@
             $(temp).find('input').val('')
             var count = $('.div-variable .variable-row').length+1;
             $(temp).find('.input-var').html(count);
-            $(temp).find('.items-end').removeClass('hidden');
             $('.div-variable').append(temp);
           }else{
-            alert('Maximal 5, apa bila membutuhkan lebih, hubungi IT');
+            alert('Maximal 5, apabila membutuhkan lebih, hubungi IT');
           }
         });
 
         function deleteAktivitasRow(div)
         {
           $(div).parent().parent().remove();
-           setVariableLable()
+          setVariableLable()
         }
 
 
@@ -439,7 +440,6 @@
           $('.variable-row').each(function(i, v){
             $(this).find('.input-var').html(i+1)
           })
-
         }
     </script>
 

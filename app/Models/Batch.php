@@ -16,6 +16,7 @@ class Batch extends Model
         'batchno',
         'companycode',
         'plot',
+        'plottype',
         'lifecyclestatus',
         'plantingrkhno',
         'batchdate',
@@ -38,13 +39,11 @@ class Batch extends Model
         'createdat' => 'datetime',
     ];
 
-    // Relationship to company
     public function company()
     {
         return $this->belongsTo(Company::class, 'companycode', 'companycode');
     }
 
-    // Accessor for cyclecount
     public function getCyclecountAttribute(): int
     {
         return match($this->lifecyclestatus) {
@@ -56,13 +55,11 @@ class Batch extends Model
         };
     }
 
-    // Accessor for status text
     public function getStatusTextAttribute(): string
     {
         return $this->isactive ? 'Active' : 'Closed';
     }
 
-    // Accessor for lifecycle badge color
     public function getLifecycleBadgeColorAttribute(): string
     {
         return match($this->lifecyclestatus) {
@@ -74,7 +71,15 @@ class Batch extends Model
         };
     }
 
-    // Scopes
+    public function getPlottypeBadgeColorAttribute(): string
+    {
+        return match($this->plottype) {
+            'KBD' => 'bg-orange-100 text-orange-800',
+            'KTG' => 'bg-teal-100 text-teal-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
+    }
+
     public function scopeActive($query)
     {
         return $query->where('isactive', 1);
@@ -90,6 +95,11 @@ class Batch extends Model
         return $query->where('lifecyclestatus', $status);
     }
 
+    public function scopePlottype($query, $type)
+    {
+        return $query->where('plottype', $type);
+    }
+
     public function scopeByPlot($query, $plot)
     {
         return $query->where('plot', $plot);
@@ -100,7 +110,6 @@ class Batch extends Model
         return $query->where('companycode', $companycode);
     }
 
-    // Helper methods
     public function isHarvestable(): bool
     {
         return $this->isactive && in_array($this->lifecyclestatus, ['PC', 'RC1', 'RC2', 'RC3']);
@@ -109,6 +118,16 @@ class Batch extends Model
     public function isHarvested(): bool
     {
         return !is_null($this->tanggalpanen);
+    }
+
+    public function isKBD(): bool
+    {
+        return $this->plottype === 'KBD';
+    }
+
+    public function isKTG(): bool
+    {
+        return $this->plottype === 'KTG';
     }
 
     public function getNextLifecycleStatus(): ?string
@@ -130,5 +149,21 @@ class Batch extends Model
     public function getAgeInDaysAttribute(): int
     {
         return now()->diffInDays($this->batchdate);
+    }
+
+    public function getPlotTimeline($company){
+        return \DB::select("
+        SELECT 
+            a.companycode, a.plot, a.latitude, a.longitude,
+            d.centerlatitude, d.centerlongitude,
+            c.batchno, c.batchdate, c.batcharea, c.tanggalpanen,
+            c.kodevarietas, c.lifecyclestatus, c.pkp, c.isactive,
+            b.luasarea, b.jaraktanam AS plot_jaraktanam, b.status
+        FROM testgpslst AS a
+        LEFT JOIN plot AS b ON a.plot = b.plot
+        LEFT JOIN batch AS c ON b.plot = c.plot
+        LEFT JOIN testgpshdr AS d ON a.plot = d.plot
+        WHERE a.companycode = ?
+        ",[$company]);
     }
 }

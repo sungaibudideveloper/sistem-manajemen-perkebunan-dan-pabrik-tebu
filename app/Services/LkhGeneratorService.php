@@ -262,7 +262,6 @@ class LkhGeneratorService
             
             if ($isPanenActivity) {
                 $plotDetail['batchno'] = $activity->batchno ?? null;
-                $plotDetail['kodestatus'] = $activity->lifecyclestatus ?? null; // GANTI ke lifecyclestatus
             }
             
             LkhDetailPlot::create($plotDetail);
@@ -382,7 +381,7 @@ class LkhGeneratorService
 
     /**
      * Get LKH summary for specific RKH
-     * UNIFIED: Works for all activity types
+     * UPDATED: Get kodestatus from batch table via JOIN
      * 
      * @param string $rkhno
      * @return array
@@ -405,16 +404,24 @@ class LkhGeneratorService
                 ];
             })->toArray(),
             'details' => $lkhList->map(function ($lkh) {
-                // Get plots (with batch info for panen)
-                $plots = LkhDetailPlot::where('companycode', $lkh->companycode)
-                    ->where('lkhno', $lkh->lkhno)
+                $plots = DB::table('lkhdetailplot as ldp')
+                    ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
+                    ->where('ldp.companycode', $lkh->companycode)
+                    ->where('ldp.lkhno', $lkh->lkhno)
+                    ->select([
+                        'ldp.blok',
+                        'ldp.plot',
+                        'ldp.luasrkh',
+                        'ldp.batchno',
+                        'b.lifecyclestatus' 
+                    ])
                     ->get()
                     ->map(function($item) {
                         $plotInfo = $item->blok . '-' . $item->plot . ' (' . $item->luasrkh . ' ha)';
                         
                         // Add batch info if exists (for panen)
                         if ($item->batchno) {
-                            $plotInfo .= ' [' . $item->batchno . '-' . $item->kodestatus . ']';
+                            $plotInfo .= ' [' . $item->batchno . '-' . $item->lifecyclestatus . ']';
                         }
                         
                         return $plotInfo;
