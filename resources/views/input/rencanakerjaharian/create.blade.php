@@ -314,7 +314,7 @@
             </thead>
 
             <tbody class="divide-y divide-gray-100">
-              @for ($i = 0; $i < 20; $i++)
+              @for ($i = 0; $i < 30; $i++)
                 <tr x-data="activityPicker({{ $i }})"
                     class="rkh-row hover:bg-blue-50 transition-colors"
                     x-init="

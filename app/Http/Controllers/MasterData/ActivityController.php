@@ -64,6 +64,7 @@ class ActivityController extends Controller
           'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
           'namaaktivitas' => 'required',
           'keterangan' => 'max:150',
+          'jenistenagakerja' => 'required|in:1,2',
           'var.*'       => 'required',
           'satuan.*'    => 'required'
         ];
@@ -89,13 +90,14 @@ class ActivityController extends Controller
             'description'   => $request->keterangan,
             'usingmaterial' => $request->material,
             'usingvehicle'  => $request->vehicle,
+            'jenistenagakerja' => $request->jenistenagakerja,
             'jumlahvar'     => count($request->var),
             'createdat'     => date("Y-m-d H:i"),
             'inputby'       => Auth::user()->userid
         ];
         foreach( $request->var as $index => $value ){
-            $hasil["var".$index+1] =  $value;
-            $hasil["satuan".$index+1] = $inputSatuan[$index];
+            $hasil["var".($index+1)] =  $value;
+            $hasil["satuan".($index+1)] = $inputSatuan[$index];
         }
 
         $input = array_merge($input, $hasil);
@@ -135,14 +137,15 @@ class ActivityController extends Controller
               'jumlahvar'     => count($request->var),
               'usingmaterial' => $request->material,
               'usingvehicle'  => $request->vehicle,
+              'jenistenagakerja' => $request->jenistenagakerja,
               'updatedat'     => date("Y-m-d H:i"),
               'updatedby'     => Auth::user()->userid
           ];
           $hasil = array();
           $inputSatuan = $request->satuan;
           foreach( $request->var as $index => $value ){
-              $hasil["var".$index+1] =  $value;
-              $hasil["satuan".$index+1] = $inputSatuan[$index];
+              $hasil["var".($index+1)] =  $value;
+              $hasil["satuan".($index+1)] = $inputSatuan[$index];
           }
 
           $input = array_merge($input, $hasil);

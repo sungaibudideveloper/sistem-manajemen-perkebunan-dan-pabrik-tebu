@@ -116,6 +116,19 @@
                       </template>
                     </div>
 
+                    {{-- ID Subkontraktor --}}
+                    <div>
+                      <label for="id" class="block text-sm font-medium text-gray-700">ID Subkontraktor</label>
+                      <input type="text" name="id" id="id" x-model="form.id" 
+                            x-init="form.id = '{{ old('id') }}'"
+                            @input="form.id = form.id.toUpperCase()"
+                            class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
+                            maxlength="10" required>
+                      @error('id')
+                      <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                      @enderror
+                    </div>
+
                     {{-- Kontraktor Dropdown --}}
                     <div>
                       <label for="kontraktorid" class="block text-sm font-medium text-gray-700">Kontraktor</label>
@@ -129,19 +142,6 @@
                         @endforeach
                       </select>
                       @error('kontraktorid')
-                      <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
-
-                    {{-- ID Subkontraktor --}}
-                    <div>
-                      <label for="id" class="block text-sm font-medium text-gray-700">ID Subkontraktor</label>
-                      <input type="text" name="id" id="id" x-model="form.id" 
-                            x-init="form.id = '{{ old('id') }}'"
-                            @input="form.id = form.id.toUpperCase()"
-                            class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
-                            maxlength="10" required>
-                      @error('id')
                       <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                       @enderror
                     </div>
@@ -186,10 +186,9 @@
                 <thead>
                     <tr class="bg-gray-100 text-gray-700">
                         <th class="py-2 px-4 border-b">No.</th>
-                        <th class="py-2 px-4 border-b">ID Kontraktor</th>
-                        <th class="py-2 px-4 border-b">Nama Kontraktor</th>
                         <th class="py-2 px-4 border-b">ID Subkontraktor</th>
                         <th class="py-2 px-4 border-b">Nama Subkontraktor</th>
+                        <th class="py-2 px-4 border-b">Kontraktor</th>
                         <th class="py-2 px-4 border-b">Aksi</th>
                     </tr>
                 </thead>
@@ -197,10 +196,9 @@
                     @foreach ($subkontraktor as $index => $data)
                         <tr class="hover:bg-gray-50">
                             <td class="py-2 px-4 border-b">{{ $subkontraktor->firstItem() + $index }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->kontraktorid }}</td>
-                            <td class="py-2 px-4 border-b text-left">{{ $data->kontraktor->namakontraktor ?? '-' }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->id }}</td>
                             <td class="py-2 px-4 border-b text-left">{{ $data->namasubkontraktor }}</td>
+                            <td class="py-2 px-4 border-b text-left">{{ $data->kontraktorid }} - {{ $data->namakontraktor ?? '-' }}</td>
                             <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
                                   {{-- Edit Button --}}
@@ -220,13 +218,18 @@
                                     <svg class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
                                       aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                       width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                        <use xlink:href="#icon-edit-outline" />
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
                                     </svg>
                                     <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                         width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                        <use xlink:href="#icon-edit-solid" />
-                                        <use xlink:href="#icon-edit-solid2" />
+                                        <path fill-rule="evenodd"
+                                            d="M11.32 6.176H5c-1.105 0-2 .949-2 2.118v10.588C3 20.052 3.895 21 5 21h11c1.105 0 2-.948 2-2.118v-7.75l-3.914 4.144A2.46 2.46 0 0 1 12.81 16l-2.681.568c-1.75.37-3.292-1.263-2.942-3.115l.536-2.839c.097-.512.335-.983.684-1.352l2.914-3.086Z"
+                                            clip-rule="evenodd" />
+                                        <path fill-rule="evenodd"
+                                            d="M19.846 4.318a2.148 2.148 0 0 0-.437-.692 2.014 2.014 0 0 0-.654-.463 1.92 1.92 0 0 0-1.544 0 2.014 2.014 0 0 0-.654.463l-.546.578 2.852 3.02.546-.579a2.14 2.14 0 0 0 .437-.692 2.244 2.244 0 0 0 0-1.635ZM17.45 8.721 14.597 5.7 9.82 10.76a.54.54 0 0 0-.137.27l-.536 2.84c-.07.37.239.696.588.622l2.682-.567a.492.492 0 0 0 .255-.145l4.778-5.06Z"
+                                            clip-rule="evenodd" />
                                     </svg>
                                   </button>
                                   @endif
@@ -246,12 +249,15 @@
                                         <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
                                           aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                           width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <use xlink:href="#icon-trash-outline" />
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
                                         </svg>
                                         <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
                                           aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                           width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                            <use xlink:href="#icon-trash-solid" />
+                                            <path fill-rule="evenodd"
+                                                d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                       </button>
                                     </form>

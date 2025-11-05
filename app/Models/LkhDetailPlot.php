@@ -21,16 +21,27 @@ class LkhDetailPlot extends Model
         'createdat',
         'updatedat',
         'batchno',
-        'kodestatus',
+        // ❌ REMOVED: 'kodestatus'
         'subkontraktorid',
+        'fieldbalancerit',
+        'fieldbalanceton',
     ];
     
     protected $casts = [
         'luasrkh' => 'decimal:2',
         'luashasil' => 'decimal:2',
         'luassisa' => 'decimal:2',
+        'fieldbalancerit' => 'decimal:2',
+        'fieldbalanceton' => 'decimal:2',
         'createdat' => 'datetime',
+        'updatedat' => 'datetime',
     ];
+    
+    // ✅ NEW: Relationship to batch
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class, 'batchno', 'batchno');
+    }
     
     // Relations
     public function lkhheader()
@@ -54,7 +65,29 @@ class LkhDetailPlot extends Model
         return $query->where('plot', $plot);
     }
     
-    // Helper methods - UPDATED column names
+    // ✅ NEW: Accessor to get lifecycle status from batch
+    public function getLifecycleStatusAttribute()
+    {
+        return $this->batch?->lifecyclestatus;
+    }
+    
+    // ✅ NEW: Accessor to get batch info
+    public function getBatchInfoAttribute()
+    {
+        if (!$this->batch) {
+            return null;
+        }
+        
+        return [
+            'batchno' => $this->batch->batchno,
+            'lifecyclestatus' => $this->batch->lifecyclestatus,
+            'batchdate' => $this->batch->batchdate,
+            'tanggalpanen' => $this->batch->tanggalpanen,
+            'batcharea' => $this->batch->batcharea,
+        ];
+    }
+    
+    // Helper methods
     public function getCompletionPercentage()
     {
         if ($this->luasrkh <= 0) {
@@ -74,17 +107,19 @@ class LkhDetailPlot extends Model
         return $this->blok . '-' . $this->plot;
     }
     
-    public function calculateBoronganUpah($activitygroup, $companycode, $workDate)
+    // ✅ UPDATED: Use batch relationship for panen info
+    public function isPanenPlot()
     {
-        $wageRates = Upah::getWageRates($companycode, $activitygroup, $workDate);
-        
-        if (isset($wageRates['PER_HECTARE'])) {
-            return $this->luashasil * $wageRates['PER_HECTARE'];
-        } elseif (isset($wageRates['PER_KG'])) {
-            // For harvest activities, assume luashasil represents weight
-            return $this->luashasil * $wageRates['PER_KG'];
+        return !is_null($this->batchno);
+    }
+    
+    public function getHaritebangAttribute()
+    {
+        if (!$this->batch || !$this->batch->tanggalpanen) {
+            return null;
         }
         
-        return 0;
+        $lkhDate = $this->lkhheader?->lkhdate ?? now();
+        return Carbon::parse($lkhDate)->diffInDays($this->batch->tanggalpanen) + 1;
     }
 }

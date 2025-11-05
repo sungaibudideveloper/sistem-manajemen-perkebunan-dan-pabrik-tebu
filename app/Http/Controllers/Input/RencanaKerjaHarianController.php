@@ -738,7 +738,7 @@ class RencanaKerjaHarianController extends Controller
                 'ldp.plot',
                 'ldp.blok',
                 'ldp.batchno',
-                'ldp.kodestatus',
+                // ❌ REMOVED: 'ldp.kodestatus',
                 'ldp.luasrkh',
                 'ldp.luashasil',
                 'ldp.createdat',
@@ -747,13 +747,10 @@ class RencanaKerjaHarianController extends Controller
                 'ldp.fieldbalanceton',
                 'sk.namasubkontraktor as subkontraktor_nama',
                 'b.batcharea',
-                'b.tanggalpanenpc',
-                'b.tanggalpanenrc1',
-                'b.tanggalpanenrc2',
-                'b.tanggalpanenrc3',
+                'b.tanggalpanen',
+                'b.lifecyclestatus as kodestatus',  // ✅ Get from batch table
                 
-                // STC = Luas batch - Total sudah dipanen sampai KEMARIN
-                // (bukan termasuk hari ini, karena HC hari ini belum dikurangi)
+                // STC calculation (unchanged)
                 DB::raw("(
                     COALESCE(b.batcharea, 0) - 
                     COALESCE((
@@ -762,7 +759,6 @@ class RencanaKerjaHarianController extends Controller
                         JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
                         WHERE ldp2.companycode = ldp.companycode
                         AND ldp2.batchno = ldp.batchno
-                        AND ldp2.kodestatus = ldp.kodestatus
                         AND lh2.lkhdate < '{$lkhDate}'
                     ), 0)
                 ) as stc"),
@@ -770,7 +766,7 @@ class RencanaKerjaHarianController extends Controller
                 // HC = Hasil panen hari ini
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
-                // BC = STC - HC (hitung manual, JANGAN pakai luassisa)
+                // BC calculation
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
@@ -780,7 +776,6 @@ class RencanaKerjaHarianController extends Controller
                             JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
                             WHERE ldp2.companycode = ldp.companycode
                             AND ldp2.batchno = ldp.batchno
-                            AND ldp2.kodestatus = ldp.kodestatus
                             AND lh2.lkhdate < '{$lkhDate}'
                         ), 0)
                     ) - COALESCE(ldp.luashasil, 0)
@@ -788,14 +783,8 @@ class RencanaKerjaHarianController extends Controller
                 
                 // Hari tebang calculation
                 DB::raw("CASE 
-                    WHEN ldp.kodestatus = 'PC' AND b.tanggalpanenpc IS NOT NULL 
-                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenpc) + 1
-                    WHEN ldp.kodestatus = 'RC1' AND b.tanggalpanenrc1 IS NOT NULL 
-                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc1) + 1
-                    WHEN ldp.kodestatus = 'RC2' AND b.tanggalpanenrc2 IS NOT NULL 
-                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc2) + 1
-                    WHEN ldp.kodestatus = 'RC3' AND b.tanggalpanenrc3 IS NOT NULL 
-                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanenrc3) + 1
+                    WHEN b.tanggalpanen IS NOT NULL 
+                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
                     ELSE NULL
                 END as haritebang")
             ])
@@ -1707,7 +1696,6 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Build LKH plot detail records
-     * NEW METHOD
      */
     private function buildLkhPlotDetails($plots, $lkhno, $companycode)
     {
@@ -1721,6 +1709,7 @@ class RencanaKerjaHarianController extends Controller
                 'luasrkh' => $plot['luasrkh'] ?? 0,
                 'luashasil' => $plot['luashasil'] ?? 0,
                 'luassisa' => $plot['luassisa'] ?? 0,
+                'batchno' => $plot['batchno'] ?? null,
                 'createdat' => now()
             ];
         }
@@ -2204,6 +2193,7 @@ class RencanaKerjaHarianController extends Controller
         $date = $request->query('date', date('Y-m-d'));
         return view('input.rencanakerjaharian.dth-report', ['date' => $date]);
     }
+
 
     /**
      * Generate DTH report
@@ -2831,11 +2821,12 @@ public function loadAbsenByDate(Request $request)
     private function buildRkhDetails($rows, $companycode, $rkhno, $tanggal)
     {
         $details = [];
-        $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
         
         foreach ($rows as $row) {
             $activity = Activity::where('activitycode', $row['nama'])->first();
             $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+
+            $batchInfo = $this->getActiveBatchForPlot($companycode, $row['plot']);
 
             $detailData = [
                 'companycode'         => $companycode,
@@ -2852,33 +2843,50 @@ public function loadAbsenByDate(Request $request)
                 'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
                 'usinghelper'         => $row['usinghelper'] ?? 0,
                 'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
+                'batchno'             => $batchInfo ? $batchInfo->batchno : null, 
             ];
-
-            // FIXED: Batch data for panen activities using new structure
-            if (in_array($row['nama'], $panenActivities)) {
-                $batchInfo = $this->getBatchInfoForPlot($companycode, $row['plot']);
-                
-                if ($batchInfo) {
-                    $detailData['batchno'] = $batchInfo->batchno;
-                    $detailData['kodestatus'] = $batchInfo->lifecyclestatus; // ✅ Ambil dari lifecyclestatus
-                    
-                    \Log::info("Batch info attached to RKH detail", [
-                        'plot' => $row['plot'],
-                        'batchno' => $batchInfo->batchno,
-                        'lifecyclestatus' => $batchInfo->lifecyclestatus,
-                        'batcharea' => $batchInfo->batcharea
-                    ]);
-                } else {
-                    \Log::warning("Plot {$row['plot']} tidak memiliki batch info untuk panen activity {$row['nama']}");
-                    $detailData['batchno'] = null;
-                    $detailData['kodestatus'] = null;
-                }
+            
+            if ($batchInfo) {
+                \Log::info("Batch info attached to RKH detail", [
+                    'plot' => $row['plot'],
+                    'batchno' => $batchInfo->batchno,
+                    'lifecyclestatus' => $batchInfo->lifecyclestatus,
+                    'batcharea' => $batchInfo->batcharea
+                ]);
+            } else {
+                \Log::warning("Plot {$row['plot']} tidak memiliki active batch");
             }
             
             $details[] = $detailData;
         }
         
         return $details;
+    }
+
+    /**
+     * Get active batch for specific plot
+     * This applies to ALL activities on that plot
+     * 
+     * @param string $companycode
+     * @param string $plot
+     * @return object|null
+     */
+    private function getActiveBatchForPlot($companycode, $plot)
+    {
+        return DB::table('masterlist')
+            ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+            ->where('masterlist.companycode', $companycode)
+            ->where('masterlist.plot', $plot)
+            ->where('masterlist.isactive', 1)
+            ->where('batch.isactive', 1)
+            ->select([
+                'batch.batchno',
+                'batch.lifecyclestatus',
+                'batch.batcharea',
+                'batch.tanggalpanen',
+                'batch.batchdate'
+            ])
+            ->first();
     }
 
     /**
