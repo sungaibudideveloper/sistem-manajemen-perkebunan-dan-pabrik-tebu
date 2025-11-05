@@ -239,12 +239,12 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 20);
         $categoryFilter = request('categories') ? explode(',', request('categories')) : [];
 
-        $result = Permission::when($search, function($query, $search) {
-                return $query->where('permissionname', 'like', "%{$search}%")
-                            ->orWhere('category', 'like', "%{$search}%")
-                            ->orWhere('description', 'like', "%{$search}%");
-            })
-            ->when(!empty($categoryFilter), function($query) use ($categoryFilter) {
+        $result = Permission::when($search, function ($query, $search) {
+            return $query->where('permissionname', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+        })
+            ->when(!empty($categoryFilter), function ($query) use ($categoryFilter) {
                 return $query->whereIn('category', $categoryFilter);
             })
             ->orderBy('permissionid') // ✅ ADD THIS
@@ -360,20 +360,20 @@ class UserManagementController extends Controller
         $search = request('search');
         $perPage = request('perPage', 10);
 
-        $result = Jabatan::withCount(['jabatanPermissions' => function($query) {
-                $query->where('isactive', 1);
-            }])
-            ->when($search, function($query, $search) {
+        $result = Jabatan::withCount(['jabatanPermissions' => function ($query) {
+            $query->where('isactive', 1);
+        }])
+            ->when($search, function ($query, $search) {
                 return $query->where('namajabatan', 'like', "%{$search}%");
             })
             ->orderBy('namajabatan')
             ->paginate($perPage);
 
         $permissions = Permission::where('isactive', 1)
-                                ->orderBy('category')
-                                ->orderBy('permissionname')
-                                ->get()
-                                ->groupBy('category');
+            ->orderBy('category')
+            ->orderBy('permissionname')
+            ->get()
+            ->groupBy('category');
 
         return view('master.usermanagement.jabatan.index', [
             'title' => 'Jabatan Management',
@@ -519,8 +519,8 @@ class UserManagementController extends Controller
 
             // Check if jabatan has any permissions
             $permissionCount = JabatanPermission::where('idjabatan', $idjabatan)
-                                            ->where('isactive', 1)
-                                            ->count();
+                ->where('isactive', 1)
+                ->count();
 
             if ($permissionCount > 0) {
                 // Deactivate all permissions for this jabatan first
@@ -840,8 +840,8 @@ class UserManagementController extends Controller
             // Get role information
             if ($user->idjabatan && $user->jabatan) {
                 $permissionCount = JabatanPermission::where('idjabatan', $user->idjabatan)
-                                                ->where('isactive', 1)
-                                                ->count();
+                    ->where('isactive', 1)
+                    ->count();
 
                 $result['role'] = [
                     'idjabatan' => $user->idjabatan,
@@ -907,8 +907,8 @@ class UserManagementController extends Controller
         // Use the CheckPermission middleware method
         $middleware = new \App\Http\Middleware\CheckPermission();
         $hasPermission = method_exists($middleware, 'checkUserPermission')
-                        ? $middleware->checkUserPermission($user, $permission)
-                        : false;
+            ? $middleware->checkUserPermission($user, $permission)
+            : false;
 
         return response()->json([
             'user' => $user->userid,
@@ -1077,7 +1077,8 @@ class UserManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('login')->with('success',
+            return redirect()->route('login')->with(
+                'success',
                 'Your request has been submitted successfully. Our admin team will contact you soon. Ticket Number: ' . $ticketNumber
             );
         } catch (\Exception $e) {
@@ -1168,8 +1169,10 @@ class UserManagementController extends Controller
             }
 
             // Track resolved/closed status change
-            if (in_array($request->status, ['resolved', 'closed']) &&
-                !in_array($ticket->status, ['resolved', 'closed'])) {
+            if (
+                in_array($request->status, ['resolved', 'closed']) &&
+                !in_array($ticket->status, ['resolved', 'closed'])
+            ) {
                 $updateData['resolved_by'] = Auth::user()->userid;
                 $updateData['resolved_at'] = now();
             }
@@ -1207,135 +1210,114 @@ class UserManagementController extends Controller
     {
         $search = request('search');
         $perPage = request('perPage', 15);
-        $statusFilter = request('status');
-        $categoryFilter = request('category');
-        $companycode = session('companycode'); // Filter by session company
+        $companycode = session('companycode');
 
-        $result = UserActivity::with('companycode')
-            ->where('companycode', $companycode) // FILTER BY COMPANY
+        // Query untuk user yang SUDAH punya activity (untuk tabel)
+        $result = UserActivity::with(['user', 'company', 'activityGroup'])
+            ->where('companycode', $companycode)
             ->when($search, function ($query, $search) {
-                return $query->where('userid', 'like', "%{$search}%")
-                    ->orWhere('companycode', 'like', "%{$search}%")
-                    ->orWhere('activitygroup', 'like', "%{$search}%");
-            })
-            ->when($statusFilter, function ($query, $status) {
-                return $query->where('status', $status);
-            })
-            ->when($categoryFilter, function ($query, $category) {
-                return $query->where('category', $category);
+                return $query->where(function ($q) use ($search) {
+                    $q->where('userid', 'like', "%{$search}%")
+                        ->orWhere('activitygroup', 'like', "%{$search}%");
+                        
+                });
             })
             ->orderBy('createdat', 'desc')
             ->paginate($perPage);
 
         $companies = Company::orderBy('name')->get();
-        // ambil semua activity group (full rows)
-        $activityGroups = ActivityGroup::orderBy('activitygroup')->get();
 
-        // kalau untuk <select>, biasanya enak pakai pluck: [id => name]
+        $users = User::where('isactive', 1)
+            ->whereHas('userCompanies', function ($q) use ($companycode) {
+                $q->where('companycode', $companycode)
+                    ->where('isactive', 1);
+            })
+            ->orderBy('name')
+            ->get();
+
+        // Activity groups
         $activityGroupOptions = ActivityGroup::orderBy('activitygroup')
-            ->pluck('activitygroup', 'groupname'); // sesuaikan kolom id/name-mu
-
-        $user = User::orderBy('userid')->get();
-        $useroption = User::orderBy('userid')->pluck('userid', 'name');
-
-        // Get statistics - filtered by company
-
-        dd($useroption, $user);
-
+            ->pluck('activitygroup', 'groupname');
+        // dd($activityGroupOptions);
         return view('master.usermanagement.user-activity-permission.index', [
-            'title' => 'Support Tickets',
+            'title' => 'User Activity Permission',
             'navbar' => 'User Management',
             'nav' => 'User Activity Permission',
             'result' => $result,
             'companies' => $companies,
-            'users' => $useroption,
+            'users' => $users,
             'perPage' => $perPage,
             'companycode' => $companycode,
             'activitygroup' => $activityGroupOptions
         ]);
     }
-
-    /**
-     * Assign activity groups to user
-     */
     public function userActivityAssign(Request $request)
     {
-        $request->validate([
-            'userid' => 'required|string|exists:user,userid',
-            'companycode' => 'required|string|exists:company,companycode',
-            'activitygroups' => 'array',
-            'activitygroups.*' => 'string|exists:activitygroup,groupname'
-        ]);
-
         try {
             DB::beginTransaction();
 
-            // Check if user has access to the company
+            // Cek akses user ke company
             $userCompany = UserCompany::where('userid', $request->userid)
                 ->where('companycode', $request->companycode)
                 ->where('isactive', 1)
                 ->first();
 
             if (!$userCompany) {
-                return redirect()->back()
-                    ->with('error', 'User tidak memiliki akses ke company yang dipilih');
+                return back()->with('error', 'User tidak memiliki akses ke company yang dipilih');
             }
 
-            // STEP 1: Nonaktifkan semua activity assignments untuk user+company ini
-            UserActivity::where('userid', $request->userid)
+            $selected = array_filter(array_map('trim', (array) $request->input('activitygroups', [])));
+            $joined = implode(',', $selected); // hasil: "I,II,III"
+
+            $activity = UserActivity::where('userid', $request->userid)
                 ->where('companycode', $request->companycode)
-                ->update(['isactive' => 0]);
+                ->first();
 
-            // STEP 2: Aktifkan hanya activity groups yang dipilih
-            $selectedActivities = $request->activitygroups ?? [];
-
-            foreach ($selectedActivities as $activitygroup) {
-                UserActivity::updateOrCreate([
+            if ($activity) {
+                UserActivity::where('userid', $request->userid)
+                ->where('companycode', $request->companycode)->update([
+                    'activitygroup' => $joined,
+                    'grantedby' => Auth::user()->userid,
+                    'updatedat' => now(),
+                ]);
+            } else {
+                UserActivity::create([
                     'userid' => $request->userid,
                     'companycode' => $request->companycode,
-                    'activitygroup' => $activitygroup
-                ], [
-                    'isactive' => 1,
+                    'activitygroup' => $joined,
                     'grantedby' => Auth::user()->userid,
-                    'createdat' => now()
+                    'createdat' => now(),
+                    'updatedat' => now(),
                 ]);
             }
 
-            // Clear cache jika perlu
-            $user = User::find($request->userid);
-            if ($user) {
-                $this->clearUserCache($user, 'Activity groups updated');
-            }
+             DB::commit();
 
-            DB::commit();
-
-            return redirect()->route('usermanagement.user-company-permissions.index')
+            return redirect()->route('usermanagement.user-activity-permission.index')
                 ->with('success', 'Activity groups berhasil diperbarui untuk user');
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Failed to assign activity groups:', ['error' => $e->getMessage()]);
-
-            return redirect()->back()
-                ->with('error', 'Gagal memperbarui activity groups: ' . $e->getMessage());
+            Log::error('Failed to assign activity groups:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Gagal memperbarui activity groups: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Get user's activity groups for AJAX
-     */
     public function getUserActivities($userid, $companycode)
     {
         try {
-            $activities = UserActivity::where('userid', $userid)
+            // Return comma-separated string dalam array
+            $activity = UserActivity::where('userid', $userid)
                 ->where('companycode', $companycode)
-                ->where('isactive', 1)
-                ->pluck('activitygroup')
-                ->toArray();
+                ->first();
+
+            $activities = $activity ? [$activity->activitygroup] : [];
 
             return response()->json([
                 'success' => true,
-                'activities' => $activities
+                'activities' => $activities // ["I,II,III"]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1354,17 +1336,9 @@ class UserManagementController extends Controller
             UserActivity::where('userid', $userid)
                 ->where('companycode', $companycode)
                 ->where('activitygroup', $activitygroup)
-                ->update([
-                    'isactive' => 0,
-                    'updatedat' => now()
-                ]);
+                ->delete();
 
-            // Clear cache
-            $user = User::find($userid);
-            if ($user) {
-                $this->clearUserCache($user, 'Activity group removed: ' . $activitygroup);
-            }
-
+            
             return redirect()->back()
                 ->with('success', 'Activity group berhasil dihapus dari user');
         } catch (\Exception $e) {
@@ -1461,8 +1435,8 @@ class UserManagementController extends Controller
     private function clearCacheForJabatan($idjabatan)
     {
         $users = User::where('idjabatan', $idjabatan)
-                    ->where('isactive', 1)
-                    ->get();
+            ->where('isactive', 1)
+            ->get();
 
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);
@@ -1489,8 +1463,8 @@ class UserManagementController extends Controller
     private function clearCacheForUsers(array $userIds)
     {
         $users = User::whereIn('userid', $userIds)
-                    ->where('isactive', 1)
-                    ->get();
+            ->where('isactive', 1)
+            ->get();
 
         foreach ($users as $user) {
             CheckPermission::clearUserCache($user);

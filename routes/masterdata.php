@@ -278,14 +278,11 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
     Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])
         ->name('usermanagement.user-activity-permission.index');
 
-    Route::post('usermanagement/user-activity-permissions/assign', [UserManagementController::class, 'userActivityAssign'])
-        ->name('usermanagement.user-activity-permissions.assign');
+    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])
+        ->name('usermanagement.user-activity-permission.assign');
 
-    Route::get('usermanagement/user-activities/{userid}/{companycode}', [UserManagementController::class, 'getUserActivities'])
-        ->name('usermanagement.user-activities.get');
-
-    Route::delete('usermanagement/user-activity-permissions/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])
-        ->name('usermanagement.user-activity-permissions.destroy');
+    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])
+        ->name('usermanagement.user-activity-permission.destroy');
 
     Route::get('usermanagement/user-activities/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
 });
