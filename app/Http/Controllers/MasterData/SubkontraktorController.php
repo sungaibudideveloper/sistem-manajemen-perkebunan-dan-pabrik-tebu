@@ -37,7 +37,6 @@ class SubkontraktorController extends Controller
         }
 
         $subkontraktor = $query
-            ->orderBy('subkontraktor.kontraktorid')
             ->orderBy('subkontraktor.id')
             ->paginate($perPage)
             ->appends([
