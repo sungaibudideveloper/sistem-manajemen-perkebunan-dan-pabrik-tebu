@@ -26,7 +26,8 @@ class BatchController extends Controller
                   ->orWhere('plot', 'like', "%{$search}%")
                   ->orWhere('kodevarietas', 'like', "%{$search}%")
                   ->orWhere('lifecyclestatus', 'like', "%{$search}%")
-                  ->orWhere('plantingrkhno', 'like', "%{$search}%");
+                  ->orWhere('plantingrkhno', 'like', "%{$search}%")
+                  ->orWhere('plottype', 'like', "%{$search}%");
             });
         }
 
@@ -56,14 +57,15 @@ class BatchController extends Controller
         $request->validate([
             'batchno' => 'required|string|max:20',
             'plot' => 'required|string|max:5',
+            'plottype' => 'nullable|in:KBD,KTG',
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
             'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
-            'pkp' => 'nullable|integer|min:0', // FIXED: pkp bukan jaraktanam
+            'pkp' => 'nullable|integer|min:0',
             'lastactivity' => 'nullable|string|max:100',
             'plantingrkhno' => 'nullable|string|max:15',
-            'tanggalpanen' => 'nullable|date', // FIXED: single field
+            'tanggalpanen' => 'nullable|date',
         ]);
 
         $exists = Batch::where('batchno', $request->batchno)->exists();
@@ -80,15 +82,16 @@ class BatchController extends Controller
             'batchno' => $request->input('batchno'),
             'companycode' => $companycode,
             'plot' => $request->input('plot'),
+            'plottype' => $request->input('plottype'),
             'batchdate' => $request->input('batchdate'),
             'batcharea' => $request->input('batcharea'),
             'kodevarietas' => $request->input('kodevarietas'),
             'lifecyclestatus' => $request->input('lifecyclestatus'),
-            'pkp' => $request->input('pkp'), // FIXED
+            'pkp' => $request->input('pkp'),
             'lastactivity' => $request->input('lastactivity'),
             'isactive' => 1,
             'plantingrkhno' => $request->input('plantingrkhno'),
-            'tanggalpanen' => $request->input('tanggalpanen'), // FIXED: single field
+            'tanggalpanen' => $request->input('tanggalpanen'),
             'inputby' => Auth::user()->userid,
             'createdat' => now(),
         ]);
@@ -107,18 +110,18 @@ class BatchController extends Controller
         $validated = $request->validate([
             'batchno' => 'required|string|max:20',
             'plot' => 'required|string|max:5',
+            'plottype' => 'nullable|in:KBD,KTG',
             'batchdate' => 'required|date',
             'batcharea' => 'required|numeric|min:0|max:9999.99',
             'kodevarietas' => 'nullable|string|max:10',
             'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
-            'pkp' => 'nullable|integer|min:0', // FIXED
+            'pkp' => 'nullable|integer|min:0',
             'lastactivity' => 'nullable|string|max:100',
             'isactive' => 'required|boolean',
             'plantingrkhno' => 'nullable|string|max:15',
-            'tanggalpanen' => 'nullable|date', // FIXED: single field
+            'tanggalpanen' => 'nullable|date',
         ]);
         
-        // Check duplicate if batchno changed
         if ($request->batchno !== $batch->batchno) {
             $exists = Batch::where('batchno', $request->batchno)->exists();
     
@@ -134,15 +137,16 @@ class BatchController extends Controller
         $batch->update([
             'batchno' => $validated['batchno'],
             'plot' => $validated['plot'],
+            'plottype' => $validated['plottype'],
             'batchdate' => $validated['batchdate'],
             'batcharea' => $validated['batcharea'],
             'kodevarietas' => $validated['kodevarietas'],
             'lifecyclestatus' => $validated['lifecyclestatus'],
-            'pkp' => $validated['pkp'], // FIXED
+            'pkp' => $validated['pkp'],
             'lastactivity' => $validated['lastactivity'],
             'isactive' => $validated['isactive'],
             'plantingrkhno' => $validated['plantingrkhno'],
-            'tanggalpanen' => $validated['tanggalpanen'], // FIXED: single field
+            'tanggalpanen' => $validated['tanggalpanen'],
         ]);
     
         return redirect()->back()->with('success', 'Data berhasil di‑update.');
