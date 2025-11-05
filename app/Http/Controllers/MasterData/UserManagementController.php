@@ -23,6 +23,8 @@ use App\Models\UserPermission;
 use App\Models\UserCompany;
 use App\Models\Company;
 use App\Models\SupportTicket;
+use App\Models\UserActivity;
+use App\Models\ActivityGroup;
 
 class UserManagementController extends Controller
 {
@@ -37,13 +39,13 @@ class UserManagementController extends Controller
         $companycode = session('companycode'); // Get from session seperti di TenagaKerjaController
 
         $result = User::with(['jabatan', 'userCompanies'])
-            ->when($search, function($query, $search) {
+            ->when($search, function ($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
-                            ->orWhere('name', 'like', "%{$search}%")
-                            ->orWhere('companycode', 'like', "%{$search}%")
-                            ->orWhereHas('jabatan', function($q) use ($search) {
-                                $q->where('namajabatan', 'like', "%{$search}%");
-                            });
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('companycode', 'like', "%{$search}%")
+                    ->orWhereHas('jabatan', function ($q) use ($search) {
+                        $q->where('namajabatan', 'like', "%{$search}%");
+                    });
             })
             ->orderBy('createdat', 'desc')
             ->paginate($perPage);
@@ -116,14 +118,13 @@ class UserManagementController extends Controller
             DB::commit();
 
             return redirect()->route('usermanagement.user.index')
-                           ->with('success', 'User berhasil ditambahkan');
-
+                ->with('success', 'User berhasil ditambahkan');
         } catch (\Exception $e) {
             DB::rollBack();
 
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal menambahkan user: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal menambahkan user: ' . $e->getMessage());
         }
     }
 
@@ -133,7 +134,7 @@ class UserManagementController extends Controller
 
         if (!$user) {
             return redirect()->route('usermanagement.user.index')
-                           ->with('error', 'User tidak ditemukan');
+                ->with('error', 'User tidak ditemukan');
         }
 
         $jabatan = Jabatan::orderBy('namajabatan')->get();
@@ -167,7 +168,7 @@ class UserManagementController extends Controller
 
             if (!$user) {
                 return redirect()->route('usermanagement.user.index')
-                            ->with('error', 'User tidak ditemukan');
+                    ->with('error', 'User tidak ditemukan');
             }
 
             // 🔥 CHECK: Apakah jabatan berubah?
@@ -196,12 +197,11 @@ class UserManagementController extends Controller
             }
 
             return redirect()->route('usermanagement.user.index')
-                        ->with('success', 'User berhasil diperbarui');
-
+                ->with('success', 'User berhasil diperbarui');
         } catch (\Exception $e) {
             return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'Gagal memperbarui user: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal memperbarui user: ' . $e->getMessage());
         }
     }
 
@@ -212,7 +212,7 @@ class UserManagementController extends Controller
 
             if (!$user) {
                 return redirect()->route('usermanagement.user.index')
-                               ->with('error', 'User tidak ditemukan');
+                    ->with('error', 'User tidak ditemukan');
             }
 
             // Soft delete by setting isactive = 0
@@ -222,11 +222,10 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->route('usermanagement.user.index')
-                           ->with('success', 'User berhasil dinonaktifkan');
-
+                ->with('success', 'User berhasil dinonaktifkan');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.user.index')
-                           ->with('error', 'Gagal menonaktifkan user: ' . $e->getMessage());
+                ->with('error', 'Gagal menonaktifkan user: ' . $e->getMessage());
         }
     }
 
@@ -281,12 +280,11 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->route('usermanagement.permissions-masterdata.index')
-                           ->with('success', 'Permission berhasil ditambahkan');
-
+                ->with('success', 'Permission berhasil ditambahkan');
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal menambahkan permission: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal menambahkan permission: ' . $e->getMessage());
         }
     }
 
@@ -304,7 +302,7 @@ class UserManagementController extends Controller
 
             if (!$permission) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
-                               ->with('error', 'Permission tidak ditemukan');
+                    ->with('error', 'Permission tidak ditemukan');
             }
 
             $permission->update([
@@ -315,12 +313,11 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->route('usermanagement.permissions-masterdata.index')
-                           ->with('success', 'Permission berhasil diperbarui');
-
+                ->with('success', 'Permission berhasil diperbarui');
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal memperbarui permission: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal memperbarui permission: ' . $e->getMessage());
         }
     }
 
@@ -331,7 +328,7 @@ class UserManagementController extends Controller
 
             if (!$permission) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
-                               ->with('error', 'Permission tidak ditemukan');
+                    ->with('error', 'Permission tidak ditemukan');
             }
 
             // Check if permission is being used
@@ -340,18 +337,17 @@ class UserManagementController extends Controller
 
             if ($usageCount > 0 || $userUsageCount > 0) {
                 return redirect()->route('usermanagement.permissions-masterdata.index')
-                               ->with('error', 'Permission sedang digunakan dan tidak bisa dihapus');
+                    ->with('error', 'Permission sedang digunakan dan tidak bisa dihapus');
             }
 
             // Soft delete by setting isactive = 0
             $permission->update(['isactive' => 0]);
 
             return redirect()->route('usermanagement.permissions-masterdata.index')
-                           ->with('success', 'Permission berhasil dinonaktifkan');
-
+                ->with('success', 'Permission berhasil dinonaktifkan');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.permissions-masterdata.index')
-                           ->with('error', 'Gagal menonaktifkan permission: ' . $e->getMessage());
+                ->with('error', 'Gagal menonaktifkan permission: ' . $e->getMessage());
         }
     }
 
@@ -407,7 +403,7 @@ class UserManagementController extends Controller
 
             // STEP 1: Nonaktifkan semua permissions untuk jabatan ini
             JabatanPermission::where('idjabatan', $request->idjabatan)
-                            ->update(['isactive' => 0]);
+                ->update(['isactive' => 0]);
 
             // STEP 2: Aktifkan hanya permissions yang dipilih
             $selectedPermissions = $request->permissions ?? [];
@@ -429,14 +425,13 @@ class UserManagementController extends Controller
             DB::commit();
 
             return redirect()->route('usermanagement.jabatan.index')
-                        ->with('success', 'Permissions berhasil diperbarui');
-
+                ->with('success', 'Permissions berhasil diperbarui');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to assign permissions:', ['error' => $e->getMessage()]);
 
             return redirect()->back()
-                        ->with('error', 'Gagal memperbarui permissions: ' . $e->getMessage());
+                ->with('error', 'Gagal memperbarui permissions: ' . $e->getMessage());
         }
     }
 
@@ -457,12 +452,11 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->route('usermanagement.jabatan.index')
-                        ->with('success', 'Jabatan berhasil ditambahkan');
-
+                ->with('success', 'Jabatan berhasil ditambahkan');
         } catch (\Exception $e) {
             return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'Gagal menambahkan jabatan: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal menambahkan jabatan: ' . $e->getMessage());
         }
     }
 
@@ -480,7 +474,7 @@ class UserManagementController extends Controller
 
             if (!$jabatan) {
                 return redirect()->route('usermanagement.jabatan.index')
-                            ->with('error', 'Jabatan tidak ditemukan');
+                    ->with('error', 'Jabatan tidak ditemukan');
             }
 
             $jabatan->update([
@@ -490,12 +484,11 @@ class UserManagementController extends Controller
             ]);
 
             return redirect()->route('usermanagement.jabatan.index')
-                        ->with('success', 'Jabatan berhasil diperbarui');
-
+                ->with('success', 'Jabatan berhasil diperbarui');
         } catch (\Exception $e) {
             return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'Gagal memperbarui jabatan: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal memperbarui jabatan: ' . $e->getMessage());
         }
     }
 
@@ -532,7 +525,7 @@ class UserManagementController extends Controller
             if ($permissionCount > 0) {
                 // Deactivate all permissions for this jabatan first
                 JabatanPermission::where('idjabatan', $idjabatan)
-                                ->update(['isactive' => 0]);
+                    ->update(['isactive' => 0]);
             }
 
             // Delete the jabatan
@@ -542,7 +535,6 @@ class UserManagementController extends Controller
                 'success' => true,
                 'message' => 'Jabatan berhasil dihapus'
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to delete jabatan:', ['error' => $e->getMessage()]);
 
@@ -563,22 +555,22 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 15);
 
         // Group by user, aggregate companies
-        $result = User::with(['jabatan', 'userCompanies' => function($query) {
-                $query->where('isactive', 1);
-            }, 'userCompanies.company'])
-            ->whereHas('userCompanies', function($query) {
+        $result = User::with(['jabatan', 'userCompanies' => function ($query) {
+            $query->where('isactive', 1);
+        }, 'userCompanies.company'])
+            ->whereHas('userCompanies', function ($query) {
                 $query->where('isactive', 1);
             })
-            ->when($search, function($query, $search) {
+            ->when($search, function ($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
-                            ->orWhere('name', 'like', "%{$search}%")
-                            ->orWhereHas('userCompanies', function($q) use ($search) {
-                                $q->where('companycode', 'like', "%{$search}%")
-                                ->where('isactive', 1);
-                            })
-                            ->orWhereHas('userCompanies.company', function($q) use ($search) {
-                                $q->where('name', 'like', "%{$search}%");
-                            });
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhereHas('userCompanies', function ($q) use ($search) {
+                        $q->where('companycode', 'like', "%{$search}%")
+                            ->where('isactive', 1);
+                    })
+                    ->orWhereHas('userCompanies.company', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
             })
             ->orderBy('userid')
             ->paginate($perPage);
@@ -586,7 +578,7 @@ class UserManagementController extends Controller
         // Get users who don't have any company access yet
         $users = User::with('jabatan')
             ->where('isactive', 1)
-            ->whereDoesntHave('userCompanies', function($query) {
+            ->whereDoesntHave('userCompanies', function ($query) {
                 $query->where('isactive', 1);
             })
             ->orderBy('name')
@@ -630,13 +622,12 @@ class UserManagementController extends Controller
             DB::commit();
 
             return redirect()->route('usermanagement.user-company-permissions.index')
-                           ->with('success', 'Company access berhasil ditambahkan');
-
+                ->with('success', 'Company access berhasil ditambahkan');
         } catch (\Exception $e) {
             DB::rollBack();
 
             return redirect()->back()
-                           ->with('error', 'Gagal menambahkan company access: ' . $e->getMessage());
+                ->with('error', 'Gagal menambahkan company access: ' . $e->getMessage());
         }
     }
 
@@ -644,11 +635,11 @@ class UserManagementController extends Controller
     {
         try {
             UserCompany::where('userid', $userid)
-                    ->where('companycode', $companycode)
-                    ->update([
-                        'isactive' => 0,
-                        'updatedat' => now()
-                    ]);
+                ->where('companycode', $companycode)
+                ->update([
+                    'isactive' => 0,
+                    'updatedat' => now()
+                ]);
 
             // CLEAR CACHE (company access & permission cache)
             $user = User::find($userid);
@@ -657,10 +648,10 @@ class UserManagementController extends Controller
             }
 
             return redirect()->route('usermanagement.user-company-permissions.index')
-                        ->with('success', 'Company access berhasil dihapus');
+                ->with('success', 'Company access berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.user-company-permissions.index')
-                        ->with('error', 'Gagal menghapus company access');
+                ->with('error', 'Gagal menghapus company access');
         }
     }
 
@@ -677,7 +668,7 @@ class UserManagementController extends Controller
 
             // STEP 1: Nonaktifkan semua company access untuk user ini
             UserCompany::where('userid', $request->userid)
-                    ->update(['isactive' => 0]);
+                ->update(['isactive' => 0]);
 
             // STEP 2: Aktifkan hanya companies yang dipilih
             $selectedCompanies = $request->companycodes ?? [];
@@ -702,13 +693,12 @@ class UserManagementController extends Controller
             DB::commit();
 
             return redirect()->route('usermanagement.user-company-permissions.index')
-                        ->with('success', 'Company access berhasil diperbarui untuk user');
-
+                ->with('success', 'Company access berhasil diperbarui untuk user');
         } catch (\Exception $e) {
             DB::rollBack();
 
             return redirect()->back()
-                        ->with('error', 'Gagal memperbarui company access: ' . $e->getMessage());
+                ->with('error', 'Gagal memperbarui company access: ' . $e->getMessage());
         }
     }
 
@@ -722,10 +712,10 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 15);
 
         $result = UserPermission::with(['user.jabatan', 'permissionModel'])
-            ->when($search, function($query, $search) {
+            ->when($search, function ($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
-                            ->orWhere('permission', 'like', "%{$search}%")
-                            ->orWhere('companycode', 'like', "%{$search}%");
+                    ->orWhere('permission', 'like', "%{$search}%")
+                    ->orWhere('companycode', 'like', "%{$search}%");
             })
             ->where('isactive', 1)
             ->orderBy('userid')
@@ -734,10 +724,10 @@ class UserManagementController extends Controller
 
         $users = User::with('jabatan')->where('isactive', 1)->orderBy('name')->get();
         $permissions = Permission::where('isactive', 1)
-                                ->orderBy('category')
-                                ->orderBy('permissionname')
-                                ->get()
-                                ->groupBy('category');
+            ->orderBy('category')
+            ->orderBy('permissionname')
+            ->get()
+            ->groupBy('category');
         $companies = Company::orderBy('name')->get();
 
         return view('master.usermanagement.user-permissions.index', [
@@ -765,13 +755,13 @@ class UserManagementController extends Controller
         try {
             // Check if user has access to the company
             $userCompany = UserCompany::where('userid', $request->userid)
-                                    ->where('companycode', $request->companycode)
-                                    ->where('isactive', 1)
-                                    ->first();
+                ->where('companycode', $request->companycode)
+                ->where('isactive', 1)
+                ->first();
 
             if (!$userCompany) {
                 return redirect()->back()
-                            ->with('error', 'User tidak memiliki akses ke company yang dipilih');
+                    ->with('error', 'User tidak memiliki akses ke company yang dipilih');
             }
 
             $permission = Permission::find($request->permissionid);
@@ -796,12 +786,11 @@ class UserManagementController extends Controller
             }
 
             return redirect()->route('usermanagement.user-permissions.index')
-                        ->with('success', 'Permission override berhasil ditambahkan');
-
+                ->with('success', 'Permission override berhasil ditambahkan');
         } catch (\Exception $e) {
             return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'Gagal menambahkan permission override: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal menambahkan permission override: ' . $e->getMessage());
         }
     }
 
@@ -809,12 +798,12 @@ class UserManagementController extends Controller
     {
         try {
             UserPermission::where('userid', $userid)
-                        ->where('companycode', $companycode)
-                        ->where('permission', $permission)
-                        ->update([
-                            'isactive' => 0,
-                            'updatedat' => now()
-                        ]);
+                ->where('companycode', $companycode)
+                ->where('permission', $permission)
+                ->update([
+                    'isactive' => 0,
+                    'updatedat' => now()
+                ]);
 
             // CLEAR CACHE saat permission override dihapus
             $user = User::find($userid);
@@ -823,10 +812,10 @@ class UserManagementController extends Controller
             }
 
             return redirect()->route('usermanagement.user-permissions.index')
-                        ->with('success', 'Permission override berhasil dihapus');
+                ->with('success', 'Permission override berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('usermanagement.user-permissions.index')
-                        ->with('error', 'Gagal menghapus permission override');
+                ->with('error', 'Gagal menghapus permission override');
         }
     }
 
@@ -863,16 +852,16 @@ class UserManagementController extends Controller
 
             // Get user-specific permission overrides
             $userPermissions = UserPermission::where('userid', $userid)
-                                            ->where('isactive', 1)
-                                            ->orderBy('permission')
-                                            ->get();
+                ->where('isactive', 1)
+                ->orderBy('permission')
+                ->get();
 
             foreach ($userPermissions as $perm) {
                 // Check if user has access to the company
                 $hasCompanyAccess = UserCompany::where('userid', $userid)
-                                            ->where('companycode', $perm->companycode)
-                                            ->where('isactive', 1)
-                                            ->exists();
+                    ->where('companycode', $perm->companycode)
+                    ->where('isactive', 1)
+                    ->exists();
 
                 if ($hasCompanyAccess) {
                     $result['overrides'][] = [
@@ -887,7 +876,6 @@ class UserManagementController extends Controller
             }
 
             return response()->json($result);
-
         } catch (\Exception $e) {
             Log::error('Error getting user permissions: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to load permissions'], 500);
@@ -898,9 +886,9 @@ class UserManagementController extends Controller
     public function getJabatanPermissions($idjabatan)
     {
         $permissions = JabatanPermission::where('idjabatan', $idjabatan)
-                                      ->where('isactive', 1)
-                                      ->with('permission')
-                                      ->get();
+            ->where('isactive', 1)
+            ->with('permission')
+            ->get();
 
         return response()->json([
             'permissions' => $permissions
@@ -944,15 +932,15 @@ class UserManagementController extends Controller
 
         $result = SupportTicket::with('company')
             ->where('companycode', $companycode) // FILTER BY COMPANY
-            ->when($search, function($query, $search) {
+            ->when($search, function ($query, $search) {
                 return $query->where('ticket_number', 'like', "%{$search}%")
-                            ->orWhere('fullname', 'like', "%{$search}%")
-                            ->orWhere('username', 'like', "%{$search}%");
+                    ->orWhere('fullname', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
             })
-            ->when($statusFilter, function($query, $status) {
+            ->when($statusFilter, function ($query, $status) {
                 return $query->where('status', $status);
             })
-            ->when($categoryFilter, function($query, $category) {
+            ->when($categoryFilter, function ($query, $category) {
                 return $query->where('category', $category);
             })
             ->orderBy('createdat', 'desc')
@@ -1092,7 +1080,6 @@ class UserManagementController extends Controller
             return redirect()->route('login')->with('success',
                 'Your request has been submitted successfully. Our admin team will contact you soon. Ticket Number: ' . $ticketNumber
             );
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -1142,7 +1129,6 @@ class UserManagementController extends Controller
             }
 
             return $result['success'] ?? false;
-
         } catch (\Exception $e) {
             Log::error('reCAPTCHA verification error', [
                 'error' => $e->getMessage(),
@@ -1191,13 +1177,12 @@ class UserManagementController extends Controller
             $ticket->update($updateData);
 
             return redirect()->back()
-                        ->with('success', 'Ticket berhasil diperbarui');
-
+                ->with('success', 'Ticket berhasil diperbarui');
         } catch (\Exception $e) {
             Log::error('Failed to update ticket:', ['error' => $e->getMessage()]);
 
             return redirect()->back()
-                        ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
+                ->with('error', 'Gagal memperbarui ticket: ' . $e->getMessage());
         }
     }
 
@@ -1208,11 +1193,209 @@ class UserManagementController extends Controller
             $ticket->delete();
 
             return redirect()->back()
-                           ->with('success', 'Ticket berhasil dihapus');
-
+                ->with('success', 'Ticket berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->back()
-                           ->with('error', 'Gagal menghapus ticket: ' . $e->getMessage());
+                ->with('error', 'Gagal menghapus ticket: ' . $e->getMessage());
+        }
+    }
+
+    // =============================================================================
+    // USER ACTIVITY PERMISSION FUNCTIONS 
+    // =============================================================================
+    public function UserActivityPermission(Request $request)
+    {
+        $search = request('search');
+        $perPage = request('perPage', 15);
+        $statusFilter = request('status');
+        $categoryFilter = request('category');
+        $companycode = session('companycode'); // Filter by session company
+
+        $result = UserActivity::with('companycode')
+            ->where('companycode', $companycode) // FILTER BY COMPANY
+            ->when($search, function ($query, $search) {
+                return $query->where('userid', 'like', "%{$search}%")
+                    ->orWhere('companycode', 'like', "%{$search}%")
+                    ->orWhere('activitygroup', 'like', "%{$search}%");
+            })
+            ->when($statusFilter, function ($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->when($categoryFilter, function ($query, $category) {
+                return $query->where('category', $category);
+            })
+            ->orderBy('createdat', 'desc')
+            ->paginate($perPage);
+
+        $companies = Company::orderBy('name')->get();
+        // ambil semua activity group (full rows)
+        $activityGroups = ActivityGroup::orderBy('activitygroup')->get();
+
+        // kalau untuk <select>, biasanya enak pakai pluck: [id => name]
+        $activityGroupOptions = ActivityGroup::orderBy('activitygroup')
+            ->pluck('activitygroup', 'groupname'); // sesuaikan kolom id/name-mu
+
+        $user = User::orderBy('userid')->get();
+        $useroption = User::orderBy('userid')->pluck('userid', 'name');
+
+        // Get statistics - filtered by company
+
+        dd($useroption, $user);
+
+        return view('master.usermanagement.user-activity-permission.index', [
+            'title' => 'Support Tickets',
+            'navbar' => 'User Management',
+            'nav' => 'User Activity Permission',
+            'result' => $result,
+            'companies' => $companies,
+            'users' => $useroption,
+            'perPage' => $perPage,
+            'companycode' => $companycode,
+            'activitygroup' => $activityGroupOptions
+        ]);
+    }
+
+    /**
+     * Assign activity groups to user
+     */
+    public function userActivityAssign(Request $request)
+    {
+        $request->validate([
+            'userid' => 'required|string|exists:user,userid',
+            'companycode' => 'required|string|exists:company,companycode',
+            'activitygroups' => 'array',
+            'activitygroups.*' => 'string|exists:activitygroup,groupname'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Check if user has access to the company
+            $userCompany = UserCompany::where('userid', $request->userid)
+                ->where('companycode', $request->companycode)
+                ->where('isactive', 1)
+                ->first();
+
+            if (!$userCompany) {
+                return redirect()->back()
+                    ->with('error', 'User tidak memiliki akses ke company yang dipilih');
+            }
+
+            // STEP 1: Nonaktifkan semua activity assignments untuk user+company ini
+            UserActivity::where('userid', $request->userid)
+                ->where('companycode', $request->companycode)
+                ->update(['isactive' => 0]);
+
+            // STEP 2: Aktifkan hanya activity groups yang dipilih
+            $selectedActivities = $request->activitygroups ?? [];
+
+            foreach ($selectedActivities as $activitygroup) {
+                UserActivity::updateOrCreate([
+                    'userid' => $request->userid,
+                    'companycode' => $request->companycode,
+                    'activitygroup' => $activitygroup
+                ], [
+                    'isactive' => 1,
+                    'grantedby' => Auth::user()->userid,
+                    'createdat' => now()
+                ]);
+            }
+
+            // Clear cache jika perlu
+            $user = User::find($request->userid);
+            if ($user) {
+                $this->clearUserCache($user, 'Activity groups updated');
+            }
+
+            DB::commit();
+
+            return redirect()->route('usermanagement.user-company-permissions.index')
+                ->with('success', 'Activity groups berhasil diperbarui untuk user');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Failed to assign activity groups:', ['error' => $e->getMessage()]);
+
+            return redirect()->back()
+                ->with('error', 'Gagal memperbarui activity groups: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get user's activity groups for AJAX
+     */
+    public function getUserActivities($userid, $companycode)
+    {
+        try {
+            $activities = UserActivity::where('userid', $userid)
+                ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->pluck('activitygroup')
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'activities' => $activities
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load user activities'
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove specific activity from user
+     */
+    public function userActivityDestroy($userid, $companycode, $activitygroup)
+    {
+        try {
+            UserActivity::where('userid', $userid)
+                ->where('companycode', $companycode)
+                ->where('activitygroup', $activitygroup)
+                ->update([
+                    'isactive' => 0,
+                    'updatedat' => now()
+                ]);
+
+            // Clear cache
+            $user = User::find($userid);
+            if ($user) {
+                $this->clearUserCache($user, 'Activity group removed: ' . $activitygroup);
+            }
+
+            return redirect()->back()
+                ->with('success', 'Activity group berhasil dihapus dari user');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Gagal menghapus activity group');
+        }
+    }
+
+    /**
+     * Get user activities untuk current company session
+     */
+    public function getUserActivitiesForCurrentCompany($userid, $companycode = null)
+    {
+        try {
+            $companycode = $companycode ?? session('companycode');
+
+            $activities = UserActivity::where('userid', $userid)
+                ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->pluck('activitygroup')
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'activities' => $activities
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load activities'
+            ], 500);
         }
     }
 
