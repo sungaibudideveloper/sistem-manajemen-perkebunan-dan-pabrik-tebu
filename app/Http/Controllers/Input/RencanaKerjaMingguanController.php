@@ -213,7 +213,7 @@ class RencanaKerjaMingguanController extends Controller
             }
 
             DB::commit();
-            return redirect()->back()
+            return redirect()->route('input.rencana-kerja-mingguan.index')
                 ->with('success1', 'Data created successfully.');
         } catch (\Exception $e) {
 
