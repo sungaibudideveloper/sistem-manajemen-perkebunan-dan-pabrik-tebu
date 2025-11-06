@@ -76,7 +76,7 @@ class Timbangan extends Controller
 
                     // Insert ke tabel timbangan_payload
                     $result = DB::table('timbangan_payload')->insert($mappedData);
-                    echo 'aaaaaaaa';
+                    
                     if ($result) {
                         $insertedData[] = [
                             'index' => $index,
@@ -93,8 +93,6 @@ class Timbangan extends Controller
                     }
 
                 } catch (\Exception $e) {
-                    return dd($e);
-
                     $failedData[] = [
                         'index' => $index,
                         'nom' => $item['NOM'] ?? 'unknown',
