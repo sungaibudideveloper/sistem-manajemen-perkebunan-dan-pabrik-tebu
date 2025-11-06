@@ -13,11 +13,11 @@
             @if ($startDate && $endDate)
                 <div class="flex gap-2 text-sm">
                     @if (hasPermission('Excel Agronomi'))
-                        <button
-                            class="bg-green-600 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-green-500 flex items-center space-x-2"
-                            onclick="window.location.href='{{ route('report.agronomi.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
-                            <svg class="w-5 h-5 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <button data-export="agronomi"
+                            class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
+                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                                viewBox="0 0 24 24">
                                 <path fill-rule="evenodd"
                                     d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v9.293l-2-2a1 1 0 0 0-1.414 1.414l.293.293h-6.586a1 1 0 1 0 0 2h6.586l-.293.293A1 1 0 0 0 18 16.707l2-2V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Z"
                                     clip-rule="evenodd" />
