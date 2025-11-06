@@ -108,6 +108,48 @@
 
         let timeout = null;
 
+        // Config untuk multiple export URLs
+        const exportConfigs = {
+            'hpt-export': {
+                baseUrl: '{{ route('input.hpt.exportExcel') }}',
+                buttonSelector: '[data-export="hpt"]'
+            },
+            'agronomi-export': {
+                baseUrl: '{{ route('input.agronomi.exportExcel') }}',
+                buttonSelector: '[data-export="agronomi"]'
+            }
+            // Tambahkan config lainnya di sini
+        };
+
+        // Function untuk update semua URL export
+        function updateAllExportUrls() {
+            const startDate = startDateInput ? startDateInput.value : "";
+            const endDate = endDateInput ? endDateInput.value : "";
+            const search = searchInput ? searchInput.value : "";
+
+            // Loop melalui semua config export
+            Object.keys(exportConfigs).forEach(configKey => {
+                const config = exportConfigs[configKey];
+                let exportUrl = config.baseUrl;
+                const params = [];
+
+                if (startDate) params.push(`start_date=${encodeURIComponent(startDate)}`);
+                if (endDate) params.push(`end_date=${encodeURIComponent(endDate)}`);
+                if (search) params.push(`search=${encodeURIComponent(search)}`);
+
+                if (params.length > 0) {
+                    exportUrl += '?' + params.join('&');
+                }
+
+                // Update semua tombol export dengan config ini
+                document.querySelectorAll(config.buttonSelector).forEach(button => {
+                    button.onclick = function() {
+                        window.location.href = exportUrl;
+                    };
+                });
+            });
+        }
+
         function fetchData(url = baseUrl) {
             const search = searchInput ? searchInput.value : "";
             const perPage = perPageInput ? perPageInput.value : 10;
@@ -140,35 +182,50 @@
                         tables.innerHTML = newTable.innerHTML;
                         pages.innerHTML = newPagination.innerHTML;
                     }
+
+                    // Update semua URL export setelah data berhasil di-load
+                    updateAllExportUrls();
                 })
                 .catch(error => console.error("AJAX Fetch Error:", error));
         }
 
+        // Event listeners
         if (searchInput) {
             searchInput.addEventListener("input", () => {
                 clearTimeout(timeout);
-                timeout = setTimeout(() => fetchData(), 300);
+                timeout = setTimeout(() => {
+                    fetchData();
+                    updateAllExportUrls();
+                }, 300);
             });
         }
 
         if (perPageInput) {
             perPageInput.addEventListener("input", () => {
                 clearTimeout(timeout);
-                timeout = setTimeout(() => fetchData(), 300);
+                timeout = setTimeout(() => {
+                    fetchData();
+                    updateAllExportUrls();
+                }, 300);
             });
         }
 
         if (startDateInput) {
             startDateInput.addEventListener("change", function() {
                 fetchData();
+                updateAllExportUrls();
             });
         }
 
         if (endDateInput) {
             endDateInput.addEventListener("change", function() {
                 fetchData();
+                updateAllExportUrls();
             });
         }
+
+        // Inisialisasi URL export pertama kali
+        updateAllExportUrls();
 
         document.addEventListener("click", function(event) {
             const target = event.target.closest("#pagination-links a");

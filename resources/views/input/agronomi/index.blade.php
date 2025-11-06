@@ -91,9 +91,8 @@
                     </div>
                 </div>
                 @if (hasPermission('Excel Agronomi'))
-                    <button
-                        class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2"
-                        onclick="window.location.href='{{ route('input.agronomi.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
+                    <button data-export="agronomi"
+                        class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2">
                         <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
                             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                             viewBox="0 0 24 24">
