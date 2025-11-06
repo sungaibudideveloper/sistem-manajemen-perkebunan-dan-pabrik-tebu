@@ -27,16 +27,42 @@ class Timbangan extends Controller
             // Array untuk menyimpan data yang berhasil diinsert
             $insertedData = [];
             $failedData = [];
+            $duplicateData = [];
 
             // Loop untuk setiap item dalam array
             foreach ($requestData as $index => $item) {
                 try {
+                    // Validasi field yang required (jika ada)
+                    if (empty($item['NOM'])) {
+                        throw new \Exception("Field NOM tidak boleh kosong untuk record index {$index}");
+                    }
+
+                    // Cek duplikat berdasarkan kombinasi divisi dan sjalan
+                    $divisi = $item['DIVISI'] ?? '';
+                    $sjalan = $item['SJALAN'] ?? '';
+                    
+                    $existingData = DB::table('timbangan_payload')
+                        ->where('divisi', $divisi)
+                        ->where('sjalan', $sjalan)
+                        ->first();
+
+                    if ($existingData) {
+                        $duplicateData[] = [
+                            'index' => $index,
+                            'nom' => $item['NOM'] ?? 'unknown',
+                            'divisi' => $divisi,
+                            'sjalan' => $sjalan,
+                            'message' => 'Data sudah ada dengan kombinasi divisi dan sjalan yang sama'
+                        ];
+                        continue; // Skip insert untuk data duplikat
+                    }
+
                     // Mapping data sesuai dengan kolom tabel timbangan_payload
                     $mappedData = [
                         'payload' => json_encode($item), // Simpan data asli sebagai JSON
                         'nom' => $item['NOM'] ?? '',
-                        'divisi' => $item['DIVISI'] ?? '',
-                        'sjalan' => $item['SJALAN'] ?? '',
+                        'divisi' => $divisi,
+                        'sjalan' => $sjalan,
                         'tgl1' => isset($item['TGL1']) && !empty($item['TGL1']) 
                                     ? Carbon::createFromFormat('Y-m-d', $item['TGL1']) 
                                     : null,
@@ -69,11 +95,6 @@ class Timbangan extends Controller
                         'createddate' => Carbon::now()
                     ];
 
-                    // Validasi field yang required (jika ada)
-                    if (empty($mappedData['nom'])) {
-                        throw new \Exception("Field NOM tidak boleh kosong untuk record index {$index}");
-                    }
-
                     // Insert ke tabel timbangan_payload
                     $result = DB::table('timbangan_payload')->insert($mappedData);
                     
@@ -82,6 +103,7 @@ class Timbangan extends Controller
                             'index' => $index,
                             'nom' => $mappedData['nom'],
                             'divisi' => $mappedData['divisi'],
+                            'sjalan' => $mappedData['sjalan'],
                             'status' => 'success'
                         ];
                     } else {
@@ -107,31 +129,39 @@ class Timbangan extends Controller
             }
 
             // Response berdasarkan hasil
-            if (count($insertedData) > 0) {
-                $response = [
-                    'status' => 'success',
-                    'message' => 'Data berhasil diproses',
-                    'summary' => [
-                        'total_received' => count($requestData),
-                        'total_inserted' => count($insertedData),
-                        'total_failed' => count($failedData)
-                    ],
-                    'inserted_data' => $insertedData
-                ];
+            $response = [
+                'status' => 'success',
+                'message' => 'Data berhasil diproses',
+                'summary' => [
+                    'total_received' => count($requestData),
+                    'total_inserted' => count($insertedData),
+                    'total_failed' => count($failedData),
+                    'total_duplicate' => count($duplicateData)
+                ],
+                'inserted_data' => $insertedData
+            ];
 
-                if (count($failedData) > 0) {
-                    $response['failed_data'] = $failedData;
+            // Tambahkan informasi duplikat jika ada
+            if (count($duplicateData) > 0) {
+                $response['duplicate_data'] = $duplicateData;
+            }
+
+            // Tambahkan informasi failed jika ada
+            if (count($failedData) > 0) {
+                $response['failed_data'] = $failedData;
+            }
+
+            // Tentukan status berdasarkan hasil
+            if (count($insertedData) > 0) {
+                if (count($failedData) > 0 || count($duplicateData) > 0) {
                     $response['status'] = 'partial_success';
                     $response['message'] = 'Sebagian data berhasil disimpan';
                 }
-
                 return response()->json($response, 200);
             } else {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Semua data gagal disimpan',
-                    'failed_data' => $failedData
-                ], 500);
+                $response['status'] = 'error';
+                $response['message'] = 'Tidak ada data yang berhasil disimpan';
+                return response()->json($response, 200);
             }
 
         } catch (\Exception $e) {
@@ -162,11 +192,31 @@ class Timbangan extends Controller
                 ], 400);
             }
 
+            // Cek duplikat berdasarkan kombinasi divisi dan sjalan
+            $divisi = $data['DIVISI'] ?? '';
+            $sjalan = $data['SJALAN'] ?? '';
+            
+            $existingData = DB::table('timbangan_payload')
+                ->where('divisi', $divisi)
+                ->where('sjalan', $sjalan)
+                ->first();
+
+            if ($existingData) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Data sudah ada dengan kombinasi divisi dan sjalan yang sama',
+                    'existing_data' => [
+                        'divisi' => $divisi,
+                        'sjalan' => $sjalan
+                    ]
+                ], 409); // 409 Conflict
+            }
+
             $mappedData = [
                 'payload' => json_encode($data),
                 'nom' => $data['NOM'],
-                'divisi' => $data['DIVISI'] ?? '',
-                'sjalan' => $data['SJALAN'] ?? '',
+                'divisi' => $divisi,
+                'sjalan' => $sjalan,
                 'tgl1' => isset($data['TGL1']) && !empty($data['TGL1']) 
                             ? Carbon::createFromFormat('Y-m-d', $data['TGL1']) 
                             : null,
@@ -209,6 +259,7 @@ class Timbangan extends Controller
                     'data' => [
                         'nom' => $mappedData['nom'],
                         'divisi' => $mappedData['divisi'],
+                        'sjalan' => $mappedData['sjalan'],
                         'created_at' => $mappedData['createddate']->toDateTimeString()
                     ]
                 ], 200);
