@@ -273,18 +273,6 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
         ->name('usermanagement.user-permissions.index');
     Route::post('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionStore'])
         ->name('usermanagement.user-permissions.store');
-
-    //User Activity Permission
-    Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])
-        ->name('usermanagement.user-activity-permission.index');
-
-    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])
-        ->name('usermanagement.user-activity-permission.assign');
-
-    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])
-        ->name('usermanagement.user-activity-permission.destroy');
-
-    Route::get('usermanagement/user-activities/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
 });
 
 // User Edit/Update - dengan permission khusus
@@ -352,6 +340,20 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
     Route::delete('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketDestroy'])
         ->name('usermanagement.support-ticket.destroy');
 });
+
+
+//User Activity Permission
+Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
+
+    Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])
+        ->name('usermanagement.user-activity-permission.index');
+    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])
+        ->name('usermanagement.user-activity-permission.assign');
+    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])
+        ->name('usermanagement.user-activity-permission.destroy');
+    Route::get('usermanagement/user-activity-permission/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
+});
+
 
 // Public ticket submission (no auth required - for forgot password)
 Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])

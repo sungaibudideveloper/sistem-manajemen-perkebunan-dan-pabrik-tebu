@@ -75,7 +75,7 @@
             this.isLoadingActivities = true;
             
             // Fetch current user activities via AJAX
-            fetch(`/usermanagement/user-activities/${this.selectedUser}/{{ session('companycode') }}`)
+            fetch(`/usermanagement/user-activity-permission/${this.selectedUser}/{{ session('companycode') }}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
