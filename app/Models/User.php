@@ -50,7 +50,7 @@ class User extends Authenticatable
     public function userCompanies()
     {
         return $this->hasMany(UserCompany::class, 'userid', 'userid')
-                    ->where('isactive', 1);
+            ->where('isactive', 1);
     }
 
     public function company()
@@ -66,7 +66,7 @@ class User extends Authenticatable
     public function userPermissions()
     {
         return $this->hasMany(UserPermission::class, 'userid', 'userid')
-                    ->where('isactive', 1);
+            ->where('isactive', 1);
     }
 
     // Permission-related methods
@@ -89,11 +89,11 @@ class User extends Authenticatable
         }
 
         return JabatanPermission::join('permissions', 'jabatanpermissions.permissionid', '=', 'permissions.permissionid')
-                               ->where('jabatanpermissions.idjabatan', $this->idjabatan)
-                               ->where('jabatanpermissions.isactive', 1)
-                               ->where('permissions.isactive', 1)
-                               ->select('permissions.*', 'jabatanpermissions.grantedby', 'jabatanpermissions.createdat')
-                               ->get();
+            ->where('jabatanpermissions.idjabatan', $this->idjabatan)
+            ->where('jabatanpermissions.isactive', 1)
+            ->where('permissions.isactive', 1)
+            ->select('permissions.*', 'jabatanpermissions.grantedby', 'jabatanpermissions.createdat')
+            ->get();
     }
 
     public function getAccessibleCompanies()
@@ -105,10 +105,10 @@ class User extends Authenticatable
     public static function getMandorByCompany($companyCode)
     {
         return self::select(['userid', 'name', 'companycode', 'idjabatan'])
-                ->where('companycode', $companyCode)
-                ->where('idjabatan', 5)
-                ->orderBy('userid')
-                ->get();
+            ->where('companycode', $companyCode)
+            ->where('idjabatan', 5)
+            ->orderBy('userid')
+            ->get();
     }
 
     // Scope for active users
@@ -131,5 +131,10 @@ class User extends Authenticatable
             'userCompanies',
             'userPermissions.permissionModel'
         ]);
+    }
+
+    public function userActivities()
+    {
+        return $this->hasMany(UserActivity::class, 'userid', 'userid');
     }
 }
