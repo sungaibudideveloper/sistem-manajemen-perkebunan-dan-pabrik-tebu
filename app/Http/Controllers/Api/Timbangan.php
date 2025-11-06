@@ -93,7 +93,8 @@ class Timbangan extends Controller
                     }
 
                 } catch (\Exception $e) {
-                    dd($e);
+                    return dd($e);
+
                     $failedData[] = [
                         'index' => $index,
                         'nom' => $item['NOM'] ?? 'unknown',
