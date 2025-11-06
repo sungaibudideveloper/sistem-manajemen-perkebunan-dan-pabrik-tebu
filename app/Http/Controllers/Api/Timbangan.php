@@ -154,13 +154,17 @@ class Timbangan extends Controller
             // Tentukan status berdasarkan hasil
             if (count($insertedData) > 0) {
                 if (count($failedData) > 0 || count($duplicateData) > 0) {
-                    $response['status'] = 'partial_success';
-                    $response['message'] = 'Sebagian data berhasil disimpan';
+                    // $response['status'] = 'partial_success';
+                    // $response['message'] = 'Sebagian data berhasil disimpan';
+                    $response['status'] = 'success';
+                    $response['message'] = 'Data berhasil disimpan';
                 }
                 return response()->json($response, 200);
             } else {
-                $response['status'] = 'error';
-                $response['message'] = 'Tidak ada data yang berhasil disimpan';
+                // $response['status'] = 'error';
+                // $response['message'] = 'Tidak ada data yang berhasil disimpan';
+                $response['status'] = 'success';
+                $response['message'] = 'Data berhasil disimpan';
                 return response()->json($response, 200);
             }
 
