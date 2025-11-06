@@ -76,7 +76,7 @@ class Timbangan extends Controller
 
                     // Insert ke tabel timbangan_payload
                     $result = DB::table('timbangan_payload')->insert($mappedData);
-                    return 'aaaaaaaa';
+                    echo 'aaaaaaaa';
                     if ($result) {
                         $insertedData[] = [
                             'index' => $index,
