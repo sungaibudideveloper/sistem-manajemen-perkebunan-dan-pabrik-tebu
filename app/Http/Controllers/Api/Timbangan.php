@@ -131,7 +131,7 @@ class Timbangan extends Controller
             // Response berdasarkan hasil
             $response = [
                 'status' => 'success',
-                'message' => 'Data berhasil diproses',
+                'message' => 'Data berhasil disimpan',
                 'summary' => [
                     'total_received' => count($requestData),
                     'total_inserted' => count($insertedData),
