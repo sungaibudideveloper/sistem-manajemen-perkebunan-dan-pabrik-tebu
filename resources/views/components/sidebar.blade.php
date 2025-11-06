@@ -209,6 +209,7 @@
                 if (!$hasVisibleItems) {
                     foreach ($directItems as $item) {
                         if ($hasPermission($menu->slug, $item->slug)) {
+
                             $hasVisibleItems = true;
                             break;
                         }
