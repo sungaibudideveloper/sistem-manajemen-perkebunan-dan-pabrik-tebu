@@ -251,7 +251,7 @@ Route::delete('masterdata/subkontraktor/{companycode}/{id}', [SubkontraktorContr
 
 // Main User Management Routes
 Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
-    
+
     // User CRUD - Main user management
     Route::get('usermanagement/user', [UserManagementController::class, 'userIndex'])
         ->name('usermanagement.user.index');
@@ -259,7 +259,7 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
         ->name('usermanagement.user.store');
     Route::get('usermanagement/user/create', [UserManagementController::class, 'userCreate'])
         ->name('usermanagement.user.create');
-    
+
     // User Company Access Management
     Route::get('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyIndex'])
         ->name('usermanagement.user-company-permissions.index');
@@ -267,7 +267,7 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
         ->name('usermanagement.user-company-permissions.store');
     Route::post('usermanagement/user-company-permissions/assign', [UserManagementController::class, 'userCompanyAssign'])
         ->name('usermanagement.user-company-permissions.assign');
-        
+
     // User Specific Permission Overrides
     Route::get('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionIndex'])
         ->name('usermanagement.user-permissions.index');
@@ -281,7 +281,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit User']], function () {
         ->name('usermanagement.user.edit');
     Route::put('usermanagement/user/{userid}', [UserManagementController::class, 'userUpdate'])
         ->name('usermanagement.user.update');
-        
+
     // User Company Access Delete
     Route::delete('usermanagement/user-company-permissions/{userid}/{companycode}', [UserManagementController::class, 'userCompanyDestroy'])
         ->name('usermanagement.user-company-permissions.destroy');
@@ -299,7 +299,7 @@ Route::delete('usermanagement/user-permissions/{userid}/{companycode}/{permissio
 
 // Permission Master Data Routes
 Route::group(['middleware' => ['auth', 'permission:Master']], function () {
-    
+
     // Permission Master CRUD
     Route::get('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionIndex'])
         ->name('usermanagement.permissions-masterdata.index');
@@ -313,7 +313,7 @@ Route::group(['middleware' => ['auth', 'permission:Master']], function () {
 
 // Jabatan Permission Management Routes
 Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
-    
+
     // Jabatan Permission Management
     Route::get('usermanagement/jabatan', [UserManagementController::class, 'jabatanPermissionIndex'])
         ->name('usermanagement.jabatan.index');
@@ -331,7 +331,7 @@ Route::group(['middleware' => ['auth', 'permission:Jabatan']], function () {
 
 // Support Ticket Routes
 Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
-    
+
     // Ticket Management (Admin)
     Route::get('usermanagement/support-ticket', [UserManagementController::class, 'ticketIndex'])
         ->name('usermanagement.support-ticket.index');
@@ -341,10 +341,30 @@ Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
         ->name('usermanagement.support-ticket.destroy');
 });
 
+
+//User Activity Permission
+Route::group(['middleware' => ['auth', 'permission:Kelola User']], function () {
+
+    Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])
+        ->name('usermanagement.user-activity-permission.index');
+    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])
+        ->name('usermanagement.user-activity-permission.assign');
+    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])
+        ->name('usermanagement.user-activity-permission.destroy');
+    Route::get('usermanagement/user-activity-permission/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
+});
+
+
 // Public ticket submission (no auth required - for forgot password)
 Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
     ->middleware('throttle:10,60') // 3 requests per 60 menit per IP
     ->name('support.ticket.submit');
+
+
+//User ACTIVITY 
+
+
+
 
 // =============================================================================
 // API ROUTES - untuk AJAX calls dan datatables

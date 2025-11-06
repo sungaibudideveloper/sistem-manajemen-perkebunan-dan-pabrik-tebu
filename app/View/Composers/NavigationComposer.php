@@ -33,10 +33,10 @@ class NavigationComposer
     {
         if (Auth::check()) {
             $user = Auth::user();
-            
+
             // Generate unique cache key per user, jabatan, and company
             $cacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_" . session('companycode');
-            
+
             // Cache all navigation data to prevent repeated queries
             $navigationData = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
                 return [
@@ -50,11 +50,11 @@ class NavigationComposer
                     'period' => $this->getMonitoringPeriod()
                 ];
             });
-            
+
             // ✅ STORE permission array in request-level memory cache
             $requestCacheKey = $user->userid . '_' . $user->idjabatan;
             self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
-            
+
             $view->with($navigationData);
         }
     }
@@ -108,14 +108,14 @@ class NavigationComposer
             }
 
             $user = Auth::user();
-            
+
             // Additional cache layer for permission array
             // This prevents repeated calls to CheckPermission::getUserEffectivePermissions()
             $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
-            
+
             return Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
                 $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
-                
+
                 // Extract only granted permission names
                 $grantedPermissions = [];
                 foreach ($effectivePermissions as $permissionName => $details) {
@@ -123,10 +123,9 @@ class NavigationComposer
                         $grantedPermissions[] = $permissionName;
                     }
                 }
-                
+
                 return $grantedPermissions;
             });
-            
         } catch (\Exception $e) {
             \Log::error('Error getting user permissions: ' . $e->getMessage());
             return [];
@@ -149,33 +148,32 @@ class NavigationComposer
 
             $user = Auth::user();
             $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-            
+
             // ✅ PRIORITY 1: Check request-level memory cache (NO DB QUERY)
             if (isset(self::$requestPermissionCache[$requestCacheKey])) {
                 return in_array($permissionName, self::$requestPermissionCache[$requestCacheKey]);
             }
-            
+
             // ✅ PRIORITY 2: Load from Laravel cache (1 DB query)
             $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
-            
+
             $grantedPermissions = Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
                 $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
-                
+
                 $grantedPermissions = [];
                 foreach ($effectivePermissions as $permName => $details) {
                     if ($details['granted']) {
                         $grantedPermissions[] = $permName;
                     }
                 }
-                
+
                 return $grantedPermissions;
             });
-            
+
             // ✅ Store in request cache untuk calls berikutnya
             self::$requestPermissionCache[$requestCacheKey] = $grantedPermissions;
-            
+
             return in_array($permissionName, $grantedPermissions);
-            
         } catch (\Exception $e) {
             \Log::error('Error checking permission: ' . $e->getMessage());
             return false;
@@ -201,7 +199,7 @@ class NavigationComposer
         // Menu-level permissions
         $menuPermissions = [
             'masterdata' => 'Master',
-            'input' => 'Input Data', 
+            'input' => 'Input Data',
             'report' => 'Report',
             'dashboard' => 'Dashboard',
             'process' => 'Process',
@@ -215,7 +213,7 @@ class NavigationComposer
             'master-list' => 'MasterList',
             'herbisida-dosage' => 'Dosis Herbisida',
             'tenagakerja' => 'Tenaga Kerja',
-            
+
             // Input Data - non-standard permissions
             'rencanakerjaharian' => 'Rencana Kerja Harian',
             'gudang-bbm' => 'Menu Gudang',
@@ -237,6 +235,7 @@ class NavigationComposer
             // User Management - non-standard permissions
             'user' => 'Kelola User',
             'user-company-permissions' => 'Kelola User',
+            'user-activity-permission' => 'Kelola User',
             'user-permissions' => 'Kelola User',
             'permissions-masterdata' => 'Master',
             'jabatan' => 'Jabatan',
@@ -252,7 +251,7 @@ class NavigationComposer
             if (isset($submenuPermissionOverrides[$submenuSlug])) {
                 return $submenuPermissionOverrides[$submenuSlug];
             }
-            
+
             // Convention: Titleize slug to get permission name
             // Example: 'support-ticket' becomes 'Support Ticket'
             return $this->slugToPermissionName($submenuSlug);
@@ -277,7 +276,7 @@ class NavigationComposer
     {
         // Replace hyphens/underscores with spaces
         $name = str_replace(['-', '_'], ' ', $slug);
-        
+
         // Convert to title case
         return ucwords($name);
     }
@@ -294,12 +293,12 @@ class NavigationComposer
                 $companyName = DB::table('company')
                     ->where('companycode', session('companycode'))
                     ->value('name');
-                
+
                 if ($companyName) {
                     session(['companyname' => $companyName]);
                     return $companyName;
                 }
-                
+
                 return session('companycode');
             }
             return 'Default Company';
@@ -321,7 +320,7 @@ class NavigationComposer
                 $period = DB::table('company')
                     ->where('companycode', session('companycode'))
                     ->value('companyperiod');
-                
+
                 if ($period) {
                     return Carbon::parse($period)->format('F Y');
                 }
@@ -367,7 +366,7 @@ class NavigationComposer
                     ->where('isactive', 1)
                     ->pluck('companycode')
                     ->toArray();
-                
+
                 sort($companies);
                 return $companies;
             }
@@ -391,21 +390,21 @@ class NavigationComposer
             ->where('userid', $user->userid)
             ->where('isactive', 1)
             ->pluck('companycode');
-        
+
         // Clear navigation cache for all companies user has access to
         foreach ($companies as $companycode) {
             $navCacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}";
             Cache::forget($navCacheKey);
         }
-        
+
         // Clear permission array cache
         $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
         Cache::forget($permCacheKey);
-        
+
         // ✅ Clear request-level cache
         $requestCacheKey = $user->userid . '_' . $user->idjabatan;
         unset(self::$requestPermissionCache[$requestCacheKey]);
-        
+
         \Log::info('Navigation and permission array cache cleared', [
             'userid' => $user->userid,
             'jabatan' => $user->idjabatan,

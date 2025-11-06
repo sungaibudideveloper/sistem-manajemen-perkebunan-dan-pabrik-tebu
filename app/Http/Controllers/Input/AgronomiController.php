@@ -490,6 +490,13 @@ class AgronomiController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+        $search = $request->input('search');
+
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'search' => 'nullable|string'
+        ]);
 
         $query = DB::table('agrolst')
             ->leftJoin('agrohdr', function ($join) {
@@ -532,7 +539,14 @@ class AgronomiController extends Controller
         if ($endDate) {
             $query->whereDate('agrohdr.tanggalpengamatan', '<=', $endDate);
         }
-        $agronomi = $query->get();
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('agro_lst.no_sample', 'like', "%{$search}%")
+                    ->orWhere('plotting.kd_plot', 'like', "%{$search}%")
+                    ->orWhere('agro_hdr.varietas', 'like', "%{$search}%")
+                    ->orWhere('agro_hdr.kat', 'like', "%{$search}%");
+            });
+        }
 
         $now = Carbon::now();
 
@@ -573,57 +587,65 @@ class AgronomiController extends Controller
         $sheet->freezePane('A2');
 
         $row = 2;
-        foreach ($agronomi as $list) {
+        $processedCount = 0;
 
-            $tanggaltanam = Carbon::parse($list->tanggaltanam);
-            $umurTanam = $tanggaltanam->diffInMonths($now);
+        // Gunakan chunk() biasa karena tidak ada kolom id
+        $query->chunk(500, function ($agronomiChunk) use ($sheet, &$row, $now, &$processedCount) {
+            foreach ($agronomiChunk as $list) {
 
-            $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
-            $bulanPengamatan = $tanggalpengamatan->format('F');
+                $tanggaltanam = Carbon::parse($list->tanggaltanam);
+                $umurTanam = $tanggaltanam->diffInMonths($now);
 
-            $sheet->setCellValue('A' . $row, $list->nosample);
-            $sheet->setCellValue('B' . $row, $list->compName);
-            $sheet->setCellValue('C' . $row, $list->blokName);
-            $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luasarea);
-            $sheet->setCellValue('F' . $row, $list->varietas);
-            $sheet->setCellValue('G' . $row, $list->kat);
-            $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
-            $sheet->setCellValue('I' . $row, round($umurTanam) . ' Bulan');
-            $sheet->setCellValue('J' . $row, $list->jaraktanam);
-            $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
-            $sheet->setCellValue('L' . $row, $bulanPengamatan);
-            $sheet->setCellValue('M' . $row, $list->nourut);
-            $sheet->setCellValue('N' . $row, $list->jumlahbatang);
-            $sheet->setCellValue('O' . $row, $list->pan_gap);
-            $sheet->setCellValue('P' . $row, $list->per_gap);
-            $sheet->setCellValue('Q' . $row, $list->per_germinasi);
-            $sheet->setCellValue('R' . $row, $list->ph_tanah);
-            $sheet->setCellValue('S' . $row, $list->populasi);
-            $sheet->setCellValue('T' . $row, $list->ktk_gulma);
-            $sheet->setCellValue('U' . $row, $list->per_gulma);
-            $sheet->setCellValue('V' . $row, $list->t_primer);
-            $sheet->setCellValue('W' . $row, $list->t_sekunder);
-            $sheet->setCellValue('X' . $row, $list->t_tersier);
-            $sheet->setCellValue('Y' . $row, $list->t_kuarter);
-            $sheet->setCellValue('Z' . $row, $list->d_primer);
-            $sheet->setCellValue('AA' . $row, $list->d_sekunder);
-            $sheet->setCellValue('AB' . $row, $list->d_tersier);
-            $sheet->setCellValue('AC' . $row, $list->d_kuarter);
+                $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
+                $bulanPengamatan = $tanggalpengamatan->format('F');
 
-            $sheet->getStyle('P' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->setCellValue('A' . $row, $list->nosample);
+                $sheet->setCellValue('B' . $row, $list->compName);
+                $sheet->setCellValue('C' . $row, $list->blokName);
+                $sheet->setCellValue('D' . $row, $list->plotName);
+                $sheet->setCellValue('E' . $row, $list->luasarea);
+                $sheet->setCellValue('F' . $row, $list->varietas);
+                $sheet->setCellValue('G' . $row, $list->kat);
+                $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
+                $sheet->setCellValue('I' . $row, round($umurTanam) . ' Bulan');
+                $sheet->setCellValue('J' . $row, $list->jaraktanam);
+                $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
+                $sheet->setCellValue('L' . $row, $bulanPengamatan);
+                $sheet->setCellValue('M' . $row, $list->nourut);
+                $sheet->setCellValue('N' . $row, $list->jumlahbatang);
+                $sheet->setCellValue('O' . $row, $list->pan_gap);
+                $sheet->setCellValue('P' . $row, $list->per_gap);
+                $sheet->setCellValue('Q' . $row, $list->per_germinasi);
+                $sheet->setCellValue('R' . $row, $list->ph_tanah);
+                $sheet->setCellValue('S' . $row, $list->populasi);
+                $sheet->setCellValue('T' . $row, $list->ktk_gulma);
+                $sheet->setCellValue('U' . $row, $list->per_gulma);
+                $sheet->setCellValue('V' . $row, $list->t_primer);
+                $sheet->setCellValue('W' . $row, $list->t_sekunder);
+                $sheet->setCellValue('X' . $row, $list->t_tersier);
+                $sheet->setCellValue('Y' . $row, $list->t_kuarter);
+                $sheet->setCellValue('Z' . $row, $list->d_primer);
+                $sheet->setCellValue('AA' . $row, $list->d_sekunder);
+                $sheet->setCellValue('AB' . $row, $list->d_tersier);
+                $sheet->setCellValue('AC' . $row, $list->d_kuarter);
 
-            $sheet->getStyle('Q' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->getStyle('P' . $row)
+                    ->getNumberFormat()
+                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
 
-            $sheet->getStyle('U' . $row)
-                ->getNumberFormat()
-                ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-            $row++;
-        }
+                $sheet->getStyle('Q' . $row)
+                    ->getNumberFormat()
+                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+
+                $sheet->getStyle('U' . $row)
+                    ->getNumberFormat()
+                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+
+                $row++;
+                $processedCount++;
+            }
+            gc_collect_cycles();
+        });
 
         $writer = new Xlsx($spreadsheet);
         if ($startDate && $endDate) {

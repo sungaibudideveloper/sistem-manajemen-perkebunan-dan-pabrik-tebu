@@ -591,6 +591,13 @@ class HPTController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+        $search = $request->input('search');
+
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'search' => 'nullable|string'
+        ]);
 
         $query = DB::table('hptlst')
             ->leftJoin('hpthdr', function ($join) {
@@ -630,153 +637,178 @@ class HPTController extends Controller
         if ($endDate) {
             $query->whereDate('hpthdr.tanggalpengamatan', '<=', $endDate);
         }
-        $hpt = $query->get();
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('hpt_lst.no_sample', 'like', "%{$search}%")
+                    ->orWhere('plotting.kd_plot', 'like', "%{$search}%")
+                    ->orWhere('hpt_hdr.varietas', 'like', "%{$search}%")
+                    ->orWhere('hpt_hdr.kat', 'like', "%{$search}%");
+            });
+        }
 
         $now = Carbon::now();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->setCellValue('A1', 'No. Sample');
-        $sheet->setCellValue('B1', 'Kebun');
-        $sheet->setCellValue('C1', 'Blok');
-        $sheet->setCellValue('D1', 'Plot');
-        $sheet->setCellValue('E1', 'Luas');
-        $sheet->setCellValue('F1', 'Tanggal Tanam');
-        $sheet->setCellValue('G1', 'Umur Tanam');
-        $sheet->setCellValue('H1', 'Varietas');
-        $sheet->setCellValue('I1', 'Kategori');
-        $sheet->setCellValue('J1', 'Tanggal Pengamatan');
-        $sheet->setCellValue('K1', 'Bulan Pengamatan');
-        $sheet->setCellValue('L1', 'No. Urut');
-        $sheet->setCellValue('M1', 'Jumlah Batang');
-        $sheet->setCellValue('N1', 'PPT');
-        $sheet->setCellValue('O1', 'PPT Aktif');
-        $sheet->setCellValue('P1', 'PBT');
-        $sheet->setCellValue('Q1', 'PBT Aktif');
-        $sheet->setCellValue('R1', 'Skor 0');
-        $sheet->setCellValue('S1', 'Skor 1');
-        $sheet->setCellValue('T1', 'Skor 2');
-        $sheet->setCellValue('U1', 'Skor 3');
-        $sheet->setCellValue('V1', 'Skor 4');
-        $sheet->setCellValue('W1', '%PPT');
-        $sheet->setCellValue('X1', '%PPT Aktif');
-        $sheet->setCellValue('Y1', '%PBT');
-        $sheet->setCellValue('Z1', '%PBT Aktif');
-        $sheet->setCellValue('AA1', 'Σni*vi');
-        $sheet->setCellValue('AB1', 'Intensitas Kerusakan');
-        $sheet->setCellValue('AC1', 'Telur PPT');
-        $sheet->setCellValue('AD1', 'Larva PPT 1');
-        $sheet->setCellValue('AE1', 'Larva PPT 2');
-        $sheet->setCellValue('AF1', 'Larva PPT 3');
-        $sheet->setCellValue('AG1', 'Larva PPT 4');
-        $sheet->setCellValue('AH1', 'Pupa PPT');
-        $sheet->setCellValue('AI1', 'Ngengat PPT');
-        $sheet->setCellValue('AJ1', 'Kosong PPT');
-        $sheet->setCellValue('AK1', 'Telur PBT');
-        $sheet->setCellValue('AL1', 'Larva PBT 1');
-        $sheet->setCellValue('AM1', 'Larva PBT 2');
-        $sheet->setCellValue('AN1', 'Larva PBT 3');
-        $sheet->setCellValue('AO1', 'Larva PBT 4');
-        $sheet->setCellValue('AP1', 'Pupa PBT');
-        $sheet->setCellValue('AQ1', 'Ngengat PBT');
-        $sheet->setCellValue('AR1', 'Kosong PBT');
-        $sheet->setCellValue('AS1', 'DH');
-        $sheet->setCellValue('AT1', 'DT');
-        $sheet->setCellValue('AU1', 'KBP');
-        $sheet->setCellValue('AV1', 'KBB');
-        $sheet->setCellValue('AW1', 'KP');
-        $sheet->setCellValue('AX1', 'Cabuk');
-        $sheet->setCellValue('AY1', 'Belalang');
-        $sheet->setCellValue('AZ1', 'BTG Terserang Ul.Grayak');
-        $sheet->setCellValue('BA1', 'Jumlah Ul.Grayak');
-        $sheet->setCellValue('BB1', 'BTG Terserang SMUT');
-        $sheet->setCellValue('BC1', 'SMUT Stadia 1');
-        $sheet->setCellValue('BD1', 'SMUT Stadia 2');
-        $sheet->setCellValue('BE1', 'SMUT Stadia 3');
-        $sheet->setCellValue('BF1', 'Jumlah Larva PPT');
-        $sheet->setCellValue('BG1', 'Jumlah Larva PBT');
+        $headers = [
+            'A' => 'No. Sample',
+            'B' => 'Kebun',
+            'C' => 'Blok',
+            'D' => 'Plot',
+            'E' => 'Luas',
+            'F' => 'Tanggal Tanam',
+            'G' => 'Umur Tanam',
+            'H' => 'Varietas',
+            'I' => 'Kategori',
+            'J' => 'Tanggal Pengamatan',
+            'K' => 'Bulan Pengamatan',
+            'L' => 'No. Urut',
+            'M' => 'Jumlah Batang',
+            'N' => 'PPT',
+            'O' => 'PPT Aktif',
+            'P' => 'PBT',
+            'Q' => 'PBT Aktif',
+            'R' => 'Skor 0',
+            'S' => 'Skor 1',
+            'T' => 'Skor 2',
+            'U' => 'Skor 3',
+            'V' => 'Skor 4',
+            'W' => '%PPT',
+            'X' => '%PPT Aktif',
+            'Y' => '%PBT',
+            'Z' => '%PBT Aktif',
+            'AA' => 'Σni*vi',
+            'AB' => 'Intensitas Kerusakan',
+            'AC' => 'Telur PPT',
+            'AD' => 'Larva PPT 1',
+            'AE' => 'Larva PPT 2',
+            'AF' => 'Larva PPT 3',
+            'AG' => 'Larva PPT 4',
+            'AH' => 'Pupa PPT',
+            'AI' => 'Ngengat PPT',
+            'AJ' => 'Kosong PPT',
+            'AK' => 'Telur PBT',
+            'AL' => 'Larva PBT 1',
+            'AM' => 'Larva PBT 2',
+            'AN' => 'Larva PBT 3',
+            'AO' => 'Larva PBT 4',
+            'AP' => 'Pupa PBT',
+            'AQ' => 'Ngengat PBT',
+            'AR' => 'Kosong PBT',
+            'AS' => 'DH',
+            'AT' => 'DT',
+            'AU' => 'KBP',
+            'AV' => 'KBB',
+            'AW' => 'KP',
+            'AX' => 'Cabuk',
+            'AY' => 'Belalang',
+            'AZ' => 'BTG Terserang Ul.Grayak',
+            'BA' => 'Jumlah Ul.Grayak',
+            'BB' => 'BTG Terserang SMUT',
+            'BC' => 'SMUT Stadia 1',
+            'BD' => 'SMUT Stadia 2',
+            'BE' => 'SMUT Stadia 3',
+            'BF' => 'Jumlah Larva PPT',
+            'BG' => 'Jumlah Larva PBT'
+        ];
+
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValue($col . '1', $header);
+        }
 
         $sheet->getStyle('A1:BG1')->getFont()->setBold(true);
         $sheet->freezePane('A2');
 
         $row = 2;
-        foreach ($hpt as $list) {
+        $processedCount = 0;
 
-            $tanggaltanam = Carbon::parse($list->tanggaltanam);
-            $umurTanam = $tanggaltanam->diffInMonths($now);
+        // Gunakan chunk() biasa karena tidak ada kolom id
+        $query->chunk(500, function ($hptChunk) use ($sheet, &$row, $now, &$processedCount) {
+            foreach ($hptChunk as $list) {
 
-            $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
-            $bulanPengamatan = $tanggalpengamatan->format('F');
+                $tanggaltanam = Carbon::parse($list->tanggaltanam);
+                $umurTanam = $tanggaltanam->diffInMonths($now);
 
-            $sheet->setCellValue('A' . $row, $list->nosample);
-            $sheet->setCellValue('B' . $row, $list->compName);
-            $sheet->setCellValue('C' . $row, $list->blokName);
-            $sheet->setCellValue('D' . $row, $list->plotName);
-            $sheet->setCellValue('E' . $row, $list->luasarea);
-            $sheet->setCellValue('F' . $row, $tanggaltanam->format('Y-m-d'));
-            $sheet->setCellValue('G' . $row, round($umurTanam) . ' Bulan');
-            $sheet->setCellValue('H' . $row, $list->varietas);
-            $sheet->setCellValue('I' . $row, $list->kat);
-            $sheet->setCellValue('J' . $row, $list->tanggalpengamatan);
-            $sheet->setCellValue('K' . $row, $bulanPengamatan);
-            $sheet->setCellValue('L' . $row, $list->nourut);
-            $sheet->setCellValue('M' . $row, $list->jumlahbatang);
-            $sheet->setCellValue('N' . $row, $list->ppt);
-            $sheet->setCellValue('O' . $row, $list->ppt_aktif);
-            $sheet->setCellValue('P' . $row, $list->pbt);
-            $sheet->setCellValue('Q' . $row, $list->pbt_aktif);
-            $sheet->setCellValue('R' . $row, $list->skor0);
-            $sheet->setCellValue('S' . $row, $list->skor1);
-            $sheet->setCellValue('T' . $row, $list->skor2);
-            $sheet->setCellValue('U' . $row, $list->skor3);
-            $sheet->setCellValue('V' . $row, $list->skor4);
-            $sheet->setCellValue('W' . $row, $list->per_ppt);
-            $sheet->setCellValue('X' . $row, $list->per_ppt_aktif);
-            $sheet->setCellValue('Y' . $row, $list->per_pbt);
-            $sheet->setCellValue('Z' . $row, $list->per_pbt_aktif);
-            $sheet->setCellValue('AA' . $row, $list->sum_ni);
-            $sheet->setCellValue('AB' . $row, $list->int_rusak);
-            $sheet->setCellValue('AC' . $row, $list->telur_ppt);
-            $sheet->setCellValue('AD' . $row, $list->larva_ppt1);
-            $sheet->setCellValue('AE' . $row, $list->larva_ppt2);
-            $sheet->setCellValue('AF' . $row, $list->larva_ppt3);
-            $sheet->setCellValue('AG' . $row, $list->larva_ppt4);
-            $sheet->setCellValue('AH' . $row, $list->pupa_ppt);
-            $sheet->setCellValue('AI' . $row, $list->ngengat_ppt);
-            $sheet->setCellValue('AJ' . $row, $list->kosong_ppt);
-            $sheet->setCellValue('AK' . $row, $list->telur_pbt);
-            $sheet->setCellValue('AL' . $row, $list->larva_pbt1);
-            $sheet->setCellValue('AM' . $row, $list->larva_pbt2);
-            $sheet->setCellValue('AN' . $row, $list->larva_pbt3);
-            $sheet->setCellValue('AO' . $row, $list->larva_pbt4);
-            $sheet->setCellValue('AP' . $row, $list->pupa_pbt);
-            $sheet->setCellValue('AQ' . $row, $list->ngengat_pbt);
-            $sheet->setCellValue('AR' . $row, $list->kosong_pbt);
-            $sheet->setCellValue('AS' . $row, $list->dh);
-            $sheet->setCellValue('AT' . $row, $list->dt);
-            $sheet->setCellValue('AU' . $row, $list->kbp);
-            $sheet->setCellValue('AV' . $row, $list->kbb);
-            $sheet->setCellValue('AW' . $row, $list->kp);
-            $sheet->setCellValue('AX' . $row, $list->cabuk);
-            $sheet->setCellValue('AY' . $row, $list->belalang);
-            $sheet->setCellValue('AZ' . $row, $list->serang_grayak);
-            $sheet->setCellValue('BA' . $row, $list->jum_grayak);
-            $sheet->setCellValue('BB' . $row, $list->serang_smut);
-            $sheet->setCellValue('BC' . $row, $list->smut_stadia1);
-            $sheet->setCellValue('BD' . $row, $list->smut_stadia2);
-            $sheet->setCellValue('BE' . $row, $list->smut_stadia3);
-            $sheet->setCellValue('BF' . $row, $list->jum_larva_ppt);
-            $sheet->setCellValue('BG' . $row, $list->jum_larva_pbt);
+                $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
+                $bulanPengamatan = $tanggalpengamatan->format('F');
 
-            $sheet->getStyle('W' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-            $sheet->getStyle('X' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-            $sheet->getStyle('Y' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-            $sheet->getStyle('Z' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-            $sheet->getStyle('AB' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->setCellValue('A' . $row, $list->nosample);
+                $sheet->setCellValue('B' . $row, $list->compName);
+                $sheet->setCellValue('C' . $row, $list->blokName);
+                $sheet->setCellValue('D' . $row, $list->plotName);
+                $sheet->setCellValue('E' . $row, $list->luasarea);
+                $sheet->setCellValue('F' . $row, $tanggaltanam->format('Y-m-d'));
+                $sheet->setCellValue('G' . $row, round($umurTanam) . ' Bulan');
+                $sheet->setCellValue('H' . $row, $list->varietas);
+                $sheet->setCellValue('I' . $row, $list->kat);
+                $sheet->setCellValue('J' . $row, $list->tanggalpengamatan);
+                $sheet->setCellValue('K' . $row, $bulanPengamatan);
+                $sheet->setCellValue('L' . $row, $list->nourut);
+                $sheet->setCellValue('M' . $row, $list->jumlahbatang);
+                $sheet->setCellValue('N' . $row, $list->ppt);
+                $sheet->setCellValue('O' . $row, $list->ppt_aktif);
+                $sheet->setCellValue('P' . $row, $list->pbt);
+                $sheet->setCellValue('Q' . $row, $list->pbt_aktif);
+                $sheet->setCellValue('R' . $row, $list->skor0);
+                $sheet->setCellValue('S' . $row, $list->skor1);
+                $sheet->setCellValue('T' . $row, $list->skor2);
+                $sheet->setCellValue('U' . $row, $list->skor3);
+                $sheet->setCellValue('V' . $row, $list->skor4);
+                $sheet->setCellValue('W' . $row, $list->per_ppt);
+                $sheet->setCellValue('X' . $row, $list->per_ppt_aktif);
+                $sheet->setCellValue('Y' . $row, $list->per_pbt);
+                $sheet->setCellValue('Z' . $row, $list->per_pbt_aktif);
+                $sheet->setCellValue('AA' . $row, $list->sum_ni);
+                $sheet->setCellValue('AB' . $row, $list->int_rusak);
+                $sheet->setCellValue('AC' . $row, $list->telur_ppt);
+                $sheet->setCellValue('AD' . $row, $list->larva_ppt1);
+                $sheet->setCellValue('AE' . $row, $list->larva_ppt2);
+                $sheet->setCellValue('AF' . $row, $list->larva_ppt3);
+                $sheet->setCellValue('AG' . $row, $list->larva_ppt4);
+                $sheet->setCellValue('AH' . $row, $list->pupa_ppt);
+                $sheet->setCellValue('AI' . $row, $list->ngengat_ppt);
+                $sheet->setCellValue('AJ' . $row, $list->kosong_ppt);
+                $sheet->setCellValue('AK' . $row, $list->telur_pbt);
+                $sheet->setCellValue('AL' . $row, $list->larva_pbt1);
+                $sheet->setCellValue('AM' . $row, $list->larva_pbt2);
+                $sheet->setCellValue('AN' . $row, $list->larva_pbt3);
+                $sheet->setCellValue('AO' . $row, $list->larva_pbt4);
+                $sheet->setCellValue('AP' . $row, $list->pupa_pbt);
+                $sheet->setCellValue('AQ' . $row, $list->ngengat_pbt);
+                $sheet->setCellValue('AR' . $row, $list->kosong_pbt);
+                $sheet->setCellValue('AS' . $row, $list->dh);
+                $sheet->setCellValue('AT' . $row, $list->dt);
+                $sheet->setCellValue('AU' . $row, $list->kbp);
+                $sheet->setCellValue('AV' . $row, $list->kbb);
+                $sheet->setCellValue('AW' . $row, $list->kp);
+                $sheet->setCellValue('AX' . $row, $list->cabuk);
+                $sheet->setCellValue('AY' . $row, $list->belalang);
+                $sheet->setCellValue('AZ' . $row, $list->serang_grayak);
+                $sheet->setCellValue('BA' . $row, $list->jum_grayak);
+                $sheet->setCellValue('BB' . $row, $list->serang_smut);
+                $sheet->setCellValue('BC' . $row, $list->smut_stadia1);
+                $sheet->setCellValue('BD' . $row, $list->smut_stadia2);
+                $sheet->setCellValue('BE' . $row, $list->smut_stadia3);
+                $sheet->setCellValue('BF' . $row, $list->jum_larva_ppt);
+                $sheet->setCellValue('BG' . $row, $list->jum_larva_pbt);
 
-            $row++;
-        }
+                $sheet->getStyle('W' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->getStyle('X' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->getStyle('Y' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->getStyle('Z' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $sheet->getStyle('AB' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+
+                $row++;
+                $processedCount++;
+            }
+
+            // Log progress setiap chunk
+            // \Log::info("Processed {$processedCount} records so far...");
+
+            // Optional: Clear memory setiap chunk
+            gc_collect_cycles();
+        });
 
         $writer = new Xlsx($spreadsheet);
         if ($startDate && $endDate) {
