@@ -42,16 +42,16 @@ class Timbangan extends Controller
                     $sjalan = $item['SJALAN'] ?? '';
                     
                     $existingData = DB::table('timbangan_payload')
-                        ->where('divisi', $divisi)
-                        ->where('sjalan', $sjalan)
+                        ->where('companycode', $divisi)
+                        ->where('suratjalanno', $sjalan)
                         ->first();
 
                     if ($existingData) {
                         $duplicateData[] = [
                             'index' => $index,
                             'nom' => $item['NOM'] ?? 'unknown',
-                            'divisi' => $divisi,
-                            'sjalan' => $sjalan,
+                            'companycode' => $divisi,
+                            'suratjalanno' => $sjalan,
                             'message' => 'Data sudah ada dengan kombinasi divisi dan sjalan yang sama'
                         ];
                         continue; // Skip insert untuk data duplikat
@@ -61,8 +61,8 @@ class Timbangan extends Controller
                     $mappedData = [
                         'payload' => json_encode($item), // Simpan data asli sebagai JSON
                         'nom' => $item['NOM'] ?? '',
-                        'divisi' => $divisi,
-                        'sjalan' => $sjalan,
+                        'companycode' => $divisi,
+                        'suratjalanno' => $sjalan,
                         'tgl1' => isset($item['TGL1']) && !empty($item['TGL1']) 
                                     ? Carbon::createFromFormat('Y-m-d', $item['TGL1']) 
                                     : null,
@@ -102,8 +102,8 @@ class Timbangan extends Controller
                         $insertedData[] = [
                             'index' => $index,
                             'nom' => $mappedData['nom'],
-                            'divisi' => $mappedData['divisi'],
-                            'sjalan' => $mappedData['sjalan'],
+                            'companycode' => $mappedData['companycode'],
+                            'suratjalanno' => $mappedData['suratjalanno'],
                             'status' => 'success'
                         ];
                     } else {
@@ -201,8 +201,8 @@ class Timbangan extends Controller
             $sjalan = $data['SJALAN'] ?? '';
             
             $existingData = DB::table('timbangan_payload')
-                ->where('divisi', $divisi)
-                ->where('sjalan', $sjalan)
+                ->where('companycode', $divisi)
+                ->where('suratjalanno', $sjalan)
                 ->first();
 
             if ($existingData) {
@@ -210,8 +210,8 @@ class Timbangan extends Controller
                     'status' => 'error',
                     'message' => 'Data sudah ada dengan kombinasi divisi dan sjalan yang sama',
                     'existing_data' => [
-                        'divisi' => $divisi,
-                        'sjalan' => $sjalan
+                        'companycode' => $divisi,
+                        'suratjalanno' => $sjalan
                     ]
                 ], 409); // 409 Conflict
             }
@@ -219,8 +219,8 @@ class Timbangan extends Controller
             $mappedData = [
                 'payload' => json_encode($data),
                 'nom' => $data['NOM'],
-                'divisi' => $divisi,
-                'sjalan' => $sjalan,
+                'companycode' => $divisi,
+                'suratjalanno' => $sjalan,
                 'tgl1' => isset($data['TGL1']) && !empty($data['TGL1']) 
                             ? Carbon::createFromFormat('Y-m-d', $data['TGL1']) 
                             : null,
@@ -262,8 +262,8 @@ class Timbangan extends Controller
                     'message' => 'Data berhasil disimpan',
                     'data' => [
                         'nom' => $mappedData['nom'],
-                        'divisi' => $mappedData['divisi'],
-                        'sjalan' => $mappedData['sjalan'],
+                        'companycode' => $mappedData['companycode'],
+                        'suratjalanno' => $mappedData['suratjalanno'],
                         'created_at' => $mappedData['createddate']->toDateTimeString()
                     ]
                 ], 200);

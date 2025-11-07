@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Report\PivotController;
@@ -19,6 +20,16 @@ Route::group(['middleware' => ['auth', 'permission:Report Zpk']], function () {
     Route::get('report/report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report.report-zpk.exportExcel');
 });
 
+// UBAH DARI:
+Route::group(['middleware' => ['auth', 'permission:Panen Tebu Report']], function () {
+    Route::get('report/panen-tebu-report', [ReportController::class, 'index'])
+        ->name('report.panen-tebu-report.index');
+});
+// MENJADI:
+Route::group(['middleware' => ['auth', 'permission:Panen Tebu Report']], function () {
+    Route::get('report/panen-tebu-report', [ReportController::class, 'index'])
+        ->name('report.panen-tebu-report.index');
+});
 Route::get('report/agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi')
     ->middleware('permission:Pivot Agronomi');
 Route::get('report/hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT')
