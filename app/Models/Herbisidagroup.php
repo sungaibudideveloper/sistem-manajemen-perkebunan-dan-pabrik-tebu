@@ -19,6 +19,7 @@ class Herbisidagroup extends Model
     protected $fillable = [
         'herbisidagroupid',
         'herbisidagroupname',
+        'activitycode',
         'description',
     ];
 
