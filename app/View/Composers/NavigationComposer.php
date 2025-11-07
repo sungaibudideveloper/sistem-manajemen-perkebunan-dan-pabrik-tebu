@@ -203,9 +203,9 @@ class NavigationComposer
             'report' => 'Report',
             'dashboard' => 'Dashboard',
             'process' => 'Process',
-            'usermanagement' => 'Kelola User'
+            'usermanagement' => 'Kelola User',
+            
         ];
-
         // Submenu-level permission overrides
         // Only for cases that don't follow the convention
         $submenuPermissionOverrides = [
@@ -243,6 +243,9 @@ class NavigationComposer
             'menu' => 'Menu',
             'submenu' => 'Submenu',
             'subsubmenu' => 'Subsubmenu',
+
+            // Pabrik - non-standard permissions
+           
         ];
 
         // Logic: Convention over configuration

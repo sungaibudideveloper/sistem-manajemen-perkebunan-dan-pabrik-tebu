@@ -137,6 +137,7 @@ Route::delete(
 )
     ->middleware(['auth', 'permission:Hapus Accounting'])
     ->name('masterdata.accounting.destroy');
+    
 
 // Master List  
 Route::group(['middleware' => ['auth', 'permission:MasterList']], function () {

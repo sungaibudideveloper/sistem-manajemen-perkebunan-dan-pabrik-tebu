@@ -386,7 +386,7 @@ Route::middleware('api')->prefix('api/mobile')->group(function () {
 });
 
 
-
+require __DIR__.'/pabrik.php';
 
 
 
