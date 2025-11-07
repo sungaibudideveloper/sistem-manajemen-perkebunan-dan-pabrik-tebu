@@ -175,11 +175,11 @@
         // Generate new row
         document.getElementById('addRow').addEventListener('click', function() {
             const container = document.getElementById('input-container');
-            const rowCount = container.querySelectorAll('.input-row').length;
+            const rowCount = container.querySelectorAll('.input-row').length + 1;
             const newRow = document.createElement('div');
             newRow.classList.add('my-3', 'flex', 'items-center', 'gap-2', 'input-row');
             newRow.innerHTML = `
-                <div><div class="border rounded-md border-gray-300 p-2 w-[60px] text-sm">${rowCount + 1}</div></div>
+                <div><div class="border rounded-md border-gray-300 p-2 w-[60px] text-sm number-count">${rowCount}</div></div>
                 <div>
                     <select name="lists[${rowCount}][blok]" class="blok-select border rounded-md border-gray-300 p-2 w-full max-w-fit text-sm" required>
                         <option value="" disabled selected>-- Pilih Blok --</option>
@@ -198,9 +198,49 @@
                 </div>
                 <div>
                     <input type="number" min="0" max="999.99" step="0.01" name="lists[${rowCount}][totalestimasi]" class="border rounded-md border-gray-300 p-2 w-[180px] text-sm" required />
+                </div>
+                <div class="flex items-end">
+                    <button type="button" class="remove-row flex items-center gap-2 bg-white border-red-600 border text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-lg shadow-sm">
+                        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Remove</span>
+                    </button>
                 </div>`;
             container.appendChild(newRow);
         });
+
+        document.addEventListener('click', function(event) {
+            const removeButton = event.target.closest('.remove-row');
+
+            if (removeButton) {
+                const row = removeButton.closest('.input-row');
+                if (row) {
+                    row.remove();
+                    updateRowNumbers();
+                }
+            }
+        });
+
+        // Fungsi untuk memperbarui nomor urut
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('.input-row');
+            rows.forEach((row, index) => {
+                const numberDiv = row.querySelector('.number-count');
+                if (numberDiv) {
+                    numberDiv.textContent = index + 1;
+                }
+
+                // Juga update nama input fields untuk menghindari gap index
+                const inputs = row.querySelectorAll('select, input');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/lists\[\d+\]/, `lists[${index}]`));
+                    }
+                });
+            });
+        }
 
         // Fetch plot by blok
         function loadPlotOptions(blok, plotSelect, selectedPlot = null) {

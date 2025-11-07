@@ -38,7 +38,7 @@ class UserManagementController extends Controller
         $perPage = request('perPage', 10);
         $companycode = session('companycode'); // Get from session seperti di TenagaKerjaController
 
-        $result = User::with(['jabatan', 'userCompanies'])
+        $result = User::with(['jabatan', 'userCompanies', 'userActivities'])
             ->when($search, function ($query, $search) {
                 return $query->where('userid', 'like', "%{$search}%")
                     ->orWhere('name', 'like', "%{$search}%")
@@ -53,6 +53,18 @@ class UserManagementController extends Controller
         $jabatan = Jabatan::orderBy('namajabatan')->get();
         $companies = Company::orderBy('name')->get(); // Fixed: company.name bukan companyname
 
+        // Activity groups
+        $activityGroupOptions = ActivityGroup::orderBy('activitygroup')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'value' => $item->activitygroup,  // Untuk value checkbox/select
+                    'label' => $item->activitygroup,  // Untuk display
+                    'groupname' => $item->groupname   // Optional: kategori/keterangan
+                ];
+            });
+
+        $activityGroupLookup = ActivityGroup::pluck('groupname', 'activitygroup')->toArray();
         return view('master.usermanagement.user.index', [
             'title' => 'User Management',
             'navbar' => 'User Management',
@@ -61,7 +73,9 @@ class UserManagementController extends Controller
             'jabatan' => $jabatan,
             'companies' => $companies,
             'perPage' => $perPage,
-            'companycode' => $companycode
+            'companycode' => $companycode,
+            'activityGroupOptions' => $activityGroupOptions,
+            'activityGroupLookup' => $activityGroupLookup
         ]);
     }
 
@@ -81,6 +95,7 @@ class UserManagementController extends Controller
 
     public function userStore(Request $request)
     {
+
         $request->validate([
             'userid' => 'required|string|max:50|unique:user,userid',
             'name' => 'required|string|max:30',
@@ -92,8 +107,26 @@ class UserManagementController extends Controller
 
         try {
             DB::beginTransaction();
-
+            $selected = array_filter(array_map('trim', (array) $request->input('activitygroups', [])));
+            $joined = implode(',', $selected); // hasil: "I,II,III"
             // Create user
+
+            $activity = UserActivity::where('userid', $request->userid)
+                ->where('companycode', $request->companycode)
+                ->first();
+            // dd($selected,$joined,$activity);
+            if (!$activity) {
+
+                UserActivity::create([
+                    'userid' => $request->userid,
+                    'companycode' => $request->companycode,
+                    'activitygroup' => $joined,
+                    'grantedby' => Auth::user()->userid,
+                    'createdat' => now(),
+                    'updatedat' => null
+                ]);
+            }
+
             $user = User::create([
                 'userid' => $request->userid,
                 'name' => $request->name,
@@ -114,6 +147,8 @@ class UserManagementController extends Controller
                 'grantedby' => Auth::user()->userid,
                 'createdat' => now()
             ]);
+
+
 
             DB::commit();
 
@@ -156,6 +191,7 @@ class UserManagementController extends Controller
 
     public function userUpdate(Request $request, $userid)
     {
+
         $request->validate([
             'name' => 'required|string|max:30',
             'companycode' => 'required|string|max:4|exists:company,companycode',
@@ -191,9 +227,25 @@ class UserManagementController extends Controller
                 ]);
             }
 
-            // ✅ CLEAR CACHE jika jabatan berubah
             if ($jabatanChanged) {
                 $this->clearUserCache($user, 'Jabatan changed');
+            }
+
+            $selected = array_filter(array_map('trim', (array) $request->input('activitygroups', [])));
+            $joined = implode(',', $selected); // hasil: "I,II,III"
+            // Create user
+            // dd($joined);
+            $activity = UserActivity::where('userid', $request->userid)
+                ->where('companycode', $request->companycode)
+                ->first();
+            //  dd($selected,$joined,$activity);
+            if ($activity) {
+                UserActivity::where('userid', $request->userid)
+                    ->where('companycode', $request->companycode)->update([
+                        'activitygroup' => $joined,
+                        'grantedby' => Auth::user()->userid,
+                        'updatedat' => now(),
+                    ]);
             }
 
             return redirect()->route('usermanagement.user.index')
@@ -1219,7 +1271,6 @@ class UserManagementController extends Controller
                 return $query->where(function ($q) use ($search) {
                     $q->where('userid', 'like', "%{$search}%")
                         ->orWhere('activitygroup', 'like', "%{$search}%");
-                        
                 });
             })
             ->orderBy('createdat', 'desc')
@@ -1275,11 +1326,11 @@ class UserManagementController extends Controller
 
             if ($activity) {
                 UserActivity::where('userid', $request->userid)
-                ->where('companycode', $request->companycode)->update([
-                    'activitygroup' => $joined,
-                    'grantedby' => Auth::user()->userid,
-                    'updatedat' => now(),
-                ]);
+                    ->where('companycode', $request->companycode)->update([
+                        'activitygroup' => $joined,
+                        'grantedby' => Auth::user()->userid,
+                        'updatedat' => now(),
+                    ]);
             } else {
                 UserActivity::create([
                     'userid' => $request->userid,
@@ -1291,7 +1342,7 @@ class UserManagementController extends Controller
                 ]);
             }
 
-             DB::commit();
+            DB::commit();
 
             return redirect()->route('usermanagement.user-activity-permission.index')
                 ->with('success', 'Activity groups berhasil diperbarui untuk user');
@@ -1338,7 +1389,7 @@ class UserManagementController extends Controller
                 ->where('activitygroup', $activitygroup)
                 ->delete();
 
-            
+
             return redirect()->back()
                 ->with('success', 'Activity group berhasil dihapus dari user');
         } catch (\Exception $e) {
