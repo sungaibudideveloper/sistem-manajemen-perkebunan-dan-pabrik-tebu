@@ -23,9 +23,10 @@ use App\Models\Herbisidagroup;
 use App\Models\AbsenHdr;
 use App\Models\AbsenLst;
 use App\Models\Lkhhdr;
-use App\Models\LkhDetailPlot; // FIXED: Import new model
-use App\Models\LkhDetailWorker; // FIXED: Import new model
-use App\Models\LkhDetailMaterial; // FIXED: Import new model
+use App\Models\LkhDetailPlot;
+use App\Models\LkhDetailWorker;
+use App\Models\LkhDetailMaterial;
+use App\Models\LkhDetailBsm;
 use App\Models\Kendaraan;
 use App\Models\TenagaKerja;
 
@@ -656,7 +657,6 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Show LKH report
-     * UPDATED: Support both normal and panen activities
      */
     public function showLKH($lkhno)
     {
@@ -670,12 +670,30 @@ class RencanaKerjaHarianController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            // Detect if this is panen activity
+            // Detect activity type
             $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
+            $bsmActivity = '4.7';
+            
             $isPanenActivity = in_array($lkhData->activitycode, $panenActivities);
+            $isBsmActivity = ($lkhData->activitycode === $bsmActivity);
 
+            // Route 1: BSM Activity Report
+            if ($isBsmActivity) {
+                $lkhBsmDetails = $this->getLkhBsmDetailsForShow($companycode, $lkhno);
+                $approvals = $this->getLkhApprovalsData($lkhData);
+
+                return view('input.rencanakerjaharian.lkh-report-bsm', [
+                    'title' => 'Laporan Kegiatan Harian (LKH) - Cek BSM',
+                    'navbar' => 'Input',
+                    'nav' => 'Rencana Kerja Harian',
+                    'lkhData' => $lkhData,
+                    'lkhBsmDetails' => $lkhBsmDetails,
+                    'approvals' => $approvals
+                ]);
+            }
+            
+            // Route 2: Panen Activity Report
             if ($isPanenActivity) {
-                // Load panen data from NEW UNIFIED STRUCTURE
                 $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
 
@@ -687,24 +705,24 @@ class RencanaKerjaHarianController extends Controller
                     'lkhPanenDetails' => $lkhPanenDetails,
                     'approvals' => $approvals
                 ]);
-            } else {
-                // Load normal activity data (existing code)
-                $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
-                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
-                $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
-                $approvals = $this->getLkhApprovalsData($lkhData);
-
-                return view('input.rencanakerjaharian.lkh-report', [
-                    'title' => 'Laporan Kegiatan Harian (LKH)',
-                    'navbar' => 'Input',
-                    'nav' => 'Rencana Kerja Harian',
-                    'lkhData' => $lkhData,
-                    'lkhPlotDetails' => $lkhPlotDetails,
-                    'lkhWorkerDetails' => $lkhWorkerDetails,
-                    'lkhMaterialDetails' => $lkhMaterialDetails,
-                    'approvals' => $approvals
-                ]);
             }
+            
+            // Route 3: Normal Activity Report (Default)
+            $lkhPlotDetails = $this->getLkhPlotDetailsForShow($companycode, $lkhno);
+            $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
+            $lkhMaterialDetails = $this->getLkhMaterialDetailsForShow($companycode, $lkhno);
+            $approvals = $this->getLkhApprovalsData($lkhData);
+
+            return view('input.rencanakerjaharian.lkh-report', [
+                'title' => 'Laporan Kegiatan Harian (LKH)',
+                'navbar' => 'Input',
+                'nav' => 'Rencana Kerja Harian',
+                'lkhData' => $lkhData,
+                'lkhPlotDetails' => $lkhPlotDetails,
+                'lkhWorkerDetails' => $lkhWorkerDetails,
+                'lkhMaterialDetails' => $lkhMaterialDetails,
+                'approvals' => $approvals
+            ]);
 
         } catch (\Exception $e) {
             \Log::error("Error showing LKH: " . $e->getMessage());
@@ -728,27 +746,20 @@ class RencanaKerjaHarianController extends Controller
         
         return DB::table('lkhdetailplot as ldp')
             ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
-            ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
-                $join->on('ldp.subkontraktorid', '=', 'sk.id')
-                    ->where('sk.companycode', '=', $companycode);
-            })
             ->where('ldp.companycode', $companycode)
             ->where('ldp.lkhno', $lkhno)
             ->select([
                 'ldp.plot',
                 'ldp.blok',
                 'ldp.batchno',
-                // ❌ REMOVED: 'ldp.kodestatus',
                 'ldp.luasrkh',
                 'ldp.luashasil',
                 'ldp.createdat',
-                'ldp.subkontraktorid',
                 'ldp.fieldbalancerit',
                 'ldp.fieldbalanceton',
-                'sk.namasubkontraktor as subkontraktor_nama',
                 'b.batcharea',
                 'b.tanggalpanen',
-                'b.lifecyclestatus as kodestatus',  // ✅ Get from batch table
+                'b.lifecyclestatus as kodestatus',
                 
                 // STC calculation (unchanged)
                 DB::raw("(
@@ -763,10 +774,8 @@ class RencanaKerjaHarianController extends Controller
                     ), 0)
                 ) as stc"),
                 
-                // HC = Hasil panen hari ini
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
-                // BC calculation
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
@@ -781,7 +790,6 @@ class RencanaKerjaHarianController extends Controller
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
-                // Hari tebang calculation
                 DB::raw("CASE 
                     WHEN b.tanggalpanen IS NOT NULL 
                         THEN DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
@@ -1383,6 +1391,72 @@ class RencanaKerjaHarianController extends Controller
             ->with('tenagakerja')
             ->orderBy('tenagakerjaurutan')
             ->get();
+    }
+
+    /**
+     * Get LKH BSM details for show
+     * NEW METHOD: For BSM activity reports
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    private function getLkhBsmDetailsForShow($companycode, $lkhno)
+    {
+        return DB::table('lkhdetailbsm as bsm')
+            ->leftJoin('batch as b', 'bsm.batchno', '=', 'b.batchno')
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('bsm.lkhno', '=', 'ldp.lkhno')
+                    ->on('bsm.plot', '=', 'ldp.plot')
+                    ->where('ldp.companycode', '=', $companycode);
+            })
+            ->where('bsm.companycode', $companycode)
+            ->where('bsm.lkhno', $lkhno)
+            ->select([
+                'bsm.id',
+                'ldp.blok',
+                'bsm.plot',
+                'bsm.batchno',
+                'bsm.nilaibersih',
+                'bsm.nilaisegar',
+                'bsm.nilaimanis',
+                'bsm.averagescore',
+                'bsm.grade',
+                'bsm.keterangan',
+                'bsm.inputby',
+                'bsm.createdat',
+                'bsm.updateby',
+                'bsm.updatedat',
+                'b.lifecyclestatus as kodestatus',
+                'b.batcharea',
+                'ldp.luasrkh'
+            ])
+            ->orderBy('ldp.blok')
+            ->orderBy('bsm.plot')
+            ->get()
+            ->map(function($item) {
+                return (object)[
+                    'id' => $item->id,
+                    'blok' => $item->blok ?? '-',
+                    'plot' => $item->plot,
+                    'plot_display' => ($item->blok ?? '-') . '-' . $item->plot,
+                    'batchno' => $item->batchno ?? '-',
+                    'kodestatus' => $item->kodestatus ?? '-',
+                    'batcharea' => number_format((float)($item->batcharea ?? 0), 2),
+                    'luasrkh' => number_format((float)($item->luasrkh ?? 0), 2),
+                    'nilaibersih' => $item->nilaibersih ? number_format((float)$item->nilaibersih, 2) : null,
+                    'nilaisegar' => $item->nilaisegar ? number_format((float)$item->nilaisegar, 2) : null,
+                    'nilaimanis' => $item->nilaimanis ? number_format((float)$item->nilaimanis, 2) : null,
+                    'averagescore' => $item->averagescore ? number_format((float)$item->averagescore, 2) : null,
+                    'grade' => $item->grade ?? null,
+                    'status' => $item->averagescore ? 'COMPLETED' : 'PENDING',
+                    'keterangan' => $item->keterangan ?? '-',
+                    'inputby' => $item->inputby ?? '-',
+                    'createdat' => $item->createdat ? Carbon::parse($item->createdat)->format('d/m/Y H:i') : '-',
+                    'updateby' => $item->updateby ?? '-',
+                    'updatedat' => $item->updatedat ? Carbon::parse($item->updatedat)->format('d/m/Y H:i') : '-',
+                ];
+            });
     }
 
     /** 
@@ -2037,12 +2111,21 @@ class RencanaKerjaHarianController extends Controller
         ];
 
         if ($action === 'approve') {
+            // Simulate after approval to check if fully approved
             $tempLkh = clone $lkh;
             $tempLkh->$approvalField = '1';
             
+            // Check if this approval makes it FULLY APPROVED
             if ($this->isLKHFullyApproved($tempLkh)) {
                 $updateData['status'] = 'APPROVED';
+                $updateData['approvalstatus'] = '1';
+            } else {
+                // Still waiting for other approvals
+                $updateData['approvalstatus'] = null;
             }
+        } else {
+            // If rejected at any level
+            $updateData['approvalstatus'] = '0';
         }
 
         DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
