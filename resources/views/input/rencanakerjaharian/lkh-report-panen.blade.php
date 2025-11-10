@@ -62,27 +62,8 @@
 
         {{-- Section 1: KONTRAKTOR & SUBKONTRAKTOR --}}
         @php
-            // ✅ NEW: Get data dari lkhdetailplot → subkontraktor → kontraktor
-            $kontraktorSummary = DB::table('lkhdetailplot as ldp')
-                ->leftJoin('subkontraktor as sk', function($join) {
-                    $join->on('ldp.subkontraktorid', '=', 'sk.id')
-                        ->on('ldp.companycode', '=', 'sk.companycode');
-                })
-                ->leftJoin('kontraktor as k', function($join) {
-                    $join->on('sk.kontraktorid', '=', 'k.id')
-                        ->on('sk.companycode', '=', 'k.companycode');
-                })
-                ->where('ldp.companycode', Session::get('companycode'))
-                ->where('ldp.lkhno', $lkhData->lkhno)
-                ->whereNotNull('ldp.subkontraktorid') // Only include plots with subkontraktor
-                ->select([
-                    'k.id as kontraktorid',
-                    'k.namakontraktor',
-                    DB::raw('COUNT(DISTINCT sk.id) as total_subkontraktor'),
-                    DB::raw('COUNT(ldp.id) as total_plot')
-                ])
-                ->groupBy('k.id', 'k.namakontraktor')
-                ->get();
+            // ❌ DISABLED: Query kontraktor summary (sementara)
+            $kontraktorSummary = collect([]); // Empty collection
         @endphp
 
         <div class="mb-8">
@@ -102,19 +83,18 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
-                        @forelse($kontraktorSummary as $index => $kontraktor)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-gray-700">{{ $index + 1 }}</td>
-                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $kontraktor->kontraktorid }}</td>
-                            <td class="px-4 py-3 text-gray-900 font-semibold">{{ $kontraktor->namakontraktor }}</td>
-                            <td class="px-4 py-3 text-center text-gray-700">{{ $kontraktor->total_subkontraktor }}</td>
-                            <td class="px-4 py-3 text-center text-gray-700">{{ $kontraktor->total_plot }}</td>
-                        </tr>
-                        @empty
+                        {{-- ✅ UPDATED: Show "no data" message --}}
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-gray-500">Tidak ada data kontraktor</td>
+                            <td colspan="5" class="px-4 py-6 text-center text-gray-500">
+                                <div class="flex flex-col items-center gap-2">
+                                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                                    </svg>
+                                    <p class="text-sm font-medium">Data kontraktor sementara tidak ditampilkan</p>
+                                    <p class="text-xs text-gray-400">Sedang dalam proses pengembangan</p>
+                                </div>
+                            </td>
                         </tr>
-                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -168,7 +148,7 @@
                                 @endif
                             </td>
                             
-                            {{-- ✅ STC & Subkontraktor SELALU tampil (dari RKH planning) --}}
+                            {{-- ✅ STC SELALU tampil (dari RKH planning) --}}
                             <td class="px-4 py-3 text-right font-semibold text-orange-700 bg-orange-50">
                                 {{ number_format($item->stc, 2) }}
                             </td>
@@ -183,7 +163,8 @@
                                 <td class="px-4 py-3 text-center text-gray-400 italic text-xs" colspan="4">Menunggu input hasil</td>
                             @endif
                             
-                            <td class="px-4 py-3 text-gray-700">{{ $item->subkontraktor_nama ?? '-' }}</td>
+                            {{-- ✅ UPDATED: Kolom Subkontraktor sementara kosong --}}
+                            <td class="px-4 py-3 text-gray-400 italic text-xs">Belum tersedia</td>
                         </tr>
                         @empty
                         <tr>
@@ -237,7 +218,8 @@
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->blok }}</td>
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
                             <td class="px-4 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $item->subkontraktor_nama ?? '-' }}</td>
+                            {{-- ✅ UPDATED: Kolom Subkontraktor sementara kosong --}}
+                            <td class="px-4 py-3 text-gray-400 italic text-xs">Belum tersedia</td>
                         </tr>
                         @empty
                         <tr>
@@ -332,7 +314,7 @@
                 class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
             >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2 2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                 </svg>
                 Print
             </button>

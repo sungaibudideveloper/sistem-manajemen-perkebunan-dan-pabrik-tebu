@@ -152,7 +152,6 @@ class ApprovalController extends Controller
 
     /**
      * Process LKH approval
-     * FIXED: Added status update to APPROVED when fully approved
      */
     public function processLKHApproval(Request $request)
     {
@@ -198,17 +197,24 @@ class ApprovalController extends Controller
                 'updatedat' => now()
             ];
 
-            // ? FIXED: Update status to APPROVED when fully approved
+            // ✅ FIXED: Update approvalstatus based on action
             if ($action === 'approve') {
+                // Simulate after approval to check if fully approved
                 $tempLkh = clone $lkh;
                 $tempLkh->$approvalField = '1';
                 
+                // Check if this approval makes it FULLY APPROVED
                 if ($this->isLKHFullyApproved($tempLkh)) {
                     $updateData['status'] = 'APPROVED';
+                    $updateData['approvalstatus'] = '1'; // ✅ Fully Approved
+                } else {
+                    // Still waiting for other approvals
+                    $updateData['approvalstatus'] = null; // ✅ In Progress
                 }
             } else {
-                // If declined, set status back to SUBMITTED with decline flag
+                // If rejected at any level
                 $updateData['status'] = 'DECLINED';
+                $updateData['approvalstatus'] = '0'; // ✅ Rejected
             }
 
             DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
