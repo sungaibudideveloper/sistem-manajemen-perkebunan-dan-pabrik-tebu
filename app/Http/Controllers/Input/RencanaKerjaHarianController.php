@@ -2131,7 +2131,7 @@ class RencanaKerjaHarianController extends Controller
                 $updateData['approvalstatus'] = '1';
             } else {
                 // Still waiting for other approvals
-                $updateData['approvalstatus'] = null;s
+                $updateData['approvalstatus'] = null;
             }
         } else {
             // If rejected at any level
