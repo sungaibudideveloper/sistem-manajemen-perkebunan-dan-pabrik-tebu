@@ -120,15 +120,19 @@ class GudangController extends Controller
             $join->on('d.itemcode', '=', 'h.itemcode')
                  ->on('d.companycode', '=', 'h.companycode');
         })
+        ->join('herbisidagroup as hg', 'd.herbisidagroupid', '=', 'hg.herbisidagroupid')
         ->where('d.companycode', session('companycode'))
         ->select(
             'd.itemcode',
             'd.dosageperha',
             'h.itemname',
             'h.measure',
-            DB::raw('MIN(d.herbisidagroupid) as herbisidagroupid') // Ambil group ID pertama jika ada duplikat
+            'd.herbisidagroupid',
+            'hg.herbisidagroupname',
+            'hg.activitycode',
+            'hg.description'
         )
-        ->groupBy('d.itemcode', 'd.dosageperha', 'h.itemname', 'h.measure')
+        ->orderBy('d.herbisidagroupid')
         ->orderBy('d.itemcode')
         ->orderBy('d.dosageperha')
         ->get();

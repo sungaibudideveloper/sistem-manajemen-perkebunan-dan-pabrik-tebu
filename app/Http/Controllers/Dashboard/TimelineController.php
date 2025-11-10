@@ -78,19 +78,21 @@ class TimelineController extends Controller
     
         // Agregasi hasil per plot x activitycode dengan tanggal terbaru
         $activityData = DB::table('lkhdetailplot as ldp')
-            ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
-            ->where('ldp.companycode', $companyCode)
-            ->whereIn('lh.activitycode', $activityCodes)
-            ->select(
-                'ldp.plot', 
-                'lh.activitycode', 
-                DB::raw('SUM(ldp.luashasil) as total_luas'),
-                DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
-            )
-            ->groupBy('ldp.plot', 'lh.activitycode')
-            ->get()
-            ->groupBy('plot')
-            ->map(fn($items) => $items->keyBy('activitycode'));
+        ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+        ->where('ldp.companycode', $companyCode)
+        ->whereIn('lh.activitycode', $activityCodes)
+        ->select(
+            'ldp.plot', 
+            'lh.activitycode', 
+            DB::raw('SUM(ldp.luashasil) as total_luas'),
+            DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
+        )
+        ->groupBy('ldp.plot', 'lh.activitycode')
+        ->get()
+        ->groupBy('plot')
+        ->map(fn($items) => $items->keyBy('activitycode'));
+
+            
     
         // Filter filled/empty
         if ($fillFilter === 'filled') {
