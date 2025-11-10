@@ -138,7 +138,6 @@ class TrashController extends Controller
             $sogolanPct = $beratKotor > 0 ? round(($sogolan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $siwlanPct = $beratKotor > 0 ? round(($siwilan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $tanahEtcRounded = round($tanahEtc, 2); // 2 desimal
-
             // Calculate totals dengan 3 desimal
             $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3); // 3 desimal
             $nettoTrash = round($totalTrash - 5, 3); // 3 desimal           
