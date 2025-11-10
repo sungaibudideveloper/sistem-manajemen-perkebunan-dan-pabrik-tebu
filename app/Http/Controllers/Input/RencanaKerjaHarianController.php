@@ -746,27 +746,20 @@ class RencanaKerjaHarianController extends Controller
         
         return DB::table('lkhdetailplot as ldp')
             ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
-            ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
-                $join->on('ldp.subkontraktorid', '=', 'sk.id')
-                    ->where('sk.companycode', '=', $companycode);
-            })
             ->where('ldp.companycode', $companycode)
             ->where('ldp.lkhno', $lkhno)
             ->select([
                 'ldp.plot',
                 'ldp.blok',
                 'ldp.batchno',
-                // ❌ REMOVED: 'ldp.kodestatus',
                 'ldp.luasrkh',
                 'ldp.luashasil',
                 'ldp.createdat',
-                'ldp.subkontraktorid',
                 'ldp.fieldbalancerit',
                 'ldp.fieldbalanceton',
-                'sk.namasubkontraktor as subkontraktor_nama',
                 'b.batcharea',
                 'b.tanggalpanen',
-                'b.lifecyclestatus as kodestatus',  // ✅ Get from batch table
+                'b.lifecyclestatus as kodestatus',
                 
                 // STC calculation (unchanged)
                 DB::raw("(
@@ -781,10 +774,8 @@ class RencanaKerjaHarianController extends Controller
                     ), 0)
                 ) as stc"),
                 
-                // HC = Hasil panen hari ini
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
-                // BC calculation
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
@@ -799,7 +790,6 @@ class RencanaKerjaHarianController extends Controller
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
-                // Hari tebang calculation
                 DB::raw("CASE 
                     WHEN b.tanggalpanen IS NOT NULL 
                         THEN DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
