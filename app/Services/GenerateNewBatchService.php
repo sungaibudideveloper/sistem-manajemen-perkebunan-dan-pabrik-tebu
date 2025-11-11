@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
  * Auto-generate new batch based on LKH approval:
  * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3
  * 2. Planting completed (2.2.7) → RC3→PC or new PC
+ * 3. Set tanggalpanen on first panen LKH approval
  */
 class GenerateNewBatchService
 {
@@ -39,6 +40,10 @@ class GenerateNewBatchService
             
             // Route 1: Panen activities
             if (in_array($lkh->activitycode, self::PANEN_ACTIVITIES)) {
+                // ✅ NEW: Set tanggalpanen first (before transition check)
+                $this->setTanggalPanen($lkhno, $companycode, $lkh);
+                
+                // Then check for batch transition
                 return $this->generateFromPanen($lkhno, $companycode);
             }
             
@@ -53,6 +58,76 @@ class GenerateNewBatchService
         } catch (\Exception $e) {
             Log::error("Batch generation check failed for LKH {$lkhno}: " . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Set tanggalpanen for first panen LKH approval
+     * NEW METHOD: Handle tanggalpanen logic
+     * 
+     * @param string $lkhno
+     * @param string $companycode
+     * @param Lkhhdr $lkh
+     * @return void
+     */
+    private function setTanggalPanen($lkhno, $companycode, $lkh)
+    {
+        try {
+            // Get all batches from this panen LKH
+            $plots = LkhDetailPlot::where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->whereNotNull('batchno')
+                ->select('batchno', 'plot')
+                ->distinct()
+                ->get();
+            
+            if ($plots->isEmpty()) {
+                Log::warning("No plots found for panen LKH {$lkhno}");
+                return;
+            }
+            
+            foreach ($plots as $plot) {
+                $batch = Batch::where('batchno', $plot->batchno)
+                    ->where('companycode', $companycode)
+                    ->first();
+                
+                if (!$batch) {
+                    Log::warning("Batch {$plot->batchno} not found for plot {$plot->plot}");
+                    continue;
+                }
+                
+                // ✅ ONLY set tanggalpanen if NULL (first panen)
+                if ($batch->tanggalpanen === null) {
+                    $batch->update([
+                        'tanggalpanen' => $lkh->lkhdate,
+                        'lastactivity' => $lkh->activitycode,
+                        'updatedat' => now()
+                    ]);
+                    
+                    Log::info("Set tanggalpanen for batch {$plot->batchno}", [
+                        'plot' => $plot->plot,
+                        'tanggalpanen' => $lkh->lkhdate,
+                        'lkhno' => $lkhno,
+                        'activitycode' => $lkh->activitycode
+                    ]);
+                } else {
+                    // Just update lastactivity for subsequent panen
+                    $batch->update([
+                        'lastactivity' => $lkh->activitycode,
+                        'updatedat' => now()
+                    ]);
+                    
+                    Log::info("Updated lastactivity for batch {$plot->batchno} (tanggalpanen already set)", [
+                        'plot' => $plot->plot,
+                        'existing_tanggalpanen' => $batch->tanggalpanen,
+                        'lkhno' => $lkhno
+                    ]);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            Log::error("Failed to set tanggalpanen for LKH {$lkhno}: " . $e->getMessage());
+            // Don't throw - allow batch generation to continue
         }
     }
     
@@ -196,7 +271,7 @@ class GenerateNewBatchService
                 'lifecyclestatus' => $nextLifecycle,
                 'previousbatchno' => $currentBatchNo,
                 'plantinglkhno' => $currentBatch->plantinglkhno, // Copy dari PC
-                'tanggalpanen' => null,
+                'tanggalpanen' => null, // ✅ Reset for new cycle
                 'kontraktorid' => $currentBatch->kontraktorid,
                 'kodevarietas' => $currentBatch->kodevarietas,
                 'pkp' => $currentBatch->pkp,

@@ -2685,15 +2685,71 @@ public function loadAbsenByDate(Request $request)
             'activities' => Activity::with(['group', 'jenistenagakerja'])->where('active', 1)->orderBy('activitycode')->get(),
             'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
-            'masterlist' => DB::table('masterlist as m')->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')->where('m.companycode', $companycode)->select([
+            'masterlist' => DB::table('masterlist as m')
+            ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+            ->leftJoin(DB::raw('(
+                SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE lh.approvalstatus = "1"
+                GROUP BY batchno
+            ) as panen_summary'), 'b.batchno', '=', 'panen_summary.batchno')
+            ->leftJoin(DB::raw('(
+                SELECT ldp.plot, lh.activitycode, a.activityname, lh.lkhdate
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                JOIN activity a ON lh.activitycode = a.activitycode
+                WHERE lh.companycode = "'.$companycode.'"
+                AND lh.approvalstatus = "1"
+                ORDER BY lh.lkhdate DESC
+                LIMIT 999999
+            ) as last_activity'), function($join) {
+                $join->on('m.plot', '=', 'last_activity.plot');
+            })
+            ->where('m.companycode', $companycode)
+            ->select([
                 'm.companycode',
                 'm.plot',
                 'm.blok',
                 'm.activebatchno',
                 'm.isactive',
                 'b.lifecyclestatus',
-                'b.batcharea'
+                'b.batcharea',
+                'b.tanggalpanen',
+                'b.isactive as batch_isactive',
+                DB::raw('COALESCE(panen_summary.total_panen, 0) as total_panen'),
+                DB::raw("CASE 
+                    WHEN b.tanggalpanen IS NOT NULL 
+                         AND b.isactive = 1
+                         AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
+                    THEN 1
+                    ELSE 0
+                END as is_on_panen"),
+                DB::raw('(
+                    SELECT activitycode 
+                    FROM lkhdetailplot ldp2
+                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                    WHERE ldp2.companycode = m.companycode
+                    AND ldp2.plot = m.plot
+                    AND lh2.approvalstatus = "1"
+                    ORDER BY lh2.lkhdate DESC
+                    LIMIT 1
+                ) as last_activitycode'),
+                DB::raw('(
+                    SELECT a2.activityname 
+                    FROM lkhdetailplot ldp2
+                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                    JOIN activity a2 ON lh2.activitycode = a2.activitycode
+                    WHERE ldp2.companycode = m.companycode
+                    AND ldp2.plot = m.plot
+                    AND lh2.approvalstatus = "1"
+                    ORDER BY lh2.lkhdate DESC
+                    LIMIT 1
+                ) as last_activityname')
             ])
+            ->groupBy('m.companycode', 'm.plot', 'm.blok', 'm.activebatchno', 'm.isactive',
+                     'b.lifecyclestatus', 'b.batcharea', 'b.tanggalpanen', 'b.isactive',
+                     'panen_summary.total_panen')
             ->orderBy('m.plot')
             ->get(),
 
@@ -4414,7 +4470,7 @@ public function loadAbsenByDate(Request $request)
                     'batch.batchno',
                     'batch.lifecyclestatus',
                     'batch.batcharea',
-                    'batch.tanggalpanen' // Single field
+                    'batch.tanggalpanen'
                 ])
                 ->first();
             
@@ -4425,7 +4481,7 @@ public function loadAbsenByDate(Request $request)
                 ]);
             }
             
-            // Calculate STC = batcharea - total sudah panen SAMPAI KEMARIN
+            // ✅ FIXED: Calculate STC = batcharea - total sudah panen SAMPAI HARI INI (approved only)
             $totalSudahPanen = DB::table('lkhdetailplot as ldp')
                 ->join('lkhhdr as lh', function($join) {
                     $join->on('ldp.lkhno', '=', 'lh.lkhno')
@@ -4433,8 +4489,8 @@ public function loadAbsenByDate(Request $request)
                 })
                 ->where('ldp.companycode', $companycode)
                 ->where('ldp.batchno', $batch->batchno)
-                ->where('lh.approvalstatus', '1')
-                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
+                ->where('lh.approvalstatus', '1') // ✅ HANYA yang APPROVED
+                ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d')) // ✅ FIXED: <= hari ini (bukan < hari ini)
                 ->sum('ldp.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);

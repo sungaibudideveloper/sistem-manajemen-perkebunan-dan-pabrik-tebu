@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 // ? ADDED: Import Services for post-approval actions
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
+use App\Services\GenerateNewBatchService;
 
 /**
  * ApprovalController
