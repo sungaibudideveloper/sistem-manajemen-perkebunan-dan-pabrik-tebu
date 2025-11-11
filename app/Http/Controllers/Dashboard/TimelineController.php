@@ -47,24 +47,35 @@ class TimelineController extends Controller
         // Activity map berdasarkan crop type
         if ($cropType === 'rc') {
             $activityMap = [
+                '3.2.1'  => 'Trash Mulcher',
+                '3.2.2'  => 'Cultivating',
                 '3.2.4'  => 'Single dress fertilizing',
-                '3.1.1'  => 'Pre Emergence',
-                '3.1.6'  => 'Weeding I',
-                '3.1.8'  => 'Weeding II',
-                '3.1.7'  => 'Post Emergence I',
-                '3.1.9'  => 'Post Emergence II',
+                '3.2.5'  => 'Pre Emergence',
+                '3.2.6'  => 'Cultivating II',
+                '3.2.7'  => 'Hand Weeding I',
+                '3.2.9'  => 'Hand Weeding II',
+                '3.2.8'  => 'Post Emergence I',
+                '3.2.10'  => 'Post Emergence II',
+
                 '3.1.2'  => 'Late Pre Emergence',
             ];
         } else { // pc (default)
             $activityMap = [
                 '2.1.5'  => 'Brushing',
+                '2.1.3'  => 'Soil sampling',
+                '2.1.6'  => 'Lime applicating',
                 '2.1.7'  => 'Ploughing I',
                 '2.1.8'  => 'Harrowing I',
                 '2.1.9'  => 'Ploughing II',
                 '2.1.10' => 'Harrowing II',
                 '2.1.11' => 'Ridging & Basalt dressing',
                 '2.2.4'  => 'Seed placing',
+                '2.2.6'  => 'Fungicide applicating',
+                '2.2.7'  => 'Covering',
+                '2.3.2'  => 'Post-covering irrigating',
                 '3.1.1'  => 'Pre Emergence',
+
+                '3.1.4'  => 'Cultivating',
                 '3.1.5'  => 'Top dress fertilizing',
                 '3.1.6'  => 'Weeding I',
                 '3.1.8'  => 'Weeding II',
