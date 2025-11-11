@@ -76,17 +76,25 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
         // =============================================================================
         // Clear cache
         Route::get('utility/deploy', function () {
+            set_time_limit(300);
+            ini_set('max_execution_time', 300);
+            
             $output = [];
             $results = [];
             
-            // 1. Git Pull
+            // Set safe directory
             chdir(base_path());
+            exec('git config --global --add safe.directory ' . base_path() . ' 2>&1', $output);
+            
+            // 1. Git Pull
+            $output = [];
             exec('git pull origin main 2>&1', $output);
             $results['git_pull'] = implode("\n", $output);
             
-            // 2. NPM Build
+            // 2. NPM Build - PAKAI FULL PATH
             $output = [];
-            exec('npm run build 2>&1', $output);
+            $npmPath = 'C:\Program Files\nodejs\npm.cmd';
+            exec('"' . $npmPath . '" run build 2>&1', $output);
             $results['npm_build'] = implode("\n", $output);
             
             // 3. Clear Cache
@@ -98,8 +106,8 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             
             // Display results
             $html = '<h3>Deployment Completed!</h3>';
-            $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
-            $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
+            $html .= '<h4>1. Git Pull:</h4><pre>' . ($results['git_pull'] ?: 'No output') . '</pre>';
+            $html .= '<h4>2. NPM Build:</h4><pre>' . ($results['npm_build'] ?: 'No output') . '</pre>';
             $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
             
             return $html;
