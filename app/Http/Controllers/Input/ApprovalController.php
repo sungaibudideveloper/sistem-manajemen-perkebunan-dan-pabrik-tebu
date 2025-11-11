@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 // ? ADDED: Import Services for post-approval actions
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
+use App\Services\GenerateNewBatchService;
 
 /**
  * ApprovalController
@@ -197,31 +198,57 @@ class ApprovalController extends Controller
                 'updatedat' => now()
             ];
 
-            // ✅ FIXED: Update approvalstatus based on action
             if ($action === 'approve') {
-                // Simulate after approval to check if fully approved
                 $tempLkh = clone $lkh;
                 $tempLkh->$approvalField = '1';
                 
-                // Check if this approval makes it FULLY APPROVED
                 if ($this->isLKHFullyApproved($tempLkh)) {
                     $updateData['status'] = 'APPROVED';
-                    $updateData['approvalstatus'] = '1'; // ✅ Fully Approved
+                    $updateData['approvalstatus'] = '1';
                 } else {
-                    // Still waiting for other approvals
-                    $updateData['approvalstatus'] = null; // ✅ In Progress
+                    $updateData['approvalstatus'] = null;
                 }
             } else {
-                // If rejected at any level
                 $updateData['status'] = 'DECLINED';
-                $updateData['approvalstatus'] = '0'; // ✅ Rejected
+                $updateData['approvalstatus'] = '0';
             }
 
             DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
 
-            DB::commit();
-
             $message = 'LKH ' . $lkhno . ' berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            // ✅ NEW: Trigger batch generation setelah LKH fully approved
+            if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
+                $batchService = new GenerateNewBatchService();
+                $batchResult = $batchService->checkAndGenerate($lkhno, $companycode);
+                
+                if ($batchResult['success']) {
+                    // Handle panen transitions (PC→RC1, RC1→RC2, RC2→RC3)
+                    if (!empty($batchResult['transitions'])) {
+                        foreach ($batchResult['transitions'] as $transition) {
+                            if ($transition['success']) {
+                                $message .= ". New Batch: {$transition['new_batchno']} ({$transition['lifecycle']}) for Plot {$transition['plot']}";
+                            }
+                        }
+                    }
+                    
+                    // Handle planting PC batches (RC3→PC or new plot)
+                    if (!empty($batchResult['batches'])) {
+                        foreach ($batchResult['batches'] as $batch) {
+                            if ($batch['success']) {
+                                $message .= ". New PC Batch: {$batch['batchno']} for Plot {$batch['plot']}";
+                            }
+                        }
+                    }
+                } else {
+                    // Log batch generation failure but don't block approval
+                    Log::warning("Batch generation failed for LKH {$lkhno}", [
+                        'message' => $batchResult['message'] ?? 'Unknown error'
+                    ]);
+                }
+            }
+
+            DB::commit();
             return back()->with('success', $message);
 
         } catch (\Exception $e) {
