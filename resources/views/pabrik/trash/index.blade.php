@@ -115,8 +115,8 @@
                                     {{ ucfirst($item->jenis ?? 'N/A') }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->daun_gulma ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->pucuk ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->daun_gulma ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->sogolan ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->siwilan ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->tebumati ?? 0, 2, ',', '.') }}</td>
