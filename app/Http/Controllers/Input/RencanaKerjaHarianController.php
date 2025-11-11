@@ -34,6 +34,7 @@ use App\Models\TenagaKerja;
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
 use App\Services\WageCalculationService;
+use App\Services\GenerateNewBatchService;
 
 /**
  * RencanaKerjaHarianController
@@ -770,6 +771,7 @@ class RencanaKerjaHarianController extends Controller
                         JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
                         WHERE ldp2.companycode = ldp.companycode
                         AND ldp2.batchno = ldp.batchno
+                        AND lh2.approvalstatus = '1' -- ✅ FIXED
                         AND lh2.lkhdate < '{$lkhDate}'
                     ), 0)
                 ) as stc"),
@@ -2086,53 +2088,101 @@ class RencanaKerjaHarianController extends Controller
             ];
         }
 
-        $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
+        try {
+            DB::beginTransaction();
 
-        if (!$lkh) {
-            return ['success' => false, 'message' => 'LKH tidak ditemukan'];
-        }
+            $lkh = DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->first();
 
-        $canApprove = $this->validateLkhApprovalAuthority($lkh, $currentUser, $level);
-        if (!$canApprove['success']) {
-            return $canApprove;
-        }
-
-        $approvalValue = $action === 'approve' ? '1' : '0';
-        $approvalField = "approval{$level}flag";
-        $approvalDateField = "approval{$level}date";
-        $approvalUserField = "approval{$level}userid";
-        
-        $updateData = [
-            $approvalField => $approvalValue,
-            $approvalDateField => now(),
-            $approvalUserField => $currentUser->userid,
-            'updateby' => $currentUser->userid,
-            'updatedat' => now()
-        ];
-
-        if ($action === 'approve') {
-            // Simulate after approval to check if fully approved
-            $tempLkh = clone $lkh;
-            $tempLkh->$approvalField = '1';
-            
-            // Check if this approval makes it FULLY APPROVED
-            if ($this->isLKHFullyApproved($tempLkh)) {
-                $updateData['status'] = 'APPROVED';
-                $updateData['approvalstatus'] = '1';
-            } else {
-                // Still waiting for other approvals
-                $updateData['approvalstatus'] = null;
+            if (!$lkh) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'LKH tidak ditemukan'];
             }
-        } else {
-            // If rejected at any level
-            $updateData['approvalstatus'] = '0';
+
+            $canApprove = $this->validateLkhApprovalAuthority($lkh, $currentUser, $level);
+            if (!$canApprove['success']) {
+                DB::rollBack();
+                return $canApprove;
+            }
+
+            $approvalValue = $action === 'approve' ? '1' : '0';
+            $approvalField = "approval{$level}flag";
+            $approvalDateField = "approval{$level}date";
+            $approvalUserField = "approval{$level}userid";
+            
+            $updateData = [
+                $approvalField => $approvalValue,
+                $approvalDateField => now(),
+                $approvalUserField => $currentUser->userid,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ];
+
+            if ($action === 'approve') {
+                // Simulate after approval to check if fully approved
+                $tempLkh = clone $lkh;
+                $tempLkh->$approvalField = '1';
+                
+                // Check if this approval makes it FULLY APPROVED
+                if ($this->isLKHFullyApproved($tempLkh)) {
+                    $updateData['status'] = 'APPROVED';
+                    $updateData['approvalstatus'] = '1';
+                } else {
+                    // Still waiting for other approvals
+                    $updateData['approvalstatus'] = null;
+                }
+            } else {
+                // If rejected at any level
+                $updateData['approvalstatus'] = '0';
+                $updateData['status'] = 'DECLINED';
+            }
+
+            DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
+
+            $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
+
+            // ✅ NEW: Trigger batch generation setelah LKH fully approved
+            if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
+                $batchService = new \App\Services\GenerateNewBatchService();
+                $batchResult = $batchService->checkAndGenerate($lkhno, $companycode);
+                
+                if ($batchResult['success']) {
+                    // Handle panen transitions (PC→RC1, RC1→RC2, RC2→RC3)
+                    if (!empty($batchResult['transitions'])) {
+                        foreach ($batchResult['transitions'] as $transition) {
+                            if ($transition['success']) {
+                                $responseMessage .= ". New Batch: {$transition['new_batchno']} ({$transition['lifecycle']}) for Plot {$transition['plot']}";
+                            }
+                        }
+                    }
+                    
+                    // Handle planting PC batches (RC3→PC or new plot)
+                    if (!empty($batchResult['batches'])) {
+                        foreach ($batchResult['batches'] as $batch) {
+                            if ($batch['success']) {
+                                $responseMessage .= ". New PC Batch: {$batch['batchno']} for Plot {$batch['plot']}";
+                            }
+                        }
+                    }
+                } else {
+                    // Log batch generation failure but don't block approval
+                    Log::warning("Batch generation failed for LKH {$lkhno}", [
+                        'message' => $batchResult['message'] ?? 'Unknown error'
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return ['success' => true, 'message' => $responseMessage];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("LKH approval process failed for {$lkhno}: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Gagal memproses approval LKH: ' . $e->getMessage()
+            ];
         }
-
-        DB::table('lkhhdr')->where('companycode', $companycode)->where('lkhno', $lkhno)->update($updateData);
-
-        $responseMessage = 'LKH berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
-
-        return ['success' => true, 'message' => $responseMessage];
     }
 
     /**
@@ -2635,15 +2685,71 @@ public function loadAbsenByDate(Request $request)
             'activities' => Activity::with(['group', 'jenistenagakerja'])->where('active', 1)->orderBy('activitycode')->get(),
             'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
-            'masterlist' => DB::table('masterlist as m')->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')->where('m.companycode', $companycode)->select([
+            'masterlist' => DB::table('masterlist as m')
+            ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+            ->leftJoin(DB::raw('(
+                SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE lh.approvalstatus = "1"
+                GROUP BY batchno
+            ) as panen_summary'), 'b.batchno', '=', 'panen_summary.batchno')
+            ->leftJoin(DB::raw('(
+                SELECT ldp.plot, lh.activitycode, a.activityname, lh.lkhdate
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                JOIN activity a ON lh.activitycode = a.activitycode
+                WHERE lh.companycode = "'.$companycode.'"
+                AND lh.approvalstatus = "1"
+                ORDER BY lh.lkhdate DESC
+                LIMIT 999999
+            ) as last_activity'), function($join) {
+                $join->on('m.plot', '=', 'last_activity.plot');
+            })
+            ->where('m.companycode', $companycode)
+            ->select([
                 'm.companycode',
                 'm.plot',
                 'm.blok',
                 'm.activebatchno',
                 'm.isactive',
                 'b.lifecyclestatus',
-                'b.batcharea'
+                'b.batcharea',
+                'b.tanggalpanen',
+                'b.isactive as batch_isactive',
+                DB::raw('COALESCE(panen_summary.total_panen, 0) as total_panen'),
+                DB::raw("CASE 
+                    WHEN b.tanggalpanen IS NOT NULL 
+                         AND b.isactive = 1
+                         AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
+                    THEN 1
+                    ELSE 0
+                END as is_on_panen"),
+                DB::raw('(
+                    SELECT activitycode 
+                    FROM lkhdetailplot ldp2
+                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                    WHERE ldp2.companycode = m.companycode
+                    AND ldp2.plot = m.plot
+                    AND lh2.approvalstatus = "1"
+                    ORDER BY lh2.lkhdate DESC
+                    LIMIT 1
+                ) as last_activitycode'),
+                DB::raw('(
+                    SELECT a2.activityname 
+                    FROM lkhdetailplot ldp2
+                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                    JOIN activity a2 ON lh2.activitycode = a2.activitycode
+                    WHERE ldp2.companycode = m.companycode
+                    AND ldp2.plot = m.plot
+                    AND lh2.approvalstatus = "1"
+                    ORDER BY lh2.lkhdate DESC
+                    LIMIT 1
+                ) as last_activityname')
             ])
+            ->groupBy('m.companycode', 'm.plot', 'm.blok', 'm.activebatchno', 'm.isactive',
+                     'b.lifecyclestatus', 'b.batcharea', 'b.tanggalpanen', 'b.isactive',
+                     'panen_summary.total_panen')
             ->orderBy('m.plot')
             ->get(),
 
@@ -4230,11 +4336,13 @@ public function loadAbsenByDate(Request $request)
                     'batchno' => $batchNo,
                     'companycode' => $companycode,
                     'plot' => $plotData->plot,
-                    'lifecyclestatus' => $newLifecycleStatus,
-                    'plantingrkhno' => $rkhno,
-                    'batchdate' => $plotData->rkhdate, // ✅ Pakai rkhdate
-                    'tanggalpanen' => null,
                     'batcharea' => $plotData->luasarea,
+                    'batchdate' => $plotData->rkhdate,
+                    'lifecyclestatus' => $newLifecycleStatus,
+                    'previousbatchno' => $previousBatch ? $previousBatch->batchno : null,
+                    'plantinglkhno' => null,
+                    'tanggalpanen' => null,
+                    'kontraktorid' => null,
                     'kodevarietas' => null,
                     'pkp' => null,
                     'lastactivity' => '2.2.7',
@@ -4362,7 +4470,7 @@ public function loadAbsenByDate(Request $request)
                     'batch.batchno',
                     'batch.lifecyclestatus',
                     'batch.batcharea',
-                    'batch.tanggalpanen' // Single field
+                    'batch.tanggalpanen'
                 ])
                 ->first();
             
@@ -4373,7 +4481,7 @@ public function loadAbsenByDate(Request $request)
                 ]);
             }
             
-            // Calculate STC = batcharea - total sudah panen SAMPAI KEMARIN
+            // ✅ FIXED: Calculate STC = batcharea - total sudah panen SAMPAI HARI INI (approved only)
             $totalSudahPanen = DB::table('lkhdetailplot as ldp')
                 ->join('lkhhdr as lh', function($join) {
                     $join->on('ldp.lkhno', '=', 'lh.lkhno')
@@ -4381,8 +4489,8 @@ public function loadAbsenByDate(Request $request)
                 })
                 ->where('ldp.companycode', $companycode)
                 ->where('ldp.batchno', $batch->batchno)
-                ->where('lh.approvalstatus', '1')
-                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
+                ->where('lh.approvalstatus', '1') // ✅ HANYA yang APPROVED
+                ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d')) // ✅ FIXED: <= hari ini (bukan < hari ini)
                 ->sum('ldp.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
@@ -4447,16 +4555,16 @@ public function loadAbsenByDate(Request $request)
             }
             
             // Calculate luas sisa (STC)
-            $totalSudahPanen = DB::table('lkhdetailplot as ldp')
-                ->join('lkhhdr as lh', function($join) {
-                    $join->on('ldp.lkhno', '=', 'lh.lkhno')
-                        ->on('ldp.companycode', '=', 'lh.companycode');
+            $totalSudahPanen = DB::table('lkhdetailplot')
+                ->join('lkhhdr', function($join) {
+                    $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                        ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
                 })
-                ->where('ldp.companycode', $companycode)
-                ->where('ldp.batchno', $batch->batchno)
-                ->where('lh.approvalstatus', '1')
-                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
-                ->sum('ldp.luashasil');
+                ->where('lkhdetailplot.companycode', $companycode)
+                ->where('lkhdetailplot.batchno', $batch->batchno)
+                ->where('lkhhdr.approvalstatus', '1')
+                ->whereDate('lkhhdr.lkhdate', '<', now()->format('Y-m-d'))
+                ->sum('lkhdetailplot.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
             
