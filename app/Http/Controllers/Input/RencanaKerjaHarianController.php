@@ -4381,6 +4381,7 @@ public function loadAbsenByDate(Request $request)
                 })
                 ->where('ldp.companycode', $companycode)
                 ->where('ldp.batchno', $batch->batchno)
+                ->where('lh.approvalstatus', '1')
                 ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
                 ->sum('ldp.luashasil');
             
@@ -4446,15 +4447,16 @@ public function loadAbsenByDate(Request $request)
             }
             
             // Calculate luas sisa (STC)
-            $totalSudahPanen = DB::table('lkhdetailplot')
-                ->join('lkhhdr', function($join) {
-                    $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
-                        ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+            $totalSudahPanen = DB::table('lkhdetailplot as ldp')
+                ->join('lkhhdr as lh', function($join) {
+                    $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                        ->on('ldp.companycode', '=', 'lh.companycode');
                 })
-                ->where('lkhdetailplot.companycode', $companycode)
-                ->where('lkhdetailplot.batchno', $batch->batchno)
-                ->whereDate('lkhhdr.lkhdate', '<', now()->format('Y-m-d'))
-                ->sum('lkhdetailplot.luashasil');
+                ->where('ldp.companycode', $companycode)
+                ->where('ldp.batchno', $batch->batchno)
+                ->where('lh.approvalstatus', '1')
+                ->whereDate('lh.lkhdate', '<', now()->format('Y-m-d'))
+                ->sum('ldp.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
             
