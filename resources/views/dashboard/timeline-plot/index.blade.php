@@ -99,7 +99,7 @@
                         <tr class="total-row">
                             <td class="sticky-v sticky-h blok" style="left:0;">TOTAL</td>
                             <td class="sticky-v sticky-h" style="left:60px;">ALL</td>
-                            <td style="text-align:right;">{{ number_format($plotHeaders->sum('luasarea'), 2) }}</td>
+                            <td class="sticky-h" style="text-align:right; left:120px;" >{{ number_format($plotHeaders->sum('luasarea'), 2) }}</td>
                             
                             @php
                                 $grandTotalRealisasi = 0;
@@ -150,7 +150,7 @@
                                 <tr>
                                     @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
                                     <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                    <td style="text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                    <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
                                     
                                     @php
                                         $totalRealisasiPlot = 0;

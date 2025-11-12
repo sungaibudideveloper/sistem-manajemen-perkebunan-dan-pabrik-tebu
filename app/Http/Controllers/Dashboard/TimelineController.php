@@ -57,7 +57,7 @@ class TimelineController extends Controller
                 '3.2.8'  => 'Post Emergence I',
                 '3.2.10'  => 'Post Emergence II',
 
-                '3.1.2'  => 'Late Pre Emergence',
+                '3.2.6'  => 'Late Pre Emergence',
             ];
         } else { // pc (default)
             $activityMap = [
