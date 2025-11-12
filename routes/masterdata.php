@@ -7,6 +7,7 @@ use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MasterListController;
 use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\HerbisidaController;
+use App\Http\Controllers\MasterData\HerbisidaGroupController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
 use App\Http\Controllers\MasterData\JabatanController;
 use App\Http\Controllers\MasterData\ApprovalController;
@@ -73,6 +74,13 @@ Route::group(['middleware' => ['auth', 'permission:Herbisida']], function () {
 Route::match(['put', 'patch'], 'masterdata/herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'update'])->name('masterdata.herbisida.update')->middleware(['auth', 'permission:Edit Herbisida']);
 Route::delete('masterdata/herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'destroy'])->name('masterdata.herbisida.destroy')->middleware(['auth', 'permission:Hapus Herbisida']);
 
+// Route::group(['middleware' => ['auth', 'permission:HerbisidaGroup']], function () {
+Route::get('masterdata/herbisidagroup', [HerbisidaGroupController::class, 'home'])->name('masterdata.herbisidagroup.index');
+Route::post('masterdata/herbisidagroup', [HerbisidaGroupController::class, 'insert']);
+Route::patch('masterdata/herbisidagroup/{id}', [HerbisidaGroupController::class, 'edit']);
+Route::delete('masterdata/herbisidagroup/{id}', [HerbisidaGroupController::class, 'delete']);
+// });
+
 //Dosis Herbisida
 Route::group(['middleware' => ['auth', 'permission:Dosis Herbisida']], function () {
     Route::get('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('masterdata.herbisida-dosage.index');
@@ -137,6 +145,7 @@ Route::delete(
 )
     ->middleware(['auth', 'permission:Hapus Accounting'])
     ->name('masterdata.accounting.destroy');
+    
 
 // Master List  
 Route::group(['middleware' => ['auth', 'permission:MasterList']], function () {

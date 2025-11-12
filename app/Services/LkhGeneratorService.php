@@ -28,11 +28,11 @@ class LkhGeneratorService
     
     // Activity type constants
     const PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
+    const BSM_ACTIVITY = '4.7';
     const JENIS_HARIAN = 1;
     const JENIS_BORONGAN = 2;
     const JENIS_OPERATOR = 3;
     const JENIS_HELPER = 4;
-    const JENIS_KONTRAKTOR = 5; // For panen
 
     public function __construct(WageCalculationService $wageCalculationService = null)
     {
@@ -77,7 +77,6 @@ class LkhGeneratorService
             }
 
             // 4. Group activities by activitycode + jenistenagakerja
-            // Panen activities will use jenistenagakerja from detection
             $groupedActivities = $this->groupActivitiesForLkh($rkhActivities);
 
             $generatedLkh = [];
@@ -100,20 +99,26 @@ class LkhGeneratorService
                     $groupActivities
                 );
                 
-                // Generate LKH Detail Plots (with batch info for panen)
-                $plotResult = $this->createLkhDetailPlots(
-                    $lkhno, 
-                    $groupActivities, 
-                    $rkh->companycode,
-                    $activitycode
-                );
+                // Generate LKH Detail Plots (SKIP untuk BSM activity)
+                $plotResult = [];
+                if ($activitycode !== self::BSM_ACTIVITY) {
+                    $plotResult = $this->createLkhDetailPlots(
+                        $lkhno, 
+                        $groupActivities, 
+                        $rkh->companycode,
+                        $activitycode
+                    );
+                }
                 
+                // Detect activity type
                 $isPanen = in_array($activitycode, self::PANEN_ACTIVITIES);
+                $isBsm = ($activitycode === self::BSM_ACTIVITY);
                 
-                $generatedLkh[] = [
+                // Base LKH data
+                $lkhData = [
                     'lkhno' => $lkhno,
                     'activitycode' => $activitycode,
-                    'type' => $isPanen ? 'PANEN' : 'NORMAL',
+                    'type' => $isPanen ? 'PANEN' : ($isBsm ? 'BSM' : 'NORMAL'),
                     'plots' => $lkhHeaderResult['plots_summary'],
                     'plots_count' => count($plotResult),
                     'jenistenagakerja' => $jenistenagakerja,
@@ -122,7 +127,15 @@ class LkhGeneratorService
                     'planned_workers' => $lkhHeaderResult['planned_workers'],
                     'status' => 'DRAFT'
                 ];
-
+                
+                // SPECIAL HANDLING: Generate BSM placeholders if BSM activity
+                if ($isBsm) {
+                    $bsmResult = $this->createBsmPlaceholders($lkhno, $groupActivities, $rkh->companycode);
+                    $lkhData['bsm_plots'] = $bsmResult['total_plots'];
+                    $lkhData['bsm_status'] = 'PENDING_INPUT';
+                }
+                
+                $generatedLkh[] = $lkhData;
                 $lkhIndex++;
             }
 
@@ -159,8 +172,7 @@ class LkhGeneratorService
 
     /**
      * Group activities for LKH generation
-     * Panen activities use jenistenagakerja = 5 (kontraktor)
-     * Normal activities use their original jenistenagakerja
+     * CLEAN VERSION: No more special handling for panen jenistenagakerja
      * 
      * @param \Illuminate\Support\Collection $activities
      * @return \Illuminate\Support\Collection
@@ -168,14 +180,7 @@ class LkhGeneratorService
     private function groupActivitiesForLkh($activities)
     {
         return $activities->groupBy(function($item) {
-            // Detect if panen activity
-            $isPanen = in_array($item->activitycode, self::PANEN_ACTIVITIES);
-            
-            // For panen, always use jenistenagakerja = 5 (kontraktor)
-            // For normal, use original jenistenagakerja
-            $jenistenagakerja = $isPanen ? self::JENIS_KONTRAKTOR : $item->jenistenagakerja;
-            
-            return $item->activitycode . '|' . $jenistenagakerja;
+            return $item->activitycode . '|' . $item->jenistenagakerja;
         });
     }
 
@@ -304,8 +309,6 @@ class LkhGeneratorService
                 return 'Operator';
             case self::JENIS_HELPER:
                 return 'Helper';
-            case self::JENIS_KONTRAKTOR:
-                return 'Kontraktor (Panen)';
             default:
                 return 'Unknown';
         }
@@ -647,5 +650,111 @@ class LkhGeneratorService
             DB::rollBack();
             throw $e;
         }
+    }
+
+
+    /**
+     * Create empty BSM placeholders for BSM activity (4.7)
+     * Team mobile akan mengisi nilai B, S, M nanti
+     * 
+     * @param string $lkhno
+     * @param \Illuminate\Support\Collection $activities
+     * @param string $companycode
+     * @return array
+     */
+    private function createBsmPlaceholders($lkhno, $activities, $companycode)
+    {
+        $bsmRecords = [];
+        
+        foreach ($activities as $activity) {
+            // Get batch info for this plot
+            $batchInfo = DB::table('masterlist')
+                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                ->where('masterlist.companycode', $companycode)
+                ->where('masterlist.plot', $activity->plot)
+                ->where('masterlist.isactive', 1)
+                ->where('batch.isactive', 1)
+                ->select(['batch.batchno', 'batch.lifecyclestatus'])
+                ->first();
+            
+            $bsmRecord = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'plot' => $activity->plot,
+                'batchno' => $batchInfo ? $batchInfo->batchno : null,
+                'nilaibersih' => null,
+                'nilaisegar' => null,
+                'nilaimanis' => null,
+                'averagescore' => null,
+                'grade' => null,
+                'keterangan' => null,
+                'inputby' => auth()->user()->userid ?? 'SYSTEM',
+                'createdat' => now()
+            ];
+            
+            DB::table('lkhdetailbsm')->insert($bsmRecord);
+            $bsmRecords[] = $bsmRecord;
+            
+            Log::info("BSM placeholder created", [
+                'lkhno' => $lkhno,
+                'plot' => $activity->plot,
+                'batchno' => $batchInfo ? $batchInfo->batchno : 'N/A'
+            ]);
+        }
+        
+        return [
+            'success' => true,
+            'total_plots' => count($bsmRecords),
+            'records' => $bsmRecords
+        ];
+    }
+
+    /**
+     * Get BSM summary for specific LKH
+     * 
+     * @param string $lkhno
+     * @return array
+     */
+    public function getBsmSummaryForLkh($lkhno)
+    {
+        $bsmRecords = DB::table('lkhdetailbsm as bsm')
+            ->leftJoin('batch as b', 'bsm.batchno', '=', 'b.batchno')
+            ->where('bsm.lkhno', $lkhno)
+            ->select([
+                'bsm.*',
+                'b.lifecyclestatus'
+            ])
+            ->get();
+        
+        $completed = $bsmRecords->filter(function($record) {
+            return $record->nilaibersih !== null && 
+                $record->nilaisegar !== null && 
+                $record->nilaimanis !== null;
+        });
+        
+        $gradeDistribution = $completed->groupBy('grade')->map(function($group) {
+            return $group->count();
+        })->toArray();
+        
+        return [
+            'total_plots' => $bsmRecords->count(),
+            'completed' => $completed->count(),
+            'pending' => $bsmRecords->count() - $completed->count(),
+            'average_score_overall' => $completed->avg('averagescore'),
+            'grade_distribution' => $gradeDistribution,
+            'details' => $bsmRecords->map(function($record) {
+                return [
+                    'plot' => $record->plot,
+                    'batchno' => $record->batchno,
+                    'lifecyclestatus' => $record->lifecyclestatus ?? 'N/A',
+                    'nilaibersih' => $record->nilaibersih,
+                    'nilaisegar' => $record->nilaisegar,
+                    'nilaimanis' => $record->nilaimanis,
+                    'averagescore' => $record->averagescore,
+                    'grade' => $record->grade,
+                    'status' => $record->averagescore ? 'COMPLETED' : 'PENDING'
+                ];
+            })->toArray()
+        ];
     }
 }

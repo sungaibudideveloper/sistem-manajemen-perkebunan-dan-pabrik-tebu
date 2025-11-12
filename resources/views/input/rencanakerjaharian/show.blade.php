@@ -141,14 +141,16 @@
           </div>
         </div>
 
-        <!-- Card 2: Info Pekerja -->
-        <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-          <div class="flex items-center justify-between mb-3">
+        <!-- Card 2: Info Pekerja - FIXED: Larger and more informative -->
+        <div class="bg-white rounded-lg shadow-md p-5 border border-gray-200">
+          <div class="flex items-center justify-between mb-4">
             <div class="flex items-center">
               <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-              <h3 class="text-sm font-bold text-gray-800">Info Pekerja</h3>
+              <h3 class="text-base font-bold text-gray-800">Info Pekerja</h3>
             </div>
-            <span class="text-xs text-gray-600">{{ $workersByActivity->count() }} Aktivitas</span>
+            <span class="text-xs text-gray-600 bg-purple-50 px-2 py-1 rounded-full">
+              {{ $workersByActivity->count() }} Aktivitas
+            </span>
           </div>
 
           <div>
@@ -160,48 +162,56 @@
                 <p class="text-xs">Tidak ada data pekerja</p>
               </div>
             @else
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="space-y-3">
                 @foreach($workersByActivity as $worker)
-                  <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                  <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200 hover:shadow-md transition-shadow">
                     
-                    <!-- ✅ Activity Code + Badge sebaris -->
-                    <div class="mb-3 flex items-start justify-between">
-                      <p class="text-sm font-semibold text-purple-900 truncate flex-1" 
-                        title="{{ $worker->activitycode }} - {{ $worker->activityname }}">
-                        {{ $worker->activitycode }} - {{ $worker->activityname }}
-                      </p>
-                      
-                      <!-- ✅ Jenis Badge -->
-                      <span 
-                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ml-2 flex-shrink-0
-                        {{ $worker->jenistenagakerja == 1 ? 'bg-blue-100 text-blue-800' : '' }}
-                        {{ $worker->jenistenagakerja == 2 ? 'bg-green-100 text-green-800' : '' }}
-                        {{ $worker->jenistenagakerja == 3 ? 'bg-yellow-100 text-yellow-800' : '' }}
-                        {{ $worker->jenistenagakerja == 4 ? 'bg-purple-100 text-purple-800' : '' }}
-                        {{ !$worker->jenistenagakerja ? 'bg-gray-100 text-gray-800' : '' }}"
-                      >
-                        {{ $worker->jenis_nama ?? '-' }}
-                      </span>
+                    <!-- Activity Info - Full Width -->
+                    <div class="mb-3">
+                      <div class="flex items-start justify-between gap-2 mb-1">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-bold text-purple-900 truncate" 
+                            title="{{ $worker->activitycode }} - {{ $worker->activityname }}">
+                            {{ $worker->activitycode }}
+                          </p>
+                          <p class="text-xs text-gray-700 line-clamp-2">
+                            {{ $worker->activityname }}
+                          </p>
+                        </div>
+                        
+                        <!-- Jenis Badge -->
+                        <span 
+                          class="inline-block px-2.5 py-1 text-xs font-semibold rounded-full flex-shrink-0
+                          {{ $worker->jenistenagakerja == 1 ? 'bg-blue-100 text-blue-800' : '' }}
+                          {{ $worker->jenistenagakerja == 2 ? 'bg-green-100 text-green-800' : '' }}
+                          {{ $worker->jenistenagakerja == 3 ? 'bg-yellow-100 text-yellow-800' : '' }}
+                          {{ $worker->jenistenagakerja == 4 ? 'bg-purple-100 text-purple-800' : '' }}
+                          {{ !$worker->jenistenagakerja ? 'bg-gray-100 text-gray-800' : '' }}"
+                        >
+                          {{ $worker->jenis_nama ?? '-' }}
+                        </span>
+                      </div>
                     </div>
 
-                    <div class="flex items-end gap-2">
-                      <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">L</label>
-                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-gray-100 text-center font-medium">
+                    <!-- Worker Stats -->
+                    <div class="grid grid-cols-3 gap-3">
+                      <div>
+                        <label class="text-xs text-gray-600 block mb-1 font-medium">Laki-laki</label>
+                        <div class="w-full text-sm border border-blue-300 rounded-md px-2 py-1.5 bg-blue-50 text-center font-bold text-blue-900">
                           {{ $worker->jumlahlaki ?? 0 }}
                         </div>
                       </div>
 
-                      <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">P</label>
-                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-gray-100 text-center font-medium">
+                      <div>
+                        <label class="text-xs text-gray-600 block mb-1 font-medium">Perempuan</label>
+                        <div class="w-full text-sm border border-pink-300 rounded-md px-2 py-1.5 bg-pink-50 text-center font-bold text-pink-900">
                           {{ $worker->jumlahperempuan ?? 0 }}
                         </div>
                       </div>
 
-                      <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">Tot</label>
-                        <div class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-green-100 text-center font-bold">
+                      <div>
+                        <label class="text-xs text-gray-600 block mb-1 font-medium">Total</label>
+                        <div class="w-full text-sm border-2 border-green-400 rounded-md px-2 py-1.5 bg-green-100 text-center font-extrabold text-green-900">
                           {{ $worker->jumlahtenagakerja ?? 0 }}
                         </div>
                       </div>
@@ -279,17 +289,17 @@
 
                 <!-- Info Panen -->
                 <td class="px-3 py-3 text-xs text-center">
-                  @if($detail->batchno && $detail->kodestatus)
+                  @if($detail->batchno && $detail->batch_lifecycle)
                     <div class="space-y-1">
                       <!-- Lifecycle Status Badge -->
                       <div class="flex items-center justify-center">
                         <span
                           class="px-2 py-0.5 rounded text-[10px] font-semibold
-                          {{ $detail->kodestatus === 'PC' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                          {{ $detail->kodestatus === 'RC1' ? 'bg-green-100 text-green-800' : '' }}
-                          {{ $detail->kodestatus === 'RC2' ? 'bg-blue-100 text-blue-800' : '' }}
-                          {{ $detail->kodestatus === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
-                          {{ $detail->kodestatus }}
+                          {{ $detail->batch_lifecycle === 'PC' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                          {{ $detail->batch_lifecycle === 'RC1' ? 'bg-green-100 text-green-800' : '' }}
+                          {{ $detail->batch_lifecycle === 'RC2' ? 'bg-blue-100 text-blue-800' : '' }}
+                          {{ $detail->batch_lifecycle === 'RC3' ? 'bg-purple-100 text-purple-800' : '' }}">
+                          {{ $detail->batch_lifecycle }}
                         </span>
                       </div>
 

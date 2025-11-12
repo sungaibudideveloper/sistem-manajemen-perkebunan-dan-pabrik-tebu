@@ -21,8 +21,6 @@ class LkhDetailPlot extends Model
         'createdat',
         'updatedat',
         'batchno',
-        // ❌ REMOVED: 'kodestatus'
-        'subkontraktorid',
         'fieldbalancerit',
         'fieldbalanceton',
     ];

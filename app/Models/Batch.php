@@ -16,18 +16,21 @@ class Batch extends Model
         'batchno',
         'companycode',
         'plot',
-        'plottype',
-        'lifecyclestatus',
-        'plantingrkhno',
-        'batchdate',
-        'tanggalpanen',
         'batcharea',
+        'batchdate',
+        'lifecyclestatus',
+        'previousbatchno',
+        'plantinglkhno',
+        'tanggalpanen',
+        'kontraktorid',
         'kodevarietas',
         'pkp',
         'lastactivity',
         'isactive',
+        'closedat',
         'inputby',
         'createdat',
+        'plottype',
     ];
 
     protected $casts = [
@@ -37,12 +40,41 @@ class Batch extends Model
         'pkp' => 'integer',
         'isactive' => 'boolean',
         'createdat' => 'datetime',
+        'closedat' => 'datetime',
     ];
+
+    // =====================================
+    // RELATIONSHIPS
+    // =====================================
 
     public function company()
     {
         return $this->belongsTo(Company::class, 'companycode', 'companycode');
     }
+
+    public function previousBatch()
+    {
+        return $this->belongsTo(Batch::class, 'previousbatchno', 'batchno');
+    }
+
+    public function nextBatch()
+    {
+        return $this->hasOne(Batch::class, 'previousbatchno', 'batchno');
+    }
+
+    public function plantingLkh()
+    {
+        return $this->belongsTo(Lkhhdr::class, 'plantinglkhno', 'lkhno');
+    }
+
+    public function kontraktor()
+    {
+        return $this->belongsTo(Kontraktor::class, 'kontraktorid', 'id');
+    }
+
+    // =====================================
+    // COMPUTED ATTRIBUTES
+    // =====================================
 
     public function getCyclecountAttribute(): int
     {
@@ -80,6 +112,28 @@ class Batch extends Model
         };
     }
 
+    public function getAgeInDaysAttribute(): int
+    {
+        return now()->diffInDays($this->batchdate);
+    }
+
+    public function getAgeInMonthsAttribute(): int
+    {
+        return now()->diffInMonths($this->batchdate);
+    }
+
+    public function getDurationDaysAttribute(): ?int
+    {
+        if (!$this->closedat) {
+            return null;
+        }
+        return $this->closedat->diffInDays($this->batchdate);
+    }
+
+    // =====================================
+    // QUERY SCOPES
+    // =====================================
+
     public function scopeActive($query)
     {
         return $query->where('isactive', 1);
@@ -109,6 +163,43 @@ class Batch extends Model
     {
         return $query->where('companycode', $companycode);
     }
+
+    public function scopeByKontraktor($query, $kontraktorid)
+    {
+        return $query->where('kontraktorid', $kontraktorid);
+    }
+
+    public function scopeOnPanen($query, $companycode)
+    {
+        return $query->where('companycode', $companycode)
+            ->where('isactive', 1)
+            ->whereNotNull('tanggalpanen')
+            ->whereRaw('batcharea > (
+                SELECT COALESCE(SUM(ldp.luashasil), 0)
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE ldp.batchno = batch.batchno
+                AND lh.approvalstatus = "1"
+            )');
+    }
+
+    public function scopePanenSelesai($query, $companycode)
+    {
+        return $query->where('companycode', $companycode)
+            ->where('isactive', 1)
+            ->whereNotNull('tanggalpanen')
+            ->whereRaw('batcharea <= (
+                SELECT COALESCE(SUM(ldp.luashasil), 0)
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE ldp.batchno = batch.batchno
+                AND lh.approvalstatus = "1"
+            )');
+    }
+
+    // =====================================
+    // HELPER METHODS
+    // =====================================
 
     public function isHarvestable(): bool
     {
@@ -146,24 +237,99 @@ class Batch extends Model
         return $this->isactive && !is_null($this->tanggalpanen);
     }
 
-    public function getAgeInDaysAttribute(): int
+    /**
+     * Get total luas yang sudah dipanen (approved only)
+     */
+    public function getTotalPanen(): float
     {
-        return now()->diffInDays($this->batchdate);
+        return \DB::table('lkhdetailplot as ldp')
+            ->join('lkhhdr as lh', function($join) {
+                $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                    ->on('ldp.companycode', '=', 'lh.companycode');
+            })
+            ->where('ldp.batchno', $this->batchno)
+            ->where('lh.approvalstatus', '1')
+            ->sum('ldp.luashasil') ?? 0;
     }
 
-    public function getPlotTimeline($company){
+    /**
+     * Get luas sisa yang belum dipanen
+     */
+    public function getLuasSisa(): float
+    {
+        return max(0, $this->batcharea - $this->getTotalPanen());
+    }
+
+    /**
+     * Check if panen completed (>= 95% tolerance)
+     */
+    public function isPanenCompleted(): bool
+    {
+        return $this->getTotalPanen() >= ($this->batcharea * 0.95);
+    }
+
+    /**
+     * Get panen status
+     */
+    public function getPanenStatus(): string
+    {
+        if (is_null($this->tanggalpanen)) {
+            return 'BELUM_PANEN';
+        }
+        
+        if ($this->isPanenCompleted()) {
+            return 'PANEN_SELESAI';
+        }
+        
+        return 'ON_PANEN';
+    }
+
+    /**
+     * Get lifecycle history (chain of batches)
+     */
+    public function getLifecycleHistory()
+    {
+        $history = collect([$this]);
+        
+        // Get previous batches
+        $current = $this;
+        while ($current->previousbatchno) {
+            $current = self::find($current->previousbatchno);
+            if ($current) {
+                $history->prepend($current);
+            } else {
+                break;
+            }
+        }
+        
+        // Get next batches
+        $current = $this;
+        while ($nextBatch = $current->nextBatch) {
+            $history->push($nextBatch);
+            $current = $nextBatch;
+        }
+        
+        return $history;
+    }
+
+    // =====================================
+    // LEGACY METHOD (keep for compatibility)
+    // =====================================
+
+    public function getPlotTimeline($company)
+    {
         return \DB::select("
-        SELECT 
-            a.companycode, a.plot, a.latitude, a.longitude,
-            d.centerlatitude, d.centerlongitude,
-            c.batchno, c.batchdate, c.batcharea, c.tanggalpanen,
-            c.kodevarietas, c.lifecyclestatus, c.pkp, c.isactive,
-            b.luasarea, b.jaraktanam AS plot_jaraktanam, b.status
-        FROM testgpslst AS a
-        LEFT JOIN plot AS b ON a.plot = b.plot
-        LEFT JOIN batch AS c ON b.plot = c.plot
-        LEFT JOIN testgpshdr AS d ON a.plot = d.plot
-        WHERE a.companycode = ?
-        ",[$company]);
+            SELECT 
+                a.companycode, a.plot, a.latitude, a.longitude,
+                d.centerlatitude, d.centerlongitude,
+                c.batchno, c.batchdate, c.batcharea, c.tanggalpanen,
+                c.kodevarietas, c.lifecyclestatus, c.pkp, c.isactive,
+                b.luasarea, b.jaraktanam AS plot_jaraktanam, b.status
+            FROM testgpslst AS a
+            LEFT JOIN plot AS b ON a.plot = b.plot
+            LEFT JOIN batch AS c ON b.plot = c.plot
+            LEFT JOIN testgpshdr AS d ON a.plot = d.plot
+            WHERE a.companycode = ?
+        ", [$company]);
     }
 }
