@@ -93,6 +93,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Surat Jalan</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toleransi</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pucuk</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daun Gulma</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sogolan</th>
@@ -101,6 +102,8 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanah Dll</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Trash</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Netto Trash</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -115,6 +118,7 @@
                                     {{ ucfirst($item->jenis ?? 'N/A') }}
                                 </span>
                             </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->toleransi ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->pucuk ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->daun_gulma ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->sogolan ?? 0, 2, ',', '.') }}</td>
@@ -123,6 +127,8 @@
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->tanah_etc ?? 0, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->total ?? 0, 3, ',', '.') }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->netto_trash ?? 0, 3, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $item->createdby ?? '-' }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $item->createddate ? date('d/m/Y H:i', strtotime($item->createddate)) : '-' }}</td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
@@ -130,6 +136,7 @@
                                             suratjalanno: '{{ $item->suratjalanno }}',
                                             companycode: '{{ $item->companycode }}',
                                             jenis: '{{ $item->jenis }}',
+                                            toleransi: '{{ $item->toleransi }}',
                                             berat_bersih: '{{ $item->berat_bersih }}',
                                             pucuk: '{{ $item->pucuk }}',
                                             daun_gulma: '{{ $item->daun_gulma }}',
@@ -162,7 +169,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            <td colspan="15" class="px-4 py-8 text-center text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -204,7 +211,7 @@
                 <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal()"></div>
 
                 <!-- Modal panel -->
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full"
                     x-transition:enter="ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
@@ -254,25 +261,27 @@
                                     <!-- Step 2: Data Entry Fields (shown only after successful search) -->
                                     <div x-show="suratJalanFound" x-transition class="space-y-4">
 
-                                        <!-- Jenis -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                                            <select name="jenis" x-model="form.jenis"
-                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
-                                                <option value="">Pilih Jenis</option>
-                                                <option value="manual">Manual</option>
-                                                <option value="mesin">Mesin</option>
-                                            </select>
+                                        <!-- Row 1: Jenis -->
+                                        <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                                                <select name="jenis" x-model="form.jenis"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
+                                                    <option value="">Pilih Jenis</option>
+                                                    <option value="manual">Manual</option>
+                                                    <option value="mesin">Mesin</option>
+                                                </select>
+                                            </div>
                                         </div>
 
-                                        <!-- Row 1: Berat Bersih, Pucuk, Daun -->
+                                        <!-- Row 2: Berat Bersih, Pucuk, Daun -->
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Berat Bersih</label>
                                                 <input type="text" name="berat_bersih" x-model="form.berat_bersih"
                                                     @input="calculateBeratKotor()"
                                                     @blur="formatInput('berat_bersih')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
                                             </div>
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pucuk</label>
@@ -290,7 +299,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Row 2: Sogolan, Siwilan, Tebu Mati -->
+                                        <!-- Row 3: Sogolan, Siwilan, Tebu Mati -->
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Sogolan</label>
@@ -315,8 +324,8 @@
                                             </div>
                                         </div>
 
-                                        <!-- Row 3: Tanan dan Lain, Berat Kotor -->
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <!-- Row 4: Tanah dan Lain, Berat Kotor, Toleransi -->
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tanah dll</label>
                                                 <input type="text" name="tanah_etc" x-model="form.tanah_etc"
@@ -332,6 +341,13 @@
                                                 <input type="text" name="berat_kotor" x-model="form.berat_kotor" readonly
                                                     class="w-full border border-gray-200 rounded-md shadow-sm bg-gray-50 px-3 py-2 text-gray-700 cursor-not-allowed"
                                                     placeholder="Auto calculated">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Toleransi (%)</label>
+                                                <input type="text" name="toleransi" x-model="form.toleransi"
+                                                    @blur="formatInput('toleransi')"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                                                    placeholder="Default: 5,00" required>
                                             </div>
                                         </div>
                                     </div>
@@ -376,6 +392,7 @@
                     companycode: '',
                     no_surat_jalan: '',
                     jenis: '',
+                    toleransi: '5,00', // Default value 5
                     berat_bersih: '',
                     pucuk: '',
                     daun_gulma: '',
@@ -415,6 +432,7 @@
                         companycode: '',
                         no_surat_jalan: '',
                         jenis: '',
+                        toleransi: '5,00', // Default value 5
                         berat_bersih: '',
                         pucuk: '',
                         daun_gulma: '',
@@ -431,6 +449,7 @@
                         companycode: data.companycode || '',
                         no_surat_jalan: data.suratjalanno || '',
                         jenis: data.jenis || '',
+                        toleransi: data.toleransi || '5,00',
                         berat_bersih: data.berat_bersih || '',
                         pucuk: data.pucuk || '',
                         daun_gulma: data.daun_gulma || '',
@@ -466,7 +485,9 @@
                     if (this.form[field] && this.form[field] !== '') {
                         const value = parseFloat(this.form[field].toString().replace(',', '.')) || 0;
                         this.form[field] = value.toFixed(2).replace('.', ',');
-                        this.calculateBeratKotor();
+                        if (field !== 'toleransi') {
+                            this.calculateBeratKotor();
+                        }
                     }
                 },
 

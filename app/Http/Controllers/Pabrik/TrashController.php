@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pabrik;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Trash;
 
@@ -94,6 +95,7 @@ class TrashController extends Controller
                 'no_surat_jalan' => 'required|string',
                 'jenis' => 'required|in:manual,mesin',
                 'berat_bersih' => 'required|string',
+                'toleransi' => 'required|string',
                 'pucuk' => 'nullable|string',
                 'daun_gulma' => 'nullable|string',
                 'sogolan' => 'nullable|string',
@@ -105,7 +107,8 @@ class TrashController extends Controller
                 'no_surat_jalan.required' => 'Nomor surat jalan wajib diisi',
                 'jenis.required' => 'Jenis trash wajib dipilih',
                 'jenis.in' => 'Jenis trash harus manual atau mesin',
-                'berat_bersih.required' => 'Berat bersih wajib diisi'
+                'berat_bersih.required' => 'Berat bersih wajib diisi',
+                'toleransi.required' => 'Toleransi wajib diisi'
             ]);
 
             // Check if combination already exists
@@ -123,6 +126,7 @@ class TrashController extends Controller
 
             // Convert comma format to decimal for calculation
             $beratBersih = $this->parseDecimal($request->berat_bersih);
+            $toleransi = $this->parseDecimal($request->toleransi);
             $pucuk = $this->parseDecimal($request->pucuk ?? '0');
             $daunGulma = $this->parseDecimal($request->daun_gulma ?? '0');
             $sogolan = $this->parseDecimal($request->sogolan ?? '0');
@@ -138,26 +142,22 @@ class TrashController extends Controller
             $sogolanPct = $beratKotor > 0 ? round(($sogolan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $siwlanPct = $beratKotor > 0 ? round(($siwilan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $tanahEtcRounded = round($tanahEtc, 2); // 2 desimal
+            
             // Calculate totals dengan 3 desimal
             $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3); // 3 desimal
-            $nettoTrash = round($totalTrash - 5, 3); // 3 desimal           
-            // dd([
-            //     'berat_kotor' => $beratKotor,
-            //     'tebumati_raw' => $tebumati,
-            //     'tebumati_pct' => $tebumatiPct,
-            //     'daun_pct' => $daunPct,
-            //     'pucuk_pct' => $pucukPct,
-            //     'sogolan_pct' => $sogolanPct,
-            //     'siwlan_pct' => $siwlanPct,
-            //     'tanah_etc' => $tanahEtc,
-            //     'total_trash' => $totalTrash,
-            //     'netto_trash' => $nettoTrash
-            // ], $request);
-            // // Insert trash record using DB
+            $nettoTrash = round($totalTrash - $toleransi, 3); // 3 desimal menggunakan toleransi dari request
+            
+            // Pastikan netto trash tidak kurang dari 0
+            if ($nettoTrash < 0) {
+                $nettoTrash = 0;
+            }
+            
+            // Insert trash record using DB
             DB::table('trash')->insert([
                 'suratjalanno' => $request->no_surat_jalan,
                 'companycode' => $request->companycode,
                 'jenis' => $request->jenis,
+                'toleransi' => $toleransi,
                 'pucuk' => $pucukPct,
                 'daun_gulma' => $daunPct,
                 'sogolan' => $sogolanPct,
@@ -166,6 +166,8 @@ class TrashController extends Controller
                 'tanah_etc' => $tanahEtcRounded,
                 'total' => $totalTrash,
                 'netto_trash' => $nettoTrash,
+                'createdby' => Auth::user()->userid,
+                'createddate' => now()->format('Y-m-d H:i:s'),
             ]);
 
             DB::commit();
@@ -192,6 +194,7 @@ class TrashController extends Controller
                 'no_surat_jalan' => 'required|string',
                 'jenis' => 'required|in:manual,mesin',
                 'berat_bersih' => 'required|string',
+                'toleransi' => 'required|string',
                 'pucuk' => 'nullable|string',
                 'daun_gulma' => 'nullable|string',
                 'sogolan' => 'nullable|string',
@@ -203,7 +206,8 @@ class TrashController extends Controller
                 'no_surat_jalan.required' => 'Nomor surat jalan wajib diisi',
                 'jenis.required' => 'Jenis trash wajib dipilih',
                 'jenis.in' => 'Jenis trash harus manual atau mesin',
-                'berat_bersih.required' => 'Berat bersih wajib diisi'
+                'berat_bersih.required' => 'Berat bersih wajib diisi',
+                'toleransi.required' => 'Toleransi wajib diisi'
             ]);
 
             // Check if record exists
@@ -220,6 +224,7 @@ class TrashController extends Controller
 
             // Convert comma format to decimal for calculation (SAMA SEPERTI STORE)
             $beratBersih = $this->parseDecimal($request->berat_bersih);
+            $toleransi = $this->parseDecimal($request->toleransi);
             $pucuk = $this->parseDecimal($request->pucuk ?? '0');
             $daunGulma = $this->parseDecimal($request->daun_gulma ?? '0');
             $sogolan = $this->parseDecimal($request->sogolan ?? '0');
@@ -238,7 +243,12 @@ class TrashController extends Controller
 
             // Calculate totals dengan 3 desimal (SAMA SEPERTI STORE)
             $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3);
-            $nettoTrash = round($totalTrash - 5, 3);
+            $nettoTrash = round($totalTrash - $toleransi, 3); // Menggunakan toleransi dari request
+            
+            // Pastikan netto trash tidak kurang dari 0
+            if ($nettoTrash < 0) {
+                $nettoTrash = 0;
+            }
 
             // Update the record
             DB::table('trash')
@@ -249,6 +259,7 @@ class TrashController extends Controller
                     'suratjalanno' => $request->no_surat_jalan,
                     'companycode' => $request->companycode,
                     'jenis' => $request->jenis,
+                    'toleransi' => $toleransi,
                     'pucuk' => $pucukPct,
                     'daun_gulma' => $daunPct,
                     'sogolan' => $sogolanPct,
@@ -257,6 +268,7 @@ class TrashController extends Controller
                     'tanah_etc' => $tanahEtcRounded,
                     'total' => $totalTrash,
                     'netto_trash' => $nettoTrash,
+                    // Note: createdby dan createddate tidak diupdate karena ini adalah data audit
                 ]);
 
             DB::commit();
