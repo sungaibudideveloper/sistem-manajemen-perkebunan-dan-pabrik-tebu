@@ -129,6 +129,12 @@
             @endphp
             
             @foreach ($groupedData as $tanggal => $dataPerTanggal)
+                @php
+                    // Variabel untuk total per tanggal
+                    $totalPotKg = 0;
+                    $totalBeratBersihHarian = 0;
+                @endphp
+                
                 <div class="mb-8 @if(!$loop->last) print-break @endif">
                     <!-- Header untuk setiap tanggal -->
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 text-center uppercase border-b border-gray-200 pb-2">
@@ -149,8 +155,8 @@
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Bruto (KG)</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tarra (KG)</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Netto (KG)</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Trash %</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Trash %</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Trash Pabrik %</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Trash Kebun %</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Pot (KG)</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Berat Bersih (KG)</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" colspan="2">Tebang Muat Tebu Giling Manual</th>
@@ -177,6 +183,16 @@
                             </thead>
                             <tbody>
                                 @foreach ($dataPerTanggal as $dt)
+                                @php
+                                    // Perhitungan variabel untuk konsistensi
+                                    $trashKebun = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
+                                    $potKg = ($trashKebun > 0) ? round($dt->netto * $trashKebun / 100, 0, PHP_ROUND_HALF_UP) : 0;
+                                    $beratBersih = $dt->netto - $potKg;
+                                    
+                                    // Accumulate untuk total
+                                    $totalPotKg += $potKg;
+                                    $totalBeratBersihHarian += $beratBersih;
+                                @endphp
                                 <tr>
                                     <td>{{$loop->iteration}}</td>
                                     <td>{{$dt->namasubkontraktor}}</td>
@@ -188,31 +204,65 @@
                                     <td>{{number_format($dt->brkend)}}</td>
                                     <td>{{number_format($dt->netto)}}</td>
                                     <td>
-                                        @if($dt->trash_percentage > 0)
-                                            {{ number_format($dt->trash_percentage, 2) }}%
+                                        @if($dt->trash_percentage > 3)
+                                            {{ number_format($dt->trash_percentage, 3) }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($trashKebun > 0)
+                                            {{ number_format($trashKebun, 3) }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($potKg > 0)
+                                            {{ number_format($potKg) }}
+                                        @endif
+                                    </td>
+                                    <td>{{ number_format($beratBersih) }}</td>
+                                    <td>@if($dt->kodetebang == 'Premium' && $dt->muatgl == '0') {{number_format($beratBersih)}} @endif</td>
+                                    <td>@if($dt->kodetebang != 'Premium' && $dt->muatgl == '0') {{number_format($beratBersih)}} @endif</td>
+                                    <td>@if($dt->kodetebang == 'Premium' && $dt->muatgl == '1') {{number_format($beratBersih)}} @endif</td>
+                                    <td>@if($dt->kodetebang != 'Premium' && $dt->muatgl == '1') {{number_format($beratBersih)}} @endif</td>
+                                    <td>@if($dt->kendaraankontraktor == 1) {{number_format($dt->netto)}}  @endif</td>
+                                    <td>@if($dt->kendaraankontraktor == 0) {{number_format($dt->netto)}}  @endif</td>
+                                    <td>{{number_format($beratBersih)}}</td>
+                                    <td>{{number_format($beratBersih)}}</td>
+                                    <td>@if($dt->tebusulit == 1) {{number_format($beratBersih)}} @endif</td>
+                                    <td>@if($dt->langsir == 1) {{number_format($beratBersih)}} @endif</td>
+                                    <td>Coming Soon!</td>
+                                    <td>
+                                        @if(!empty($dt->averagescore) && !empty($dt->grade))
+                                            {{ number_format($dt->averagescore, 1) }} ({{ $dt->grade }})
                                         @else
                                             -
                                         @endif
                                     </td>
-                                    <td>trash %</td>
-                                    <td>{{number_format($dt->traf)}}</td>
-                                    <td>{{number_format($dt->beratbersih)}}</td>
-                                    <td>@if($dt->kodetebang == 'Premium' && $dt->muatgl == '0') {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>@if($dt->kodetebang != 'Premium' && $dt->muatgl == '0') {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>@if($dt->kodetebang == 'Premium' && $dt->muatgl == '1') {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>@if($dt->kodetebang != 'Premium' && $dt->muatgl == '1') {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>@if($dt->kendaraankontraktor == 1) {{number_format($dt->netto)}}  @endif</td>
-                                    <td>@if($dt->kendaraankontraktor == 0) {{number_format($dt->netto)}}  @endif</td>
-                                    <td>{{number_format($dt->beratbersih)}}</td>
-                                    <td>{{number_format($dt->beratbersih)}}</td>
-                                    <td>@if($dt->tebusulit == 1) {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>@if($dt->langsir == 1) {{number_format($dt->beratbersih)}} @endif</td>
-                                    <td>Coming Soon!</td>
-                                    <td>Coming Soon!</td>
                                 </tr>
                                 @endforeach
                                 
                                 <!-- Summary row untuk setiap tanggal -->
+                                @php
+                                    // Hitung total untuk kategori tebang muat menggunakan berat bersih yang sudah dihitung
+                                    $totalPremiumManual = 0;
+                                    $totalNonPremiumManual = 0;
+                                    $totalPremiumGL = 0;
+                                    $totalNonPremiumGL = 0;
+                                    $totalTebuSulit = 0;
+                                    $totalLangsir = 0;
+                                    
+                                    foreach ($dataPerTanggal as $dt) {
+                                        $trashKebunCalc = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
+                                        $potKgCalc = ($trashKebunCalc > 0) ? round($dt->netto * $trashKebunCalc / 100, 0, PHP_ROUND_HALF_UP) : 0;
+                                        $beratBersihCalc = $dt->netto - $potKgCalc;
+                                        
+                                        if($dt->kodetebang == 'Premium' && $dt->muatgl == '0') $totalPremiumManual += $beratBersihCalc;
+                                        if($dt->kodetebang != 'Premium' && $dt->muatgl == '0') $totalNonPremiumManual += $beratBersihCalc;
+                                        if($dt->kodetebang == 'Premium' && $dt->muatgl == '1') $totalPremiumGL += $beratBersihCalc;
+                                        if($dt->kodetebang != 'Premium' && $dt->muatgl == '1') $totalNonPremiumGL += $beratBersihCalc;
+                                        if($dt->tebusulit == 1) $totalTebuSulit += $beratBersihCalc;
+                                        if($dt->langsir == 1) $totalLangsir += $beratBersihCalc;
+                                    }
+                                @endphp
                                 <tr class="bg-yellow-50 border-t-2 border-yellow-400 font-semibold">
                                     <td colspan="6" class="text-right font-bold">TOTAL {{ \Carbon\Carbon::parse($tanggal)->format('d M Y') }}:</td>
                                     <td class="font-bold">{{ number_format($dataPerTanggal->sum('bruto')) }}</td>
@@ -220,18 +270,18 @@
                                     <td class="font-bold">{{ number_format($dataPerTanggal->sum('netto')) }}</td>
                                     <td>-</td>
                                     <td>-</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->sum('traf')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('kodetebang', 'Premium')->where('muatgl', '0')->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('kodetebang', '!=', 'Premium')->where('muatgl', '0')->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('kodetebang', 'Premium')->where('muatgl', '1')->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('kodetebang', '!=', 'Premium')->where('muatgl', '1')->sum('beratbersih')) }}</td>
+                                    <td class="font-bold">{{ number_format($totalPotKg) }}</td>
+                                    <td class="font-bold">{{ number_format($totalBeratBersihHarian) }}</td>
+                                    <td class="font-bold">{{ number_format($totalPremiumManual) }}</td>
+                                    <td class="font-bold">{{ number_format($totalNonPremiumManual) }}</td>
+                                    <td class="font-bold">{{ number_format($totalPremiumGL) }}</td>
+                                    <td class="font-bold">{{ number_format($totalNonPremiumGL) }}</td>
                                     <td class="font-bold">{{ number_format($dataPerTanggal->where('kendaraankontraktor', 1)->sum('netto')) }}</td>
                                     <td class="font-bold">{{ number_format($dataPerTanggal->where('kendaraankontraktor', 0)->sum('netto')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('tebusulit', 1)->sum('beratbersih')) }}</td>
-                                    <td class="font-bold">{{ number_format($dataPerTanggal->where('langsir', 1)->sum('beratbersih')) }}</td>
+                                    <td class="font-bold">{{ number_format($totalBeratBersihHarian) }}</td>
+                                    <td class="font-bold">{{ number_format($totalBeratBersihHarian) }}</td>
+                                    <td class="font-bold">{{ number_format($totalTebuSulit) }}</td>
+                                    <td class="font-bold">{{ number_format($totalLangsir) }}</td>
                                     <td>-</td>
                                     <td>-</td>
                                 </tr>

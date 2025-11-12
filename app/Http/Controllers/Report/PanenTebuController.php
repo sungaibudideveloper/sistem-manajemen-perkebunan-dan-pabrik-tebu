@@ -34,7 +34,7 @@ class PanenTebuController extends Controller
     }
 
     public function proses(Request $request){
-        // dd($request);
+        // dd(round(2.538, 0, PHP_ROUND_HALF_UP));
 
         $companycode = session('companycode');
         $timbangan = new Timbangan;
