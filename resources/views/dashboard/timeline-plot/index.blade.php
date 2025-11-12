@@ -9,7 +9,7 @@
         th,td{border:1px solid #ddd;padding:6px 8px;font-size:13px;vertical-align:middle;background-clip:padding-box;}
         tbody tr{transition:background-color .2s;}
         tbody tr:hover td{background:#24874a !important;color:white;}
-        
+         
         /* ✅ Sticky Vertical */
         .sticky-v{position:sticky;background:#166534;color:#fff;}
         thead tr:first-child .sticky-v{top:0;z-index:16;}
@@ -18,7 +18,13 @@
         .sticky-h{position:sticky;font-weight:600;}
         thead .sticky-h{background:#166534;color:white;z-index:20;}
         tbody .sticky-h{background:white;color:#333;z-index:9;}
-        
+
+        /* ✅ Minimum width untuk kolom-kolom */
+        th.sticky-h.blok{min-width:50px;}
+        th.sticky-h:not(.blok){min-width:80px;}  /* Plot */
+        th.sticky-v[rowspan="2"]{min-width:70px;}  /* Saldo, Realisasi, % */
+        th.sticky-v[colspan="2"]{min-width:140px;}  /* Activity headers */
+
         /* ✅ Khusus blok */
         .sticky-h.blok{background:#14532d;color:white;text-align:center;}
         tbody .sticky-h.blok{background:#14532d;}
@@ -70,93 +76,115 @@
                             <th class="sticky-v sticky-h" style="left:60px;" rowspan="2">Plot</th>
                             <th class="sticky-v" rowspan="2">Saldo<br><small>HA</small></th>
                             
-                            @if($cropType === 'pc')
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Brushing<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Ploughing I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Harrowing I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Ploughing II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Harrowing II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Ridging & Basalt dressing<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Seed placing<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Pre Emergence<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Top dress fertilizing<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Weeding I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Weeding II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Post Emergence I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Post Emergence II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Late Pre Emergence<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            @else
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Single dress fertilizing<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Pre Emergence<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Weeding I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Weeding II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Post Emergence I<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Post Emergence II<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            <th class="sticky-v" colspan="2" style="text-align:center;">Late Pre Emergence<br><small style="font-weight:normal;">HA / Tanggal</small></th>
-                            @endif
+                            {{-- DINAMIS: Loop dari $activityMap --}}
+                            @foreach($activityMap as $code => $label)
+                                <th class="sticky-v" colspan="2" style="text-align:center;">
+                                    {{ $label }}<br>
+                                    <small style="font-weight:normal;">HA / Tanggal</small>
+                                </th>
+                            @endforeach
+                            
+                            {{-- 2 Kolom Terakhir --}}
+                            <th class="sticky-v" rowspan="2">Realisasi<br>Tanam<br><small>HA</small></th>
+                            <th class="sticky-v" rowspan="2">%</th>
                         </tr>
-                        
-                   
                     </thead>
                     
                     <tbody>
-                      @php
-                          $blokPlots = $plotHeaders->groupBy(fn($item)=>substr($item->plot,0,1));
-                      @endphp
-                    <!-- Baris 2: Kosong untuk Blok/Plot/Saldo, isi HA/Tanggal -->
-                      {{-- BARIS TOTAL SUMMARY --}}
-                      <tr class="total-row">
-                          <td class="sticky-v sticky-h blok" style="left:0;">TOTAL</td>
-                          <td class="sticky-v sticky-h" style="left:60px;">ALL</td>
-                          <td style="text-align:right;">{{ number_format($plotHeaders->sum('luasarea'), 2) }}</td>
-                          
-                          @foreach($activityMap as $code => $label)
-                              @php 
-                                  $totalActivity = 0;
-                                  $allDates = [];
-                                  
-                                  foreach($activityData as $plot => $activities) {
-                                      if($act = $activities->get($code)) {
-                                          $totalActivity += $act->total_luas;
-                                          if($act->tanggal_terbaru) {
-                                              $allDates[] = $act->tanggal_terbaru;
-                                          }
-                                      }
-                                  }
-                                  
-                                  $latestDate = !empty($allDates) ? max($allDates) : null;
-                              @endphp
-                              
-                              <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
-                              <td style="text-align:center;font-size:11px;">
-                                  {{ $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M y') : '-' }}
-                              </td>
-                          @endforeach
-                      </tr>
-                      
-                      {{-- DATA PER PLOT --}}
-                      @foreach($blokPlots as $blok=>$plots)
-                          @foreach($plots as $index=>$plot)
-                              <tr>
-                                  @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
-                                  <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                  <td style="text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
-                                  
-                                  @foreach($activityMap as $code => $label)
-                                      @php 
-                                          $activity = $activityData->get($plot->plot)?->get($code);
-                                          $value = $activity->total_luas ?? 0;
-                                          $tanggal = $activity->tanggal_terbaru ?? null;
-                                      @endphp
-                                      
-                                      <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
-                                      <td style="text-align:center;font-size:11px;">
-                                          {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
-                                      </td>
-                                  @endforeach
-                              </tr>
-                          @endforeach
-                      @endforeach
+                        @php
+                            $blokPlots = $plotHeaders->groupBy(fn($item)=>substr($item->plot,0,1));
+                        @endphp
+                        
+                        {{-- BARIS TOTAL SUMMARY --}}
+                        <tr class="total-row">
+                            <td class="sticky-v sticky-h blok" style="left:0;">TOTAL</td>
+                            <td class="sticky-v sticky-h" style="left:60px;">ALL</td>
+                            <td style="text-align:right;">{{ number_format($plotHeaders->sum('luasarea'), 2) }}</td>
+                            
+                            @php
+                                $grandTotalRealisasi = 0;
+                            @endphp
+                            
+                            @foreach($activityMap as $code => $label)
+                                @php 
+                                    $totalActivity = 0;
+                                    $allDates = [];
+                                    
+                                    foreach($activityData as $plot => $activities) {
+                                        if($act = $activities->get($code)) {
+                                            $totalActivity += $act->total_luas;
+                                            if($act->tanggal_terbaru) {
+                                                $allDates[] = $act->tanggal_terbaru;
+                                            }
+                                        }
+                                    }
+                                    
+                                    $grandTotalRealisasi += $totalActivity;
+                                    $latestDate = !empty($allDates) ? max($allDates) : null;
+                                @endphp
+                                
+                                <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
+                                <td style="text-align:center;font-size:11px;">
+                                    {{ $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M y') : '-' }}
+                                </td>
+                            @endforeach
+                            
+                            {{-- Total Realisasi Tanam --}}
+                            <td style="text-align:right;">
+                                {{ number_format($grandTotalRealisasi, 2) }}
+                            </td>
+                            
+                            {{-- Total Persentase --}}
+                            <td style="text-align:right;">
+                                @php
+                                    $totalSaldo = $plotHeaders->sum('luasarea');
+                                    $persenTotal = $totalSaldo > 0 ? ($grandTotalRealisasi / $totalSaldo) * 100 : 0;
+                                @endphp
+                                {{ number_format($persenTotal, 2) }}%
+                            </td>
+                        </tr>
+                        
+                        {{-- DATA PER PLOT --}}
+                        @foreach($blokPlots as $blok=>$plots)
+                            @foreach($plots as $index=>$plot)
+                                <tr>
+                                    @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
+                                    <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
+                                    <td style="text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                    
+                                    @php
+                                        $totalRealisasiPlot = 0;
+                                    @endphp
+                                    
+                                    @foreach($activityMap as $code => $label)
+                                        @php 
+                                            $activity = $activityData->get($plot->plot)?->get($code);
+                                            $value = $activity->total_luas ?? 0;
+                                            $tanggal = $activity->tanggal_terbaru ?? null;
+                                            $totalRealisasiPlot += $value;
+                                        @endphp
+                                        
+                                        <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
+                                        <td style="text-align:right;font-size:11px;">
+                                            {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
+                                        </td>
+                                    @endforeach
+                                    
+                                    {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
+                                    <td style="text-align:right;">
+                                        {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
+                                    </td>
+                                    
+                                    {{-- Persentase --}}
+                                    <td style="text-align:right;">
+                                        @php
+                                            $persen = $plot->luasarea > 0 ? ($totalRealisasiPlot / $plot->luasarea) * 100 : 0;
+                                        @endphp
+                                        {{ number_format($persen, 2) }}%
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @endforeach
                     </tbody>
                 </table>
             </div>

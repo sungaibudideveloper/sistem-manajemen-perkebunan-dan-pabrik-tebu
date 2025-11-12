@@ -165,23 +165,36 @@ table th, table td {
 
     <tr class="border-b hover:bg-gray-50">
         <td class="py-2 px-2">
+            @php
+                // Ambil activitycode dari $plots jika $d->activitycode kosong
+                if (empty($d->activitycode)) {
+                    $plotData = $plots->where('lkhno', $d->lkhno)
+                                      ->where('plot', $d->plot)
+                                      ->first();
+                    $activitycode = $plotData->activitycode ?? null;
+                } else {
+                    $activitycode = $d->activitycode;
+                }
+            @endphp
+        
             <select
                 @if (strtoupper($details[0]->flagstatus) != 'ACTIVE') disabled @endif
                 name="itemcode[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
                 class="item-select w-full border-none bg-yellow-100 text-xs"
                 data-luas="{{ $totalLuas }}"
                 data-lkhno="{{ $d->lkhno }}"
-            >
-                @foreach ($itemlist as $item)
+            > 
+                @foreach ($itemlist as $item) 
                     <option value="{{ $item->itemcode }}" 
-                            {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha ? 'selected' : '' }}
+                            {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha && $item->activitycode == $activitycode ? 'selected' : '' }}
                             data-dosage="{{$item->dosageperha}}" 
-                            data-measure="{{ $item->measure }}" data-itemname="{{ $item->itemname }}">
-                        Grup {{$item->herbisidagroupid}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
+                            data-measure="{{ $item->measure }}" 
+                            data-itemname="{{ $item->itemname }}">
+                        {{$item->activitycode}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
                     </option>
                 @endforeach
             </select>
-
+        
             <span class="print-label text-xs">
                 Herbisida {{ $d->herbisidagroupid }} - {{ $d->itemcode }} - {{ $d->itemname ?? '[Nama Item]' }} - {{ $d->dosageperha }} ({{ $d->unit }}) (Total: {{ $totalLuas }} HA)
             </span>
