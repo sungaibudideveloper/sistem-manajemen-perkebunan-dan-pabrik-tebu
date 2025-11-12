@@ -3,6 +3,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Report\PivotController;
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\Report\PanenTebuController;
 use App\Http\Controllers\Input\AgronomiController;
 
 Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function () {
@@ -17,6 +18,11 @@ Route::group(['middleware' => ['auth', 'permission:Report HPT']], function () {
 Route::group(['middleware' => ['auth', 'permission:Report Zpk']], function () {
     Route::match(['GET', 'POST'], 'report/report-zpk', [ReportController::class, 'zpk'])->name('report.report-zpk.index');
     Route::get('report/report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report.report-zpk.exportExcel');
+});
+
+Route::group(['middleware' => ['auth', 'permission:Panen Tebu Report']], function () {
+    Route::match(['GET', 'POST'], 'report/panen-tebu-report', [PanenTebuController::class, 'index'])->name('report.panen-tebu-report.index');
+    Route::post('report/panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('report.panen-tebu-report.proses');
 });
 
 Route::get('report/agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi')
