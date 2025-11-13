@@ -12,7 +12,8 @@ class Timbangan extends Model
     'supl', 'gsupl', 'area', 'item', 'note', 'ket1', 'ket2', 'ket3', 'donom', 'dotgl', 'bruto', 'brkend', 'raf', 'traf', 'netto', 
     'flag', 'usr1', 'usr2'];
 
-    public function getData($companycode){
+    public function getData($companycode, $idkontraktor, $startdate, $enddate){
+        dd($startdate, $enddate);
         // Query utama dengan penambahan join ke lkhhdr dan lkhdetailbsm
         $data = \DB::select("
             SELECT a.suratjalanno, b.tanggalangkut, c.kontraktorid, d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, b.plot, 
@@ -35,6 +36,7 @@ class Timbangan extends Model
                 AND BINARY lkh.lkhno = BINARY bsm.lkhno 
                 AND BINARY b.plot = BINARY bsm.plot
             WHERE a.companycode = '".$companycode."'
+            and DATE(b.tanggalangkut) between '".$startdate."' and '".$enddate."'
             GROUP BY 
                 a.suratjalanno, a.companycode, b.tanggalangkut, b.companycode, c.kontraktorid, 
                 d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, 
