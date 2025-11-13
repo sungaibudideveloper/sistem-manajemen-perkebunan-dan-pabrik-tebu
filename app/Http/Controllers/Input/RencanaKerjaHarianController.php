@@ -681,6 +681,7 @@ class RencanaKerjaHarianController extends Controller
             // Route 1: BSM Activity Report
             if ($isBsmActivity) {
                 $lkhBsmDetails = $this->getLkhBsmDetailsForShow($companycode, $lkhno);
+                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
 
                 return view('input.rencanakerjaharian.lkh-report-bsm', [
@@ -689,6 +690,7 @@ class RencanaKerjaHarianController extends Controller
                     'nav' => 'Rencana Kerja Harian',
                     'lkhData' => $lkhData,
                     'lkhBsmDetails' => $lkhBsmDetails,
+                    'lkhWorkerDetails' => $lkhWorkerDetails,
                     'approvals' => $approvals
                 ]);
             }
