@@ -106,8 +106,14 @@ class PiasController extends Controller
                  ->on('masterlist.blok', '=', 'lkhdetailplot.blok')
                  ->on('masterlist.plot', '=', 'lkhdetailplot.plot');
         })
+        // TAMBAHKAN JOIN KE BATCH
+        ->leftJoin('batch', function($join) {
+            $join->on('batch.companycode', '=', 'masterlist.companycode')
+                 ->on('batch.plot', '=', 'masterlist.plot')
+                 ->on('batch.batchno', '=', 'masterlist.activebatchno');
+        })
         ->where('rkhhdr.rkhno', $request->input('rkhno'))
-        ->where('approvalstatus', 1)
+        ->where('rkhhdr.approvalstatus', 1)
         ->select(
             'rkhhdr.*', 
             'u.name as mandor_name',
@@ -115,10 +121,11 @@ class PiasController extends Controller
             'lkhdetailplot.blok',
             'lkhdetailplot.plot',
             'lkhdetailplot.luasrkh',
-            'masterlist.tanggalulangtahun',
-            'masterlist.kodevarietas',
-            'masterlist.kodestatus',
-            'masterlist.batchno'
+            // GANTI DARI masterlist KE batch
+            'batch.tanggalpanen as tanggalulangtahun',
+            'batch.kodevarietas',
+            'batch.lifecyclestatus as kodestatus',
+            'batch.batchno'
         )
         ->get();
             
@@ -248,7 +255,7 @@ public function submit(Request $request)
 }
 
 
-
+/*
     public function submit_old_perhitungan_otomatis(Request $request) 
 {
     $data = $request->validate([
@@ -435,7 +442,7 @@ public function submit(Request $request)
         return back()->withErrors(['save' => 'Gagal menyimpan PIAS: '.$e->getMessage()])->withInput();
     }
 }
-
+*/
 /**
  * Equal-first + Group-fair (CRC32; target = sum(round(need)))
  */

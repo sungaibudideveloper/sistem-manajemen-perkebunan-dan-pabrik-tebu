@@ -75,7 +75,7 @@ Route::match(['put', 'patch'], 'masterdata/herbisida/{companycode}/{itemcode}', 
 Route::delete('masterdata/herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'destroy'])->name('masterdata.herbisida.destroy')->middleware(['auth', 'permission:Hapus Herbisida']);
 
 // Route::group(['middleware' => ['auth', 'permission:Herbisida Group']], function () {
-Route::get('masterdata/herbisida-group', [HerbisidaGroupController::class, 'home'])->name('masterdata.herbisidagroup.index');
+Route::get('masterdata/herbisida-group', [HerbisidaGroupController::class, 'home'])->name('masterdata.herbisida-group.index');
 Route::post('masterdata/herbisida-group', [HerbisidaGroupController::class, 'insert']);
 Route::patch('masterdata/herbisida-group/{id}', [HerbisidaGroupController::class, 'edit']);
 Route::delete('masterdata/herbisida-group/{id}', [HerbisidaGroupController::class, 'delete']);

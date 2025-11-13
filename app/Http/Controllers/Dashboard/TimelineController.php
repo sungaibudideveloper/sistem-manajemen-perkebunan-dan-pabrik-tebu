@@ -51,11 +51,11 @@ class TimelineController extends Controller
                 '3.2.2'  => 'Cultivating',
                 '3.2.4'  => 'Single dress fertilizing',
                 '3.2.5'  => 'Pre Emergence',
-                '3.2.6'  => 'Cultivating II',
-                '3.2.7'  => 'Hand Weeding I',
-                '3.2.9'  => 'Hand Weeding II',
-                '3.2.8'  => 'Post Emergence I',
-                '3.2.10'  => 'Post Emergence II',
+                '3.2.7'  => 'Cultivating II',
+                '3.2.8'  => 'Hand Weeding I',
+                '3.2.10'  => 'Hand Weeding II',
+                '3.2.9'  => 'Post Emergence I',
+                '3.2.11'  => 'Post Emergence II',
 
                 '3.2.6'  => 'Late Pre Emergence',
             ];
