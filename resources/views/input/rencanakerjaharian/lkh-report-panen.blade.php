@@ -61,11 +61,6 @@
         </div>
 
         {{-- Section 1: KONTRAKTOR & SUBKONTRAKTOR --}}
-        @php
-            // ❌ DISABLED: Query kontraktor summary (sementara)
-            $kontraktorSummary = collect([]); // Empty collection
-        @endphp
-
         <div class="mb-8">
             <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
                 <h3 class="font-bold text-sm uppercase tracking-wide">Kontraktor & Subkontraktor</h3>
@@ -80,21 +75,40 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Nama Kontraktor</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Total Subkontraktor</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Total Plot</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">List Plot</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
-                        {{-- ✅ UPDATED: Show "no data" message --}}
+                        @forelse($kontraktorSummary as $index => $kontraktor)
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-gray-700 font-medium">{{ $index + 1 }}</td>
+                            <td class="px-4 py-3 text-gray-900 font-mono">{{ $kontraktor->kontraktor_id }}</td>
+                            <td class="px-4 py-3 text-gray-900 font-semibold">{{ $kontraktor->kontraktor_nama ?? 'Unknown' }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                                    {{ $kontraktor->total_subkontraktor }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                    {{ $kontraktor->total_plot }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-700 font-mono text-xs">{{ $kontraktor->list_plot }}</td>
+                        </tr>
+                        @empty
                         <tr>
                             <td colspan="5" class="px-4 py-6 text-center text-gray-500">
                                 <div class="flex flex-col items-center gap-2">
                                     <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
                                     </svg>
-                                    <p class="text-sm font-medium">Data kontraktor sementara tidak ditampilkan</p>
-                                    <p class="text-xs text-gray-400">Sedang dalam proses pengembangan</p>
+                                    <p class="text-sm font-medium">Belum ada data kontraktor</p>
+                                    <p class="text-xs text-gray-400">Data akan muncul setelah input dari mobile</p>
                                 </div>
                             </td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -163,8 +177,42 @@
                                 <td class="px-4 py-3 text-center text-gray-400 italic text-xs" colspan="4">Menunggu input hasil</td>
                             @endif
                             
-                            {{-- ✅ UPDATED: Kolom Subkontraktor sementara kosong --}}
-                            <td class="px-4 py-3 text-gray-400 italic text-xs">Belum tersedia</td>
+                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan data real --}}
+                            <td class="px-4 py-3">
+                                @php
+                                    $plotData = $subkontraktorDetail->where('plot', $item->plot);
+                                @endphp
+                                
+                                @if($plotData->count() > 0)
+                                    @php
+                                        $kontraktor = $plotData->first();
+                                    @endphp
+                                    
+                                    {{-- Header Kontraktor dengan format ID - Nama --}}
+                                    <div class="mb-2 pb-2 border-b border-gray-200">
+                                        <div class="text-xs font-bold text-gray-800">
+                                            {{ $kontraktor->kontraktor_id }} - {{ $kontraktor->kontraktor_nama ?? 'Unknown' }}
+                                        </div>
+                                    </div>
+                                    
+                                    {{-- List Subkontraktor --}}
+                                    <div class="space-y-1">
+                                        @foreach($plotData as $sk)
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-blue-600">•</span>
+                                            <div class="flex-1 text-xs">
+                                                <span class="font-semibold text-gray-900">
+                                                    {{ $sk->subkontraktor_nama ?? $sk->subkontraktor_id }}
+                                                </span>
+                                                <span class="text-gray-500 ml-1">({{ $sk->jumlah_sj }} SJ)</span>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 italic text-xs">Belum ada SJ</span>
+                                @endif
+                            </td>
                         </tr>
                         @empty
                         <tr>
@@ -218,8 +266,26 @@
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->blok }}</td>
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
                             <td class="px-4 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
-                            {{-- ✅ UPDATED: Kolom Subkontraktor sementara kosong --}}
-                            <td class="px-4 py-3 text-gray-400 italic text-xs">Belum tersedia</td>
+                            
+                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan data real untuk Petak Baru --}}
+                            <td class="px-4 py-3">
+                                @php
+                                    $plotData = $subkontraktorDetail->where('plot', $item->plot);
+                                @endphp
+                                
+                                @if($plotData->count() > 0)
+                                    <div class="text-xs">
+                                        @foreach($plotData as $sk)
+                                            <div class="mb-1">
+                                                <span class="font-semibold text-gray-900">{{ $sk->subkontraktor_nama ?? $sk->subkontraktor_id }}</span>
+                                                <span class="text-gray-500">({{ $sk->jumlah_sj }} SJ)</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 italic text-xs">Belum ada SJ</span>
+                                @endif
+                            </td>
                         </tr>
                         @empty
                         <tr>

@@ -698,13 +698,18 @@ class RencanaKerjaHarianController extends Controller
                 $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
 
+                $kontraktorSummary = $this->getKontraktorSummaryForLkh($companycode, $lkhno);
+                $subkontraktorDetail = $this->getSubkontraktorDetailForLkh($companycode, $lkhno);
+
                 return view('input.rencanakerjaharian.lkh-report-panen', [
                     'title' => 'Laporan Kegiatan Harian (LKH) - Panen',
                     'navbar' => 'Input',
                     'nav' => 'Rencana Kerja Harian',
                     'lkhData' => $lkhData,
                     'lkhPanenDetails' => $lkhPanenDetails,
-                    'approvals' => $approvals
+                    'approvals' => $approvals,
+                    'kontraktorSummary' => $kontraktorSummary,
+                    'subkontraktorDetail' => $subkontraktorDetail 
                 ]);
             }
             
@@ -762,44 +767,119 @@ class RencanaKerjaHarianController extends Controller
                 'b.tanggalpanen',
                 'b.lifecyclestatus as kodestatus',
                 
-                // STC calculation (unchanged)
+                // STC calculation
                 DB::raw("(
                     COALESCE(b.batcharea, 0) - 
                     COALESCE((
                         SELECT SUM(ldp2.luashasil)
                         FROM lkhdetailplot ldp2
-                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno 
+                                        AND ldp2.companycode = lh2.companycode
                         WHERE ldp2.companycode = ldp.companycode
                         AND ldp2.batchno = ldp.batchno
-                        AND lh2.approvalstatus = '1' -- ✅ FIXED
+                        AND ldp2.batchno IS NOT NULL
+                        AND lh2.approvalstatus = '1'
                         AND lh2.lkhdate < '{$lkhDate}'
                     ), 0)
                 ) as stc"),
                 
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
+                // BC calculation
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
                         COALESCE((
                             SELECT SUM(ldp2.luashasil)
                             FROM lkhdetailplot ldp2
-                            JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                            JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno 
+                                            AND ldp2.companycode = lh2.companycode
                             WHERE ldp2.companycode = ldp.companycode
                             AND ldp2.batchno = ldp.batchno
+                            AND ldp2.batchno IS NOT NULL
+                            AND lh2.approvalstatus = '1'
                             AND lh2.lkhdate < '{$lkhDate}'
                         ), 0)
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
+                // ✅ FIXED: Hari Tebang dengan fallback
                 DB::raw("CASE 
-                    WHEN b.tanggalpanen IS NOT NULL 
-                        THEN DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
-                    ELSE NULL
+                    WHEN b.tanggalpanen IS NULL THEN 1
+                    ELSE DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
                 END as haritebang")
             ])
             ->orderBy('ldp.blok')
             ->orderBy('ldp.plot')
+            ->get();
+    }
+
+    /**
+     * Get kontraktor summary for LKH Panen
+     * 1 kontraktor bisa punya many subkontraktor, many plot
+     */
+    private function getKontraktorSummaryForLkh($companycode, $lkhno)
+    {
+        return DB::table('suratjalanpos as sjp')
+            ->leftJoin('kontraktor as k', function($join) use ($companycode) {
+                $join->on('sjp.namakontraktor', '=', 'k.id')
+                    ->where('k.companycode', '=', $companycode);
+            })
+            ->where('sjp.companycode', $companycode)
+            ->where('sjp.suratjalanno', 'LIKE', "%-{$lkhno}-%")
+            ->select([
+                'sjp.namakontraktor as kontraktor_id',
+                'k.namakontraktor as kontraktor_nama',
+                DB::raw('COUNT(DISTINCT sjp.namasubkontraktor) as total_subkontraktor'),
+                DB::raw('COUNT(DISTINCT sjp.plot) as total_plot'),
+                DB::raw("GROUP_CONCAT(DISTINCT sjp.plot ORDER BY sjp.plot SEPARATOR ', ') as list_plot")
+            ])
+            ->groupBy('sjp.namakontraktor', 'k.namakontraktor')
+            ->orderBy('k.namakontraktor')
+            ->get();
+    }
+
+    /**
+     * Get subkontraktor detail per plot
+     * 1 plot = 1 kontraktor = MANY subkontraktor
+     */
+    private function getSubkontraktorDetailForLkh($companycode, $lkhno)
+    {
+        return DB::table('suratjalanpos as sjp')
+            ->join('lkhdetailplot as ldp', function($join) use ($companycode, $lkhno) {
+                $join->on('sjp.plot', '=', 'ldp.plot')
+                    ->where('ldp.companycode', '=', $companycode)
+                    ->where('ldp.lkhno', '=', $lkhno);
+            })
+            ->leftJoin('kontraktor as k', function($join) use ($companycode) {
+                $join->on('sjp.namakontraktor', '=', 'k.id')
+                    ->where('k.companycode', '=', $companycode);
+            })
+            ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
+                $join->on('sjp.namasubkontraktor', '=', 'sk.id')
+                    ->where('sk.companycode', '=', $companycode);
+            })
+            ->where('sjp.companycode', $companycode)
+            ->where('sjp.suratjalanno', 'LIKE', "%-{$lkhno}-%")  // ✅ Filter by LKHNO pattern
+            ->select([
+                'ldp.blok',  // ✅ Ambil blok dari lkhdetailplot (bukan extract dari string)
+                'sjp.plot',
+                'sjp.namakontraktor as kontraktor_id',
+                'k.namakontraktor as kontraktor_nama',
+                'sjp.namasubkontraktor as subkontraktor_id',
+                'sk.namasubkontraktor as subkontraktor_nama',
+                DB::raw('COUNT(sjp.suratjalanno) as jumlah_sj')
+            ])
+            ->groupBy(
+                'ldp.blok',  // ✅ Sekarang blok sudah ada di GROUP BY
+                'sjp.plot',
+                'sjp.namakontraktor',
+                'k.namakontraktor',
+                'sjp.namasubkontraktor',
+                'sk.namasubkontraktor'
+            )
+            ->orderBy('ldp.blok')
+            ->orderBy('sjp.plot')
             ->get();
     }
 
