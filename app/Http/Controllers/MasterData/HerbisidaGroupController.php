@@ -172,6 +172,15 @@ public function edit(Request $request, $id)
         'items.*.dosageperha' => 'required|numeric|min:0'
     ]);
 
+    $isUsed = DB::table('rkhlst')
+    ->where('activitycode', $group->activitycode)
+    ->where('herbisidagroupid', $group->herbisidagroupid)
+    ->exists();
+
+    if ($isUsed) {
+    return back()->with('error', 'Gagal Edit! Group ini sudah digunakan di RKH dan tidak bisa diubah!');
+    }
+
     // Check for duplicate item codes in the submitted items
     $itemCodes = array_column($request->items, 'itemcode');
     if (count($itemCodes) !== count(array_unique($itemCodes))) {
