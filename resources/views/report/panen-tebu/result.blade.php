@@ -229,7 +229,11 @@
                                     <td>{{number_format($beratBersih)}}</td>
                                     <td>@if($dt->tebusulit == 1) {{number_format($beratBersih)}} @endif</td>
                                     <td>@if($dt->langsir == 1) {{number_format($beratBersih)}} @endif</td>
-                                    <td>Coming Soon!</td>
+                                    <td>
+                                        @if(!empty($dt->averagescore) && $dt->averagescore < 1200)
+                                            {{ number_format($beratBersih) }}
+                                        @endif
+                                    </td>
                                     <td>
                                         @if(!empty($dt->averagescore) && !empty($dt->grade))
                                             {{ number_format($dt->averagescore, 1) }} ({{ $dt->grade }})
@@ -249,6 +253,7 @@
                                     $totalNonPremiumGL = 0;
                                     $totalTebuSulit = 0;
                                     $totalLangsir = 0;
+                                    $totalInsentifBSM = 0;
                                     
                                     foreach ($dataPerTanggal as $dt) {
                                         $trashKebunCalc = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
@@ -261,6 +266,11 @@
                                         if($dt->kodetebang != 'Premium' && $dt->muatgl == '1') $totalNonPremiumGL += $beratBersihCalc;
                                         if($dt->tebusulit == 1) $totalTebuSulit += $beratBersihCalc;
                                         if($dt->langsir == 1) $totalLangsir += $beratBersihCalc;
+                                        
+                                        // Hitung total Insentif BSM: jika averagescore < 1200 maka tambahkan beratBersih
+                                        if(!empty($dt->averagescore) && $dt->averagescore < 1200) {
+                                            $totalInsentifBSM += $beratBersihCalc;
+                                        }
                                     }
                                 @endphp
                                 <tr class="bg-yellow-50 border-t-2 border-yellow-400 font-semibold">
@@ -282,7 +292,7 @@
                                     <td class="font-bold">{{ number_format($totalBeratBersihHarian) }}</td>
                                     <td class="font-bold">{{ number_format($totalTebuSulit) }}</td>
                                     <td class="font-bold">{{ number_format($totalLangsir) }}</td>
-                                    <td>-</td>
+                                    <td class="font-bold">{{ number_format($totalInsentifBSM) }}</td>
                                     <td>-</td>
                                 </tr>
                             </tbody>
