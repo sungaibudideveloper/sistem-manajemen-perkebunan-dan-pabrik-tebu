@@ -137,9 +137,8 @@ class PiasController extends Controller
         ]);
     }
 
-    
-public function submit(Request $request)
-{
+    public function submit(Request $request)
+{   
     // 1) Validasi dasar + baris input
     $data = $request->validate([
         'rkhno'                 => 'required|string|max:20',
@@ -148,6 +147,7 @@ public function submit(Request $request)
         'rows'                  => 'required|array|min:1',
         'rows.*.blok'           => 'required|string|max:50',
         'rows.*.plot'           => 'required|string|max:50',
+        'rows.*.lkhno'          => 'required|string|max:20',
         'rows.*.tj'             => 'nullable|numeric|min:0',
         'rows.*.tc'             => 'nullable|numeric|min:0',
     ], [
@@ -159,12 +159,13 @@ public function submit(Request $request)
     $stokTC  = (float) $data['inputTC'];
     $rowsIn  = $data['rows'];
 
-    // 2) Hitung total yang diketik user, pastikan tidak melebihi stok
+    // 2) Hitung total yang diketik user
     $sumTJ = 0; $sumTC = 0;
     foreach ($rowsIn as $r) {
         $sumTJ += (float) ($r['tj'] ?? 0);
         $sumTC += (float) ($r['tc'] ?? 0);
     }
+    
     if ($sumTJ > $stokTJ) {
         return back()
             ->withErrors(['rows' => "Total TJ yang diinput ($sumTJ) melebihi stok TJ ($stokTJ)."])
@@ -176,23 +177,27 @@ public function submit(Request $request)
             ->withInput();
     }
 
-    // (Opsional tapi aman) Pastikan baris yang disubmit memang milik RKH tersebut
-    // Jika tidak perlu, blok ini bisa dihapus.
+    // 3) Validasi kombinasi lkhno|blok|plot milik RKH ini
     $validKeys = DB::table('rkhhdr')
         ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
         ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
         ->where('rkhhdr.rkhno', $rkhno)
-        ->pluck(DB::raw("CONCAT(lkhdetailplot.blok,'|',lkhdetailplot.plot)"))
+        ->whereNotNull('lkhdetailplot.blok')
+        ->whereNotNull('lkhdetailplot.plot')
+        ->whereNotNull('lkhhdr.lkhno')
+        ->select(DB::raw("CONCAT(lkhhdr.lkhno,'|',lkhdetailplot.blok,'|',lkhdetailplot.plot) as plot_key"))
+        ->pluck('plot_key')
         ->toArray();
+    
     $validMap = array_flip($validKeys);
 
-    // Ambil companycode (kalau tabel piaslst/piashdr memakainya)
+    // Ambil companycode
     $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->value('companycode');
 
-    // 3) Simpan apa adanya dalam transaksi
-    return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $stokTJ, $stokTC, $sumTJ, $sumTC) {
+    // 4) Simpan dalam transaksi
+    return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC) {
 
-        // Hapus detail lama agar sinkron dengan input terbaru
+        // Hapus detail lama
         $q = DB::table('piaslst')->where('rkhno', $rkhno);
         if ($companycode) $q->where('companycode', $companycode);
         $q->delete();
@@ -200,23 +205,33 @@ public function submit(Request $request)
         // Siapkan rows untuk insert
         $now = now();
         $detail = [];
+        
         foreach ($rowsIn as $r) {
-            $blok = trim((string)($r['blok'] ?? ''));
-            $plot = trim((string)($r['plot'] ?? ''));
+            $blok  = trim((string)($r['blok'] ?? ''));
+            $plot  = trim((string)($r['plot'] ?? ''));
+            $lkhno = trim((string)($r['lkhno'] ?? ''));
 
-            // skip baris yang tidak valid untuk RKH (jika blok validasi diaktifkan)
-            if (!empty($validMap) && !isset($validMap["{$blok}|{$plot}"])) {
+            // Validasi: cek kombinasi lkhno|blok|plot
+            $key = "{$lkhno}|{$blok}|{$plot}";
+            if (!empty($validMap) && !isset($validMap[$key])) {
+                \Log::warning("Invalid lkhno|blok|plot submitted", [
+                    'rkhno' => $rkhno,
+                    'lkhno' => $lkhno,
+                    'blok' => $blok,
+                    'plot' => $plot,
+                    'key' => $key
+                ]);
                 continue;
             }
 
             $detail[] = array_filter([
                 'companycode' => $companycode ?: null,
                 'rkhno'       => $rkhno,
+                'lkhno'       => $lkhno,
                 'blok'        => $blok,
                 'plot'        => $plot,
                 'tj'          => (int) ($r['tj'] ?? 0),
                 'tc'          => (int) ($r['tc'] ?? 0),
-                'updated_at'  => $now,
             ], fn($v) => $v !== null);
         }
 
@@ -224,7 +239,7 @@ public function submit(Request $request)
             DB::table('piaslst')->insert($detail);
         }
 
-        // Upsert header (stok & sisa); tanpa perhitungan kebutuhan apa pun
+        // Upsert header
         $header = [
             'tj'       => $stokTJ,
             'tc'       => $stokTC,
@@ -253,6 +268,130 @@ public function submit(Request $request)
         return back()->with('success', 'Data PIAS berhasil disimpan.');
     });
 }
+    
+// public function old_submit_buma cek blok plot ga lkh(Request $request)
+// {   
+//     // 1) Validasi dasar + baris input
+//     $data = $request->validate([
+//         'rkhno'                 => 'required|string|max:20',
+//         'inputTJ'               => 'required|numeric|min:0',
+//         'inputTC'               => 'required|numeric|min:0',
+//         'rows'                  => 'required|array|min:1',
+//         'rows.*.blok'           => 'required|string|max:50',
+//         'rows.*.plot'           => 'required|string|max:50',
+//         'rows.*.tj'             => 'nullable|numeric|min:0',
+//         'rows.*.tc'             => 'nullable|numeric|min:0',
+//     ], [
+//         'rows.required'         => 'Detail baris wajib ada.',
+//     ]);
+
+//     $rkhno   = $data['rkhno'];
+//     $stokTJ  = (float) $data['inputTJ'];
+//     $stokTC  = (float) $data['inputTC'];
+//     $rowsIn  = $data['rows'];
+
+//     // 2) Hitung total yang diketik user, pastikan tidak melebihi stok
+//     $sumTJ = 0; $sumTC = 0;
+//     foreach ($rowsIn as $r) {
+//         $sumTJ += (float) ($r['tj'] ?? 0);
+//         $sumTC += (float) ($r['tc'] ?? 0);
+//     }
+//     if ($sumTJ > $stokTJ) {
+//         return back()
+//             ->withErrors(['rows' => "Total TJ yang diinput ($sumTJ) melebihi stok TJ ($stokTJ)."])
+//             ->withInput();
+//     }
+//     if ($sumTC > $stokTC) {
+//         return back()
+//             ->withErrors(['rows' => "Total TC yang diinput ($sumTC) melebihi stok TC ($stokTC)."])
+//             ->withInput();
+//     }
+
+//     // (Opsional tapi aman) Pastikan baris yang disubmit memang milik RKH tersebut
+//     // Jika tidak perlu, blok ini bisa dihapus.
+//     // $validKeys = DB::table('rkhhdr')
+//     //     ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+//     //     ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+//     //     ->where('rkhhdr.rkhno', $rkhno)
+//     //     ->pluck(DB::raw("CONCAT(lkhdetailplot.blok,'|',lkhdetailplot.plot)"))
+//     //     ->toArray();
+//     $validKeys = DB::table('rkhhdr')
+//     ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+//     ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+//     ->where('rkhhdr.rkhno', $rkhno)
+//     ->whereNotNull('lkhdetailplot.blok')
+//     ->whereNotNull('lkhdetailplot.plot')
+//     ->select(DB::raw("CONCAT(lkhdetailplot.blok,'|',lkhdetailplot.plot) as plot_key"))
+//     ->pluck('plot_key')  
+//     ->toArray();
+//     $validMap = array_flip($validKeys);
+
+//     // Ambil companycode (kalau tabel piaslst/piashdr memakainya)
+//     $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->value('companycode');
+
+//     // 3) Simpan apa adanya dalam transaksi
+//     return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $stokTJ, $stokTC, $sumTJ, $sumTC) {
+
+//         // Hapus detail lama agar sinkron dengan input terbaru
+//         $q = DB::table('piaslst')->where('rkhno', $rkhno);
+//         if ($companycode) $q->where('companycode', $companycode);
+//         $q->delete();
+
+//         // Siapkan rows untuk insert
+//         $now = now();
+//         $detail = [];
+//         foreach ($rowsIn as $r) {
+//             $blok = trim((string)($r['blok'] ?? ''));
+//             $plot = trim((string)($r['plot'] ?? ''));
+
+//             // skip baris yang tidak valid untuk RKH (jika blok validasi diaktifkan)
+//             if (!empty($validMap) && !isset($validMap["{$blok}|{$plot}"])) {
+//                 continue;
+//             }
+
+//             $detail[] = array_filter([
+//                 'companycode' => $companycode ?: null,
+//                 'rkhno'       => $rkhno,
+//                 'blok'        => $blok,
+//                 'plot'        => $plot,
+//                 'tj'          => (int) ($r['tj'] ?? 0),
+//                 'tc'          => (int) ($r['tc'] ?? 0),
+//             ], fn($v) => $v !== null);
+//         }
+
+//         if (!empty($detail)) {
+//             DB::table('piaslst')->insert($detail);
+//         }
+
+//         // Upsert header (stok & sisa); tanpa perhitungan kebutuhan apa pun
+//         $header = [
+//             'tj'       => $stokTJ,
+//             'tc'       => $stokTC,
+//             'sisatj'   => (int) floor($stokTJ - $sumTJ),
+//             'sisatc'   => (int) floor($stokTC - $sumTC),
+//         ];
+
+//         $keys = array_filter([
+//             'companycode' => $companycode ?: null,
+//             'rkhno'       => $rkhno,
+//         ], fn($v) => $v !== null);
+
+//         $exists = DB::table('piashdr')->where($keys)->exists();
+//         if (!$exists) {
+//             DB::table('piashdr')->insert($keys + $header + [
+//                 'generateddate' => $now,
+//                 'inputby'       => auth()->user()->name ?? 'System',
+//             ]);
+//         } else {
+//             DB::table('piashdr')->where($keys)->update($header + [
+//                 'updateddate' => $now,
+//                 'updateby'    => auth()->user()->name ?? 'System',
+//             ]);
+//         }
+
+//         return back()->with('success', 'Data PIAS berhasil disimpan.');
+//     });
+// }
 
 
 /*
