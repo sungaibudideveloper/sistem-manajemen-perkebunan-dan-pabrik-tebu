@@ -231,11 +231,10 @@ public function delete($id)
         $group->delete();
         
         DB::commit();
-        return redirect()->route('herbisida.index')->with('success', 'Group Sukses Dihapus!');
-        
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Group Sukses Dihapus!');
     } catch (\Exception $e) {
         DB::rollBack();
-        return back()->with('error', 'Gagal Hapis Group: ' . $e->getMessage());
+        return back()->with('error', 'Gagal Hapus Group: ' . $e->getMessage());
     }
 }
 
