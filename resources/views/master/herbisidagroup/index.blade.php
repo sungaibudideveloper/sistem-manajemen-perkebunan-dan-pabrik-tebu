@@ -253,7 +253,7 @@
                                               @endif
                                               
                                               @if(hasPermission('Hapus Herbisida'))
-                                              <form action="{{ url("masterdata/herbisidagroup/{$groupId}") }}" 
+                                              <form action="{{ url("masterdata/herbisida-group/{$groupId}") }}" 
                                                     method="POST"
                                                     onsubmit="return confirm('Yakin hapus group ini?');">
                                                   @csrf
