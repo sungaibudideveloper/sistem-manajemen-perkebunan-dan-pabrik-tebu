@@ -16,7 +16,7 @@ class Timbangan extends Model
         // dd($startdate, $enddate);
         // Query utama dengan penambahan join ke lkhhdr dan lkhdetailbsm
         $data = \DB::select("
-            SELECT a.suratjalanno, b.tanggalangkut, c.kontraktorid, d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, b.plot, 
+            SELECT distinct a.suratjalanno, b.tanggalangkut, c.kontraktorid, d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, b.plot, 
             a.bruto, a.brkend, a.netto, a.traf, SUM(a.netto - a.traf) AS beratbersih, b.muatgl, b.kodetebang, b.kendaraankontraktor, b.tebusulit, b.langsir,
             t.netto_trash AS trash_percentage,
             bsm.averagescore,
