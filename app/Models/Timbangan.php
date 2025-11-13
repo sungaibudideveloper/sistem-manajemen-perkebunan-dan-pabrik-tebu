@@ -37,6 +37,7 @@ class Timbangan extends Model
                 AND BINARY b.plot = BINARY bsm.plot
             WHERE a.companycode = '".$companycode."'
             and DATE(b.tanggalangkut) between '".$startdate."' and '".$enddate."'
+            and b.namakontraktor = '".$idkontraktor."'
             GROUP BY 
                 a.suratjalanno, a.companycode, b.tanggalangkut, b.companycode, c.kontraktorid, 
                 d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, 
