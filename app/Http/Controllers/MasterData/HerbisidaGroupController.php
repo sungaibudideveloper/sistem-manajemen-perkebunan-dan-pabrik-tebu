@@ -150,7 +150,7 @@ public function insert(Request $request)
         }
         
         DB::commit();
-        return redirect()->route('masterdata.herbisidagroup.index')->with('success', 'Grup Berhasil Dibuat!');
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Grup Berhasil Dibuat!');
         
     } catch (\Exception $e) {
         DB::rollBack();
@@ -201,7 +201,7 @@ public function edit(Request $request, $id)
         }
         
         DB::commit();
-        return redirect()->route('masterdata.herbisidagroup.index')->with('success', 'Edit Sukses!');
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Edit Sukses!');
         
     } catch (\Exception $e) {
         DB::rollBack();
