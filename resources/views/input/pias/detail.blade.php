@@ -502,15 +502,17 @@
     inputTC.addEventListener('change', schedule);
 
     // Render awal (non-blocking)
-    function scheduleFirstRender(){
-      if (!hasBoth()) return;
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => render(), { timeout: 1200 });
-      } else {
-        setTimeout(render, 200);
-      }
-    }
-    scheduleFirstRender();
+// Render awal (non-blocking) - HANYA jika user mengetik stok TJ/TC
+function scheduleFirstRender(){
+  // ✅ JANGAN auto-render saat page load
+  // Biarkan user yang trigger render dengan mengetik stok TJ/TC
+  
+  // Tapi tetap hitung total dan sisa dari data existing
+  if (hasBoth()) {
+    recalcTotalsFromInputs();
+  }
+}
+scheduleFirstRender();
 
     // Cetak: render sebelum print
     window.onbeforeprint = function(){ if (hasBoth()) render(); };
