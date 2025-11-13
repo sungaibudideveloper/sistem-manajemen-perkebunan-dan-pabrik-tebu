@@ -73,7 +73,7 @@
     
       <div x-show="open" x-cloak class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div x-show="open" x-transition.opacity
-            class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div>
+            class="fixed inset-0 bg-gray-500/75" aria-hidden="true"></div> 
 
         <div class="fixed inset-0 z-10 overflow-y-auto">
           <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
