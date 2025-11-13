@@ -216,6 +216,7 @@ public function delete($id)
     // Check if activitycode is being used in rkhlst
     $isUsed = DB::table('rkhlst')
                 ->where('activitycode', $group->activitycode)
+                ->where('herbisidagroupid', $group->herbisidagroupid)
                 ->exists();
     
     if ($isUsed) {
