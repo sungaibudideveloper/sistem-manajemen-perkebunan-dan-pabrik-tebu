@@ -13,7 +13,7 @@ class Timbangan extends Model
     'flag', 'usr1', 'usr2'];
 
     public function getData($companycode, $idkontraktor, $startdate, $enddate){
-        dd($startdate, $enddate);
+        // dd($startdate, $enddate);
         // Query utama dengan penambahan join ke lkhhdr dan lkhdetailbsm
         $data = \DB::select("
             SELECT a.suratjalanno, b.tanggalangkut, c.kontraktorid, d.namakontraktor, b.namasupir, c.id, c.namasubkontraktor, b.nomorpolisi, b.plot, 
