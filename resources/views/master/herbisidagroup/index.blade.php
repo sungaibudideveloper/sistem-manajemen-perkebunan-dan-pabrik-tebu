@@ -78,8 +78,8 @@
                            class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-2xl">
                           <form method="POST"
                                 :action="mode === 'edit'
-                                  ? '{{ url('masterdata/herbisidagroup') }}/' + form.herbisidagroupid
-                                  : '{{ url('masterdata/herbisidagroup') }}'"
+                                  ? '{{ url('masterdata/herbisida-group') }}/' + form.herbisidagroupid
+                                  : '{{ url('masterdata/herbisida-group') }}'"
                                 class="bg-white px-4 pt-4 pb-4 sm:p-6 space-y-4">
                               @csrf
                               <template x-if="mode === 'edit'">
