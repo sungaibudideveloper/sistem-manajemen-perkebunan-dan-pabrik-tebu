@@ -12,20 +12,20 @@ use App\Models\Herbisidagroup;
 
 class HerbisidaController extends Controller
 {
-    
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
         $companycode = Session::get('companycode'); // NEW: Get company session
-    
+
         $query = Herbisida::where('companycode', $companycode); // NEW: Filter by company session
-    
+
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('itemcode', 'like', "%{$search}%")
-                  ->orWhere('itemname',  'like', "%{$search}%");
-                  // REMOVED: companycode search karena sudah di-filter
+                    ->orWhere('itemname',  'like', "%{$search}%");
+                // REMOVED: companycode search karena sudah di-filter
             });
         }
 
@@ -36,7 +36,7 @@ class HerbisidaController extends Controller
                 'perPage' => $perPage,
                 'search'  => $search,
             ]);
-    
+
         return view('master.herbisida.index', [
             'herbisida' => $herbisida,
             'title'     => 'Data Herbisida',
@@ -50,7 +50,7 @@ class HerbisidaController extends Controller
     public function store(Request $request)
     {
         $companycode = Session::get('companycode'); // NEW: Get company session
-        
+
         $request->validate([
             'itemcode' => 'required|string|max:30',
             'itemname' => 'required|string|max:50',
@@ -62,7 +62,7 @@ class HerbisidaController extends Controller
         $exists = Herbisida::where('companycode', $companycode) // NEW: Use session company
             ->where('itemcode', $request->itemcode)
             ->exists();
-            
+
         if ($exists) {
             return redirect()->back()
                 ->withInput()
@@ -86,14 +86,14 @@ class HerbisidaController extends Controller
     }
 
     public function update(Request $request, $companycode, $itemcode)
-    {   
+    {
         $sessionCompanycode = Session::get('companycode'); // NEW: Get company session
-        
+
         // NEW: Security check - ensure user can only edit their company data
         if ($companycode !== $sessionCompanycode) {
             abort(403, 'Unauthorized access to company data');
         }
-        
+
         $herbi = Herbisida::where([
             ['companycode', $companycode],
             ['itemcode', $itemcode]
@@ -106,13 +106,13 @@ class HerbisidaController extends Controller
         ]);
         // REMOVED: companycode validation karena tidak bisa diubah
         // REMOVED: dosageperha validation karena sudah tidak ada
-        
+
         // NEW: Simplified duplicate check - hanya cek itemcode karena company tetap sama
         if ($request->itemcode !== $herbi->itemcode) {
             $exists = Herbisida::where('companycode', $companycode)
                 ->where('itemcode', $request->itemcode)
                 ->exists();
-    
+
             if ($exists) {
                 return redirect()->back()
                     ->withInput()
@@ -121,26 +121,26 @@ class HerbisidaController extends Controller
                     ]);
             }
         }
-        
+
         Herbisida::where('companycode', $companycode)
-             ->where('itemcode', $itemcode)
-             ->update([
+            ->where('itemcode', $itemcode)
+            ->update([
                 'companycode' => $companycode, // NEW: Company tetap sama (dari session)
                 'itemcode' => $validated['itemcode'],
                 'itemname' => $validated['itemname'],
                 'measure' => $validated['measure'],
                 'updateby' => Auth::user()->userid,
                 'updatedat' => now(),
-             ]);
+            ]);
         // REMOVED: dosageperha karena sudah tidak ada di table
-    
+
         return redirect()->back()->with('success', 'Data berhasil di‑update.');
     }
 
     public function destroy(Request $request, $companycode, $itemcode)
     {
         $sessionCompanycode = Session::get('companycode'); // NEW: Get company session
-        
+
         // NEW: Security check - ensure user can only delete their company data
         if ($companycode !== $sessionCompanycode) {
             abort(403, 'Unauthorized access to company data');
@@ -151,17 +151,14 @@ class HerbisidaController extends Controller
             ['itemcode', $itemcode]
         ])->delete();
 
-        return redirect()->back()->with('success','Data berhasil di‑hapus.');
+        return redirect()->back()->with('success', 'Data berhasil di‑hapus.');
     }
 
     public function group(Request $request)
-    { 
-        $companycode = Session::get('companycode'); // NEW: Get company session
-        
-        // NEW: Filter herbisida groups by company session
-        return Herbisidagroup::where('companycode', $companycode)->get();
-        
-        // ALTERNATIVE: Jika Herbisidagroup tidak punya companycode field, gunakan:
-        // return Herbisidagroup::get(); // Keep original if no company filtering needed
+    {
+        // Hapus filter companycode karena kolom tidak ada
+        return Herbisidagroup::select('herbisidagroupid', 'herbisidagroupname', 'activitycode')
+            ->orderBy('herbisidagroupid')
+            ->get();
     }
 }
