@@ -143,12 +143,9 @@
               @php
                 $hari = (int) floor(abs($item->rkhdate->diffInRealDays($item->tanggalulangtahun)));
                 $bulan = ceil($hari / 30);
-                // cari data existing utk baris ini
                 $exist = $lst->where('blok', $item->blok)->where('plot', $item->plot)->first();
-                // ganti nama kolom sesuai tabel piaslst kamu
                 $existTJ = optional($exist)->tj_alloc ?? optional($exist)->tj ?? null;
                 $existTC = optional($exist)->tc_alloc ?? optional($exist)->tc ?? null;
-                
               @endphp
               <tr class="hover:bg-gray-50"
                   data-luas="{{ $item->luasrkh }}" data-umur="{{ $hari }}" 
@@ -164,7 +161,12 @@
                 <td class="p-3 border-b text-center">{{ $item->kodestatus }}</td>
                 <td class="p-3 border-b">{{ $item->kodevarietas }}</td>
                 <td class="p-3 border-b text-right">{{ $item->luasrkh }}</td>
+                
+                {{-- ✅ INPUT TJ dengan hidden blok & plot --}}
                 <td class="p-3 border-b bg-blue-50 font-semibold text-right">
+                  <input type="hidden" name="rows[{{ $loop->index }}][blok]" value="{{ $item->blok }}">
+                  <input type="hidden" name="rows[{{ $loop->index }}][plot]" value="{{ $item->plot }}">
+                  <input type="hidden" name="rows[{{ $loop->index }}][lkhno]" value="{{ $item->lkhno }}">
                   <input
                     type="number" step="1" min="0"
                     class="tj-result w-24 text-right border rounded px-2 py-1 bg-white"
@@ -172,6 +174,8 @@
                     name="rows[{{ $loop->index }}][tj]"
                   >
                 </td>
+                
+                {{-- ✅ INPUT TC --}}
                 <td class="p-3 border-b bg-green-50 font-semibold text-right">
                   <input
                     type="number" step="1" min="0"
@@ -180,9 +184,10 @@
                     name="rows[{{ $loop->index }}][tc]"
                   >
                 </td>
+                
+                {{-- ✅ FORMULA (tanpa hidden input lagi) --}}
                 <td class="p-3 border-b pias-formula text-left text-sm no-print">
-                  <input type="hidden" name="rows[{{ $loop->index }}][blok]" value="{{ $item->blok }}">
-                  <input type="hidden" name="rows[{{ $loop->index }}][plot]" value="{{ $item->plot }}">
+                  {{-- Konten formula akan di-generate oleh JavaScript --}}
                 </td>
               </tr>
             @endforeach
@@ -214,7 +219,7 @@
           </a> &nbsp;
           <button
               type="submit"
-              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition no-print"
           >
             {{ $hdr ? 'Edit Data' : 'Generate' }}
           </button>
@@ -224,7 +229,7 @@
           <button
             type="button"
             onclick="window.print()"
-            class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded shadow transition no-print"
           >
             Print
           </button>
