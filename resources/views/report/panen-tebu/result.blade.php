@@ -162,23 +162,23 @@
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" colspan="2">Tebang Muat Tebu Giling Manual</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" colspan="2">Tebang Muat Tebu Giling GL</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Kirim <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Extra Fooding <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Tdk Diseset <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Fee Kontraktor/P <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Sulit <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Langsir <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Insentif BSM/P <br><br> Rp 35/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Extra Fooding <br><br> Rp {{number_format($tabelharga[0]->extra_fooding ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Tdk Diseset <br><br> Rp {{number_format($tabelharga[0]->tebu_tdk_seset ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Fee Kontraktor/P <br><br> Rp {{number_format($tabelharga[0]->manual_feekont ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Sulit <br><br> Rp {{number_format($tabelharga[0]->manual_tebusulit ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Langsir <br><br> Rp {{number_format($tabelharga[0]->langsir ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Insentif BSM/P <br><br> Rp {{number_format($tabelharga[0]->manual_bsm ?? 0)}}/kg</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Ket Kg <br>(BSM)</th>
                                 </tr>
                                 
                                 <!-- Second row of headers (Sub headers) -->
                                 <tr class="bg-gray-100">
                                     <!-- Sub-columns for "Tebang Muat Tebu Giling Manual" -->
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium <br><br> Rp {{number_format(($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium <br><br> Rp {{number_format($tabelharga[0]->manual_nonpremi ?? 0)}}/kg</th>
                                     <!-- Sub-columns for "Tebang Muat Tebu Giling GL" -->
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium GL</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium GL</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium GL <br><br> Rp {{number_format(($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium GL <br><br> Rp {{number_format($tabelharga[0]->glkebun_nonpremi ?? 0)}}/kg</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -300,6 +300,178 @@
                     </div>
                 </div>
             @endforeach
+        </div>
+
+        <!-- Summary Total Section -->
+        <div class="mt-12 mb-16">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 text-center uppercase border-b-2 border-gray-300 pb-4">
+                REKAPITULASI TOTAL PERIODE {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} s/d {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}
+            </h2>
+            
+            @php
+                // Inisialisasi variabel total keseluruhan
+                $grandTotalPremiumManual = 0;
+                $grandTotalNonPremiumManual = 0;
+                $grandTotalPremiumGL = 0;
+                $grandTotalNonPremiumGL = 0;
+                $grandTotalKirimKontraktor = 0;
+                $grandTotalExtraFooding = 0;
+                $grandTotalTebuTidakSeset = 0;
+                $grandTotalTebuSulit = 0;
+                $grandTotalLangsir = 0;
+                $grandTotalInsentifBSM = 0;
+                
+                // Loop melalui semua data untuk menghitung total
+                foreach ($data as $dt) {
+                    $trashKebunCalc = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
+                    $potKgCalc = ($trashKebunCalc > 0) ? round($dt->netto * $trashKebunCalc / 100, 0, PHP_ROUND_HALF_UP) : 0;
+                    $beratBersihCalc = $dt->netto - $potKgCalc;
+                    
+                    // Akumulasi berdasarkan kondisi
+                    if($dt->kodetebang == 'Premium' && $dt->muatgl == '0') $grandTotalPremiumManual += $beratBersihCalc;
+                    if($dt->kodetebang != 'Premium' && $dt->muatgl == '0') $grandTotalNonPremiumManual += $beratBersihCalc;
+                    if($dt->kodetebang == 'Premium' && $dt->muatgl == '1') $grandTotalPremiumGL += $beratBersihCalc;
+                    if($dt->kodetebang != 'Premium' && $dt->muatgl == '1') $grandTotalNonPremiumGL += $beratBersihCalc;
+                    if($dt->kendaraankontraktor == 1) $grandTotalKirimKontraktor += $dt->netto;
+                    if($dt->kendaraankontraktor == 0) $grandTotalExtraFooding += $dt->netto;
+                    // Tebu Tidak Seset menggunakan berat bersih untuk semua data
+                    $grandTotalTebuTidakSeset += $beratBersihCalc;
+                    if($dt->tebusulit == 1) $grandTotalTebuSulit += $beratBersihCalc;
+                    if($dt->langsir == 1) $grandTotalLangsir += $beratBersihCalc;
+                    if(!empty($dt->averagescore) && $dt->averagescore < 1200) $grandTotalInsentifBSM += $beratBersihCalc;
+                }
+            @endphp
+            
+            <div class="overflow-x-auto">
+                <table class="report-table min-w-full border-2 border-gray-400">
+                    <thead>
+                        <tr class="bg-blue-100 border-b-2 border-blue-400">
+                            <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">No</th>
+                            <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">Kategori</th>
+                            <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">Berat (KG)</th>
+                            <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">Tarif (Rp/KG)</th>
+                            <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4">Total (Rp)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">1</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling Manual (Premium)</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalPremiumManual) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalPremiumManual * (($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">2</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling Manual (Non Premium)</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalNonPremiumManual) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_nonpremi ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalNonPremiumManual * ($tabelharga[0]->manual_nonpremi ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">3</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling GL (Premium)</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalPremiumGL) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalPremiumGL * (($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">4</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling GL (Non Premium)</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalNonPremiumGL) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->glkebun_nonpremi ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalNonPremiumGL * ($tabelharga[0]->glkebun_nonpremi ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">5</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Kirim</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalKirimKontraktor) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">35</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalKirimKontraktor * 35) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">6</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Extra Fooding</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalExtraFooding) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->extra_fooding ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalExtraFooding * ($tabelharga[0]->extra_fooding ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">7</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebu Tidak Di Seset</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalTebuTidakSeset) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->tebu_tdk_seset ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalTebuTidakSeset * ($tabelharga[0]->tebu_tdk_seset ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">8</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebu Sulit</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalTebuSulit) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_tebusulit ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalTebuSulit * ($tabelharga[0]->manual_tebusulit ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">9</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Langsir</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalLangsir) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->langsir ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalLangsir * ($tabelharga[0]->langsir ?? 0)) }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="text-center py-2 px-4 border-r border-gray-300">10</td>
+                            <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Insentif BSM/P</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalInsentifBSM) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_bsm ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalInsentifBSM * ($tabelharga[0]->manual_bsm ?? 0)) }}</td>
+                        </tr>
+                        
+                        <!-- Grand Total Row -->
+                        @php
+                            $finalTotal = 
+                                ($grandTotalPremiumManual * (($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))) +
+                                ($grandTotalNonPremiumManual * ($tabelharga[0]->manual_nonpremi ?? 0)) +
+                                ($grandTotalPremiumGL * (($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))) +
+                                ($grandTotalNonPremiumGL * ($tabelharga[0]->glkebun_nonpremi ?? 0)) +
+                                ($grandTotalKirimKontraktor * 35) +
+                                ($grandTotalExtraFooding * ($tabelharga[0]->extra_fooding ?? 0)) +
+                                ($grandTotalTebuTidakSeset * ($tabelharga[0]->tebu_tdk_seset ?? 0)) +
+                                ($grandTotalTebuSulit * ($tabelharga[0]->manual_tebusulit ?? 0)) +
+                                ($grandTotalLangsir * ($tabelharga[0]->langsir ?? 0)) +
+                                ($grandTotalInsentifBSM * ($tabelharga[0]->manual_bsm ?? 0));
+                        @endphp
+                        <tr class="bg-blue-200 border-t-4 border-blue-600 font-bold text-lg">
+                            <td colspan="4" class="text-center py-4 px-4 font-black uppercase text-blue-900">GRAND TOTAL</td>
+                            <td class="text-right py-4 px-4 font-black text-blue-900 text-xl">{{ number_format($finalTotal) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary Info -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div class="font-semibold text-blue-900">Total Berat Bersih:</div>
+                    <div class="text-lg font-bold text-blue-800">
+                        @php
+                            $totalBeratBersih = 0;
+                            foreach ($data as $dt) {
+                                $trashKebunCalc = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
+                                $potKgCalc = ($trashKebunCalc > 0) ? round($dt->netto * $trashKebunCalc / 100, 0, PHP_ROUND_HALF_UP) : 0;
+                                $totalBeratBersih += ($dt->netto - $potKgCalc);
+                            }
+                        @endphp
+                        {{ number_format($totalBeratBersih) }} KG
+                    </div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div class="font-semibold text-green-900">Total Netto:</div>
+                    <div class="text-lg font-bold text-green-800">{{ number_format(collect($data)->sum('netto')) }} KG</div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <div class="font-semibold text-yellow-900">Total Bruto:</div>
+                    <div class="text-lg font-bold text-yellow-800">{{ number_format(collect($data)->sum('bruto')) }} KG</div>
+                </div>
+            </div>
         </div>
 
         <!-- Footer/Signature Section -->
