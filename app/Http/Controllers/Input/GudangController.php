@@ -484,14 +484,16 @@ class GudangController extends Controller
                         'itemprice' => $itemprice,
                         'type' => gettype($itemprice)
                     ]);
-
+                    
                     usemateriallst::where('rkhno', $request->rkhno)
                         ->where('companycode', session('companycode'))
                         ->where('itemcode', $itemcode)
                         ->update([
-                            'nouse'     => $responseData['noUse'],
-                            'itemprice' => $itemprice,
-                            'costcenter' => $request->costcenter
+                            'nouse'      => $responseData['noUse'],
+                            'itemprice'  => $itemprice,
+                            'costcenter' => $request->costcenter,
+                            'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,  
+                            'endstock'   => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0  
                         ]);
 
                     // Cek hasil di database
