@@ -353,7 +353,7 @@ function activityPicker(rowIndex) {
     searchQuery: '',
     selectedGroup: '',
     selectedSubGroup: '',
-    activities: window.activitiesData || [], // Ambil dari global yang sudah di-set di create.blade.php
+    activities: window.activitiesData || [],
     selected: { 
       activitycode: '', 
       activityname: '',
@@ -442,17 +442,13 @@ function activityPicker(rowIndex) {
     selectSubGroup(code) {
       const matched = this.activities.filter(a => a.activitycode.startsWith(code))
       
-      // Cek apakah ada child activities (activities yang dimulai dengan code + '.')
       const children = this.activities.filter(a => a.activitycode.startsWith(code + '.'))
       
-      // Jika tidak ada children, langsung pilih aktivitas yang cocok
       if (children.length === 0 && matched.length > 0) {
-        // Cari yang exact match dulu, kalau tidak ada ambil yang pertama
         const exactMatch = matched.find(a => a.activitycode === code)
         return this.selectActivity(exactMatch || matched[0])
       }
       
-      // Jika ada children, tampilkan daftar children
       this.selectedSubGroup = code
       this.searchQuery = ''
     },
@@ -476,12 +472,8 @@ function activityPicker(rowIndex) {
         jenistenagakerja: activity.jenistenagakerja
       };
       
-      // Simpan ke global store
       Alpine.store('activityPerRow').setActivity(this.rowIndex, this.selected);
-      
-      // Update field kendaraan berdasarkan usingvehicle
       this.updateJenisField();
-      
       this.closeModal();
     },
 
@@ -494,15 +486,12 @@ function activityPicker(rowIndex) {
       const jenisField = document.getElementById(`jenistenagakerja-${this.rowIndex}`);
       
       if (jenisField) {
-        // Handle both direct ID and object from relation
         let jenisId = null;
         
         if (this.selected.jenistenagakerja) {
-          // If it's an object with idjenistenagakerja property
           if (typeof this.selected.jenistenagakerja === 'object' && this.selected.jenistenagakerja.idjenistenagakerja) {
             jenisId = this.selected.jenistenagakerja.idjenistenagakerja;
           } else if (typeof this.selected.jenistenagakerja === 'number') {
-            // If it's a direct number
             jenisId = this.selected.jenistenagakerja;
           }
         }
@@ -528,37 +517,37 @@ function activityPicker(rowIndex) {
       this.searchQuery = ''
     },
 
-clear() {
-  console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
-  
-  // ✅ 1. Hapus dari worker card
-  if (this.selected.activitycode) {
-    const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
-    if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
-      const workerCard = workerCardElement._x_dataStack[0];
+    clear() {
+      console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
       
-      if (workerCard.workers[this.selected.activitycode]) {
-        delete workerCard.workers[this.selected.activitycode];
-        console.log('✅ Removed worker card for activity:', this.selected.activitycode);
-      }
-    }
+      // ✅ 1. Hapus dari worker card
+      if (this.selected.activitycode) {
+        const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+        if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+          const workerCard = workerCardElement._x_dataStack[0];
+          
+          if (workerCard.workers[this.selected.activitycode]) {
+            delete workerCard.workers[this.selected.activitycode];
+            console.log('✅ Removed worker card for activity:', this.selected.activitycode);
+          }
+        }
 
-    // ✅ NEW: Hapus dari kendaraan card
-    const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
-    if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
-      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
-      
-      if (kendaraanCard.kendaraans[this.selected.activitycode]) {
-        delete kendaraanCard.kendaraans[this.selected.activitycode];
-        console.log('✅ Removed kendaraan card for activity:', this.selected.activitycode);
+        // ✅ 2. Hapus dari kendaraan card (FIXED: kendaraan bukan kendaraans)
+        const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+        if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+          const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+          
+          if (kendaraanCard.kendaraan[this.selected.activitycode]) {
+            delete kendaraanCard.kendaraan[this.selected.activitycode];
+            console.log('✅ Removed kendaraan card for activity:', this.selected.activitycode);
+          }
+        }
+        
+        // Hapus dari Alpine store
+        Alpine.store('activityPerRow').setActivity(this.rowIndex, null);
       }
-    }
-    
-    // Hapus dari Alpine store
-    Alpine.store('activityPerRow').setActivity(this.rowIndex, null);
-  }
       
-      //  2. Clear activity data
+      // ✅ 3. Clear activity data (internal state)
       this.selected = { 
         activitycode: '', 
         activityname: '', 
@@ -566,24 +555,32 @@ clear() {
         jenistenagakerja: null 
       };
       
-      //  3. Clear BLOK
+      // ✅ 4. Clear hidden input field nama (activitycode) - INI YANG PENTING!
+      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
+      if (activityInput) {
+        activityInput.value = '';
+        // Trigger Alpine reactivity
+        activityInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      
+      // ✅ 5. Clear BLOK
       const blokComponent = this.$el.closest('tr').querySelector('[x-data*="blokPicker"]');
       if (blokComponent && blokComponent._x_dataStack && blokComponent._x_dataStack[0]) {
         blokComponent._x_dataStack[0].selected = { blok: '', id: '' };
         Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
       }
       
-      //  4. Clear PLOT
+      // ✅ 6. Clear PLOT
       const plotComponent = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
       if (plotComponent && plotComponent._x_dataStack && plotComponent._x_dataStack[0]) {
         plotComponent._x_dataStack[0].selected = { plot: '' };
       }
       
-      //  5. Clear LUAS
+      // ✅ 7. Clear LUAS
       const luasInput = document.querySelector(`input[name="rows[${this.rowIndex}][luas]"]`);
       if (luasInput) luasInput.value = '';
       
-      //  6. Clear MATERIAL
+      // ✅ 8. Clear MATERIAL
       const materialComponent = this.$el.closest('tr').querySelector('[x-data*="materialPicker"]');
       if (materialComponent && materialComponent._x_dataStack && materialComponent._x_dataStack[0]) {
         const materialData = materialComponent._x_dataStack[0];
@@ -592,27 +589,19 @@ clear() {
         materialData.updateHiddenInputs();
       }
       
-      //  7. Clear KENDARAAN
-      const kendaraanComponent = this.$el.closest('tr').querySelector('[x-data*="kendaraanPicker"]');
-      if (kendaraanComponent && kendaraanComponent._x_dataStack && kendaraanComponent._x_dataStack[0]) {
-        const kendaraanData = kendaraanComponent._x_dataStack[0];
-        kendaraanData.currentActivityCode = '';
-        kendaraanData.selectedOperator = null;
-        kendaraanData.selectedHelper = null;
-        kendaraanData.useHelper = false;
-        kendaraanData.updateHiddenInputs();
-      }
-      
-      //  8. Clear PANEN INFO (if any)
+      // ✅ 9. Clear PANEN INFO (if any)
       const panenComponent = this.$el.closest('tr').querySelector('[x-data*="panenInfoPicker"]');
       if (panenComponent && panenComponent._x_dataStack && panenComponent._x_dataStack[0]) {
         panenComponent._x_dataStack[0].resetPanenInfo();
       }
       
-      //  9. Clear unique combination store
+      // ✅ 10. Clear unique combination store
       Alpine.store('uniqueCombinations').setCombination(this.rowIndex, '', '', '');
       
-      console.log(' All fields cleared for row', this.rowIndex);
+      console.log('✅ All fields cleared for row', this.rowIndex);
+      
+      // Show toast notification
+      showToast('Activity dan semua data terkait berhasil dihapus', 'success', 2000);
       
       this.closeModal();
     }
@@ -621,7 +610,6 @@ clear() {
 
 // ===== INITIALIZATION FOR EDIT MODE =====
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize jenis fields for any pre-filled activities (for edit mode)
   const activityInputs = document.querySelectorAll('input[name*="[nama]"]');
   activityInputs.forEach((input, index) => {
     if (input.value && window.activitiesData) {
