@@ -29,7 +29,7 @@
           <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
             <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
             </svg>
           </div>
           <h2 class="text-lg font-semibold text-gray-900">Pilih Kendaraan & Operator</h2>
@@ -68,7 +68,7 @@
             type="checkbox"
             id="useHelper"
             x-model="useHelper"
-            class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+            class="h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded"
           >
           <label for="useHelper" class="ml-2 text-sm font-medium text-gray-700">
             Gunakan Helper
@@ -99,7 +99,7 @@
         <!-- Search Helper -->
         <div x-show="useHelper" class="relative">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -108,7 +108,7 @@
             type="text"
             placeholder="Cari helper (nama, ID)..."
             x-model="searchHelperQuery"
-            class="w-full pl-10 pr-4 py-2.5 text-sm border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200"
+            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors duration-200"
           >
         </div>
       </div>
@@ -136,11 +136,18 @@
                 <template x-for="operator in filteredOperators" :key="operator.tenagakerjaid">
                   <tr
                     @click="selectOperator(operator)"
-                    class="hover:bg-green-50 cursor-pointer transition-colors duration-150"
-                    :class="selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid ? 'bg-green-100' : ''"
+                    class="cursor-pointer transition-colors duration-150"
+                    :class="{
+                      'bg-green-100 hover:bg-green-150': selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid,
+                      'hover:bg-green-50': !selectedOperator || selectedOperator.tenagakerjaid !== operator.tenagakerjaid,
+                      'opacity-50 cursor-not-allowed': isOperatorDisabled(operator)
+                    }"
                   >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <span class="text-sm font-medium text-gray-900" x-text="operator.tenagakerjaid"></span>
+                      <template x-if="isOperatorDisabled(operator)">
+                        <span class="ml-1 text-xs text-red-600">(Sudah dipilih)</span>
+                      </template>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap">
                       <div class="text-sm text-gray-900" x-text="operator.nama"></div>
@@ -161,7 +168,7 @@
               <div class="text-center py-8">
                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
                 </svg>
                 <p class="mt-2 text-sm text-gray-500">Tidak ada operator ditemukan</p>
               </div>
@@ -171,8 +178,8 @@
 
         {{-- Helper List --}}
         <div x-show="useHelper">
-          <div class="px-4 py-2 bg-purple-100 border-b">
-            <h3 class="text-sm font-semibold text-purple-800">Pilih Helper</h3>
+          <div class="px-4 py-2 bg-gray-200 border-b">
+            <h3 class="text-sm font-semibold text-gray-800">Pilih Helper</h3>
           </div>
           <div class="overflow-y-auto max-h-[350px]">
             <table class="w-full">
@@ -187,8 +194,8 @@
                 <template x-for="helper in filteredHelpers" :key="helper.tenagakerjaid">
                   <tr
                     @click="selectHelper(helper)"
-                    class="hover:bg-purple-50 cursor-pointer transition-colors duration-150"
-                    :class="selectedHelper && selectedHelper.tenagakerjaid === helper.tenagakerjaid ? 'bg-purple-100' : ''"
+                    class="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                    :class="selectedHelper && selectedHelper.tenagakerjaid === helper.tenagakerjaid ? 'bg-gray-200' : ''"
                   >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <span class="text-sm font-medium text-gray-900" x-text="helper.tenagakerjaid"></span>
@@ -238,7 +245,7 @@
               Operator: <span x-text="selectedOperator ? selectedOperator.nama : ''"></span>
             </span>
             <template x-if="useHelper && selectedHelper">
-              <span class="text-purple-600 ml-3">
+              <span class="text-gray-700 ml-3">
                 Helper: <span x-text="selectedHelper.nama"></span>
               </span>
             </template>
@@ -270,7 +277,7 @@
 <script>
 /**
  * ✅ Kendaraan Modal Component
- * Handles multiple vehicle selection per activity
+ * Handles multiple vehicle selection per activity with duplicate prevention
  */
 function kendaraanModalComponent() {
   return {
@@ -284,7 +291,7 @@ function kendaraanModalComponent() {
     useHelper: false,
 
     get canConfirm() {
-      return this.selectedActivityCode && this.selectedOperator;
+      return this.selectedActivityCode && this.selectedOperator && !this.isOperatorDisabled(this.selectedOperator);
     },
 
     get availableOperators() {
@@ -318,6 +325,26 @@ function kendaraanModalComponent() {
       );
     },
 
+    isOperatorDisabled(operator) {
+      if (!this.selectedActivityCode || !operator) return false;
+      
+      // Get kendaraan card to check if operator's vehicle is already selected
+      const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+      if (!kendaraanCardElement || !kendaraanCardElement._x_dataStack || !kendaraanCardElement._x_dataStack[0]) {
+        return false;
+      }
+
+      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+      const activityKendaraan = kendaraanCard.kendaraan[this.selectedActivityCode];
+      
+      if (!activityKendaraan) return false;
+
+      // Check if this operator's vehicle (nokendaraan) is already in the list
+      return Object.values(activityKendaraan).some(
+        item => item.nokendaraan === operator.nokendaraan
+      );
+    },
+
     handleOpen(detail) {
       if (!detail || !detail.activityCodes || detail.activityCodes.length === 0) {
         showToast('Tidak ada aktivitas yang menggunakan kendaraan', 'warning', 3000);
@@ -330,6 +357,12 @@ function kendaraanModalComponent() {
     },
 
     selectOperator(operator) {
+      // Prevent selection if operator is disabled
+      if (this.isOperatorDisabled(operator)) {
+        showToast(`Kendaraan ${operator.nokendaraan} sudah dipilih untuk aktivitas ini`, 'warning', 3000);
+        return;
+      }
+
       this.selectedOperator = {
         tenagakerjaid: operator.tenagakerjaid,
         nama: operator.nama,
@@ -357,14 +390,17 @@ function kendaraanModalComponent() {
       if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
         const kendaraanCard = kendaraanCardElement._x_dataStack[0];
         
-        kendaraanCard.addKendaraan(
+        const success = kendaraanCard.addKendaraan(
           this.selectedActivityCode,
           this.selectedOperator,
           this.useHelper ? this.selectedHelper : null
         );
 
-        showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
-        this.clearSelection();
+        if (success) {
+          showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
+          this.clearSelection();
+        }
+        // If not success, the addKendaraan function already showed a toast
       }
     },
 
