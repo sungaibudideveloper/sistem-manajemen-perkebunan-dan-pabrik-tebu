@@ -16,7 +16,7 @@ use App\Http\Controllers\LiveChatController;
 |
 | Routes for traditional server-rendered Blade views and forms
 | Authentication: Session-based
-| 
+|
 */
 
 // Authentication routes
@@ -49,26 +49,27 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     Route::get('utility/deploy', function () {
         $output = [];
         $results = [];
-        
+        exec('whoami 2>&1', $outWhoami, $codeWho);
+dd($outWhoami);
         chdir(base_path());
         exec('git pull origin main 2>&1', $output);
         $results['git_pull'] = implode("\n", $output);
-        
+
         $output = [];
         exec('npm run build 2>&1', $output);
         $results['npm_build'] = implode("\n", $output);
-        
+
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('route:clear');
         Artisan::call('view:clear');
         $results['cache'] = 'All caches cleared';
-        
+
         $html = '<h3>Deployment Completed!</h3>';
         $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
         $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
         $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
-        
+
         return $html;
     });
 

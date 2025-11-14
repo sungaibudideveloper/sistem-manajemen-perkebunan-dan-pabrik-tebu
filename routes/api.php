@@ -42,5 +42,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/checkdatahpt', [MobileController::class, 'checkDataHPT']);
     
     // Timbangan data insertion
-    Route::post('/timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
+   
 });
+ Route::post('/timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
