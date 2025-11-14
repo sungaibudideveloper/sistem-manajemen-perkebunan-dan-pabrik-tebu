@@ -144,29 +144,6 @@ Route::middleware('auth')->group(function () {
 });
 
 // =====================================
-// RKH PANEN ROUTES
-// =====================================
-Route::middleware('auth')->group(function () {
-    Route::prefix('input/rkh-panen')
-        ->name('input.rkh-panen.')
-        ->group(function () {
-
-            Route::get('/', [RkhPanenController::class, 'index'])->name('index');
-            Route::get('/create', [RkhPanenController::class, 'create'])->name('create');
-            Route::post('/store', [RkhPanenController::class, 'store'])->name('store');
-            Route::get('/{rkhpanenno}/show', [RkhPanenController::class, 'show'])->name('show');
-            Route::delete('/{rkhpanenno}', [RkhPanenController::class, 'destroy'])->name('destroy');
-
-            // Hasil Panen routes
-            Route::get('/{rkhpanenno}/hasil/edit', [RkhPanenController::class, 'editHasil'])->name('editHasil');
-            Route::put('/{rkhpanenno}/hasil', [RkhPanenController::class, 'updateHasil'])->name('updateHasil');
-
-            // Complete RKH Panen
-            Route::post('/{rkhpanenno}/complete', [RkhPanenController::class, 'complete'])->name('complete');
-        });
-});
-
-// =====================================
 // GUDANG ROUTES (EXISTING)
 // =====================================
 Route::middleware('auth')->group(function () {
