@@ -571,31 +571,26 @@
                   <td class="px-2 py-3" x-data="materialPicker(index)" x-init="
                     rowIndex = index;
                     
-                    // ✅ Set activity code dari row data
                     if (row.activitycode) {
                       currentActivityCode = row.activitycode;
                     }
                     
-                    // ✅ Set selected group dari row data
                     if (row.material_group_id) {
                       selectedGroup = {
                         herbisidagroupid: row.material_group_id,
                         herbisidagroupname: row.herbisidagroupname
                       };
                       
-                      // ✅ CRITICAL: Manually set hidden input values immediately
                       $nextTick(() => {
                         const groupInput = document.querySelector(`input[name='rows[${index}][material_group_id]']`);
                         const usingInput = document.querySelector(`input[name='rows[${index}][usingmaterial]']`);
                         
                         if (groupInput) {
                           groupInput.value = row.material_group_id;
-                          console.log(`✅ Manually set material_group_id for row ${index}:`, row.material_group_id);
                         }
                         
                         if (usingInput) {
                           usingInput.value = '1';
-                          console.log(`✅ Manually set usingmaterial=1 for row ${index}`);
                         }
                       });
                     }
@@ -720,13 +715,10 @@ function rowManager() {
     existingData: @json($rkhDetails ?? []),
 
     init() {
-      console.log('🔄 Loading existing RKH data...');
-      console.log('Raw existingData:', this.existingData);
       
       // ✅ CRITICAL: Load existing data FIRST before anything else
       if (this.existingData && this.existingData.length > 0) {
         this.existingData.forEach((detail, index) => {
-          console.log(`📝 Row ${index} data:`, detail);
           
           const newRow = {
             id: this.nextId++,
@@ -743,13 +735,11 @@ function rowManager() {
             herbisidagroupname: detail.herbisidagroupname || ''
           };
           
-          console.log(`✅ Row ${index} formatted:`, newRow);
           this.rows.push(newRow);
 
           // ✅ CRITICAL: Register to stores IMMEDIATELY (not in $nextTick)
           if (detail.blok) {
             Alpine.store('blokPerRow').setBlok(index, detail.blok);
-            console.log(`✅ Blok set for row ${index}:`, detail.blok);
           }
           
           if (detail.activitycode) {
@@ -759,7 +749,6 @@ function rowManager() {
               usingvehicle: detail.usingvehicle || 0,
               jenistenagakerja: detail.jenistenagakerja || null
             });
-            console.log(`✅ Activity set for row ${index}:`, detail.activitycode);
           }
           
           if (detail.blok && detail.plot && detail.activitycode) {
@@ -767,10 +756,7 @@ function rowManager() {
           }
         });
 
-        console.log(`✅ Loaded ${this.existingData.length} existing rows`);
-        console.log('✅ Activity store after load:', Alpine.store('activityPerRow').selected);
       } else {
-        console.log('⚠️ No existing data, starting with 1 empty row');
         this.addRow();
       }
 
@@ -894,12 +880,6 @@ window.helpersData = @json($helpersData ?? []);
 window.existingKendaraan = @json($existingKendaraan ?? []);
 window.existingWorkers = @json($existingWorkers ?? []);
 
-// ✅ DEBUG: Log loaded data
-console.log('📦 Global Data Loaded:');
-console.log('- Existing Workers:', window.existingWorkers);
-console.log('- Existing Kendaraan:', window.existingKendaraan);
-console.log('- Activities Data:', window.activitiesData);
-
 window.currentUser = {
   userid: '{{ Auth::user()->userid ?? '' }}',
   name: '{{ Auth::user()->name ?? '' }}',
@@ -919,13 +899,10 @@ function kendaraanInfoCard() {
     currentActivityCode: null,
 
     init() {
-      // ✅ Wait for activities to be registered first
+      // Wait for activities to be registered first
       setTimeout(() => {
-        console.log('🚗 Initializing kendaraanInfoCard...');
-        console.log('Raw existingKendaraan:', window.existingKendaraan);
-        console.log('Activity store:', Alpine.store('activityPerRow').selected);
         
-        // ✅ Load existing kendaraan data
+        // Load existing kendaraan data
         if (window.existingKendaraan && Object.keys(window.existingKendaraan).length > 0) {
           for (const [activityCode, vehicles] of Object.entries(window.existingKendaraan)) {
             this.kendaraan[activityCode] = {};
@@ -941,13 +918,11 @@ function kendaraanInfoCard() {
               };
             });
 
-            console.log(`✅ Loaded ${vehicles.length} vehicles for activity ${activityCode}`);
           }
-          console.log('✅ Total kendaraan loaded:', Object.keys(this.kendaraan).length);
         } else {
-          console.log('⚠️ No existing kendaraan data found');
+          console.log('No existing kendaraan data found');
         }
-      }, 400); // ✅ Delay 400ms
+      }, 400);
 
       this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
         this.syncKendaraanFromActivities(activities);
@@ -1166,13 +1141,10 @@ function workerInfoCard() {
     workers: {},
 
     init() {
-      // ✅ Wait for activities to be registered to store first
+      // Wait for activities to be registered to store first
       setTimeout(() => {
-        console.log('👷 Initializing workerInfoCard...');
-        console.log('Raw existingWorkers:', window.existingWorkers);
-        console.log('Activity store:', Alpine.store('activityPerRow').selected);
         
-        // ✅ Load existing workers data
+        // Load existing workers data
         if (window.existingWorkers && window.existingWorkers.length > 0) {
           window.existingWorkers.forEach(worker => {
             this.workers[worker.activitycode] = {
@@ -1185,18 +1157,16 @@ function workerInfoCard() {
             };
           });
           
-          console.log(`✅ Loaded ${window.existingWorkers.length} worker activities`);
-          console.log('✅ Workers object:', this.workers);
         } else {
-          console.log('⚠️ No existing workers data found');
+          console.log('No existing workers data found');
         }
-      }, 400); // ✅ Delay 400ms to ensure activities are registered
+      }, 400); // Delay 400ms to ensure activities are registered
 
       this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
         this.syncWorkersFromActivities(activities);
       }, { deep: true });
 
-      // ✅ Also sync immediately after delay
+      // Also sync immediately after delay
       setTimeout(() => {
         this.syncWorkersFromActivities(Alpine.store('activityPerRow').selected);
       }, 500);
