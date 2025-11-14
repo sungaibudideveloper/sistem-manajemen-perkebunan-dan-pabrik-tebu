@@ -531,16 +531,26 @@ function activityPicker(rowIndex) {
 clear() {
   console.log('🔴 Clearing activity and all related fields for row', this.rowIndex);
   
-  // ✅ CRITICAL FIX: Hapus dari worker card DULU sebelum clear activity
+  // ✅ 1. Hapus dari worker card
   if (this.selected.activitycode) {
     const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
     if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
       const workerCard = workerCardElement._x_dataStack[0];
       
-      // Hapus worker untuk activity ini
       if (workerCard.workers[this.selected.activitycode]) {
         delete workerCard.workers[this.selected.activitycode];
         console.log('✅ Removed worker card for activity:', this.selected.activitycode);
+      }
+    }
+
+    // ✅ NEW: Hapus dari kendaraan card
+    const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+    if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+      
+      if (kendaraanCard.kendaraans[this.selected.activitycode]) {
+        delete kendaraanCard.kendaraans[this.selected.activitycode];
+        console.log('✅ Removed kendaraan card for activity:', this.selected.activitycode);
       }
     }
     

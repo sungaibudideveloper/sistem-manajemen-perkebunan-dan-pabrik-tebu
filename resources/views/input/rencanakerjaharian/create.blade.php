@@ -210,13 +210,11 @@
                 <template x-for="(worker, activityCode) in workers" :key="activityCode">
                   <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
                     
-                    <!-- ✅ Activity Code + Badge (flex row with space-between) -->
                     <div class="mb-3 flex items-start justify-between">
                       <p class="text-sm font-semibold text-purple-900 truncate flex-1" 
                         x-text="`${activityCode} - ${worker.activityname}`"
                         :title="`${activityCode} - ${worker.activityname}`"></p>
                       
-                      <!-- ✅ Badge di kanan atas -->
                       <span 
                         class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ml-2 flex-shrink-0"
                         :class="{
@@ -282,6 +280,91 @@
             </div>
           </div>
 
+          <!-- Card 3: Info Kendaraan -->
+          <div x-data="kendaraanInfoCard()" class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <h3 class="text-sm font-bold text-gray-800">Info Kendaraan</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-600" x-text="`${getTotalKendaraan()} Unit`"></span>
+                <button
+                  type="button"
+                  @click="openKendaraanModal()"
+                  class="px-2 py-1 text-[10px] font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+                >
+                  + Tambah
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <template x-if="Object.keys(kendaraan).length === 0">
+                <div class="text-center py-8 text-gray-400">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+                  <p class="text-xs">Belum ada kendaraan dipilih</p>
+                  <p class="text-[10px] text-gray-500 mt-1">Pilih aktivitas terlebih dahulu</p>
+                </div>
+              </template>
+
+              <div class="space-y-2">
+                <template x-for="(activityGroup, activityCode) in kendaraan" :key="activityCode">
+                  <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    
+                    <!-- Activity Header -->
+                    <div class="mb-2 flex items-center justify-between border-b border-green-200 pb-2">
+                      <p class="text-xs font-semibold text-green-900" x-text="activityCode"></p>
+                      <span class="text-[10px] text-green-700" x-text="`${Object.keys(activityGroup).length} unit`"></span>
+                    </div>
+
+                    <!-- Kendaraan List -->
+                    <div class="space-y-2">
+                      <template x-for="(item, urutan) in activityGroup" :key="`${activityCode}-${urutan}`">
+                        <div class="flex items-center justify-between bg-white rounded p-2 border border-green-100">
+                          <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                              <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                              </svg>
+                              <span class="text-[11px] font-semibold text-gray-900" x-text="item.nokendaraan"></span>
+                            </div>
+                            <div class="mt-0.5 text-[10px] text-gray-600">
+                              <span x-text="item.operatorName"></span>
+                              <template x-if="item.helperName">
+                                <span> + <span x-text="item.helperName"></span></span>
+                              </template>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            @click="removeKendaraan(activityCode, urutan)"
+                            class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1 transition-colors"
+                          >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                          </button>
+
+                          <!-- Hidden inputs -->
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][nokendaraan]`" x-model="item.nokendaraan">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][operatorid]`" x-model="item.operatorid">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][helperid]`" x-model="item.helperid">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][usinghelper]`" :value="item.helperid ? 1 : 0">
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Kendaraan Modal Component -->
+            @include('input.rencanakerjaharian.modal-kendaraan')
+          </div>
+
         </div>
       </div>
 
@@ -297,7 +380,6 @@
               <col style="width: 80px">
               <col style="width: 80px">
               <col style="width: 120px">
-              <col style="width: 120px">
             </colgroup>
 
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
@@ -309,7 +391,6 @@
                 <th class="py-3 px-2 text-xs font-semibold">Info Panen</th>
                 <th class="py-3 px-2 text-xs font-semibold">Luas<br>(ha)</th>
                 <th class="py-3 px-2 text-xs font-semibold">Material</th>
-                <th class="py-3 px-2 text-xs font-semibold">Unit Alat</th>
               </tr>
             </thead>
 
@@ -400,12 +481,9 @@
 
                   <!-- Info Panen -->
                   <td class="px-2 py-3" x-data="panenInfoPicker({{ $i }})" x-init="init()">
-                    <!-- ✅ SHOW DASH ONLY when NO panen activity -->
                     <div x-show="!isPanenActivity" class="text-center text-xs text-gray-400">-</div>
 
-                    <!-- ✅ SHOW INFO ONLY when IS panen activity -->
                     <div x-show="isPanenActivity" x-cloak class="text-xs space-y-1">
-                      <!-- Loading State -->
                       <div x-show="isLoading" class="text-center py-2">
                         <svg class="animate-spin h-5 w-5 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -413,9 +491,7 @@
                         </svg>
                       </div>
 
-                      <!-- Panen Info Display -->
                       <div x-show="!isLoading && panenInfo.batchno">
-                        <!-- Lifecycle Status Badge -->
                         <div class="flex items-center justify-center">
                           <span
                             class="px-2 py-0.5 rounded text-[10px] font-semibold"
@@ -429,26 +505,22 @@
                           ></span>
                         </div>
 
-                        <!-- Tanggal Panen -->
                         <div class="text-gray-700">
                           <span class="font-semibold">Tgl:</span>
                           <span x-text="panenInfo.tanggalpanen || '-'"></span>
                         </div>
 
-                        <!-- Luas Sisa -->
                         <div class="text-gray-700">
                           <span class="font-semibold">Sisa:</span>
                           <span x-text="panenInfo.luassisa + ' Ha'"></span>
                         </div>
                       </div>
 
-                      <!-- Error State -->
                       <div x-show="!isLoading && !panenInfo.batchno && isPanenActivity && currentPlot" class="text-center text-red-600 text-[10px] py-2">
                         <span>Batch tidak tersedia</span>
                       </div>
                     </div>
 
-                    <!-- Hidden inputs for panen data -->
                     <input type="hidden" name="rows[{{ $i }}][batchno]" x-model="panenInfo.batchno">
                     <input type="hidden" name="rows[{{ $i }}][kodestatus]" x-model="panenInfo.kodestatus">
                   </td>
@@ -486,33 +558,6 @@
                       </div>
                     </div>
                     @include('input.rencanakerjaharian.modal-material')
-                  </td>
-
-                  <!-- Kendaraan -->
-                  <td class="px-2 py-3" x-data="kendaraanPicker({{ $i }})" x-init="init()">
-                    <input type="hidden" name="rows[{{ $i }}][usingvehicle]" value="0">
-                    <input type="hidden" name="rows[{{ $i }}][usinghelper]" value="0">
-                    <input type="hidden" name="rows[{{ $i }}][operatorid]" value="">
-                    <input type="hidden" name="rows[{{ $i }}][helperid]" value="">
-                    <div class="relative">
-                      <div
-                        @click="checkVehicle()"
-                        :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': hasVehicle,
-                          'cursor-not-allowed bg-gray-100': !hasVehicle,
-                          'border-green-500 bg-green-50': hasVehicle && selectedOperator,
-                          'border-green-300': hasVehicle && !selectedOperator,
-                          'border-gray-300': !hasVehicle
-                        }"
-                        class="w-full text-xs border-2 rounded-lg px-2 py-2 text-center transition-colors min-h-[36px] flex items-center justify-center"
-                      >
-                        <div x-show="!currentActivityCode" x-cloak class="text-gray-500 text-xs">-</div>
-                        <div x-show="currentActivityCode && !hasVehicle" x-cloak class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasVehicle && !selectedOperator" x-cloak class="text-green-600 text-xs font-medium">Pilih</div>
-                        <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-semibold" x-text="selectedOperator?.nokendaraan"></div>
-                      </div>
-                    </div>
-                    @include('input.rencanakerjaharian.modal-kendaraan')
                   </td>
                 </tr>
               @endfor
@@ -568,8 +613,6 @@ window.currentUser = {
 };
 
 window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
-
-// ✅ FIXED: Base URL for panen info (use placeholder)
 window.PANEN_INFO_URL = "{{ route('input.rencanakerjaharian.getPanenInfo', ['plot' => 'PLOT_PLACEHOLDER']) }}".replace('PLOT_PLACEHOLDER', '');
 
 // ============================================================
@@ -577,8 +620,102 @@ window.PANEN_INFO_URL = "{{ route('input.rencanakerjaharian.getPanenInfo', ['plo
 // ============================================================
 
 /**
+ * Kendaraan Info Card Component
+ */
+function kendaraanInfoCard() {
+  return {
+    kendaraan: {},
+    currentActivityCode: null,
+
+    init() {
+      this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
+        this.syncKendaraanFromActivities(activities);
+      }, { deep: true });
+    },
+
+    syncKendaraanFromActivities(activities) {
+      const currentActivityCodes = Object.values(activities)
+        .filter(act => act && act.activitycode && act.usingvehicle === 1)
+        .map(act => act.activitycode);
+      
+      Object.keys(this.kendaraan).forEach(activityCode => {
+        if (!currentActivityCodes.includes(activityCode)) {
+          delete this.kendaraan[activityCode];
+        }
+      });
+    },
+
+    openKendaraanModal() {
+      const activities = Alpine.store('activityPerRow').selected;
+      const activityCodes = Object.values(activities)
+        .filter(act => act && act.activitycode && act.usingvehicle === 1)
+        .map(act => act.activitycode);
+
+      if (activityCodes.length === 0) {
+        showToast('Pilih aktivitas yang menggunakan kendaraan terlebih dahulu', 'warning', 3000);
+        return;
+      }
+
+      this.currentActivityCode = activityCodes[0];
+
+      window.dispatchEvent(new CustomEvent('open-kendaraan-modal', {
+        detail: { activityCodes: activityCodes }
+      }));
+    },
+
+    addKendaraan(activityCode, operatorData, helperData = null) {
+      if (!this.kendaraan[activityCode]) {
+        this.kendaraan[activityCode] = {};
+      }
+
+      const urutan = Object.keys(this.kendaraan[activityCode]).length + 1;
+
+      this.kendaraan[activityCode][urutan] = {
+        nokendaraan: operatorData.nokendaraan,
+        operatorid: operatorData.tenagakerjaid,
+        operatorName: operatorData.nama,
+        helperid: helperData ? helperData.tenagakerjaid : null,
+        helperName: helperData ? helperData.nama : null
+      };
+
+      console.log('✅ Added kendaraan:', this.kendaraan[activityCode][urutan]);
+    },
+
+    removeKendaraan(activityCode, urutan) {
+      if (this.kendaraan[activityCode] && this.kendaraan[activityCode][urutan]) {
+        delete this.kendaraan[activityCode][urutan];
+        
+        if (Object.keys(this.kendaraan[activityCode]).length === 0) {
+          delete this.kendaraan[activityCode];
+        }
+
+        this.reindexKendaraan(activityCode);
+      }
+    },
+
+    reindexKendaraan(activityCode) {
+      if (!this.kendaraan[activityCode]) return;
+
+      const items = Object.values(this.kendaraan[activityCode]);
+      this.kendaraan[activityCode] = {};
+      
+      items.forEach((item, index) => {
+        this.kendaraan[activityCode][index + 1] = item;
+      });
+    },
+
+    getTotalKendaraan() {
+      let total = 0;
+      Object.values(this.kendaraan).forEach(activityGroup => {
+        total += Object.keys(activityGroup).length;
+      });
+      return total;
+    }
+  };
+}
+
+/**
  * Panen Info Picker Component
- * Handles display of harvest information for panen activities
  */
 function panenInfoPicker(rowIndex) {
   return {
@@ -607,7 +744,6 @@ function panenInfoPicker(rowIndex) {
         const newPlot = plotInput.value || '';
         if (this.currentPlot !== newPlot) {
           this.currentPlot = newPlot;
-          // ✅ Only update if panen activity is selected
           if (this.isPanenActivity) {
             this.updatePanenInfo();
           }
@@ -628,11 +764,9 @@ function panenInfoPicker(rowIndex) {
           this.currentActivityCode = newActivity;
           this.checkIfPanenActivity();
 
-          // ✅ Only fetch if it's panen activity AND plot is selected
           if (this.isPanenActivity && this.currentPlot) {
             this.updatePanenInfo();
           } else if (!this.isPanenActivity) {
-            // Reset when switching from panen to non-panen activity
             this.resetPanenInfo();
           }
         }
@@ -652,7 +786,6 @@ function panenInfoPicker(rowIndex) {
     },
 
     async updatePanenInfo() {
-      // ✅ Guard: Don't fetch if not panen activity or no plot selected
       if (!this.isPanenActivity || !this.currentPlot) {
         this.resetPanenInfo();
         return;
@@ -667,7 +800,7 @@ function panenInfoPicker(rowIndex) {
         if (data.success) {
           this.panenInfo = {
             batchno: data.batchno,
-            kodestatus: data.kodestatus,
+            kodestatus: data.lifecyclestatus,
             tanggalpanen: data.tanggalpanen,
             luassisa: parseFloat(data.luassisa).toFixed(2)
           };
@@ -698,8 +831,6 @@ function panenInfoPicker(rowIndex) {
 
 /**
  * Worker Info Card Component
- * Manages worker count inputs per activity
- * UPDATED: Include jenistenagakerja info from database
  */
 function workerInfoCard() {
   return {
@@ -947,8 +1078,6 @@ function validateFormWithWorkerCard() {
     const plot = row.querySelector('input[name$="[plot]"]').value;
     const activity = row.querySelector('input[name$="[nama]"]').value;
     const luas = row.querySelector('input[name$="[luas]"]').value;
-    const usingVehicle = row.querySelector('input[name$="[usingvehicle]"]')?.value || '0';
-    const operatorId = row.querySelector('input[name$="[operatorid]"]')?.value || '';
 
     if (blok) {
       hasCompleteRow = true;
@@ -963,10 +1092,6 @@ function validateFormWithWorkerCard() {
         if (!activityData || activityData.jenistenagakerja === null) {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
-      }
-
-      if (usingVehicle === '1' && !operatorId) {
-        errors.push(`Baris ${rowNum}: Operator harus dipilih`);
       }
 
       if (activity) {
@@ -991,6 +1116,22 @@ function validateFormWithWorkerCard() {
 
       if (laki === '' && perempuan === '') {
         errors.push(`Aktivitas "${activityCode}": Jumlah pekerja harus diisi (boleh 0, tapi tidak boleh kosong)`);
+      }
+    });
+  }
+
+  // Validate kendaraan
+  const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+  if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+    const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
+    
+    // Check if activities that require vehicles have at least one vehicle assigned
+    const activities = Alpine.store('activityPerRow').selected;
+    Object.values(activities).forEach(activity => {
+      if (activity && activity.activitycode && activity.usingvehicle === 1) {
+        if (!kendaraan[activity.activitycode] || Object.keys(kendaraan[activity.activitycode]).length === 0) {
+          errors.push(`Aktivitas "${activity.activitycode}": Wajib memilih minimal 1 kendaraan`);
+        }
       }
     });
   }

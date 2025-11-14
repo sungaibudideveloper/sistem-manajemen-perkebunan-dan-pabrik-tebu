@@ -299,6 +299,7 @@ function kendaraanData() {
         isLoading: false,
         selectedItem: null,
         formData: {
+            id: '',
             lkhno: '',
             plot: '',
             nokendaraan: '',
@@ -310,6 +311,7 @@ function kendaraanData() {
         openInputModal(item) {
             this.selectedItem = item;
             this.formData = {
+                id: item.id,
                 lkhno: item.lkhno,
                 plot: item.plot,
                 nokendaraan: item.nokendaraan,
@@ -323,6 +325,7 @@ function kendaraanData() {
         openEditModal(item) {
             this.selectedItem = item;
             this.formData = {
+                id: item.id,
                 lkhno: item.lkhno,
                 plot: item.plot,
                 nokendaraan: item.nokendaraan,

@@ -134,7 +134,9 @@
                         <td class="border border-black px-2 py-2 font-semibold">{{ $vehicle->nokendaraan }}</td>
                         <td class="border border-black px-2 py-2">{{ $vehicle->jenis ?? '-' }}</td>
                         <td class="border border-black px-2 py-2">{{ $vehicle->operator_nama ?? '-' }}</td>
-                        <td class="border border-black px-2 py-2 text-center">{{ $vehicle->plot }}</td>
+                        <td class="border border-black px-2 py-2 text-center">
+                            <span class="text-xs">{{ $vehicle->plots ?? '-' }}</span>
+                        </td>
                         <td class="border border-black px-2 py-2 text-center">
                             {{ substr($vehicle->jammulai, 0, 5) }} - {{ substr($vehicle->jamselesai, 0, 5) }}
                         </td>

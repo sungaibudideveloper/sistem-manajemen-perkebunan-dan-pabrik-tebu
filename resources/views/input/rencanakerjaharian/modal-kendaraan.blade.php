@@ -1,7 +1,9 @@
 {{--resources\views\input\rencanakerjaharian\modal-kendaraan.blade.php--}}
 <div
+  x-data="kendaraanModalComponent()"
   x-show="open"
   x-cloak
+  @open-kendaraan-modal.window="handleOpen($event.detail)"
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
   x-transition:enter="transition ease-out duration-300"
   x-transition:enter-start="opacity-0"
@@ -12,7 +14,7 @@
 >
   <div
     @click.away="open = false"
-    class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden"
+    class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
     x-transition:enter="transition ease-out duration-300"
     x-transition:enter-start="opacity-0 transform scale-95"
     x-transition:enter-end="opacity-100 transform scale-100"
@@ -30,7 +32,7 @@
                 d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h2 class="text-lg font-semibold text-gray-900">Pilih Operator & Unit Alat</h2>
+          <h2 class="text-lg font-semibold text-gray-900">Pilih Kendaraan & Operator</h2>
         </div>
         <button @click="open = false" type="button"
           class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200">
@@ -40,25 +42,37 @@
           </svg>
         </button>
       </div>
-      <p class="text-sm text-gray-600 mt-1">Pilih operator untuk aktivitas yang memerlukan unit alat</p>
+      <p class="text-sm text-gray-600 mt-1">Pilih aktivitas, operator, dan helper (opsional) untuk assignment kendaraan</p>
     </div>
 
-    {{-- Helper Checkbox Section --}}
-    <div class="px-6 py-4 bg-purple-50 border-b border-purple-200">
-      <div class="flex items-center space-x-4">
-        <div class="flex items-center">
+    {{-- Activity Selector & Helper Checkbox --}}
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <div class="flex items-center gap-4">
+        <!-- Activity Selector -->
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-700 mb-1">Pilih Aktivitas</label>
+          <select
+            x-model="selectedActivityCode"
+            class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="">-- Pilih Aktivitas --</option>
+            <template x-for="activityCode in availableActivityCodes" :key="activityCode">
+              <option :value="activityCode" x-text="activityCode"></option>
+            </template>
+          </select>
+        </div>
+
+        <!-- Helper Checkbox -->
+        <div class="flex items-center pt-5">
           <input
             type="checkbox"
             id="useHelper"
             x-model="useHelper"
-            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+            class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
           >
           <label for="useHelper" class="ml-2 text-sm font-medium text-gray-700">
             Gunakan Helper
           </label>
-        </div>
-        <div class="text-xs text-gray-500">
-          (Opsional: Pilih helper untuk membantu operator)
         </div>
       </div>
     </div>
@@ -82,7 +96,7 @@
           >
         </div>
 
-        <!-- Search Helper (jika useHelper aktif) -->
+        <!-- Search Helper -->
         <div x-show="useHelper" class="relative">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,7 +169,7 @@
           </div>
         </div>
 
-        {{-- Helper List (jika useHelper aktif) --}}
+        {{-- Helper List --}}
         <div x-show="useHelper">
           <div class="px-4 py-2 bg-purple-100 border-b">
             <h3 class="text-sm font-semibold text-purple-800">Pilih Helper</h3>
@@ -217,7 +231,10 @@
             </template>
           </div>
           <div class="mt-1">
-            <span x-show="selectedOperator" class="text-green-600">
+            <span x-show="selectedActivityCode" class="text-green-700 font-medium">
+              Aktivitas: <span x-text="selectedActivityCode"></span>
+            </span>
+            <span x-show="selectedOperator" class="text-green-600 ml-3">
               Operator: <span x-text="selectedOperator ? selectedOperator.nama : ''"></span>
             </span>
             <template x-if="useHelper && selectedHelper">
@@ -239,10 +256,10 @@
             type="button"
             @click="confirmSelection()"
             class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            :disabled="!selectedOperator"
-            :class="!selectedOperator ? 'opacity-50 cursor-not-allowed' : ''"
+            :disabled="!canConfirm"
+            :class="!canConfirm ? 'opacity-50 cursor-not-allowed' : ''"
           >
-            Konfirmasi Pilihan
+            Tambah Kendaraan
           </button>
         </div>
       </div>
@@ -251,27 +268,23 @@
 </div>
 
 <script>
-// KENDARAAN PICKER dengan HELPER di dalamnya
-function kendaraanPicker(rowIndex) {
+/**
+ * ✅ Kendaraan Modal Component
+ * Handles multiple vehicle selection per activity
+ */
+function kendaraanModalComponent() {
   return {
     open: false,
-    rowIndex: rowIndex,
+    availableActivityCodes: [],
+    selectedActivityCode: '',
     searchOperatorQuery: '',
     searchHelperQuery: '',
-    currentActivityCode: '',
     selectedOperator: null,
     selectedHelper: null,
     useHelper: false,
 
-    get hasVehicle() {
-      return this.currentActivityCode && this.canUseVehicle;
-    },
-
-    get canUseVehicle() {
-      if (!this.currentActivityCode || !window.activitiesData) return false;
-
-      const activity = window.activitiesData.find(act => act.activitycode === this.currentActivityCode);
-      return activity && activity.usingvehicle === 1;
+    get canConfirm() {
+      return this.selectedActivityCode && this.selectedOperator;
     },
 
     get availableOperators() {
@@ -305,15 +318,15 @@ function kendaraanPicker(rowIndex) {
       );
     },
 
-    checkVehicle() {
-      if (this.hasVehicle) {
-        this.open = true;
-      } else {
-        this.selectedOperator = null;
-        this.selectedHelper = null;
-        this.useHelper = false;
-        this.updateHiddenInputs();
+    handleOpen(detail) {
+      if (!detail || !detail.activityCodes || detail.activityCodes.length === 0) {
+        showToast('Tidak ada aktivitas yang menggunakan kendaraan', 'warning', 3000);
+        return;
       }
+
+      this.availableActivityCodes = detail.activityCodes;
+      this.selectedActivityCode = detail.activityCodes[0]; // Default to first
+      this.open = true;
     },
 
     selectOperator(operator) {
@@ -334,9 +347,24 @@ function kendaraanPicker(rowIndex) {
     },
 
     confirmSelection() {
-      if (this.selectedOperator) {
-        this.updateHiddenInputs();
-        this.open = false;
+      if (!this.canConfirm) {
+        showToast('Pilih aktivitas dan operator terlebih dahulu', 'warning', 2000);
+        return;
+      }
+
+      // Get kendaraan card component
+      const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+      if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+        const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+        
+        kendaraanCard.addKendaraan(
+          this.selectedActivityCode,
+          this.selectedOperator,
+          this.useHelper ? this.selectedHelper : null
+        );
+
+        showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
+        this.clearSelection();
       }
     },
 
@@ -344,109 +372,16 @@ function kendaraanPicker(rowIndex) {
       this.selectedOperator = null;
       this.selectedHelper = null;
       this.useHelper = false;
-      this.updateHiddenInputs();
+      this.searchOperatorQuery = '';
+      this.searchHelperQuery = '';
     },
 
-    updateHiddenInputs() {
-      this.ensureHiddenInputsExist();
-
-      // Operator inputs
-      const operatorIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][operatorid]"]`);
-      const operatorNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][operator_name]"]`);
-      const vehicleNoInput = document.querySelector(`input[name="rows[${this.rowIndex}][vehicle_no]"]`);
-      const usingVehicleInput = document.querySelector(`input[name="rows[${this.rowIndex}][usingvehicle]"]`);
-
-      // Helper inputs
-      const helperIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][helperid]"]`);
-      const usingHelperInput = document.querySelector(`input[name="rows[${this.rowIndex}][usinghelper]"]`);
-
-      // Update operator data
-      if (operatorIdInput) {
-        operatorIdInput.value = this.selectedOperator ? this.selectedOperator.tenagakerjaid : '';
-      }
-      if (operatorNameInput) {
-        operatorNameInput.value = this.selectedOperator ? this.selectedOperator.nama : '';
-      }
-      if (vehicleNoInput) {
-        vehicleNoInput.value = this.selectedOperator ? this.selectedOperator.nokendaraan : '';
-      }
-      if (usingVehicleInput) {
-        usingVehicleInput.value = this.canUseVehicle ? '1' : '0';
-      }
-
-      // Update helper data
-      if (helperIdInput) {
-        helperIdInput.value = (this.useHelper && this.selectedHelper) ? this.selectedHelper.tenagakerjaid : '';
-      }
-      if (usingHelperInput) {
-        usingHelperInput.value = this.useHelper ? '1' : '0';
-      }
-    },
-
-    ensureHiddenInputsExist() {
-      const vehicleCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(11)`);
-      if (!vehicleCell) return;
-
-      // Operator hidden inputs
-      ['operatorid', 'operator_name', 'vehicle_no', 'usingvehicle'].forEach(fieldName => {
-        if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = `rows[${this.rowIndex}][${fieldName}]`;
-          input.value = fieldName === 'usingvehicle' ? '0' : '';
-          vehicleCell.appendChild(input);
-        }
-      });
-
-      // Helper hidden inputs
-      ['helperid', 'usinghelper'].forEach(fieldName => {
-        if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = `rows[${this.rowIndex}][${fieldName}]`;
-          input.value = fieldName === 'usinghelper' ? '0' : '';
-          vehicleCell.appendChild(input);
-        }
-      });
-    },
-
-    init() {
-      this.ensureHiddenInputsExist();
-
-      // Observer activity input changes
-      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
-      if (activityInput) {
-        const observer = new MutationObserver(() => {
-          const newActivity = activityInput.value || '';
-          if (this.currentActivityCode !== newActivity) {
-            this.currentActivityCode = newActivity;
-            this.selectedOperator = null;
-            this.selectedHelper = null;
-            this.useHelper = false;
-            this.updateHiddenInputs();
-          }
-        });
-
-        observer.observe(activityInput, {
-          attributes: true,
-          attributeFilter: ['value']
-        });
-
-        activityInput.addEventListener('input', () => {
-          const newActivity = activityInput.value || '';
-          if (this.currentActivityCode !== newActivity) {
-            this.currentActivityCode = newActivity;
-            this.selectedOperator = null;
-            this.selectedHelper = null;
-            this.useHelper = false;
-            this.updateHiddenInputs();
-          }
-        });
-
-        this.currentActivityCode = activityInput.value || '';
-        this.updateHiddenInputs();
-      }
+    closeModal() {
+      this.open = false;
+      this.clearSelection();
+      this.selectedActivityCode = '';
+      this.availableActivityCodes = [];
     }
-  }
+  };
 }
 </script>

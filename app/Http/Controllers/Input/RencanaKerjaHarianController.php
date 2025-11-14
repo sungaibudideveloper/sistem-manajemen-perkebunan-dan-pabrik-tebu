@@ -122,7 +122,7 @@ class RencanaKerjaHarianController extends Controller
         // Generate preview RKH number
         $previewRkhNo = $this->generatePreviewRkhNo($targetDate, $companycode);
 
-        // Load form data
+        // Load form data (includes operators/kendaraan)
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
         return view('input.rencanakerjaharian.create', array_merge([
@@ -137,6 +137,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Store new RKH record
+     * UPDATED: Handle kendaraan assignments per activity
      */
     public function store(Request $request)
     {
@@ -162,7 +163,8 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Display specific RKH record - Updated dengan data herbisida
+     * Display specific RKH record
+     * UPDATED: Include kendaraan assignments per activity
      */
     public function show($rkhno)
     {
@@ -177,22 +179,24 @@ class RencanaKerjaHarianController extends Controller
         
         $rkhDetails = $this->getRkhDetails($companycode, $rkhno);
         $absenData = $this->getAttendanceData($companycode, $rkhHeader->rkhdate);
-        $operatorsWithVehicles = $this->getOperatorsWithVehicles($companycode);
+        
+        // ✅ NEW: Get kendaraan assignments grouped by activity
+        $kendaraanByActivity = $this->getKendaraanByActivity($companycode, $rkhno);
         
         $herbisidadosages = new Herbisidadosage;
         $herbisidaData = $herbisidadosages->getFullHerbisidaGroupData($companycode);
         
-        // ✅ UPDATED: Add JOIN to jenistenagakerja
+        // Workers by activity (unchanged)
         $workersByActivity = DB::table('rkhlstworker as w')
             ->leftJoin('activity as a', 'w.activitycode', '=', 'a.activitycode')
-            ->leftJoin('jenistenagakerja as j', 'a.jenistenagakerja', '=', 'j.idjenistenagakerja') // ✅ NEW
+            ->leftJoin('jenistenagakerja as j', 'a.jenistenagakerja', '=', 'j.idjenistenagakerja')
             ->where('w.companycode', $companycode)
             ->where('w.rkhno', $rkhno)
             ->select([
                 'w.activitycode',
                 'a.activityname',
                 'a.jenistenagakerja',
-                'j.nama as jenis_nama', // ✅ NEW
+                'j.nama as jenis_nama',
                 'w.jumlahlaki',
                 'w.jumlahperempuan',
                 'w.jumlahtenagakerja'
@@ -207,14 +211,15 @@ class RencanaKerjaHarianController extends Controller
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
             'workersByActivity' => $workersByActivity,
+            'kendaraanByActivity' => $kendaraanByActivity, // ✅ NEW
             'absentenagakerja' => $absenData,
-            'operatorsData' => $operatorsWithVehicles,
             'herbisidagroups' => $herbisidaData,
         ]);
     }
 
     /**
      * Show edit form for RKH
+     * UPDATED: Load existing kendaraan assignments
      */
     public function edit($rkhno)
     {
@@ -236,6 +241,9 @@ class RencanaKerjaHarianController extends Controller
         $rkhDetails = $this->getRkhDetailsForEdit($companycode, $rkhno);
         $formData = $this->loadEditFormData($companycode, $rkhHeader->rkhdate);
         
+        // ✅ NEW: Get existing kendaraan assignments grouped by activity
+        $existingKendaraan = $this->getKendaraanByActivity($companycode, $rkhno);
+        
         return view('input.rencanakerjaharian.edit', array_merge([
             'title' => 'Edit RKH',
             'navbar' => 'Input',
@@ -252,12 +260,14 @@ class RencanaKerjaHarianController extends Controller
                     'jumlahtenagakerja' => $first->jumlahtenagakerja ?? 0
                 ];
             })->values(),
+            'existingKendaraan' => $existingKendaraan, // ✅ NEW
             'oldInput' => old(),
         ], $formData));
     }
 
     /**
      * Update existing RKH record
+     * UPDATED: Handle kendaraan assignments update
      */
     public function update(Request $request, $rkhno)
     {   
@@ -295,6 +305,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Delete RKH record
+     * UPDATED: Cascade delete rkhlstkendaraan
      */
     public function destroy($rkhno)
     {   
@@ -316,7 +327,13 @@ class RencanaKerjaHarianController extends Controller
         try {
             DB::beginTransaction();
             
-            // Delete from rkhlstworker first (foreign key constraint)
+            // ✅ NEW: Delete from rkhlstkendaraan
+            DB::table('rkhlstkendaraan')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->delete();
+            
+            // Delete from rkhlstworker (foreign key constraint)
             DB::table('rkhlstworker')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkhno)
@@ -445,75 +462,6 @@ class RencanaKerjaHarianController extends Controller
                 'can_complete' => false,
                 'color' => 'yellow'
             ];
-        }
-    }
-
-    /**
-     * Group rows by activity and extract worker data
-     * NEW METHOD - Worker extraction logic
-     */
-    private function groupRowsByActivity($workers)
-    {
-        $activities = [];
-
-        foreach ($workers as $activityCode => $worker) {
-            // $workers already keyed by activitycode from frontend
-            // Format: workers[activityCode] = {laki, perempuan, total, activityname}
-            
-            $laki = (int) ($worker['laki'] ?? 0);
-            $perempuan = (int) ($worker['perempuan'] ?? 0);
-            
-            $activities[$activityCode] = [
-                'activitycode' => $activityCode,
-                'jumlahlaki' => $laki,
-                'jumlahperempuan' => $perempuan,
-                'jumlahtenagakerja' => $laki + $perempuan,
-            ];
-        }
-
-        return $activities;
-    }
-
-    /**
-     * Create worker assignments in rkhlstworker table
-     * NEW METHOD - Worker insertion
-     */
-    private function createWorkerAssignments($activitiesWorkers, $companycode, $rkhno)
-    {
-        $workerRecords = [];
-        
-        foreach ($activitiesWorkers as $worker) {
-            $workerRecords[] = [
-                'companycode' => $companycode,
-                'rkhno' => $rkhno,
-                'activitycode' => $worker['activitycode'],
-                'jumlahlaki' => $worker['jumlahlaki'],
-                'jumlahperempuan' => $worker['jumlahperempuan'],
-                'jumlahtenagakerja' => $worker['jumlahtenagakerja'],
-                'createdat' => now()
-            ];
-        }
-        
-        if (!empty($workerRecords)) {
-            DB::table('rkhlstworker')->insert($workerRecords);
-        }
-    }
-
-    /**
-     * Update worker assignments in rkhlstworker table
-     * NEW METHOD - Worker update logic
-     */
-    private function updateWorkerAssignments($activitiesWorkers, $companycode, $rkhno)
-    {
-        // Delete existing worker records for this RKH
-        DB::table('rkhlstworker')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->delete();
-        
-        // FIX: Only re-insert if there are workers
-        if (!empty($activitiesWorkers)) {
-            $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
         }
     }
 
@@ -2768,72 +2716,60 @@ public function loadAbsenByDate(Request $request)
             'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
             'masterlist' => DB::table('masterlist as m')
-            ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
-            ->leftJoin(DB::raw('(
-                SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
-                FROM lkhdetailplot ldp
-                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
-                WHERE lh.approvalstatus = "1"
-                GROUP BY batchno
-            ) as panen_summary'), 'b.batchno', '=', 'panen_summary.batchno')
-            ->leftJoin(DB::raw('(
-                SELECT ldp.plot, lh.activitycode, a.activityname, lh.lkhdate
-                FROM lkhdetailplot ldp
-                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
-                JOIN activity a ON lh.activitycode = a.activitycode
-                WHERE lh.companycode = "'.$companycode.'"
-                AND lh.approvalstatus = "1"
-                ORDER BY lh.lkhdate DESC
-                LIMIT 999999
-            ) as last_activity'), function($join) {
-                $join->on('m.plot', '=', 'last_activity.plot');
-            })
-            ->where('m.companycode', $companycode)
-            ->select([
-                'm.companycode',
-                'm.plot',
-                'm.blok',
-                'm.activebatchno',
-                'm.isactive',
-                'b.lifecyclestatus',
-                'b.batcharea',
-                'b.tanggalpanen',
-                'b.isactive as batch_isactive',
-                DB::raw('COALESCE(panen_summary.total_panen, 0) as total_panen'),
-                DB::raw("CASE 
-                    WHEN b.tanggalpanen IS NOT NULL 
-                         AND b.isactive = 1
-                         AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
-                    THEN 1
-                    ELSE 0
-                END as is_on_panen"),
-                DB::raw('(
-                    SELECT activitycode 
-                    FROM lkhdetailplot ldp2
-                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
-                    WHERE ldp2.companycode = m.companycode
-                    AND ldp2.plot = m.plot
-                    AND lh2.approvalstatus = "1"
-                    ORDER BY lh2.lkhdate DESC
-                    LIMIT 1
-                ) as last_activitycode'),
-                DB::raw('(
-                    SELECT a2.activityname 
-                    FROM lkhdetailplot ldp2
-                    JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
-                    JOIN activity a2 ON lh2.activitycode = a2.activitycode
-                    WHERE ldp2.companycode = m.companycode
-                    AND ldp2.plot = m.plot
-                    AND lh2.approvalstatus = "1"
-                    ORDER BY lh2.lkhdate DESC
-                    LIMIT 1
-                ) as last_activityname')
-            ])
-            ->groupBy('m.companycode', 'm.plot', 'm.blok', 'm.activebatchno', 'm.isactive',
-                     'b.lifecyclestatus', 'b.batcharea', 'b.tanggalpanen', 'b.isactive',
-                     'panen_summary.total_panen')
-            ->orderBy('m.plot')
-            ->get(),
+                ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+                ->leftJoin(DB::raw('(
+                    SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
+                    FROM lkhdetailplot ldp
+                    JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                    WHERE lh.approvalstatus = "1"
+                    GROUP BY batchno
+                ) as panen_summary'), 'b.batchno', '=', 'panen_summary.batchno')
+                ->where('m.companycode', $companycode)
+                ->select([
+                    'm.companycode',
+                    'm.plot',
+                    'm.blok',
+                    'm.activebatchno',
+                    'm.isactive',
+                    'b.lifecyclestatus',
+                    'b.batcharea',
+                    'b.tanggalpanen',
+                    'b.isactive as batch_isactive',
+                    DB::raw('COALESCE(panen_summary.total_panen, 0) as total_panen'),
+                    DB::raw("CASE 
+                        WHEN b.tanggalpanen IS NOT NULL 
+                             AND b.isactive = 1
+                             AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
+                        THEN 1
+                        ELSE 0
+                    END as is_on_panen"),
+                    DB::raw('(
+                        SELECT activitycode 
+                        FROM lkhdetailplot ldp2
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        WHERE ldp2.companycode = m.companycode
+                        AND ldp2.plot = m.plot
+                        AND lh2.approvalstatus = "1"
+                        ORDER BY lh2.lkhdate DESC
+                        LIMIT 1
+                    ) as last_activitycode'),
+                    DB::raw('(
+                        SELECT a2.activityname 
+                        FROM lkhdetailplot ldp2
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        JOIN activity a2 ON lh2.activitycode = a2.activitycode
+                        WHERE ldp2.companycode = m.companycode
+                        AND ldp2.plot = m.plot
+                        AND lh2.approvalstatus = "1"
+                        ORDER BY lh2.lkhdate DESC
+                        LIMIT 1
+                    ) as last_activityname')
+                ])
+                ->groupBy('m.companycode', 'm.plot', 'm.blok', 'm.activebatchno', 'm.isactive',
+                         'b.lifecyclestatus', 'b.batcharea', 'b.tanggalpanen', 'b.isactive',
+                         'panen_summary.total_panen')
+                ->orderBy('m.plot')
+                ->get(),
 
             'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
             'absentenagakerja' => $absenModel->getDataAbsenFull($companycode, $targetDate),
@@ -2841,33 +2777,38 @@ public function loadAbsenByDate(Request $request)
             'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
             'masterlistData' => DB::table('masterlist as m')
-            ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
-            ->where('m.companycode', $companycode)
-            ->select([
-                'm.companycode',
-                'm.plot',
-                'm.blok',
-                'm.activebatchno',
-                'm.isactive',
-                'b.lifecyclestatus',
-                'b.batcharea'
-            ])
-            ->orderBy('m.plot')
-            ->get(),
+                ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+                ->where('m.companycode', $companycode)
+                ->select([
+                    'm.companycode',
+                    'm.plot',
+                    'm.blok',
+                    'm.activebatchno',
+                    'm.isactive',
+                    'b.lifecyclestatus',
+                    'b.batcharea'
+                ])
+                ->orderBy('m.plot')
+                ->get(),
 
             'plotsData' => DB::table('plot')->where('companycode', $companycode)->get(),
+            
+            // ✅ UPDATED: operatorsData untuk frontend compatibility
             'operatorsData' => $this->getOperatorsWithVehicles($companycode),
+            
             'helpersData' => TenagaKerja::where('companycode', $companycode)
                 ->where('jenistenagakerja', 4)
                 ->where('isactive', 1)
                 ->select(['tenagakerjaid', 'nama', 'nik'])
                 ->orderBy('nama')
                 ->get(),
+                
             'kontraktorData' => DB::table('kontraktor')
                 ->where('companycode', $companycode)
                 ->where('isactive', 1)
                 ->orderBy('namakontraktor')
                 ->get(),
+                
             'batchData' => [],
         ];
     }
@@ -2900,7 +2841,6 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Validate RKH request
-     * UPDATED: Add panen validation
      */
     private function validateRkhRequest($request)
     {
@@ -2915,18 +2855,19 @@ public function loadAbsenByDate(Request $request)
             'rows.*.luas'            => 'required|numeric|min:0',
             'rows.*.batchno'         => 'nullable|string',
             'rows.*.kodestatus'      => 'nullable|string|in:PC,RC1,RC2,RC3',
-            'rows.*.usingvehicle'    => 'required|in:0,1',
-            'rows.*.usinghelper'     => 'required|in:0,1',
-            'rows.*.helperid'        => 'nullable|string',
-            'rows.*.operatorid'      => 'nullable|string',
             'rows.*.material_group_id' => 'nullable|integer',
             'workers'                  => 'required|array|min:0',
             'workers.*.laki'           => 'nullable|integer|min:0',
             'workers.*.perempuan'      => 'nullable|integer|min:0',
             'workers.*.total'          => 'required|integer|min:0',
+            'kendaraan'                       => 'nullable|array',
+            'kendaraan.*'                     => 'nullable|array',
+            'kendaraan.*.*.nokendaraan'       => 'required_with:kendaraan.*|string',
+            'kendaraan.*.*.operatorid'        => 'required_with:kendaraan.*|string',
+            'kendaraan.*.*.usinghelper'       => 'nullable|in:0,1',
+            'kendaraan.*.*.helperid'          => 'nullable|string',
         ]);
 
-        // Existing validations...
         $plantingErrors = $this->validatePlantingPlots($request->input('rows', []), Session::get('companycode'));
         if (!empty($plantingErrors)) {
             throw ValidationException::withMessages([
@@ -2952,7 +2893,11 @@ public function loadAbsenByDate(Request $request)
 
         $rkhno = $this->generateUniqueRkhNoWithLock($tanggal);
 
+        // ✅ Group workers by activity
         $activitiesWorkers = $this->groupRowsByActivity($request->workers);
+        
+        // ✅ NEW: Group kendaraan by activity
+        $activitiesKendaraan = $this->groupKendaraanByActivity($request->kendaraan ?? []);
 
         $totalLuas = collect($request->rows)->sum('luas');
         $totalManpower = collect($activitiesWorkers)->sum('jumlahtenagakerja');
@@ -2975,8 +2920,13 @@ public function loadAbsenByDate(Request $request)
 
         RkhHdr::create($headerData);
 
+        // Create worker assignments
         $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
+        
+        // ✅ NEW: Create kendaraan assignments
+        $this->createKendaraanAssignments($activitiesKendaraan, $companycode, $rkhno);
 
+        // Create plot details
         $details = $this->buildRkhDetails($request->rows, $companycode, $rkhno, $tanggal);
         DB::table('rkhlst')->insert($details);
 
@@ -2991,8 +2941,11 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
         $tanggal = Carbon::parse($request->input('tanggal'))->format('Y-m-d');
 
-        // ✅ NEW: Group workers by activity
+        // Group workers by activity
         $activitiesWorkers = $this->groupRowsByActivity($request->workers);
+        
+        // ✅ NEW: Group kendaraan by activity
+        $activitiesKendaraan = $this->groupKendaraanByActivity($request->kendaraan ?? []);
 
         $totalLuas = collect($request->rows)->sum('luas');
         $totalManpower = collect($activitiesWorkers)->sum('jumlahtenagakerja');
@@ -3012,11 +2965,14 @@ public function loadAbsenByDate(Request $request)
 
         DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->update($updateData);
         
-        // ✅ NEW: Update worker assignments
+        // Update worker assignments
         $this->updateWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
         
+        // ✅ NEW: Update kendaraan assignments
+        $this->updateKendaraanAssignments($activitiesKendaraan, $companycode, $rkhno);
+        
+        // Update plot details
         DB::table('rkhlst')->where('companycode', $companycode)->where('rkhno', $rkhno)->delete();
-
         $details = $this->buildRkhDetails($request->rows, $companycode, $rkhno, $tanggal);
         DB::table('rkhlst')->insert($details);
     }
@@ -3110,11 +3066,8 @@ public function loadAbsenByDate(Request $request)
                 'jenistenagakerja'    => $jenistenagakerja,
                 'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                 'herbisidagroupid'    => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
-                'usingvehicle'        => $row['usingvehicle'],
-                'operatorid'          => !empty($row['operatorid']) ? $row['operatorid'] : null,
-                'usinghelper'         => $row['usinghelper'] ?? 0,
-                'helperid'            => !empty($row['helperid']) ? $row['helperid'] : null,
-                'batchno'             => $batchInfo ? $batchInfo->batchno : null, 
+                'batchno'             => $batchInfo ? $batchInfo->batchno : null,
+                // ✅ REMOVED: usingvehicle, operatorid, usinghelper, helperid
             ];
             
             if ($batchInfo) {
@@ -3351,9 +3304,6 @@ public function loadAbsenByDate(Request $request)
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            ->leftJoin('tenagakerja as tk', 'r.operatorid', '=', 'tk.tenagakerjaid')
-            ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
-            // NEW: Join batch for panen activities
             ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3365,10 +3315,6 @@ public function loadAbsenByDate(Request $request)
                 'hg.herbisidagroupname', 
                 'a.activityname', 
                 'a.jenistenagakerja',
-                'tk.nama as operator_name',
-                'tk.nik as operator_nik',
-                'tk_helper.nama as helper_name',
-                // NEW: Batch info
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea'
@@ -3378,6 +3324,7 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Get RKH details for edit
+     * UPDATED: Remove old vehicle fields
      */
     private function getRkhDetailsForEdit($companycode, $rkhno)
     {
@@ -3392,8 +3339,6 @@ public function loadAbsenByDate(Request $request)
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            ->leftJoin('tenagakerja as tk_operator', 'r.operatorid', '=', 'tk_operator.tenagakerjaid')
-            ->leftJoin('tenagakerja as tk_helper', 'r.helperid', '=', 'tk_helper.tenagakerjaid')
             ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3405,8 +3350,6 @@ public function loadAbsenByDate(Request $request)
                 'hg.herbisidagroupname', 
                 'a.activityname', 
                 'a.jenistenagakerja',
-                'tk_operator.nama as operator_name',
-                'tk_helper.nama as helper_name',
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea'
@@ -4120,14 +4063,6 @@ public function loadAbsenByDate(Request $request)
         return $jabatan ? $jabatan->namajabatan : 'Unknown';
     }
 
-    /**
-     * Get operators with vehicle data
-     */
-    private function getOperatorsWithVehicles($companycode)
-    {
-        return Kendaraan::getOperatorsWithVehicles($companycode);
-    }
-
     // Section, Report Operators LKH
 
     /**
@@ -4656,5 +4591,236 @@ public function loadAbsenByDate(Request $request)
         }
         
         return $errors;
+    }
+    
+    // =====================================
+    // NEW SECTION: KENDARAAN MANAGEMENT
+    // =====================================
+
+    /**
+     * Group kendaraan by activity from request input
+     * Format input: kendaraan[activityCode][] = {nokendaraan, operatorid, usinghelper, helperid}
+     * 
+     * @param array $kendaraan
+     * @return array
+     */
+    private function groupKendaraanByActivity($kendaraan)
+    {
+        if (empty($kendaraan)) {
+            return [];
+        }
+
+        $grouped = [];
+
+        foreach ($kendaraan as $activityCode => $vehicles) {
+            if (!is_array($vehicles)) continue;
+
+            $grouped[$activityCode] = array_map(function($vehicle) {
+                return [
+                    'nokendaraan' => $vehicle['nokendaraan'] ?? null,
+                    'operatorid' => $vehicle['operatorid'] ?? null,
+                    'usinghelper' => isset($vehicle['usinghelper']) ? (int)$vehicle['usinghelper'] : 0,
+                    'helperid' => $vehicle['helperid'] ?? null,
+                ];
+            }, array_values($vehicles));
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * Create kendaraan assignments in rkhlstkendaraan table
+     * 
+     * @param array $activitiesKendaraan
+     * @param string $companycode
+     * @param string $rkhno
+     * @return void
+     */
+    private function createKendaraanAssignments($activitiesKendaraan, $companycode, $rkhno)
+    {
+        if (empty($activitiesKendaraan)) {
+            return;
+        }
+
+        $records = [];
+        
+        foreach ($activitiesKendaraan as $activityCode => $vehicles) {
+            foreach ($vehicles as $index => $vehicle) {
+                // Skip if no kendaraan/operator selected
+                if (empty($vehicle['nokendaraan']) || empty($vehicle['operatorid'])) {
+                    continue;
+                }
+
+                $records[] = [
+                    'companycode' => $companycode,
+                    'rkhno' => $rkhno,
+                    'activitycode' => $activityCode,
+                    'nokendaraan' => $vehicle['nokendaraan'],
+                    'operatorid' => $vehicle['operatorid'],
+                    'usinghelper' => $vehicle['usinghelper'],
+                    'helperid' => $vehicle['helperid'],
+                    'urutan' => $index + 1,
+                    'createdat' => now()
+                ];
+            }
+        }
+        
+        if (!empty($records)) {
+            DB::table('rkhlstkendaraan')->insert($records);
+            
+            \Log::info("Kendaraan assignments created", [
+                'rkhno' => $rkhno,
+                'total_vehicles' => count($records),
+                'activities' => array_keys($activitiesKendaraan)
+            ]);
+        }
+    }
+
+    /**
+     * Update kendaraan assignments in rkhlstkendaraan table
+     * 
+     * @param array $activitiesKendaraan
+     * @param string $companycode
+     * @param string $rkhno
+     * @return void
+     */
+    private function updateKendaraanAssignments($activitiesKendaraan, $companycode, $rkhno)
+    {
+        // Delete existing kendaraan records for this RKH
+        DB::table('rkhlstkendaraan')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->delete();
+        
+        // Re-insert with new data
+        if (!empty($activitiesKendaraan)) {
+            $this->createKendaraanAssignments($activitiesKendaraan, $companycode, $rkhno);
+        }
+        
+        \Log::info("Kendaraan assignments updated", [
+            'rkhno' => $rkhno,
+            'activities' => array_keys($activitiesKendaraan)
+        ]);
+    }
+
+    /**
+     * Get kendaraan assignments grouped by activity for display
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return \Illuminate\Support\Collection
+     */
+    private function getKendaraanByActivity($companycode, $rkhno)
+    {
+        return DB::table('rkhlstkendaraan as rk')
+            ->leftJoin('kendaraan as k', function($join) use ($companycode) {
+                $join->on('rk.nokendaraan', '=', 'k.nokendaraan')
+                     ->where('k.companycode', '=', $companycode);
+            })
+            ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
+                $join->on('rk.operatorid', '=', 'tk_operator.tenagakerjaid')
+                     ->where('tk_operator.companycode', '=', $companycode);
+            })
+            ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
+                $join->on('rk.helperid', '=', 'tk_helper.tenagakerjaid')
+                     ->where('tk_helper.companycode', '=', $companycode);
+            })
+            ->leftJoin('activity as a', 'rk.activitycode', '=', 'a.activitycode')
+            ->where('rk.companycode', $companycode)
+            ->where('rk.rkhno', $rkhno)
+            ->select([
+                'rk.activitycode',
+                'a.activityname',
+                'rk.nokendaraan',
+                'k.jenis as vehicle_type',
+                'rk.operatorid',
+                'tk_operator.nama as operator_nama',
+                'tk_operator.nik as operator_nik',
+                'rk.usinghelper',
+                'rk.helperid',
+                'tk_helper.nama as helper_nama',
+                'rk.urutan'
+            ])
+            ->orderBy('rk.activitycode')
+            ->orderBy('rk.urutan')
+            ->get()
+            ->groupBy('activitycode');
+    }
+
+    /**
+     * Get operators with vehicle data (for form dropdown)
+     * Uses existing Kendaraan model method
+     * 
+     * @param string $companycode
+     * @return \Illuminate\Support\Collection
+     */
+    private function getOperatorsWithVehicles($companycode)
+    {
+        return Kendaraan::getOperatorsWithVehicles($companycode);
+    }
+
+    // =====================================
+    // EXISTING HELPER METHODS (UNCHANGED)
+    // =====================================
+
+    /**
+     * Group rows by activity and extract worker data
+     */
+    private function groupRowsByActivity($workers)
+    {
+        $activities = [];
+
+        foreach ($workers as $activityCode => $worker) {
+            $laki = (int) ($worker['laki'] ?? 0);
+            $perempuan = (int) ($worker['perempuan'] ?? 0);
+            
+            $activities[$activityCode] = [
+                'activitycode' => $activityCode,
+                'jumlahlaki' => $laki,
+                'jumlahperempuan' => $perempuan,
+                'jumlahtenagakerja' => $laki + $perempuan,
+            ];
+        }
+
+        return $activities;
+    }
+
+    /**
+     * Create worker assignments in rkhlstworker table
+     */
+    private function createWorkerAssignments($activitiesWorkers, $companycode, $rkhno)
+    {
+        $workerRecords = [];
+        
+        foreach ($activitiesWorkers as $worker) {
+            $workerRecords[] = [
+                'companycode' => $companycode,
+                'rkhno' => $rkhno,
+                'activitycode' => $worker['activitycode'],
+                'jumlahlaki' => $worker['jumlahlaki'],
+                'jumlahperempuan' => $worker['jumlahperempuan'],
+                'jumlahtenagakerja' => $worker['jumlahtenagakerja'],
+                'createdat' => now()
+            ];
+        }
+        
+        if (!empty($workerRecords)) {
+            DB::table('rkhlstworker')->insert($workerRecords);
+        }
+    }
+
+    /**
+     * Update worker assignments in rkhlstworker table
+     */
+    private function updateWorkerAssignments($activitiesWorkers, $companycode, $rkhno)
+    {
+        DB::table('rkhlstworker')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->delete();
+        
+        if (!empty($activitiesWorkers)) {
+            $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
+        }
     }
 }
