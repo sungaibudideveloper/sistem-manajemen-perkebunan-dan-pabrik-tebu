@@ -29,8 +29,10 @@ class PanenTebuController extends Controller
         $nav = "Panen Tebu";
 
         $kontraktor = DB::table('kontraktor')->where('companycode', session('companycode'))->get();
+        $tabel_harga = DB::table('harga_panentebu')->where('companycode', session('companycode'))->get();
+        // dd($tabel_harga);
 
-        return view('report.panen-tebu.index', compact('title', 'nav', 'kontraktor'));
+        return view('report.panen-tebu.index', compact('title', 'nav', 'kontraktor', 'tabel_harga'));
     }
 
     public function proses(Request $request){
