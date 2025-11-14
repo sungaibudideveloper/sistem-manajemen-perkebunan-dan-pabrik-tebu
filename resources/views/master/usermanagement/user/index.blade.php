@@ -90,7 +90,7 @@
             
             try {
                 const baseUrl = '{{ url("/") }}';
-                const response = await fetch(baseUrl + '/usermanagement/user/' + userid + '/permissions-api');
+                const response = await fetch(baseUrl + '/usermanagement/ajax/user/' + userid + '/permissions');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }

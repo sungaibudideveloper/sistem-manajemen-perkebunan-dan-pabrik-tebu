@@ -381,11 +381,15 @@ Route::post('support-ticket/submit', [UserManagementController::class, 'ticketSt
     ->middleware('throttle:10,60')
     ->name('support.ticket.submit');
 
-// API routes for AJAX calls
-Route::middleware('auth')->prefix('api/usermanagement')->group(function () {
-    Route::get('/jabatan/{idjabatan}/permissions', [UserManagementController::class, 'getJabatanPermissions'])->name('api.usermanagement.jabatan.permissions');
-});
 
-Route::middleware('auth')->group(function () {
-    Route::get('usermanagement/user/{userid}/permissions-api', [UserManagementController::class, 'getUserPermissionsSimple'])->name('usermanagement.user.permissions-api');
+// User Management AJAX endpoints
+Route::middleware('auth')->prefix('usermanagement/ajax')->name('usermanagement.ajax.')->group(function () {
+    
+    // Get jabatan permissions for modal/form dropdown
+    Route::get('/jabatan/{idjabatan}/permissions', [UserManagementController::class, 'getJabatanPermissions'])
+        ->name('jabatan-permissions');
+    
+    // Get user permissions for display in modal
+    Route::get('/user/{userid}/permissions', [UserManagementController::class, 'getUserPermissionsSimple'])
+        ->name('user-permissions');
 });
