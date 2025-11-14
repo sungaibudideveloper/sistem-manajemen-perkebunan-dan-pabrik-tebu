@@ -37,9 +37,10 @@ class PanenTebuController extends Controller
         // dd(round(2.538, 0, PHP_ROUND_HALF_UP));
 
         $companycode = session('companycode');
+        // dd($request);
         $timbangan = new Timbangan;
 
-        $data = $timbangan->getData($companycode);
+        $data = $timbangan->getData($companycode, $request->idkontraktor, $request->start_date, $request->end_date);
         // dd($data);
 
         $viewData = [

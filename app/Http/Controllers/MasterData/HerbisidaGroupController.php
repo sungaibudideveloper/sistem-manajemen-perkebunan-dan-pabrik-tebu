@@ -150,7 +150,7 @@ public function insert(Request $request)
         }
         
         DB::commit();
-        return redirect()->route('masterdata.herbisidagroup.index')->with('success', 'Grup Berhasil Dibuat!');
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Grup Berhasil Dibuat!');
         
     } catch (\Exception $e) {
         DB::rollBack();
@@ -171,6 +171,15 @@ public function edit(Request $request, $id)
         'items.*.itemcode' => 'required|exists:herbisida,itemcode',
         'items.*.dosageperha' => 'required|numeric|min:0'
     ]);
+
+    $isUsed = DB::table('rkhlst')
+    ->where('activitycode', $group->activitycode)
+    ->where('herbisidagroupid', $group->herbisidagroupid)
+    ->exists();
+
+    if ($isUsed) {
+    return back()->with('error', 'Gagal Edit! Group ini sudah digunakan di RKH dan tidak bisa diubah!');
+    }
 
     // Check for duplicate item codes in the submitted items
     $itemCodes = array_column($request->items, 'itemcode');
@@ -201,7 +210,7 @@ public function edit(Request $request, $id)
         }
         
         DB::commit();
-        return redirect()->route('masterdata.herbisidagroup.index')->with('success', 'Edit Sukses!');
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Edit Sukses!');
         
     } catch (\Exception $e) {
         DB::rollBack();
@@ -216,6 +225,7 @@ public function delete($id)
     // Check if activitycode is being used in rkhlst
     $isUsed = DB::table('rkhlst')
                 ->where('activitycode', $group->activitycode)
+                ->where('herbisidagroupid', $group->herbisidagroupid)
                 ->exists();
     
     if ($isUsed) {
@@ -231,11 +241,10 @@ public function delete($id)
         $group->delete();
         
         DB::commit();
-        return redirect()->route('herbisida.index')->with('success', 'Group Sukses Dihapus!');
-        
+        return redirect()->route('masterdata.herbisida-group.index')->with('success', 'Group Sukses Dihapus!');
     } catch (\Exception $e) {
         DB::rollBack();
-        return back()->with('error', 'Gagal Hapis Group: ' . $e->getMessage());
+        return back()->with('error', 'Gagal Hapus Group: ' . $e->getMessage());
     }
 }
 
