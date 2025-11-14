@@ -219,7 +219,6 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Show edit form for RKH
-     * UPDATED: Load existing kendaraan assignments
      */
     public function edit($rkhno)
     {
@@ -232,7 +231,6 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Data RKH tidak ditemukan');
         }
 
-        // Security check - prevent editing approved RKH
         if ($this->isRkhApproved($rkhHeader)) {
             return redirect()->route('input.rencanakerjaharian.index')
                 ->with('error', 'RKH tidak dapat diedit karena sudah disetujui');
@@ -241,8 +239,36 @@ class RencanaKerjaHarianController extends Controller
         $rkhDetails = $this->getRkhDetailsForEdit($companycode, $rkhno);
         $formData = $this->loadEditFormData($companycode, $rkhHeader->rkhdate);
         
-        // ✅ NEW: Get existing kendaraan assignments grouped by activity
         $existingKendaraan = $this->getKendaraanByActivity($companycode, $rkhno);
+        
+        $existingWorkers = DB::table('rkhlstworker as w')
+            ->leftJoin('activity as a', 'w.activitycode', '=', 'a.activitycode')
+            ->leftJoin('jenistenagakerja as j', 'a.jenistenagakerja', '=', 'j.idjenistenagakerja')
+            ->where('w.companycode', $companycode)
+            ->where('w.rkhno', $rkhno)
+            ->select([
+                'w.activitycode',
+                'a.activityname',
+                'a.jenistenagakerja',
+                'j.nama as jenis_nama',
+                'w.jumlahlaki',
+                'w.jumlahperempuan',
+                'w.jumlahtenagakerja'
+            ])
+            ->orderBy('w.activitycode')
+            ->get()
+            ->map(function($worker) {
+                return [
+                    'activitycode' => $worker->activitycode,
+                    'activityname' => $worker->activityname,
+                    'jenistenagakerja' => $worker->jenistenagakerja,
+                    'jenis_nama' => $worker->jenis_nama,
+                    'jumlahlaki' => $worker->jumlahlaki,
+                    'jumlahperempuan' => $worker->jumlahperempuan,
+                    'jumlahtenagakerja' => $worker->jumlahtenagakerja
+                ];
+            })
+            ->toArray();
         
         return view('input.rencanakerjaharian.edit', array_merge([
             'title' => 'Edit RKH',
@@ -250,24 +276,15 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhHeader' => $rkhHeader,
             'rkhDetails' => $rkhDetails,
-            'existingWorkers' => $rkhDetails->groupBy('activitycode')->map(function($items) {
-                $first = $items->first();
-                return [
-                    'activitycode' => $first->activitycode,
-                    'activityname' => $first->activityname,
-                    'jumlahlaki' => $first->jumlahlaki ?? 0,
-                    'jumlahperempuan' => $first->jumlahperempuan ?? 0,
-                    'jumlahtenagakerja' => $first->jumlahtenagakerja ?? 0
-                ];
-            })->values(),
-            'existingKendaraan' => $existingKendaraan, // ✅ NEW
+            'existingWorkers' => $existingWorkers,
+            'existingKendaraan' => $existingKendaraan,
             'oldInput' => old(),
         ], $formData));
     }
 
+
     /**
      * Update existing RKH record
-     * UPDATED: Handle kendaraan assignments update
      */
     public function update(Request $request, $rkhno)
     {   
