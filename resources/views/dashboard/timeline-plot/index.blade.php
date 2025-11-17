@@ -1,5 +1,5 @@
 <x-layout>
-    <x-slot:title>{{ $title }} yo</x-slot>
+    <x-slot:title>{{ $title }}</x-slot>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     

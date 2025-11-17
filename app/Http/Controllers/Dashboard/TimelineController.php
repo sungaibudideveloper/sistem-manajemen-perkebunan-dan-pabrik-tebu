@@ -195,7 +195,7 @@ class TimelineController extends Controller
         ->values();
 
     return view('dashboard.timeline-plot.index', [
-        'title'             => 'Dashboard Timeline',
+        'title'             => 'Timeline',
         'nav'               => 'Timeline',
         'navbar'            => 'Timeline',
         'plotHeaders'       => $plotHeaders,
