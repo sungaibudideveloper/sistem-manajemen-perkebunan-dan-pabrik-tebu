@@ -118,17 +118,17 @@
                                     {{ ucfirst($item->jenis ?? 'N/A') }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->toleransi ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->pucuk ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->daun_gulma ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->sogolan ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->siwilan ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->tebumati ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->tanah_etc ?? 0, 2, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->total ?? 0, 3, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->netto_trash ?? 0, 3, ',', '.') }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $item->createdby ?? '-' }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $item->createddate ? date('d/m/Y H:i', strtotime($item->createddate)) : '-' }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->toleransi ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->pucuk ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->daungulma ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->sogolan ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->siwilan ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->tebumati ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->tanahetc ?? 0, 2, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->total ?? 0, 3, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">{{ number_format($item->nettotrash ?? 0, 3, ',', '.') }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">{{ $item->createdby ?? '-' }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">{{ $item->createddate ? date('d/m/Y H:i', strtotime($item->createddate)) : '-' }}</td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
@@ -139,11 +139,11 @@
                                             toleransi: '{{ $item->toleransi }}',
                                             berat_bersih: '{{ $item->berat_bersih }}',
                                             pucuk: '{{ $item->pucuk }}',
-                                            daun_gulma: '{{ $item->daun_gulma }}',
+                                            daun_gulma: '{{ $item->daungulma }}',
                                             sogolan: '{{ $item->sogolan }}',
                                             siwilan: '{{ $item->siwilan }}',
                                             tebumati: '{{ $item->tebumati }}',
-                                            tanah_etc: '{{ $item->tanah_etc }}'
+                                            tanah_etc: '{{ $item->tanahetc }}'
                                         })"
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-1 transition-all duration-150"
                                         title="Edit Data Trash">
@@ -182,6 +182,22 @@
                         @endforelse
                     </tbody>
                 </table>
+
+
+            </div>
+
+            <!-- Report Section - Tambahkan setelah pagination -->
+            <div class="mt-6 pt-4">
+                <div class="flex justify-between items-center">
+                    <button @click="openReportModal()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="hidden sm:inline">Generate Report</span>
+                        <span class="sm:hidden">Report</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Pagination -->
@@ -370,6 +386,131 @@
             </div>
         </div>
 
+        <!-- Modal Report -->
+        <!-- Modal Report -->
+        <div x-show="showReportModal" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto"
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <!-- Background overlay -->
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeReportModal()"></div>
+
+                <!-- Modal panel -->
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+
+                    <form action="{{ route('pabrik.trash.report') }}" method="POST" target="_blank">
+                        @csrf
+
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div class="w-full">
+                                    <!-- Header -->
+                                    <div class="flex items-center mb-4">
+
+                                        <h3 class="ml-3 text-lg leading-6 font-medium text-gray-900">Generate Report Trash</h3>
+                                    </div>
+
+                                    <!-- Form Fields -->
+                                    <div class="space-y-4">
+                                        <!-- Date Range -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Tanggal Mulai <span class="text-red-500">*</span>
+                                                </label>
+                                                <input type="date" name="start_date" x-model="reportForm.start_date"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    required>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Tanggal Selesai <span class="text-red-500">*</span>
+                                                </label>
+                                                <input type="date" name="end_date" x-model="reportForm.end_date"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    required>
+                                            </div>
+                                        </div>
+
+                                        <!-- Report Type -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                Tipe Report <span class="text-red-500">*</span>
+                                            </label>
+                                            <select name="report_type" x-model="reportForm.report_type"
+                                                @change="updateCompanyOptions()"
+                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                <option value="">Pilih Tipe Report</option>
+                                                <option value="harian">Laporan Harian</option>
+                                                <option value="mingguan">Laporan Mingguan</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                Company <span class="text-red-500">*</span>
+                                            </label>
+                                            <select name="company" x-model="reportForm.company"
+                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                <option value="">Pilih Company</option>
+
+                                                <!-- Untuk Harian: Hanya All -->
+                                                <template x-if="reportForm.report_type === 'harian'">
+                                                    <option value="all">Semua Company</option>
+                                                </template>
+
+                                                <!-- Untuk Mingguan: TBL dan BNIL -->
+                                                <template x-if="reportForm.report_type === 'mingguan'">
+                                                    <div>
+                                                        <option value="TBL">TBL</option>
+                                                        <option value="BNIL">BNIL</option>
+                                                    </div>
+                                                </template>
+                                            </select>
+
+                                            <!-- Info text berdasarkan tipe -->
+                                            <div x-show="reportForm.report_type === 'harian'" class="mt-1 text-xs text-gray-500">
+                                                Laporan harian menampilkan semua company
+                                            </div>
+                                            <div x-show="reportForm.report_type === 'mingguan'" class="mt-1 text-xs text-gray-500">
+                                                Laporan mingguan berdasarkan kelompok company
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                            <button type="submit"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors duration-200">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Generate Report
+                            </button>
+                            <button type="button" @click="closeReportModal()"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors duration-200">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <style>
@@ -382,17 +523,20 @@
         function trashManagement() {
             return {
                 showModal: false,
+                showReportModal: false, // Tambah ini
                 mode: 'create',
                 modalTitle: '',
                 formAction: '',
                 suratJalanFound: false,
                 searchMessage: '',
                 searchSuccess: false,
+
+                // Form data yang sudah ada
                 form: {
                     companycode: '',
                     no_surat_jalan: '',
                     jenis: '',
-                    toleransi: '5,00', // Default value 5
+                    toleransi: '5,00',
                     berat_bersih: '',
                     pucuk: '',
                     daun_gulma: '',
@@ -401,6 +545,25 @@
                     tebumati: '',
                     tanah_etc: '',
                     berat_kotor: ''
+                },
+
+                // Tambah reportForm
+                reportForm: {
+                    start_date: '',
+                    end_date: '',
+                    report_type: 'harian',
+                    company: '{{ session("companycode") }}',
+                    format: 'pdf'
+                },
+
+                // Method init untuk set default dates
+                init() {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+
+                    this.reportForm.end_date = today.toISOString().split('T')[0];
+                    this.reportForm.start_date = yesterday.toISOString().split('T')[0];
                 },
 
                 openModal(mode, data = null) {
@@ -432,7 +595,7 @@
                         companycode: '',
                         no_surat_jalan: '',
                         jenis: '',
-                        toleransi: '5,00', // Default value 5
+                        toleransi: '5,00',
                         berat_bersih: '',
                         pucuk: '',
                         daun_gulma: '',
@@ -442,6 +605,18 @@
                         tanah_etc: '',
                         berat_kotor: ''
                     };
+                },
+
+                // Method untuk update company options berdasarkan report type
+                updateCompanyOptions() {
+                    // Reset company selection ketika report type berubah
+                    this.reportForm.company = '';
+
+                    // Jika harian, auto set ke 'all'
+                    if (this.reportForm.report_type === 'harian') {
+                        this.reportForm.company = 'all';
+                    }
+                    // Untuk mingguan, biarkan kosong supaya user harus pilih company spesifik
                 },
 
                 fillForm(data) {
@@ -459,12 +634,10 @@
                         tanah_etc: data.tanah_etc || '',
                         berat_kotor: data.berat_kotor || ''
                     };
-                    // Calculate berat kotor after filling form
                     this.calculateBeratKotor();
                 },
 
                 calculateBeratKotor() {
-                    // Parse values, handle comma format
                     const beratBersih = parseFloat(this.form.berat_bersih.toString().replace(',', '.')) || 0;
                     const pucuk = parseFloat(this.form.pucuk.toString().replace(',', '.')) || 0;
                     const daunGulma = parseFloat(this.form.daun_gulma.toString().replace(',', '.')) || 0;
@@ -473,14 +646,10 @@
                     const tebumati = parseFloat(this.form.tebumati.toString().replace(',', '.')) || 0;
                     const tanahEtc = parseFloat(this.form.tanah_etc.toString().replace(',', '.')) || 0;
 
-                    // Calculate berat kotor (berat bersih + all trash components)
                     const beratKotor = beratBersih + pucuk + daunGulma + sogolan + siwilan + tebumati + tanahEtc;
-
-                    // Format dengan 3 desimal dan koma
                     this.form.berat_kotor = beratKotor.toFixed(2).replace('.', ',');
                 },
 
-                // Format input saat user selesai mengetik
                 formatInput(field) {
                     if (this.form[field] && this.form[field] !== '') {
                         const value = parseFloat(this.form[field].toString().replace(',', '.')) || 0;
@@ -509,7 +678,6 @@
                             this.searchSuccess = true;
                             this.suratJalanFound = true;
 
-                            // Auto-fill company code dari hasil pencarian
                             if (result.data && result.data.companycode) {
                                 this.form.companycode = result.data.companycode;
                             }
@@ -531,12 +699,34 @@
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = `{{ url('/') }}/pabrik/trash/delete/${data.suratjalanno}/${data.companycode}/${data.jenis}`;
-                        form.innerHTML = `
-                        @csrf
-                    `; 
+                        form.innerHTML = `@csrf`;
                         document.body.appendChild(form);
                         form.submit();
                     }
+                },
+
+                // Methods untuk report modal
+                openReportModal() {
+                    this.showReportModal = true;
+                },
+
+                closeReportModal() {
+                    this.showReportModal = false;
+                    this.resetReportForm();
+                },
+
+                resetReportForm() {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+
+                    this.reportForm = {
+                        start_date: yesterday.toISOString().split('T')[0],
+                        end_date: today.toISOString().split('T')[0],
+                        report_type: 'harian',
+                        company: '{{ session("companycode") }}',
+                        format: 'pdf'
+                    };
                 }
             }
         }

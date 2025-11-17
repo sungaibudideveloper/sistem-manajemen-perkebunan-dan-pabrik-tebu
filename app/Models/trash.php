@@ -19,13 +19,16 @@ class Trash extends Model
         'companycode',
         'jenis',
         'pucuk',
-        'daun_gulma',
+        'daungulma',
         'sogolan',
         'siwilan',
         'tebumati',
-        'tanah_etc',
+        'tanahetc',
         'total',
-        'netto_trash'
+        'toleransi',
+        'nettotrash',
+        'createdby',
+        'createddate'
         
     ];
 
