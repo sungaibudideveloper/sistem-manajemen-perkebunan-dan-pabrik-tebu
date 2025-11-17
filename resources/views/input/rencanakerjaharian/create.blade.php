@@ -1274,13 +1274,29 @@ function validateFormWithWorkerCard() {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
       }
+    }
+  });
 
-      if (activity) {
-        const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            errors.push(`Baris ${rowNum}: Grup material harus dipilih`);
+  rows.forEach((row, index) => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    
+    if (blok && activity) {
+      const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
+      if (hasMaterialOptions) {
+        const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+        const materialValue = materialGroupInput?.value || '';
+        
+        // Cek langsung dari Alpine component jika DOM value kosong
+        if (!materialValue) {
+          const materialPicker = row.querySelector('[x-data*="materialPicker"]');
+          if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
+            const selectedGroup = materialPicker._x_dataStack[0].selectedGroup;
+            if (!selectedGroup || !selectedGroup.herbisidagroupid) {
+              errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
+            }
+          } else {
+            errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
           }
         }
       }
@@ -1306,7 +1322,6 @@ function validateFormWithWorkerCard() {
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
     
-    // Check if activities that require vehicles have at least one vehicle assigned
     const activities = Alpine.store('activityPerRow').selected;
     Object.values(activities).forEach(activity => {
       if (activity && activity.activitycode && activity.usingvehicle === 1) {

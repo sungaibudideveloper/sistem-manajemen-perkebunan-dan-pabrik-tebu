@@ -1397,10 +1397,12 @@ function attachUniqueValidationListeners(row, rowIndex) {
 function validateFormWithWorkerCard() {
   const errors = [];
 
+  // Validate mandor
   if (!document.querySelector('input[name="mandor_id"]').value) {
     errors.push('Silakan pilih Mandor terlebih dahulu');
   }
 
+  // Validate rows
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
@@ -1424,19 +1426,36 @@ function validateFormWithWorkerCard() {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
       }
+    }
+  });
 
-      if (activity) {
-        const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            errors.push(`Baris ${rowNum}: Grup material harus dipilih`);
+  rows.forEach((row, index) => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    
+    if (blok && activity) {
+      const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
+      if (hasMaterialOptions) {
+        const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+        const materialValue = materialGroupInput?.value || '';
+        
+        // Cek langsung dari Alpine component jika DOM value kosong
+        if (!materialValue) {
+          const materialPicker = row.querySelector('[x-data*="materialPicker"]');
+          if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
+            const selectedGroup = materialPicker._x_dataStack[0].selectedGroup;
+            if (!selectedGroup || !selectedGroup.herbisidagroupid) {
+              errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
+            }
+          } else {
+            errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
           }
         }
       }
     }
   });
 
+  // Validate workers
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -1450,6 +1469,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
+  // Validate kendaraan
   const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
@@ -1464,6 +1484,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
+  // Check for duplicates
   const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
   if (duplicates.size > 0) {
     for (const [key, duplicateInfo] of duplicates) {
