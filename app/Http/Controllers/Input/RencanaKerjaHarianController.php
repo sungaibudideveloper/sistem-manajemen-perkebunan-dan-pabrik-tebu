@@ -2330,6 +2330,20 @@ class RencanaKerjaHarianController extends Controller
             $companyInfo = $this->getCompanyInfo($companycode);
             $rkhNumbers = $this->getRkhNumbersForDate($companycode, $date);
             
+            // Get RKH approval status
+            $totalRkh = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->whereDate('rkhdate', $date)
+                ->count();
+
+            $approvedRkh = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->whereDate('rkhdate', $date)
+                ->where('approvalstatus', '1')
+                ->count();
+
+            $approvalPercentage = $totalRkh > 0 ? round(($approvedRkh / $totalRkh) * 100) : 0;
+            
             $dthData = [
                 'harian' => $this->getHarianData($companycode, $date),
                 'borongan' => $this->getBoronganData($companycode, $date),
@@ -2343,6 +2357,11 @@ class RencanaKerjaHarianController extends Controller
                 'borongan' => $dthData['borongan'],
                 'alat' => $dthData['alat'],
                 'rkh_numbers' => $rkhNumbers,
+                'rkh_approval' => [
+                    'total' => $totalRkh,
+                    'approved' => $approvedRkh,
+                    'percentage' => $approvalPercentage
+                ],
                 'date' => $date,
                 'generated_at' => now()->format('d/m/Y H:i:s'),
                 'debug' => [

@@ -272,6 +272,12 @@
                     <span>Total Tenaga Kerja: <strong id="stat-total-tenaga">0</strong> orang</span>
                     <span>Total Alat: <strong id="stat-total-kendaraan">0</strong> unit</span>
                 </div>
+                <div id="rkh-approval-status" style="margin-top: 8px; font-size: 10px; font-weight: 600;">
+                    <span id="approval-text">RKH Approved: <strong id="stat-rkh-approved">0/0 (0%)</strong></span>
+                    <span style="margin-left: 8px; font-weight: normal; font-style: italic;" id="validity-text">
+                        - Dokumen DTH ini Valid ketika RKH approved = 100%
+                    </span>
+                </div>
             </div>
             <div style="text-align: right; font-size: 12px; color: #6b7280;">
                 <div class="date" style="font-weight: 600; color: #111827">Tanggal: <span id="report-date"></span></div>
@@ -454,10 +460,29 @@
             // Update company info
             const companyInfo = document.getElementById('company-info');
             if (companyInfo) {
-                if (data.company_info) {
-                    companyInfo.textContent = data.company_info;
-                } else {
-                    companyInfo.textContent = 'N/A';
+                companyInfo.textContent = data.company_info || 'N/A';
+            }
+
+            // Update RKH approval status
+            if (data.rkh_approval) {
+                const approvalText = document.getElementById('stat-rkh-approved');
+                const validityText = document.getElementById('validity-text');
+                const approvalContainer = document.getElementById('rkh-approval-status');
+                
+                if (approvalText) {
+                    approvalText.textContent = `${data.rkh_approval.approved}/${data.rkh_approval.total} (${data.rkh_approval.percentage}%)`;
+                }
+                
+                // Color coding based on percentage
+                if (approvalContainer) {
+                    if (data.rkh_approval.percentage === 100) {
+                        approvalContainer.style.color = '#059669';
+                        if (validityText) validityText.textContent = '- Dokumen DTH ini valid';
+                    } else if (data.rkh_approval.percentage >= 50) {
+                        approvalContainer.style.color = '#d97706';
+                    } else {
+                        approvalContainer.style.color = '#070101ff';
+                    }
                 }
             }
 
