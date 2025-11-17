@@ -353,8 +353,8 @@
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plot}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.totalluasactual}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.totalestimasi}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.totalhasil}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.totalsisa}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.totalhasil ?? 0}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.totalsisa ?? 0}</td>
                             </tr>
                         `;
                         tableBody.innerHTML += row;
