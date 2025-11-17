@@ -38,7 +38,7 @@ class Timbangan extends Model
                 t.nettotrash AS trash_percentage,
                 bsm_data.averagescore,
                 bsm_data.grade
-            FROM timbangan_payload a
+            FROM timbanganpayload a
             LEFT JOIN suratjalanpos b ON BINARY a.companycode = BINARY b.companycode
                 AND BINARY a.suratjalanno = BINARY b.suratjalanno
             LEFT JOIN subkontraktor c ON BINARY c.id = BINARY b.namasubkontraktor
@@ -145,7 +145,7 @@ class Timbangan extends Model
                 t.netto_trash AS trash_percentage,
                 bsm.averagescore,
                 bsm.grade
-            FROM timbangan_payload a
+            FROM timbanganpayload a
             LEFT JOIN suratjalanpos b ON BINARY a.companycode = BINARY b.companycode
                 AND BINARY a.suratjalanno = BINARY b.suratjalanno
             LEFT JOIN subkontraktor c ON BINARY c.id = BINARY b.namasubkontraktor
@@ -183,7 +183,7 @@ class Timbangan extends Model
             SELECT
                 a.suratjalanno,
                 COUNT(*) as duplicate_count
-            FROM timbangan_payload a
+            FROM timbanganpayload a
             LEFT JOIN suratjalanpos b ON BINARY a.companycode = BINARY b.companycode
                 AND BINARY a.suratjalanno = BINARY b.suratjalanno
             LEFT JOIN subkontraktor c ON BINARY c.id = BINARY b.namasubkontraktor

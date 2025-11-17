@@ -16,7 +16,7 @@ class Timbangan extends Controller
         try {
             // Validasi bahwa request berisi array data
             $requestData = $request->all();
-            
+
             if (empty($requestData) || !is_array($requestData)) {
                 return response()->json([
                     'status' => 'error',
@@ -40,8 +40,8 @@ class Timbangan extends Controller
                     // Cek duplikat berdasarkan kombinasi divisi dan sjalan
                     $divisi = $item['DIVISI'] ?? '';
                     $sjalan = $item['SJALAN'] ?? '';
-                    
-                    $existingData = DB::table('timbangan_payload')
+
+                    $existingData = DB::table('timbanganpayload')
                         ->where('companycode', $divisi)
                         ->where('suratjalanno', $sjalan)
                         ->first();
@@ -57,18 +57,18 @@ class Timbangan extends Controller
                         continue; // Skip insert untuk data duplikat
                     }
 
-                    // Mapping data sesuai dengan kolom tabel timbangan_payload
+                    // Mapping data sesuai dengan kolom tabel timbanganpayload
                     $mappedData = [
                         'payload' => json_encode($item), // Simpan data asli sebagai JSON
                         'nom' => $item['NOM'] ?? '',
                         'companycode' => $divisi,
                         'suratjalanno' => $sjalan,
-                        'tgl1' => isset($item['TGL1']) && !empty($item['TGL1']) 
-                                    ? Carbon::createFromFormat('Y-m-d', $item['TGL1']) 
+                        'tgl1' => isset($item['TGL1']) && !empty($item['TGL1'])
+                                    ? Carbon::createFromFormat('Y-m-d', $item['TGL1'])
                                     : null,
                         'jam1' => $item['JAM1'] ?? '',
-                        'tgl2' => isset($item['TGL2']) && !empty($item['TGL2']) 
-                                    ? Carbon::createFromFormat('Y-m-d', $item['TGL2']) 
+                        'tgl2' => isset($item['TGL2']) && !empty($item['TGL2'])
+                                    ? Carbon::createFromFormat('Y-m-d', $item['TGL2'])
                                     : null,
                         'jam2' => $item['JAM2'] ?? '',
                         'nopol' => $item['NOPOL'] ?? '',
@@ -83,7 +83,7 @@ class Timbangan extends Controller
                         'ket3' => $item['KET3'] ?? '',
                         'donom' => $item['DONOM'] ?? '',
                         'dotgl' => isset($item['DOTGL']) && $item['DOTGL'] !== '0000-00-00' && !empty($item['DOTGL'])
-                                    ? Carbon::createFromFormat('Y-m-d', $item['DOTGL']) 
+                                    ? Carbon::createFromFormat('Y-m-d', $item['DOTGL'])
                                     : null,
                         'bruto' => isset($item['BRUTO']) ? (float)$item['BRUTO'] : 0.00,
                         'brkend' => isset($item['BRKEND']) ? (float)$item['BRKEND'] : 0.00,
@@ -95,9 +95,9 @@ class Timbangan extends Controller
                         'createddate' => Carbon::now()
                     ];
 
-                    // Insert ke tabel timbangan_payload
-                    $result = DB::table('timbangan_payload')->insert($mappedData);
-                    
+                    // Insert ke tabel timbanganpayload
+                    $result = DB::table('timbanganpayload')->insert($mappedData);
+
                     if ($result) {
                         $insertedData[] = [
                             'index' => $index,
@@ -120,7 +120,7 @@ class Timbangan extends Controller
                         'nom' => $item['NOM'] ?? 'unknown',
                         'error' => $e->getMessage()
                     ];
-                    
+
                     Log::error("Error inserting timbangan data: " . $e->getMessage(), [
                         'data' => $item,
                         'index' => $index
@@ -187,7 +187,7 @@ class Timbangan extends Controller
     {
         try {
             $data = $request->all();
-            
+
             // Validasi data
             if (!isset($data['NOM']) || empty($data['NOM'])) {
                 return response()->json([
@@ -199,8 +199,8 @@ class Timbangan extends Controller
             // Cek duplikat berdasarkan kombinasi divisi dan sjalan
             $divisi = $data['DIVISI'] ?? '';
             $sjalan = $data['SJALAN'] ?? '';
-            
-            $existingData = DB::table('timbangan_payload')
+
+            $existingData = DB::table('timbanganpayload')
                 ->where('companycode', $divisi)
                 ->where('suratjalanno', $sjalan)
                 ->first();
@@ -221,12 +221,12 @@ class Timbangan extends Controller
                 'nom' => $data['NOM'],
                 'companycode' => $divisi,
                 'suratjalanno' => $sjalan,
-                'tgl1' => isset($data['TGL1']) && !empty($data['TGL1']) 
-                            ? Carbon::createFromFormat('Y-m-d', $data['TGL1']) 
+                'tgl1' => isset($data['TGL1']) && !empty($data['TGL1'])
+                            ? Carbon::createFromFormat('Y-m-d', $data['TGL1'])
                             : null,
                 'jam1' => $data['JAM1'] ?? '',
-                'tgl2' => isset($data['TGL2']) && !empty($data['TGL2']) 
-                            ? Carbon::createFromFormat('Y-m-d', $data['TGL2']) 
+                'tgl2' => isset($data['TGL2']) && !empty($data['TGL2'])
+                            ? Carbon::createFromFormat('Y-m-d', $data['TGL2'])
                             : null,
                 'jam2' => $data['JAM2'] ?? '',
                 'nopol' => $data['NOPOL'] ?? '',
@@ -241,7 +241,7 @@ class Timbangan extends Controller
                 'ket3' => $data['KET3'] ?? '',
                 'donom' => $data['DONOM'] ?? '',
                 'dotgl' => isset($data['DOTGL']) && $data['DOTGL'] !== '0000-00-00' && !empty($data['DOTGL'])
-                            ? Carbon::createFromFormat('Y-m-d', $data['DOTGL']) 
+                            ? Carbon::createFromFormat('Y-m-d', $data['DOTGL'])
                             : null,
                 'bruto' => isset($data['BRUTO']) ? (float)$data['BRUTO'] : 0.00,
                 'brkend' => isset($data['BRKEND']) ? (float)$data['BRKEND'] : 0.00,
@@ -253,8 +253,8 @@ class Timbangan extends Controller
                 'createddate' => Carbon::now()
             ];
 
-            // Insert ke tabel timbangan_payload
-            $result = DB::table('timbangan_payload')->insert($mappedData);
+            // Insert ke tabel timbanganpayload
+            $result = DB::table('timbanganpayload')->insert($mappedData);
 
             if ($result) {
                 return response()->json([
@@ -278,7 +278,7 @@ class Timbangan extends Controller
             Log::error("Error in insertSingleData: " . $e->getMessage(), [
                 'request' => $request->all()
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
