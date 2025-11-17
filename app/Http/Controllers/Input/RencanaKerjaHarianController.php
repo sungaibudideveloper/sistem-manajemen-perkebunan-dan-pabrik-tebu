@@ -4111,18 +4111,18 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
 
         try {
-            $operators = DB::table('kendaraanbbm as kb')
-                ->join('lkhhdr as lh', 'kb.lkhno', '=', 'lh.lkhno')
+            $operators = DB::table('lkhdetailkendaraan as lk')
+                ->join('lkhhdr as lh', 'lk.lkhno', '=', 'lh.lkhno')
                 ->join('tenagakerja as tk', function($join) use ($companycode) {
-                    $join->on('kb.operatorid', '=', 'tk.tenagakerjaid')
+                    $join->on('lk.operatorid', '=', 'tk.tenagakerjaid')
                         ->where('tk.companycode', '=', $companycode)
                         ->where('tk.jenistenagakerja', '=', 3); // Operator type
                 })
                 ->join('kendaraan as k', function($join) use ($companycode) {
-                    $join->on('kb.nokendaraan', '=', 'k.nokendaraan')
+                    $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
                         ->where('k.companycode', '=', $companycode);
                 })
-                ->where('lh.companycode', $companycode)
+                ->where('lk.companycode', $companycode)
                 ->whereDate('lh.lkhdate', $date)
                 ->select([
                     'tk.tenagakerjaid',
@@ -4226,26 +4226,26 @@ public function loadAbsenByDate(Request $request)
                 ]);
             }
 
-            // Get activities for this operator on this date
-            $activities = DB::table('kendaraanbbm as kb')
-                ->join('lkhhdr as lh', 'kb.lkhno', '=', 'lh.lkhno')
+            // ✅ NEW: Get activities from lkhdetailkendaraan + lkhdetailplot
+            $activities = DB::table('lkhdetailkendaraan as lk')
+                ->join('lkhhdr as lh', 'lk.lkhno', '=', 'lh.lkhno')
                 ->join('lkhdetailplot as ldp', function($join) {
                     $join->on('lh.lkhno', '=', 'ldp.lkhno')
-                        ->on('kb.plot', '=', 'ldp.plot');
+                        ->on('lh.companycode', '=', 'ldp.companycode');
                 })
                 ->join('activity as a', 'lh.activitycode', '=', 'a.activitycode')
-                ->where('lh.companycode', $companycode)
+                ->where('lk.companycode', $companycode)
                 ->whereDate('lh.lkhdate', $date)
-                ->where('kb.operatorid', $operatorId)
+                ->where('lk.operatorid', $operatorId)
                 ->select([
                     // Time & Duration
-                    'kb.jammulai',
-                    'kb.jamselesai',
-                    DB::raw('TIMEDIFF(kb.jamselesai, kb.jammulai) as durasi_kerja'),
+                    'lk.jammulai',
+                    'lk.jamselesai',
+                    DB::raw('TIMEDIFF(lk.jamselesai, lk.jammulai) as durasi_kerja'),
                     
                     // Location & Activity
                     'ldp.blok',
-                    'kb.plot',
+                    'ldp.plot',
                     'lh.activitycode',
                     'a.activityname',
                     
@@ -4254,20 +4254,20 @@ public function loadAbsenByDate(Request $request)
                     'ldp.luashasil as luas_hasil_ha',
                     
                     // Fuel Data
-                    'kb.solar',
-                    'kb.hourmeterstart',
-                    'kb.hourmeterend',
+                    'lk.solar',
+                    'lk.hourmeterstart',
+                    'lk.hourmeterend',
                     
                     // Reference
                     'lh.lkhno',
                     'lh.rkhno'
                 ])
-                ->orderBy('kb.jammulai')
-                ->orderBy('kb.plot')
+                ->orderBy('lk.jammulai')
+                ->orderBy('ldp.plot')
                 ->get()
                 ->map(function($activity) {
                     return [
-                        'jam_mulai' => substr($activity->jammulai, 0, 5), // HH:MM format
+                        'jam_mulai' => substr($activity->jammulai, 0, 5),
                         'jam_selesai' => substr($activity->jamselesai, 0, 5),
                         'durasi_kerja' => $activity->durasi_kerja ? substr($activity->durasi_kerja, 0, 5) : '00:00',
                         'blok' => $activity->blok,
@@ -4286,7 +4286,7 @@ public function loadAbsenByDate(Request $request)
                     ];
                 });
 
-            // Calculate totals
+            // Calculate totals (unchanged)
             $totals = [
                 'total_activities' => $activities->count(),
                 'total_luas_rencana' => $activities->sum(function($activity) {
@@ -4299,7 +4299,6 @@ public function loadAbsenByDate(Request $request)
                 'total_duration_minutes' => $this->calculateTotalDurationMinutes($activities)
             ];
 
-            // Company info
             $companyInfo = DB::table('company')
                 ->where('companycode', $companycode)
                 ->select('companycode', 'name')
