@@ -1090,7 +1090,7 @@ class RencanaKerjaHarianController extends Controller
     }
 
     /**
-     * Get LKH Rekap data - UPDATED VERSION
+     * Get LKH Rekap data Harian- ALL sections in one query
      */
     public function getLKHRekapData(Request $request)
     {
@@ -1101,25 +1101,132 @@ class RencanaKerjaHarianController extends Controller
             $companyInfo = $this->getCompanyInfo($companycode);
             $lkhNumbers = $this->getLkhNumbersForDate($companycode, $date);
             
-            $rekapData = [
-                'pengolahan' => $this->getPengolahanData($companycode, $date),
-                'perawatan' => $this->getPerawatanData($companycode, $date) // UPDATED: Combined manual & mekanis
+            // ✅ ONE QUERY for all activity groups
+            $allLkhData = DB::table('lkhhdr as h')
+                ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                    $join->on('h.lkhno', '=', 'ldp.lkhno')
+                        ->where('ldp.companycode', '=', $companycode);
+                })
+                ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+                ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
+                ->leftJoin('rkhlstkendaraan as rk', function($join) use ($companycode) {
+                    $join->on('h.rkhno', '=', 'rk.rkhno')
+                        ->on('h.activitycode', '=', 'rk.activitycode')
+                        ->where('rk.companycode', '=', $companycode);
+                })
+                ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
+                    $join->on('rk.operatorid', '=', 'tk.tenagakerjaid')
+                        ->where('tk.companycode', '=', $companycode)
+                        ->where('tk.jenistenagakerja', '=', 3);
+                })
+                ->leftJoin('plot as p', function($join) use ($companycode) {
+                    $join->on('ldp.plot', '=', 'p.plot')
+                        ->where('p.companycode', '=', $companycode);
+                })
+                ->where('h.companycode', $companycode)
+                ->whereDate('h.lkhdate', $date)
+                ->select([
+                    'h.lkhno',
+                    'h.activitycode',
+                    'h.totalworkers',
+                    'ldp.luashasil as totalhasil',
+                    'h.totalupahall',
+                    'a.activityname',
+                    'a.activitygroup',
+                    'ldp.plot',
+                    'p.luasarea',
+                    'u.name as mandor_nama',
+                    'tk.nama as operator_nama'
+                ])
+                ->orderBy('h.activitycode')
+                ->orderBy('h.lkhno')
+                ->get();
+
+            // ✅ Group data by activity group
+            $grouped = [
+                'pengolahan' => [],  // I, II
+                'perawatan' => ['pc' => [], 'rc' => []], // III
+                'panen' => [],       // IV
+                'pias' => [],        // V
+                'lainlain' => []     // VI, VII, VIII
             ];
+
+            foreach ($allLkhData as $record) {
+                $item = (object)[
+                    'lkhno' => $record->lkhno,
+                    'activitycode' => $record->activitycode,
+                    'activityname' => $record->activityname,
+                    'totalworkers' => $record->totalworkers,
+                    'totalhasil' => $record->totalhasil,
+                    'totalupahall' => $record->totalupahall,
+                    'plot' => $record->plot,
+                    'luasarea' => $record->luasarea ?: 0,
+                    'mandor_nama' => $record->mandor_nama ?: '-',
+                    'operator_nama' => $record->operator_nama ?: '-',
+                ];
+
+                $activityGroup = $record->activitygroup;
+                $activityCode = $record->activitycode;
+
+                // Route to correct section
+                switch ($activityGroup) {
+                    case 'I':
+                    case 'II':
+                        // Pengolahan
+                        if (!isset($grouped['pengolahan'][$activityCode])) {
+                            $grouped['pengolahan'][$activityCode] = [];
+                        }
+                        $grouped['pengolahan'][$activityCode][] = $item;
+                        break;
+
+                    case 'III':
+                        // Perawatan - split by PC/RC
+                        $type = (strpos($activityCode, '3.2.') === 0) ? 'rc' : 'pc';
+                        if (!isset($grouped['perawatan'][$type][$activityCode])) {
+                            $grouped['perawatan'][$type][$activityCode] = [];
+                        }
+                        $grouped['perawatan'][$type][$activityCode][] = $item;
+                        break;
+
+                    case 'IV':
+                        // Panen
+                        if (!isset($grouped['panen'][$activityCode])) {
+                            $grouped['panen'][$activityCode] = [];
+                        }
+                        $grouped['panen'][$activityCode][] = $item;
+                        break;
+
+                    case 'V':
+                        // Pias/Hama
+                        if (!isset($grouped['pias'][$activityCode])) {
+                            $grouped['pias'][$activityCode] = [];
+                        }
+                        $grouped['pias'][$activityCode][] = $item;
+                        break;
+
+                    case 'VI':
+                    case 'VII':
+                    case 'VIII':
+                        // Lain-lain
+                        if (!isset($grouped['lainlain'][$activityCode])) {
+                            $grouped['lainlain'][$activityCode] = [];
+                        }
+                        $grouped['lainlain'][$activityCode][] = $item;
+                        break;
+                }
+            }
 
             return response()->json([
                 'success' => true,
                 'company_info' => $companyInfo,
-                'pengolahan' => $rekapData['pengolahan'],
-                'perawatan' => $rekapData['perawatan'], // UPDATED: Single perawatan section
+                'pengolahan' => $grouped['pengolahan'],
+                'perawatan' => $grouped['perawatan'],
+                'panen' => $grouped['panen'],
+                'pias' => $grouped['pias'],
+                'lainlain' => $grouped['lainlain'],
                 'lkh_numbers' => $lkhNumbers,
                 'date' => $date,
-                'generated_at' => now()->format('d/m/Y H:i:s'),
-                'debug' => [
-                    'pengolahan_count' => count($rekapData['pengolahan']),
-                    'perawatan_pc_count' => count($rekapData['perawatan']['pc'] ?? []),
-                    'perawatan_rc_count' => count($rekapData['perawatan']['rc'] ?? []),
-                    'total_lkh' => count($lkhNumbers)
-                ]
+                'generated_at' => now()->format('d/m/Y H:i:s')
             ]);
             
         } catch (\Exception $e) {
@@ -1129,82 +1236,6 @@ class RencanaKerjaHarianController extends Controller
                 'message' => 'Gagal mengambil data LKH Rekap: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    private function getPerawatanData($companycode, $date)
-    {
-        $perawatanData = DB::table('lkhhdr as h')
-            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldp.lkhno')
-                    ->where('ldp.companycode', '=', $companycode);
-            })
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('rkhlst as rls', function($join) use ($companycode) {
-                $join->on('h.rkhno', '=', 'rls.rkhno')
-                    ->on('h.activitycode', '=', 'rls.activitycode')
-                    ->on('ldp.plot', '=', 'rls.plot')
-                    ->where('rls.companycode', '=', $companycode);
-            })
-            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
-                $join->on('rls.operatorid', '=', 'tk.tenagakerjaid')
-                    ->where('tk.companycode', '=', $companycode)
-                    ->where('tk.jenistenagakerja', '=', 3); // Only operators
-            })
-            ->leftJoin('plot as p', function($join) use ($companycode) {
-                $join->on('ldp.plot', '=', 'p.plot')
-                    ->where('p.companycode', '=', $companycode);
-            })
-            ->where('h.companycode', $companycode)
-            ->whereDate('h.lkhdate', $date)
-            ->where('a.activitygroup', 'III') // All Activity V using activitygroup
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'h.totalworkers',
-                'ldp.luashasil as totalhasil',
-                'h.totalupahall',
-                'a.activityname',
-                'ldp.plot',
-                'p.luasarea',
-                'tk.nama as operator_nama',
-                'rls.usingvehicle'
-            ])
-            ->orderBy('h.activitycode')
-            ->orderBy('h.lkhno')
-            ->get();
-        
-        // Group by PC/RC based on activity code pattern
-        $result = ['pc' => [], 'rc' => []];
-        
-        foreach ($perawatanData as $record) {
-            // Determine PC or RC based on activity code pattern (without romawi prefix)
-            $type = 'pc'; // default
-            if (strpos($record->activitycode, 'III.2.') !== false) {
-                $type = 'rc';
-            } elseif (strpos($record->activitycode, 'III.1.') !== false) {
-                $type = 'pc';
-            }
-            
-            $activityCode = $record->activitycode;
-            
-            if (!isset($result[$type][$activityCode])) {
-                $result[$type][$activityCode] = [];
-            }
-            
-            $result[$type][$activityCode][] = (object)[
-                'lkhno' => $record->lkhno,
-                'activitycode' => $record->activitycode,
-                'activityname' => $record->activityname,
-                'totalworkers' => $record->totalworkers,
-                'totalhasil' => $record->totalhasil,
-                'totalupahall' => $record->totalupahall,
-                'plot' => $record->plot,
-                'luasarea' => $record->luasarea ?: 0,
-                'operator_nama' => $record->usingvehicle && $record->operator_nama ? $record->operator_nama : '-',
-            ];
-        }
-        
-        return $result;
     }
 
     // =====================================
@@ -2282,40 +2313,6 @@ class RencanaKerjaHarianController extends Controller
             ->values()
             ->toArray();
     }
-
-    /**
-     * Get Pengolahan data (Activity II, III, IV) - FIXED: Use luashasil per plot  
-     * UPDATED: using lkhdetailplot and proper mandor from header with correct hasil per plot
-     */
-    private function getPengolahanData($companycode, $date)
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('h.lkhno', '=', 'ldp.lkhno')
-                    ->where('ldp.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->where('h.companycode', $companycode)
-            ->whereDate('h.lkhdate', $date)
-            ->whereIn('a.activitygroup', ['II', 'III', 'IV']) // ? Pakai activitygroup
-            ->select([
-                'h.lkhno',
-                'h.activitycode',
-                'h.totalworkers',
-                'ldp.luashasil as totalhasil',
-                'h.totalupahall',
-                'u.name as mandor_nama',
-                'a.activityname',
-                'ldp.plot'
-            ])
-            ->orderBy('h.activitycode')
-            ->orderBy('h.lkhno')
-            ->get()
-            ->groupBy('activitycode')
-            ->toArray();
-    }
-
 
     // =====================================
     // SECTION 5: DTH REPORT MANAGEMENT
