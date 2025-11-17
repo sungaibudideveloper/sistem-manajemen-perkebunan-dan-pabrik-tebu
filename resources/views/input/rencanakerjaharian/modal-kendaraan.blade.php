@@ -1,7 +1,9 @@
 {{--resources\views\input\rencanakerjaharian\modal-kendaraan.blade.php--}}
 <div
+  x-data="kendaraanModalComponent()"
   x-show="open"
   x-cloak
+  @open-kendaraan-modal.window="handleOpen($event.detail)"
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
   x-transition:enter="transition ease-out duration-300"
   x-transition:enter-start="opacity-0"
@@ -12,7 +14,7 @@
 >
   <div
     @click.away="open = false"
-    class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden"
+    class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
     x-transition:enter="transition ease-out duration-300"
     x-transition:enter-start="opacity-0 transform scale-95"
     x-transition:enter-end="opacity-100 transform scale-100"
@@ -27,10 +29,10 @@
           <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
             <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
             </svg>
           </div>
-          <h2 class="text-lg font-semibold text-gray-900">Pilih Operator & Unit Alat</h2>
+          <h2 class="text-lg font-semibold text-gray-900">Pilih Kendaraan & Operator</h2>
         </div>
         <button @click="open = false" type="button"
           class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200">
@@ -40,25 +42,37 @@
           </svg>
         </button>
       </div>
-      <p class="text-sm text-gray-600 mt-1">Pilih operator untuk aktivitas yang memerlukan unit alat</p>
+      <p class="text-sm text-gray-600 mt-1">Pilih aktivitas, operator, dan helper (opsional) untuk assignment kendaraan</p>
     </div>
 
-    {{-- Helper Checkbox Section --}}
-    <div class="px-6 py-4 bg-purple-50 border-b border-purple-200">
-      <div class="flex items-center space-x-4">
-        <div class="flex items-center">
+    {{-- Activity Selector & Helper Checkbox --}}
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <div class="flex items-center gap-4">
+        <!-- Activity Selector -->
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-700 mb-1">Pilih Aktivitas</label>
+          <select
+            x-model="selectedActivityCode"
+            class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="">-- Pilih Aktivitas --</option>
+            <template x-for="activityCode in availableActivityCodes" :key="activityCode">
+              <option :value="activityCode" x-text="activityCode"></option>
+            </template>
+          </select>
+        </div>
+
+        <!-- Helper Checkbox -->
+        <div class="flex items-center pt-5">
           <input
             type="checkbox"
             id="useHelper"
             x-model="useHelper"
-            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+            class="h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300 rounded"
           >
           <label for="useHelper" class="ml-2 text-sm font-medium text-gray-700">
             Gunakan Helper
           </label>
-        </div>
-        <div class="text-xs text-gray-500">
-          (Opsional: Pilih helper untuk membantu operator)
         </div>
       </div>
     </div>
@@ -82,10 +96,10 @@
           >
         </div>
 
-        <!-- Search Helper (jika useHelper aktif) -->
+        <!-- Search Helper -->
         <div x-show="useHelper" class="relative">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -94,7 +108,7 @@
             type="text"
             placeholder="Cari helper (nama, ID)..."
             x-model="searchHelperQuery"
-            class="w-full pl-10 pr-4 py-2.5 text-sm border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200"
+            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors duration-200"
           >
         </div>
       </div>
@@ -122,11 +136,18 @@
                 <template x-for="operator in filteredOperators" :key="operator.tenagakerjaid">
                   <tr
                     @click="selectOperator(operator)"
-                    class="hover:bg-green-50 cursor-pointer transition-colors duration-150"
-                    :class="selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid ? 'bg-green-100' : ''"
+                    class="cursor-pointer transition-colors duration-150"
+                    :class="{
+                      'bg-green-100 hover:bg-green-150': selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid,
+                      'hover:bg-green-50': !selectedOperator || selectedOperator.tenagakerjaid !== operator.tenagakerjaid,
+                      'opacity-50 cursor-not-allowed': isOperatorDisabled(operator)
+                    }"
                   >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <span class="text-sm font-medium text-gray-900" x-text="operator.tenagakerjaid"></span>
+                      <template x-if="isOperatorDisabled(operator)">
+                        <span class="ml-1 text-xs text-red-600">(Sudah dipilih)</span>
+                      </template>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap">
                       <div class="text-sm text-gray-900" x-text="operator.nama"></div>
@@ -147,7 +168,7 @@
               <div class="text-center py-8">
                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
                 </svg>
                 <p class="mt-2 text-sm text-gray-500">Tidak ada operator ditemukan</p>
               </div>
@@ -155,10 +176,10 @@
           </div>
         </div>
 
-        {{-- Helper List (jika useHelper aktif) --}}
+        {{-- Helper List --}}
         <div x-show="useHelper">
-          <div class="px-4 py-2 bg-purple-100 border-b">
-            <h3 class="text-sm font-semibold text-purple-800">Pilih Helper</h3>
+          <div class="px-4 py-2 bg-gray-200 border-b">
+            <h3 class="text-sm font-semibold text-gray-800">Pilih Helper</h3>
           </div>
           <div class="overflow-y-auto max-h-[350px]">
             <table class="w-full">
@@ -173,8 +194,8 @@
                 <template x-for="helper in filteredHelpers" :key="helper.tenagakerjaid">
                   <tr
                     @click="selectHelper(helper)"
-                    class="hover:bg-purple-50 cursor-pointer transition-colors duration-150"
-                    :class="selectedHelper && selectedHelper.tenagakerjaid === helper.tenagakerjaid ? 'bg-purple-100' : ''"
+                    class="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                    :class="selectedHelper && selectedHelper.tenagakerjaid === helper.tenagakerjaid ? 'bg-gray-200' : ''"
                   >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <span class="text-sm font-medium text-gray-900" x-text="helper.tenagakerjaid"></span>
@@ -217,11 +238,14 @@
             </template>
           </div>
           <div class="mt-1">
-            <span x-show="selectedOperator" class="text-green-600">
+            <span x-show="selectedActivityCode" class="text-green-700 font-medium">
+              Aktivitas: <span x-text="selectedActivityCode"></span>
+            </span>
+            <span x-show="selectedOperator" class="text-green-600 ml-3">
               Operator: <span x-text="selectedOperator ? selectedOperator.nama : ''"></span>
             </span>
             <template x-if="useHelper && selectedHelper">
-              <span class="text-purple-600 ml-3">
+              <span class="text-gray-700 ml-3">
                 Helper: <span x-text="selectedHelper.nama"></span>
               </span>
             </template>
@@ -239,10 +263,10 @@
             type="button"
             @click="confirmSelection()"
             class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            :disabled="!selectedOperator"
-            :class="!selectedOperator ? 'opacity-50 cursor-not-allowed' : ''"
+            :disabled="!canConfirm"
+            :class="!canConfirm ? 'opacity-50 cursor-not-allowed' : ''"
           >
-            Konfirmasi Pilihan
+            Tambah Kendaraan
           </button>
         </div>
       </div>
@@ -251,27 +275,23 @@
 </div>
 
 <script>
-// KENDARAAN PICKER dengan HELPER di dalamnya
-function kendaraanPicker(rowIndex) {
+/**
+ * ✅ Kendaraan Modal Component
+ * Handles multiple vehicle selection per activity with duplicate prevention
+ */
+function kendaraanModalComponent() {
   return {
     open: false,
-    rowIndex: rowIndex,
+    availableActivityCodes: [],
+    selectedActivityCode: '',
     searchOperatorQuery: '',
     searchHelperQuery: '',
-    currentActivityCode: '',
     selectedOperator: null,
     selectedHelper: null,
     useHelper: false,
 
-    get hasVehicle() {
-      return this.currentActivityCode && this.canUseVehicle;
-    },
-
-    get canUseVehicle() {
-      if (!this.currentActivityCode || !window.activitiesData) return false;
-
-      const activity = window.activitiesData.find(act => act.activitycode === this.currentActivityCode);
-      return activity && activity.usingvehicle === 1;
+    get canConfirm() {
+      return this.selectedActivityCode && this.selectedOperator && !this.isOperatorDisabled(this.selectedOperator);
     },
 
     get availableOperators() {
@@ -305,18 +325,44 @@ function kendaraanPicker(rowIndex) {
       );
     },
 
-    checkVehicle() {
-      if (this.hasVehicle) {
-        this.open = true;
-      } else {
-        this.selectedOperator = null;
-        this.selectedHelper = null;
-        this.useHelper = false;
-        this.updateHiddenInputs();
+    isOperatorDisabled(operator) {
+      if (!this.selectedActivityCode || !operator) return false;
+      
+      // Get kendaraan card to check if operator's vehicle is already selected
+      const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+      if (!kendaraanCardElement || !kendaraanCardElement._x_dataStack || !kendaraanCardElement._x_dataStack[0]) {
+        return false;
       }
+
+      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+      const activityKendaraan = kendaraanCard.kendaraan[this.selectedActivityCode];
+      
+      if (!activityKendaraan) return false;
+
+      // Check if this operator's vehicle (nokendaraan) is already in the list
+      return Object.values(activityKendaraan).some(
+        item => item.nokendaraan === operator.nokendaraan
+      );
+    },
+
+    handleOpen(detail) {
+      if (!detail || !detail.activityCodes || detail.activityCodes.length === 0) {
+        showToast('Tidak ada aktivitas yang menggunakan kendaraan', 'warning', 3000);
+        return;
+      }
+
+      this.availableActivityCodes = detail.activityCodes;
+      this.selectedActivityCode = detail.activityCodes[0]; // Default to first
+      this.open = true;
     },
 
     selectOperator(operator) {
+      // Prevent selection if operator is disabled
+      if (this.isOperatorDisabled(operator)) {
+        showToast(`Kendaraan ${operator.nokendaraan} sudah dipilih untuk aktivitas ini`, 'warning', 3000);
+        return;
+      }
+
       this.selectedOperator = {
         tenagakerjaid: operator.tenagakerjaid,
         nama: operator.nama,
@@ -334,9 +380,27 @@ function kendaraanPicker(rowIndex) {
     },
 
     confirmSelection() {
-      if (this.selectedOperator) {
-        this.updateHiddenInputs();
-        this.open = false;
+      if (!this.canConfirm) {
+        showToast('Pilih aktivitas dan operator terlebih dahulu', 'warning', 2000);
+        return;
+      }
+
+      // Get kendaraan card component
+      const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+      if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+        const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+        
+        const success = kendaraanCard.addKendaraan(
+          this.selectedActivityCode,
+          this.selectedOperator,
+          this.useHelper ? this.selectedHelper : null
+        );
+
+        if (success) {
+          showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
+          this.clearSelection();
+        }
+        // If not success, the addKendaraan function already showed a toast
       }
     },
 
@@ -344,109 +408,16 @@ function kendaraanPicker(rowIndex) {
       this.selectedOperator = null;
       this.selectedHelper = null;
       this.useHelper = false;
-      this.updateHiddenInputs();
+      this.searchOperatorQuery = '';
+      this.searchHelperQuery = '';
     },
 
-    updateHiddenInputs() {
-      this.ensureHiddenInputsExist();
-
-      // Operator inputs
-      const operatorIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][operatorid]"]`);
-      const operatorNameInput = document.querySelector(`input[name="rows[${this.rowIndex}][operator_name]"]`);
-      const vehicleNoInput = document.querySelector(`input[name="rows[${this.rowIndex}][vehicle_no]"]`);
-      const usingVehicleInput = document.querySelector(`input[name="rows[${this.rowIndex}][usingvehicle]"]`);
-
-      // Helper inputs
-      const helperIdInput = document.querySelector(`input[name="rows[${this.rowIndex}][helperid]"]`);
-      const usingHelperInput = document.querySelector(`input[name="rows[${this.rowIndex}][usinghelper]"]`);
-
-      // Update operator data
-      if (operatorIdInput) {
-        operatorIdInput.value = this.selectedOperator ? this.selectedOperator.tenagakerjaid : '';
-      }
-      if (operatorNameInput) {
-        operatorNameInput.value = this.selectedOperator ? this.selectedOperator.nama : '';
-      }
-      if (vehicleNoInput) {
-        vehicleNoInput.value = this.selectedOperator ? this.selectedOperator.nokendaraan : '';
-      }
-      if (usingVehicleInput) {
-        usingVehicleInput.value = this.canUseVehicle ? '1' : '0';
-      }
-
-      // Update helper data
-      if (helperIdInput) {
-        helperIdInput.value = (this.useHelper && this.selectedHelper) ? this.selectedHelper.tenagakerjaid : '';
-      }
-      if (usingHelperInput) {
-        usingHelperInput.value = this.useHelper ? '1' : '0';
-      }
-    },
-
-    ensureHiddenInputsExist() {
-      const vehicleCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(11)`);
-      if (!vehicleCell) return;
-
-      // Operator hidden inputs
-      ['operatorid', 'operator_name', 'vehicle_no', 'usingvehicle'].forEach(fieldName => {
-        if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = `rows[${this.rowIndex}][${fieldName}]`;
-          input.value = fieldName === 'usingvehicle' ? '0' : '';
-          vehicleCell.appendChild(input);
-        }
-      });
-
-      // Helper hidden inputs
-      ['helperid', 'usinghelper'].forEach(fieldName => {
-        if (!document.querySelector(`input[name="rows[${this.rowIndex}][${fieldName}]"]`)) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = `rows[${this.rowIndex}][${fieldName}]`;
-          input.value = fieldName === 'usinghelper' ? '0' : '';
-          vehicleCell.appendChild(input);
-        }
-      });
-    },
-
-    init() {
-      this.ensureHiddenInputsExist();
-
-      // Observer activity input changes
-      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
-      if (activityInput) {
-        const observer = new MutationObserver(() => {
-          const newActivity = activityInput.value || '';
-          if (this.currentActivityCode !== newActivity) {
-            this.currentActivityCode = newActivity;
-            this.selectedOperator = null;
-            this.selectedHelper = null;
-            this.useHelper = false;
-            this.updateHiddenInputs();
-          }
-        });
-
-        observer.observe(activityInput, {
-          attributes: true,
-          attributeFilter: ['value']
-        });
-
-        activityInput.addEventListener('input', () => {
-          const newActivity = activityInput.value || '';
-          if (this.currentActivityCode !== newActivity) {
-            this.currentActivityCode = newActivity;
-            this.selectedOperator = null;
-            this.selectedHelper = null;
-            this.useHelper = false;
-            this.updateHiddenInputs();
-          }
-        });
-
-        this.currentActivityCode = activityInput.value || '';
-        this.updateHiddenInputs();
-      }
+    closeModal() {
+      this.open = false;
+      this.clearSelection();
+      this.selectedActivityCode = '';
+      this.availableActivityCodes = [];
     }
-  }
+  };
 }
 </script>

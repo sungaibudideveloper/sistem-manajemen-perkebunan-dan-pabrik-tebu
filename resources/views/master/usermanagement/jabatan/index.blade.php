@@ -55,7 +55,7 @@
         async loadCurrentPermissions() {
             try {
                 const baseUrl = '{{ url("/") }}';
-                const response = await fetch(baseUrl + '/api/usermanagement/jabatan/' + this.selectedJabatan + '/permissions');
+                const response = await fetch(baseUrl + '/usermanagement/ajax/jabatan/' + this.selectedJabatan + '/permissions');
                 const data = await response.json();
                 this.selectedPermissions = data.permissions.map(p => p.permissionid);
                 this.isLoadingPermissions = false;

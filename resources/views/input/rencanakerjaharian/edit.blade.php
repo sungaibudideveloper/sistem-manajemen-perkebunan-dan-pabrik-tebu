@@ -65,7 +65,7 @@
     @method('PUT')
 
     @if ($errors->any())
-        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-lg shadow-sm">
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-lg shadow-sm">
             <div class="flex">
                 <div class="flex-shrink-0">
                     <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -88,24 +88,25 @@
         </div>
     @endif
 
-    <div class="bg-gray-50 rounded-lg p-6 mb-8 border border-blue-100">
+    <div class="bg-gray-50 rounded-lg p-4 lg:p-6 mb-6 border border-blue-100">
 
-      <div class="flex flex-col lg:flex-row gap-6 mb-6">
+      <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 mb-6">
 
         <!-- LEFT: Form Fields -->
-        <div class="w-full lg:max-w-md space-y-4">
+        <div class="w-full lg:max-w-md space-y-3">
           <input type="hidden" name="rkhno" value="{{ $rkhHeader->rkhno }}">
 
           <!-- Mandor -->
           <div x-data="mandorPicker()" x-init="
-            @if(old('mandor_id', $rkhHeader->mandorid))
-                selected = {
-                    userid: '{{ old('mandor_id', $rkhHeader->mandorid) }}',
-                    name: '{{ old('mandor', $rkhHeader->mandor_nama) }}'
-                }
-            @else
-                checkIfUserIsMandor()
-            @endif
+            selected = {
+                userid: '{{ old('mandor_id', $rkhHeader->mandorid) }}',
+                name: '{{ old('mandor', $rkhHeader->mandor_nama) }}'
+            };
+            setTimeout(() => {
+              if (selected.userid) {
+                updateAbsenSummary(selected.userid, selected.userid, selected.name);
+              }
+            }, 100);
           ">
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
@@ -120,7 +121,7 @@
                 'cursor-not-allowed bg-gray-100 border-gray-300': isMandorUser,
                 'cursor-pointer bg-white hover:bg-gray-50': !isMandorUser
               }"
-              class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-4 py-2 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-3 py-2 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
             <input type="hidden" name="mandor_id" x-model="selected.userid">
 
@@ -138,40 +139,36 @@
               id="tanggal"
               value="{{ old('tanggal', \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('Y-m-d')) }}"
               readonly
-              class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 bg-gray-100 text-sm font-medium cursor-not-allowed"
+              class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-sm font-medium cursor-not-allowed"
             />
           </div>
 
           <!-- Keterangan -->
           <div>
             <label for="keterangan" class="block text-sm font-semibold text-gray-700 mb-1">
-              Keterangan Dokumen
+              Keterangan
               <span class="text-xs text-gray-500 font-normal">(opsional)</span>
             </label>
             <textarea
               name="keterangan"
               id="keterangan"
-              rows="3"
-              placeholder="Masukkan keterangan untuk dokumen RKH ini..."
+              rows="2"
+              placeholder="Masukkan keterangan..."
               maxlength="500"
-              class="w-full text-sm border-2 border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              class="w-full text-sm border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             >{{ old('keterangan', $rkhHeader->keterangan) }}</textarea>
           </div>
-        </div>
 
-        <!-- RIGHT: Cards Section -->
-        <div class="flex-1 space-y-4">
-
-          <!-- Card 1: Data Absen -->
-          <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200 lg:max-w-sm">
-            <div class="flex items-center justify-between mb-3">
+          <!-- Card: Data Absen -->
+          <div class="bg-white rounded-lg shadow-md p-3 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
               <div class="flex items-center">
-                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <div class="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></div>
                 <h3 class="text-sm font-bold text-gray-800">Data Absen</h3>
               </div>
               <p class="text-xs text-gray-600" id="absen-info">{{ \Carbon\Carbon::parse($rkhHeader->rkhdate)->format('d/m/Y') }}</p>
             </div>
-            <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="grid grid-cols-3 gap-2 text-center">
               <div class="bg-blue-50 rounded-lg p-2">
                 <div class="text-lg font-bold" id="summary-laki">0</div>
                 <div class="text-xs text-gray-600">Laki-laki</div>
@@ -186,12 +183,16 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Card 2: Info Pekerja -->
+        <!-- RIGHT: Cards Section -->
+        <div class="flex-1 space-y-3">
+
+          <!-- Card: Info Pekerja -->
           <div x-data="workerInfoCard()" class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center">
-                <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                <div class="w-3 h-3 bg-gray-600 rounded-full mr-2"></div>
                 <h3 class="text-sm font-bold text-gray-800">Info Pekerja</h3>
               </div>
               <span class="text-xs text-gray-600" x-text="`${Object.keys(workers).length} Aktivitas`"></span>
@@ -209,53 +210,67 @@
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <template x-for="(worker, activityCode) in workers" :key="activityCode">
-                  <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
-
-                    <div class="mb-3">
-                      <p class="text-sm font-semibold text-purple-900 truncate"
+                  <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-300">
+                    
+                    <div class="mb-3 flex items-start justify-between">
+                      <p class="text-sm font-semibold text-gray-900 truncate flex-1" 
                         x-text="`${activityCode} - ${worker.activityname}`"
                         :title="`${activityCode} - ${worker.activityname}`"></p>
+                      
+                      <span 
+                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ml-2 flex-shrink-0"
+                        :class="{
+                          'bg-blue-100 text-blue-700': worker.jenisId == 1,
+                          'bg-green-100 text-green-700': worker.jenisId == 2,
+                          'bg-orange-100 text-orange-700': worker.jenisId == 3,
+                          'bg-purple-100 text-purple-700': worker.jenisId == 4,
+                          'bg-gray-200 text-gray-700': !worker.jenisId
+                        }"
+                        x-text="worker.jenisLabel"
+                      ></span>
                     </div>
 
                     <div class="flex items-end gap-2">
+                      <!-- Laki-laki -->
                       <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">L</label>
-                        <select
+                        <label class="text-[10px] text-gray-600 block mb-1">L</label>
+                        <input
+                          type="number"
                           x-model="worker.laki"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
+                      <!-- Perempuan -->
                       <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">P</label>
-                        <select
+                        <label class="text-[10px] text-gray-600 block mb-1">P</label>
+                        <input
+                          type="number"
                           x-model="worker.perempuan"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
                       <div class="flex-1">
-                        <label class="text-[10px] text-gray-600 block mb-0.5">Tot</label>
+                        <label class="text-[10px] text-gray-600 block mb-1">Tot</label>
                         <input
                           type="text"
                           x-model="worker.total"
                           readonly
                           placeholder="-"
-                          class="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-gray-100 font-bold text-center cursor-not-allowed"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 font-bold text-center cursor-not-allowed"
                         >
                       </div>
                     </div>
@@ -269,11 +284,110 @@
             </div>
           </div>
 
+          <!-- Card: Info Kendaraan -->
+          <div x-data="kendaraanInfoCard()" class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <h3 class="text-sm font-bold text-gray-800">Info Kendaraan</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-600" x-text="`${getTotalKendaraan()} Unit`"></span>
+                <button
+                  type="button"
+                  @click="openKendaraanModal()"
+                  class="px-2 py-1 text-[10px] font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+                >
+                  + Tambah
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <template x-if="Object.keys(kendaraan).length === 0">
+                <div class="text-center py-8 text-gray-400">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+                  </svg>
+                  <p class="text-xs">Belum ada kendaraan dipilih</p>
+                  <p class="text-[10px] text-gray-500 mt-1">Pilih aktivitas terlebih dahulu</p>
+                </div>
+              </template>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <template x-for="(activityGroup, activityCode) in kendaraan" :key="activityCode">
+                  <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    
+                    <!-- Activity Header -->
+                    <div class="mb-3 pb-2 border-b border-green-200 flex items-center justify-between">
+                      <p class="text-sm font-semibold text-green-900 flex-1" x-text="getActivityFullName(activityCode)"></p>
+                      <span class="text-[10px] text-green-700 font-medium" x-text="`${Object.keys(activityGroup).length} unit`"></span>
+                    </div>
+
+                    <!-- Kendaraan List (Simple) -->
+                    <div class="space-y-1.5">
+                      <template x-for="(item, urutan) in activityGroup" :key="`${activityCode}-${urutan}`">
+                        <div class="flex items-center justify-between bg-white rounded p-2 border border-green-100 hover:border-green-300 transition-colors">
+                          <div class="flex-1 text-xs text-gray-700">
+                            <span class="font-semibold text-gray-900" x-text="item.nokendaraan"></span>
+                            <span class="text-gray-500"> - </span>
+                            <span x-text="item.operatorName"></span>
+                            <template x-if="item.helperName">
+                              <span class="text-gray-500"> + <span x-text="item.helperName"></span></span>
+                            </template>
+                          </div>
+                          <button
+                            type="button"
+                            @click="removeKendaraan(activityCode, urutan)"
+                            class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1 transition-colors ml-2 flex-shrink-0"
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                          </button>
+
+                          <!-- Hidden inputs -->
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][nokendaraan]`" x-model="item.nokendaraan">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][operatorid]`" x-model="item.operatorid">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][helperid]`" x-model="item.helperid">
+                          <input type="hidden" :name="`kendaraan[${activityCode}][${urutan}][usinghelper]`" :value="item.helperid ? 1 : 0">
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Kendaraan Modal Component -->
+            @include('input.rencanakerjaharian.modal-kendaraan')
+          </div>
+
         </div>
       </div>
 
       <!-- TABLE -->
-      <div class="bg-white rounded-xl border border-gray-300 shadow-md">
+      <div class="bg-white rounded-xl border border-gray-300 shadow-md" x-data="rowManager()">
+        <!-- Add Row Button (Top) -->
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-sm font-semibold text-gray-700">Detail Aktivitas RKH</span>
+          </div>
+          <button
+            type="button"
+            @click="addRow()"
+            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Tambah Baris
+          </button>
+        </div>
+
         <div class="overflow-x-auto">
           <table id="rkh-table" class="table-fixed w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
             <colgroup>
@@ -284,7 +398,7 @@
               <col style="width: 80px">
               <col style="width: 80px">
               <col style="width: 120px">
-              <col style="width: 120px">
+              <col style="width: 50px">
             </colgroup>
 
             <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
@@ -296,29 +410,29 @@
                 <th class="py-3 px-2 text-xs font-semibold">Info Panen</th>
                 <th class="py-3 px-2 text-xs font-semibold">Luas<br>(ha)</th>
                 <th class="py-3 px-2 text-xs font-semibold">Material</th>
-                <th class="py-3 px-2 text-xs font-semibold">Unit Alat</th>
+                <th class="py-3 px-2 text-xs font-semibold">Aksi</th>
               </tr>
             </thead>
 
-            <tbody class="divide-y divide-gray-100">
-              @for ($i = 0; $i < 30; $i++)
-                @php
-                  $detail = $rkhDetails->get($i);
-                @endphp
-                <tr x-data="activityPicker({{ $i }})"
+            <tbody class="divide-y divide-gray-100" id="rkh-tbody">
+              <!-- Dynamic Rows -->
+              <template x-for="(row, index) in rows" :key="row.id">
+                <tr x-data="activityPicker(index)"
                     class="rkh-row hover:bg-blue-50 transition-colors"
+                    :data-row-id="row.id"
                     x-init="
-                      @if($detail && $detail->activitycode)
+                      rowIndex = index;
+                      if (row.activitycode) {
                         selected = {
-                          activitycode: '{{ $detail->activitycode }}',
-                          activityname: '{{ $detail->activityname ?? '' }}',
-                          usingvehicle: {{ $detail->usingvehicle ?? 0 }},
-                          jenistenagakerja: {{ $detail->jenistenagakerja ?? 'null' }}
+                          activitycode: row.activitycode,
+                          activityname: row.activityname,
+                          usingvehicle: row.usingvehicle,
+                          jenistenagakerja: row.jenistenagakerja
                         };
-                      @endif
+                      }
                     ">
 
-                  <td class="px-2 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50">{{ $i + 1 }}</td>
+                  <td class="px-2 py-3 text-sm text-center font-medium text-gray-600 bg-gray-50" x-text="index + 1"></td>
 
                   <!-- Activity -->
                   <td class="px-2 py-3">
@@ -337,18 +451,18 @@
                         </svg>
                       </div>
                     </div>
-                    <input type="hidden" name="rows[{{ $i }}][nama]" x-model="selected.activitycode">
+                    <input type="hidden" :name="`rows[${index}][nama]`" x-model="selected.activitycode">
                     @include('input.rencanakerjaharian.modal-activity')
                   </td>
 
                   <!-- Blok -->
                   <td class="px-2 py-3">
-                    <div x-data="blokPicker({{ $i }})" class="relative" x-init="
-                      init();
-                      @if($detail && $detail->blok)
-                        selected = { blok: '{{ $detail->blok }}' };
-                        Alpine.store('blokPerRow').setBlok({{ $i }}, '{{ $detail->blok }}');
-                      @endif
+                    <div x-data="blokPicker(index)" class="relative" x-init="
+                      init(); 
+                      rowIndex = index;
+                      if (row.blok) {
+                        selected.blok = row.blok;
+                      }
                     ">
                       <input
                         type="text"
@@ -357,18 +471,19 @@
                         :value="selected.blok ? selected.blok : ''"
                         class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                      <input type="hidden" name="rows[{{ $i }}][blok]" x-model="selected.blok">
+                      <input type="hidden" :name="`rows[${index}][blok]`" x-model="selected.blok">
                       @include('input.rencanakerjaharian.modal-blok')
                     </div>
                   </td>
 
                   <!-- Plot -->
                   <td class="px-2 py-3">
-                    <div x-data="plotPicker({{ $i }})" class="relative" x-init="
-                      init();
-                      @if($detail && $detail->plot)
-                        selected = { plot: '{{ $detail->plot }}' };
-                      @endif
+                    <div x-data="plotPicker(index)" class="relative" x-init="
+                      init(); 
+                      rowIndex = index;
+                      if (row.plot) {
+                        selected.plot = row.plot;
+                      }
                     ">
                       <input
                         type="text"
@@ -383,13 +498,21 @@
                         }"
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
-                      <input type="hidden" name="rows[{{ $i }}][plot]" x-model="selected.plot">
+                      <input type="hidden" :name="`rows[${index}][plot]`" x-model="selected.plot">
                       @include('input.rencanakerjaharian.modal-plot')
                     </div>
                   </td>
 
                   <!-- Info Panen -->
-                  <td class="px-2 py-3" x-data="panenInfoPicker({{ $i }})" x-init="init()">
+                  <td class="px-2 py-3" x-data="panenInfoPicker(index)" x-init="
+                    init(); 
+                    rowIndex = index;
+                    if (row.plot) currentPlot = row.plot;
+                    if (row.batchno) {
+                      panenInfo.batchno = row.batchno;
+                      panenInfo.kodestatus = row.kodestatus;
+                    }
+                  ">
                     <div x-show="!isPanenActivity" class="text-center text-xs text-gray-400">-</div>
 
                     <div x-show="isPanenActivity" x-cloak class="text-xs space-y-1">
@@ -430,51 +553,51 @@
                       </div>
                     </div>
 
-                    <input type="hidden" name="rows[{{ $i }}][batchno]" x-model="panenInfo.batchno">
-                    <input type="hidden" name="rows[{{ $i }}][kodestatus]" x-model="panenInfo.kodestatus">
+                    <input type="hidden" :name="`rows[${index}][batchno]`" x-model="panenInfo.batchno">
+                    <input type="hidden" :name="`rows[${index}][kodestatus]`" x-model="panenInfo.kodestatus">
                   </td>
 
                   <!-- Luas -->
                   <td class="px-2 py-3">
                     <input
                       type="number"
-                      name="rows[{{ $i }}][luas]"
+                      :name="`rows[${index}][luas]`"
                       min="0"
-                      value="{{ $detail->luasarea ?? '' }}"
                       step="0.01"
+                      :value="row.luas"
                       class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                   </td>
 
                   <!-- Material -->
-                  <td class="px-2 py-3" x-data="materialPicker({{ $i }})" x-init="
-                    @if($detail && $detail->activitycode)
-                      // Set activity code dulu
-                      currentActivityCode = '{{ $detail->activitycode }}';
-
-                      // ✅ LOAD EXISTING MATERIAL GROUP
-                      @if($detail->herbisidagroupid)
-                        // Tunggu herbisidaData ready
-                        setTimeout(() => {
-                          if (window.herbisidaData && window.herbisidaData.length > 0) {
-                            // Cari group yang match
-                            const matchedItems = window.herbisidaData.filter(item =>
-                              item.herbisidagroupid == {{ $detail->herbisidagroupid }} &&
-                              item.activitycode === '{{ $detail->activitycode }}'
-                            );
-
-                            if (matchedItems.length > 0) {
-                              selectedGroup = {
-                                herbisidagroupid: {{ $detail->herbisidagroupid }},
-                                herbisidagroupname: '{{ addslashes($detail->herbisidagroupname ?? '') }}'
-                              };
-                              updateHiddenInputs();
-                            }
-                          }
-                        }, 100);
-                      @endif
-                    @endif
-
+                  <td class="px-2 py-3" x-data="materialPicker(index)" x-init="
+                    rowIndex = index;
+                    
+                    if (row.activitycode) {
+                      currentActivityCode = row.activitycode;
+                    }
+                    
+                    if (row.material_group_id) {
+                      selectedGroup = {
+                        herbisidagroupid: row.material_group_id,
+                        herbisidagroupname: row.herbisidagroupname
+                      };
+                      
+                      $nextTick(() => {
+                        const groupInput = document.querySelector(`input[name='rows[${index}][material_group_id]']`);
+                        const usingInput = document.querySelector(`input[name='rows[${index}][usingmaterial]']`);
+                        
+                        if (groupInput) {
+                          groupInput.value = row.material_group_id;
+                        }
+                        
+                        if (usingInput) {
+                          usingInput.value = '1';
+                        }
+                      });
+                    }
+                    
+                    // Call the original init
                     init();
                   ">
                     <div class="relative">
@@ -495,88 +618,72 @@
                         <div x-show="hasMaterial && selectedGroup" class="text-green-800 text-xs font-semibold" x-text="selectedGroup?.herbisidagroupname"></div>
                       </div>
                     </div>
+                    
+                    <!-- Hidden inputs - ALWAYS present with proper binding -->
+                    <input 
+                      type="hidden" 
+                      :name="`rows[${index}][material_group_id]`" 
+                      :value="selectedGroup?.herbisidagroupid || ''"
+                      :data-row-index="index"
+                    >
+                    <input 
+                      type="hidden" 
+                      :name="`rows[${index}][usingmaterial]`" 
+                      :value="(hasMaterial && selectedGroup) ? '1' : '0'"
+                      :data-row-index="index"
+                    >
+                    
                     @include('input.rencanakerjaharian.modal-material')
                   </td>
 
-                  <!-- Kendaraan -->
-                  <td class="px-2 py-3" x-data="kendaraanPicker({{ $i }})" x-init="
-                    @if($detail && $detail->operatorid)
-                      currentActivityCode = '{{ $detail->activitycode }}';
-
-                      // Set useHelper
-                      @if($detail->usinghelper == 1)
-                        useHelper = true;
-                      @endif
-
-                      // WAIT FOR DATA THEN SET
-                      setTimeout(() => {
-                        if (window.operatorsData && window.operatorsData.length > 0) {
-                          const operator = window.operatorsData.find(op => op.tenagakerjaid === '{{ $detail->operatorid }}');
-                          if (operator) {
-                            selectedOperator = {
-                              tenagakerjaid: operator.tenagakerjaid,
-                              nama: operator.nama,
-                              nokendaraan: operator.nokendaraan,
-                              jenis: operator.jenis
-                            };
-                            updateHiddenInputs();
-                          }
-                        }
-
-                        @if($detail->helperid)
-                          if (window.helpersData && window.helpersData.length > 0) {
-                            const helper = window.helpersData.find(h => h.tenagakerjaid === '{{ $detail->helperid }}');
-                            if (helper) {
-                              selectedHelper = {
-                                tenagakerjaid: helper.tenagakerjaid,
-                                nama: helper.nama,
-                                nik: helper.nik
-                              };
-                              updateHiddenInputs();
-                            }
-                          }
-                        @endif
-                      }, 100);
-                    @endif
-
-                    init();
-                  ">
-                    <input type="hidden" name="rows[{{ $i }}][usingvehicle]" value="0">
-                    <input type="hidden" name="rows[{{ $i }}][usinghelper]" value="0">
-                    <input type="hidden" name="rows[{{ $i }}][operatorid]" value="">
-                    <input type="hidden" name="rows[{{ $i }}][helperid]" value="">
-                    <div class="relative">
-                      <div
-                        @click="checkVehicle()"
-                        :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': hasVehicle,
-                          'cursor-not-allowed bg-gray-100': !hasVehicle,
-                          'border-green-500 bg-green-50': hasVehicle && selectedOperator,
-                          'border-green-300': hasVehicle && !selectedOperator,
-                          'border-gray-300': !hasVehicle
-                        }"
-                        class="w-full text-xs border-2 rounded-lg px-2 py-2 text-center transition-colors min-h-[36px] flex items-center justify-center"
-                      >
-                        <div x-show="!currentActivityCode" x-cloak class="text-gray-500 text-xs">-</div>
-                        <div x-show="currentActivityCode && !hasVehicle" x-cloak class="text-xs font-medium">Tidak</div>
-                        <div x-show="hasVehicle && !selectedOperator" x-cloak class="text-green-600 text-xs font-medium">Pilih</div>
-                        <div x-show="hasVehicle && selectedOperator" class="text-green-800 text-xs font-semibold" x-text="selectedOperator?.nokendaraan"></div>
-                      </div>
-                    </div>
-                    @include('input.rencanakerjaharian.modal-kendaraan')
+                  <!-- Delete Button -->
+                  <td class="px-2 py-3 text-center">
+                    <button
+                      type="button"
+                      @click="$dispatch('delete-row', { rowId: row.id, index: index })"
+                      class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 transition-colors"
+                      title="Hapus baris"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
                   </td>
                 </tr>
-              @endfor
+              </template>
+
+              <!-- Empty State -->
+              <template x-if="rows.length === 0">
+                <tr>
+                  <td colspan="8" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                      <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      <p class="text-sm font-medium">Belum ada baris aktivitas</p>
+                      <p class="text-xs text-gray-500 mt-1">Klik tombol "Tambah Baris" untuk menambahkan aktivitas</p>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+          <div class="flex items-center justify-between text-xs text-gray-600">
+            <span x-text="`Total: ${rows.length} baris aktivitas`"></span>
+            <span class="text-gray-500">Klik ikon 🗑️ untuk menghapus baris</span>
+          </div>
         </div>
       </div>
 
       <!-- BUTTONS -->
-      <div class="mt-8 flex flex-col items-center space-y-4">
-        <div class="flex justify-center space-x-4">
+      <div class="mt-6 flex flex-col items-center space-y-3">
+        <div class="flex justify-center space-x-3">
           <button type="button" onclick="window.location.href = '{{ route('input.rencanakerjaharian.index') }}';"
-                  class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center">
+                  class="bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
@@ -601,6 +708,166 @@
 
 <script>
 // ============================================================
+// ROW MANAGER - LOAD EXISTING DATA PROPERLY
+// ============================================================
+function rowManager() {
+  return {
+    rows: [],
+    nextId: 1,
+    existingData: @json($rkhDetails ?? []),
+
+    init() {
+      
+      // ✅ CRITICAL: Load existing data FIRST before anything else
+      if (this.existingData && this.existingData.length > 0) {
+        this.existingData.forEach((detail, index) => {
+          
+          const newRow = {
+            id: this.nextId++,
+            activitycode: detail.activitycode || '',
+            activityname: detail.activityname || '',
+            usingvehicle: detail.usingvehicle || 0,
+            jenistenagakerja: detail.jenistenagakerja || null,
+            blok: detail.blok || '',
+            plot: detail.plot || '',
+            luas: detail.luasarea || '',
+            batchno: detail.batchno || '',
+            kodestatus: detail.batch_lifecycle || '',
+            material_group_id: detail.herbisidagroupid || '',
+            herbisidagroupname: detail.herbisidagroupname || ''
+          };
+          
+          this.rows.push(newRow);
+
+          // ✅ CRITICAL: Register to stores IMMEDIATELY (not in $nextTick)
+          if (detail.blok) {
+            Alpine.store('blokPerRow').setBlok(index, detail.blok);
+          }
+          
+          if (detail.activitycode) {
+            Alpine.store('activityPerRow').setActivity(index, {
+              activitycode: detail.activitycode,
+              activityname: detail.activityname || '',
+              usingvehicle: detail.usingvehicle || 0,
+              jenistenagakerja: detail.jenistenagakerja || null
+            });
+          }
+          
+          if (detail.blok && detail.plot && detail.activitycode) {
+            Alpine.store('uniqueCombinations').setCombination(index, detail.blok, detail.plot, detail.activitycode);
+          }
+        });
+
+      } else {
+        this.addRow();
+      }
+
+      // Listen for delete events
+      this.$el.addEventListener('delete-row', (e) => {
+        this.deleteRow(e.detail.rowId, e.detail.index);
+      });
+
+      // Reinitialize validation after everything is loaded
+      this.$nextTick(() => {
+        setTimeout(() => {
+          initializeRowValidation();
+        }, 200);
+      });
+    },
+
+    addRow() {
+      const newRow = {
+        id: this.nextId++,
+        activitycode: '',
+        activityname: '',
+        blok: '',
+        plot: '',
+        luas: '',
+      };
+      
+      this.rows.push(newRow);
+      
+      this.$nextTick(() => {
+        initializeRowValidation();
+        showToast('Baris baru ditambahkan', 'success', 2000);
+      });
+    },
+
+    deleteRow(rowId, index) {
+      if (this.rows.length === 1) {
+        showToast('Minimal harus ada 1 baris', 'warning', 2000);
+        return;
+      }
+
+      const activityStore = Alpine.store('activityPerRow');
+      const activity = activityStore.getActivity(index);
+      
+      if (activity && activity.activitycode) {
+        const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+        if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+          const workerCard = workerCardElement._x_dataStack[0];
+          if (workerCard.workers[activity.activitycode]) {
+            delete workerCard.workers[activity.activitycode];
+          }
+        }
+
+        const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+        if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+          const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+          if (kendaraanCard.kendaraan[activity.activitycode]) {
+            delete kendaraanCard.kendaraan[activity.activitycode];
+          }
+        }
+      }
+
+      Alpine.store('blokPerRow').selected[index] = '';
+      Alpine.store('activityPerRow').selected[index] = null;
+      Alpine.store('uniqueCombinations').setCombination(index, '', '', '');
+
+      this.rows.splice(index, 1);
+
+      this.$nextTick(() => {
+        this.reindexStores();
+        showToast('Baris berhasil dihapus', 'success', 2000);
+      });
+    },
+
+    reindexStores() {
+      const blokStore = Alpine.store('blokPerRow');
+      const newBlokSelected = {};
+      Object.keys(blokStore.selected).forEach(oldIndex => {
+        const newIndex = parseInt(oldIndex);
+        if (newIndex < this.rows.length) {
+          newBlokSelected[newIndex] = blokStore.selected[oldIndex];
+        }
+      });
+      blokStore.selected = newBlokSelected;
+
+      const activityStore = Alpine.store('activityPerRow');
+      const newActivitySelected = {};
+      Object.keys(activityStore.selected).forEach(oldIndex => {
+        const newIndex = parseInt(oldIndex);
+        if (newIndex < this.rows.length) {
+          newActivitySelected[newIndex] = activityStore.selected[oldIndex];
+        }
+      });
+      activityStore.selected = newActivitySelected;
+
+      const uniqueStore = Alpine.store('uniqueCombinations');
+      const newCombinations = new Map();
+      for (const [oldIndex, combo] of uniqueStore.combinations) {
+        if (oldIndex < this.rows.length) {
+          newCombinations.set(oldIndex, combo);
+        }
+      }
+      uniqueStore.combinations = newCombinations;
+
+      initializeRowValidation();
+    }
+  };
+}
+
+// ============================================================
 // GLOBAL DATA INITIALIZATION
 // ============================================================
 window.bloksData = @json($bloks ?? []);
@@ -612,6 +879,9 @@ window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
 window.helpersData = @json($helpersData ?? []);
 
+window.existingKendaraan = @json($existingKendaraan ?? []);
+window.existingWorkers = @json($existingWorkers ?? []);
+
 window.currentUser = {
   userid: '{{ Auth::user()->userid ?? '' }}',
   name: '{{ Auth::user()->name ?? '' }}',
@@ -621,12 +891,156 @@ window.currentUser = {
 window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
 window.PANEN_INFO_URL = "{{ route('input.rencanakerjaharian.getPanenInfo', ['plot' => 'PLOT_PLACEHOLDER']) }}".replace('PLOT_PLACEHOLDER', '');
 
-// ✅ LOAD EXISTING WORKER DATA FROM RKH
-window.existingWorkers = @json($existingWorkers ?? []);
-
 // ============================================================
 // ALPINE.JS COMPONENTS
 // ============================================================
+
+function kendaraanInfoCard() {
+  return {
+    kendaraan: {},
+    currentActivityCode: null,
+
+    init() {
+      setTimeout(() => {
+        // Load existing kendaraan data
+        if (window.existingKendaraan && Object.keys(window.existingKendaraan).length > 0) {
+          for (const [activityCode, vehicles] of Object.entries(window.existingKendaraan)) {
+            this.kendaraan[activityCode] = {};
+            
+            vehicles.forEach((vehicle, index) => {
+              const urutan = index + 1;
+              this.kendaraan[activityCode][urutan] = {
+                nokendaraan: vehicle.nokendaraan,
+                operatorid: vehicle.operatorid,
+                operatorName: vehicle.operator_nama,
+                helperid: vehicle.helperid || null,
+                helperName: vehicle.helper_nama || null
+              };
+            });
+          }
+          console.log('Loaded existing kendaraan:', this.kendaraan);
+        }
+      }, 600);
+
+      this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
+        this.syncKendaraanFromActivities(activities);
+      }, { deep: true });
+    },
+
+    syncKendaraanFromActivities(activities) {
+      const currentActivityCodes = Object.values(activities)
+        .filter(act => act && act.activitycode && act.usingvehicle === 1)
+        .map(act => act.activitycode);
+      
+      // Don't delete if no activities yet (still loading)
+      if (currentActivityCodes.length === 0 && Object.keys(activities).length === 0) {
+        return;
+      }
+      
+      Object.keys(this.kendaraan).forEach(activityCode => {
+        if (!currentActivityCodes.includes(activityCode)) {
+          delete this.kendaraan[activityCode];
+        }
+      });
+    },
+
+    getActivityFullName(activityCode) {
+      const activity = window.activitiesData?.find(a => a.activitycode === activityCode);
+      return activity ? `${activityCode} - ${activity.activityname}` : activityCode;
+    },
+
+    openKendaraanModal() {
+      const activities = Alpine.store('activityPerRow').selected;
+      
+      let activityCodes = Object.values(activities)
+        .filter(act => act && act.activitycode && act.usingvehicle === 1)
+        .map(act => act.activitycode);
+
+      if (activityCodes.length === 0) {
+        const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+        if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+          const workers = workerCardElement._x_dataStack[0].workers;
+          activityCodes = Object.keys(workers)
+            .filter(activityCode => {
+              const activity = window.activitiesData?.find(a => a.activitycode === activityCode);
+              return activity && activity.usingvehicle === 1;
+            });
+        }
+      }
+
+      if (activityCodes.length === 0) {
+        showToast('Pilih aktivitas yang menggunakan kendaraan terlebih dahulu', 'warning', 3000);
+        return;
+      }
+
+      this.currentActivityCode = activityCodes[0];
+
+      window.dispatchEvent(new CustomEvent('open-kendaraan-modal', {
+        detail: { activityCodes: activityCodes }
+      }));
+    },
+
+    addKendaraan(activityCode, operatorData, helperData = null) {
+      if (this.kendaraan[activityCode]) {
+        const isDuplicate = Object.values(this.kendaraan[activityCode]).some(
+          item => item.nokendaraan === operatorData.nokendaraan
+        );
+        
+        if (isDuplicate) {
+          showToast(`Kendaraan ${operatorData.nokendaraan} sudah ditambahkan untuk aktivitas ini`, 'warning', 3000);
+          return false;
+        }
+      }
+
+      if (!this.kendaraan[activityCode]) {
+        this.kendaraan[activityCode] = {};
+      }
+
+      const urutan = Object.keys(this.kendaraan[activityCode]).length + 1;
+
+      this.kendaraan[activityCode][urutan] = {
+        nokendaraan: operatorData.nokendaraan,
+        operatorid: operatorData.tenagakerjaid,
+        operatorName: operatorData.nama,
+        helperid: helperData ? helperData.tenagakerjaid : null,
+        helperName: helperData ? helperData.nama : null
+      };
+
+      return true;
+    },
+
+    removeKendaraan(activityCode, urutan) {
+      if (this.kendaraan[activityCode] && this.kendaraan[activityCode][urutan]) {
+        delete this.kendaraan[activityCode][urutan];
+        
+        if (Object.keys(this.kendaraan[activityCode]).length === 0) {
+          delete this.kendaraan[activityCode];
+        }
+
+        this.reindexKendaraan(activityCode);
+      }
+    },
+
+    reindexKendaraan(activityCode) {
+      if (!this.kendaraan[activityCode]) return;
+
+      const items = Object.values(this.kendaraan[activityCode]);
+      this.kendaraan[activityCode] = {};
+      
+      items.forEach((item, index) => {
+        this.kendaraan[activityCode][index + 1] = item;
+      });
+    },
+
+    getTotalKendaraan() {
+      let total = 0;
+      Object.values(this.kendaraan).forEach(activityGroup => {
+        total += Object.keys(activityGroup).length;
+      });
+      return total;
+    }
+  };
+}
 
 function panenInfoPicker(rowIndex) {
   return {
@@ -711,18 +1125,16 @@ function panenInfoPicker(rowIndex) {
         if (data.success) {
           this.panenInfo = {
             batchno: data.batchno,
-            kodestatus: data.kodestatus,
+            kodestatus: data.lifecyclestatus,
             tanggalpanen: data.tanggalpanen,
             luassisa: parseFloat(data.luassisa).toFixed(2)
           };
         } else {
           this.resetPanenInfo();
-          showToast(data.message || 'Gagal memuat info panen', 'warning', 3000);
         }
       } catch (error) {
         console.error('Error fetching panen info:', error);
         this.resetPanenInfo();
-        showToast('Error memuat info panen', 'error', 3000);
       } finally {
         this.isLoading = false;
       }
@@ -745,45 +1157,62 @@ function workerInfoCard() {
     workers: {},
 
     init() {
-      // ✅ LOAD EXISTING DATA dengan explicit 0 handling
-      if (window.existingWorkers && window.existingWorkers.length > 0) {
-        window.existingWorkers.forEach(worker => {
-          this.workers[worker.activitycode] = {
-            activityname: worker.activityname || '',
-            // ✅ FIX: 0 harus tetap 0, bukan ''
-            laki: worker.jumlahlaki !== null && worker.jumlahlaki !== undefined ? worker.jumlahlaki : '',
-            perempuan: worker.jumlahperempuan !== null && worker.jumlahperempuan !== undefined ? worker.jumlahperempuan : '',
-            total: worker.jumlahtenagakerja !== null && worker.jumlahtenagakerja !== undefined ? worker.jumlahtenagakerja : ''
-          };
-
-          // Register ke store
-          Alpine.store('activityPerRow').setActivity(worker.activitycode, {
-            activitycode: worker.activitycode,
-            activityname: worker.activityname
+      // Wait for activities to be registered to store first
+      setTimeout(() => {
+        
+        // Load existing workers data
+        if (window.existingWorkers && window.existingWorkers.length > 0) {
+          window.existingWorkers.forEach(worker => {
+            this.workers[worker.activitycode] = {
+              activityname: worker.activityname || '',
+              jenisId: worker.jenistenagakerja,
+              jenisLabel: this.getJenisLabel(worker.jenistenagakerja),
+              laki: worker.jumlahlaki !== null && worker.jumlahlaki !== undefined ? worker.jumlahlaki : '',
+              perempuan: worker.jumlahperempuan !== null && worker.jumlahperempuan !== undefined ? worker.jumlahperempuan : '',
+              total: worker.jumlahtenagakerja !== null && worker.jumlahtenagakerja !== undefined ? worker.jumlahtenagakerja : ''
+            };
           });
-        });
-      }
+          
+        } else {
+          console.log('No existing workers data found');
+        }
+      }, 400); // Delay 400ms to ensure activities are registered
 
       this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
         this.syncWorkersFromActivities(activities);
       }, { deep: true });
+
+      // Also sync immediately after delay
+      setTimeout(() => {
+        this.syncWorkersFromActivities(Alpine.store('activityPerRow').selected);
+      }, 500);
+    },
+
+    getJenisLabel(jenisId) {
+      const labels = { 1: 'Harian', 2: 'Borongan', 3: 'Operator', 4: 'Helper' };
+      return labels[jenisId] || '-';
     },
 
     syncWorkersFromActivities(activities) {
       const currentActivityCodes = Object.values(activities)
         .filter(act => act && act.activitycode)
         .map(act => act.activitycode);
-
+      
       Object.keys(this.workers).forEach(activityCode => {
         if (!currentActivityCodes.includes(activityCode)) {
           delete this.workers[activityCode];
         }
       });
-
+      
       Object.values(activities).forEach(activity => {
         if (activity && activity.activitycode && !this.workers[activity.activitycode]) {
+          const fullActivity = window.activitiesData?.find(a => a.activitycode === activity.activitycode);
+          const jenisData = fullActivity?.jenistenagakerja;
+          
           this.workers[activity.activitycode] = {
             activityname: activity.activityname || '',
+            jenisId: typeof jenisData === 'object' ? jenisData?.idjenistenagakerja : jenisData,
+            jenisLabel: this.getJenisLabel(typeof jenisData === 'object' ? jenisData?.idjenistenagakerja : jenisData),
             laki: '',
             perempuan: '',
             total: ''
@@ -889,13 +1318,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeRowValidation();
   initializeValidationStyles();
   initializeFormSubmit();
-
-  // ✅ Initialize absen summary
-  const mandorId = '{{ old('mandor_id', $rkhHeader->mandorid) }}';
-  const mandorName = '{{ old('mandor', $rkhHeader->mandor_nama) }}';
-  if (mandorId && mandorName) {
-    updateAbsenSummary(mandorId, mandorId, mandorName);
-  }
 });
 
 function initializeRowValidation() {
@@ -991,10 +1413,12 @@ function attachUniqueValidationListeners(row, rowIndex) {
 function validateFormWithWorkerCard() {
   const errors = [];
 
+  // Validate mandor
   if (!document.querySelector('input[name="mandor_id"]').value) {
     errors.push('Silakan pilih Mandor terlebih dahulu');
   }
 
+  // Validate rows
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
@@ -1003,8 +1427,6 @@ function validateFormWithWorkerCard() {
     const plot = row.querySelector('input[name$="[plot]"]').value;
     const activity = row.querySelector('input[name$="[nama]"]').value;
     const luas = row.querySelector('input[name$="[luas]"]').value;
-    const usingVehicle = row.querySelector('input[name$="[usingvehicle]"]')?.value || '0';
-    const operatorId = row.querySelector('input[name$="[operatorid]"]')?.value || '';
 
     if (blok) {
       hasCompleteRow = true;
@@ -1020,23 +1442,36 @@ function validateFormWithWorkerCard() {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
       }
+    }
+  });
 
-      if (usingVehicle === '1' && !operatorId) {
-        errors.push(`Baris ${rowNum}: Operator harus dipilih`);
-      }
-
-      if (activity) {
-        const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            errors.push(`Baris ${rowNum}: Grup material harus dipilih`);
+  rows.forEach((row, index) => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    
+    if (blok && activity) {
+      const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
+      if (hasMaterialOptions) {
+        const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+        const materialValue = materialGroupInput?.value || '';
+        
+        // Cek langsung dari Alpine component jika DOM value kosong
+        if (!materialValue) {
+          const materialPicker = row.querySelector('[x-data*="materialPicker"]');
+          if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
+            const selectedGroup = materialPicker._x_dataStack[0].selectedGroup;
+            if (!selectedGroup || !selectedGroup.herbisidagroupid) {
+              errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
+            }
+          } else {
+            errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
           }
         }
       }
     }
   });
 
+  // Validate workers
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -1050,6 +1485,22 @@ function validateFormWithWorkerCard() {
     });
   }
 
+  // Validate kendaraan
+  const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+  if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+    const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
+    
+    const activities = Alpine.store('activityPerRow').selected;
+    Object.values(activities).forEach(activity => {
+      if (activity && activity.activitycode && activity.usingvehicle === 1) {
+        if (!kendaraan[activity.activitycode] || Object.keys(kendaraan[activity.activitycode]).length === 0) {
+          errors.push(`Aktivitas "${activity.activitycode}": Wajib memilih minimal 1 kendaraan`);
+        }
+      }
+    });
+  }
+
+  // Check for duplicates
   const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
   if (duplicates.size > 0) {
     for (const [key, duplicateInfo] of duplicates) {
@@ -1309,6 +1760,7 @@ function materialPicker(rowIndex) {
             groups[item.herbisidagroupid] = {
               herbisidagroupid: item.herbisidagroupid,
               herbisidagroupname: item.herbisidagroupname,
+              showDetails: false,
               items: []
             };
           }
@@ -1319,10 +1771,10 @@ function materialPicker(rowIndex) {
     },
 
     checkMaterial() {
-      if (this.hasMaterial) this.open = true;
-      else {
+      if (this.hasMaterial) {
+        this.open = true;
+      } else {
         this.selectedGroup = null;
-        this.updateHiddenInputs();
       }
     },
 
@@ -1333,60 +1785,32 @@ function materialPicker(rowIndex) {
       };
     },
 
+    clearSelection() {
+      this.selectedGroup = null;
+    },
+
     confirmSelection() {
-      this.updateHiddenInputs();
       this.open = false;
     },
 
-    updateHiddenInputs() {
-      this.ensureHiddenInputsExist();
-      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(7)`);
-      if (!materialCell) return;
-
-      const inputs = {
-        groupId: materialCell.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`),
-        usingMaterial: materialCell.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`)
-      };
-
-      if (inputs.groupId) inputs.groupId.value = this.selectedGroup ? this.selectedGroup.herbisidagroupid : '';
-      if (inputs.usingMaterial) inputs.usingMaterial.value = (this.hasMaterial && this.selectedGroup) ? '1' : '0';
-    },
-
-    ensureHiddenInputsExist() {
-      const materialCell = document.querySelector(`tr:nth-child(${this.rowIndex + 1}) td:nth-child(7)`);
-      if (!materialCell) return;
-
-      if (!materialCell.querySelector(`input[name="rows[${this.rowIndex}][material_group_id]"]`)) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `rows[${this.rowIndex}][material_group_id]`;
-        materialCell.appendChild(input);
-      }
-
-      if (!materialCell.querySelector(`input[name="rows[${this.rowIndex}][usingmaterial]"]`)) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `rows[${this.rowIndex}][usingmaterial]`;
-        input.value = '0';
-        materialCell.appendChild(input);
-      }
-    },
-
     init() {
-      this.ensureHiddenInputsExist();
-      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
-      if (activityInput) {
-        const observer = new MutationObserver(() => {
-          const newActivity = activityInput.value || '';
-          if (this.currentActivityCode !== newActivity) {
-            this.currentActivityCode = newActivity;
-            this.selectedGroup = null;
-            this.updateHiddenInputs();
-          }
-        });
-        observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
-        this.currentActivityCode = activityInput.value || '';
-      }
+      this.$watch('rowIndex', (newIndex) => {
+        const activityInput = document.querySelector(`input[name="rows[${newIndex}][nama]"]`);
+        if (activityInput) {
+          const observer = new MutationObserver(() => {
+            const newActivity = activityInput.value || '';
+            if (this.currentActivityCode !== newActivity) {
+              this.currentActivityCode = newActivity;
+              if (!this.hasMaterial) {
+                this.selectedGroup = null;
+              }
+            }
+          });
+          
+          observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
+          this.currentActivityCode = activityInput.value || '';
+        }
+      });
     }
   }
 }

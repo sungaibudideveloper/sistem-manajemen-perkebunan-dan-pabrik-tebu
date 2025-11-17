@@ -77,9 +77,18 @@
                             <th class="sticky-v" rowspan="2">Saldo<br><small>HA</small></th>
                             
                             {{-- DINAMIS: Loop dari $activityMap --}}
-                            @foreach($activityMap as $code => $label)
+                            @foreach($activityMap as $activitycode => $label)
+                                @php
+                                    $isGrouped = isset($activityGrouping[$activitycode]);
+                                @endphp
                                 <th class="sticky-v" colspan="2" style="text-align:center;">
-                                    {{ $label }}<br>
+                                    <span style="{{ $isGrouped ? 'text-decoration: underline; text-decoration-color: #fbbf24; text-decoration-thickness: 2px; text-underline-offset: 3px;' : '' }}">
+                                        {{ $activitycode }}
+                                    </span>
+                                    @if($isGrouped)
+                                        <span style="color:#fbbf24;font-size:12px;" title="Gabungan dari {{ implode(' + ', $activityGrouping[$activitycode]) }}"></span>
+                                    @endif
+                                    <br>{{ $label }}<br>
                                     <small style="font-weight:normal;">HA / Tanggal</small>
                                 </th>
                             @endforeach
@@ -105,13 +114,13 @@
                                 $grandTotalRealisasi = 0;
                             @endphp
                             
-                            @foreach($activityMap as $code => $label)
+                            @foreach($activityMap as $activitycode => $label)
                                 @php 
                                     $totalActivity = 0;
                                     $allDates = [];
                                     
                                     foreach($activityData as $plot => $activities) {
-                                        if($act = $activities->get($code)) {
+                                        if($act = $activities->get($activitycode)) {
                                             $totalActivity += $act->total_luas;
                                             if($act->tanggal_terbaru) {
                                                 $allDates[] = $act->tanggal_terbaru;
@@ -156,9 +165,9 @@
                                         $totalRealisasiPlot = 0;
                                     @endphp
                                     
-                                    @foreach($activityMap as $code => $label)
+                                    @foreach($activityMap as $activitycode => $label)
                                         @php 
-                                            $activity = $activityData->get($plot->plot)?->get($code);
+                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
                                             $value = $activity->total_luas ?? 0;
                                             $tanggal = $activity->tanggal_terbaru ?? null;
                                             $totalRealisasiPlot += $value;

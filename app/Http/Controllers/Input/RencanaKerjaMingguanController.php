@@ -225,8 +225,10 @@ class RencanaKerjaMingguanController extends Controller
 
     public function show($rkmno)
     {
+        $companyCode = session('companycode');
+
         $rkm = DB::table('rkmhdr')
-            ->where('companycode', '=', session('companycode'))
+            ->where('companycode', $companyCode)
             ->where('rkmno', $rkmno)
             ->first();
 
@@ -234,18 +236,48 @@ class RencanaKerjaMingguanController extends Controller
             abort(404, 'RKM header not found');
         }
 
-        $rkmLists = DB::table('rkmlst')
-            ->leftJoin('rkmhdr', function ($join) {
-                $join->on('rkmlst.rkmno', '=', 'rkmhdr.rkmno')
-                    ->whereColumn('rkmlst.companycode', '=', 'rkmhdr.companycode');
+        $rkmLists = DB::table('rkmhdr as a')
+            ->leftJoin('rkmlst as b', function ($join) {
+                $join->on('a.companycode', '=', 'b.companycode')
+                    ->on('a.rkmno', '=', 'b.rkmno');
             })
+            ->leftJoin('lkhhdr as c', function ($join) {
+                $join->on('a.companycode', '=', 'b.companycode')
+                    ->on('a.activitycode', '=', 'c.activitycode')
+                    ->whereBetween('c.lkhdate', [DB::raw('a.startdate'), DB::raw('a.enddate')]);
+            })
+            ->leftJoin('lkhdetailplot as d', function ($join) {
+                $join->on('c.lkhno', '=', 'd.lkhno')
+                    ->on('a.companycode', '=', 'b.companycode')
+                    ->on('b.plot', '=', 'd.plot');
+            })
+            ->leftJoin('activity as act', 'a.activitycode', '=', 'act.activitycode')
             ->select(
-                'rkmlst.*',
-                'rkmhdr.*',
+                'a.rkmno',
+                'a.startdate',
+                'a.enddate',
+                'a.activitycode',
+                'act.activityname',
+                'b.totalestimasi',
+                'b.blok',
+                'b.plot',
+                'b.totalluasactual',
+                DB::raw('SUM(d.luashasil) AS hasil'),
+                DB::raw('b.totalestimasi - SUM(d.luashasil) AS sisa')
             )
-            ->where('rkmlst.rkmno', $rkmno)
-            ->where('rkmlst.companycode', session('companycode'))
-            ->orderBy('rkmlst.rkmno', 'asc')
+            ->where('a.companycode', $companyCode)
+            ->where('a.rkmno', $rkmno)
+            ->groupBy(
+                'a.rkmno',
+                'a.startdate',
+                'a.enddate',
+                'a.activitycode',
+                'act.activityname',
+                'b.totalestimasi',
+                'b.blok',
+                'b.plot',
+                'b.totalluasactual'
+            )
             ->get();
 
         foreach ($rkmLists as $index => $item) {
@@ -254,6 +286,7 @@ class RencanaKerjaMingguanController extends Controller
 
         return response()->json($rkmLists);
     }
+
 
     public function edit($rkmno)
     {

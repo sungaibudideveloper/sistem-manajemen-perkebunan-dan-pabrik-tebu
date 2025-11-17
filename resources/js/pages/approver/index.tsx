@@ -1,12 +1,11 @@
-// resources/js/pages/approver/index.tsx - FIXED
-import React, { useState } from 'react';
+// resources/js/pages/approver/index.tsx - UPDATED for new route structure
+import React, { useState, useEffect } from 'react';
 import { PageProps } from '@inertiajs/core';
 import LayoutApprover from '../../components/layout-approver';
 import DashboardApprover from './dashboard-approver';
 import AttendanceApproval from './attendance-approval';
 import AttendanceHistory from './attendance-history';
 
-// User interface
 interface User {
   id: number;
   name: string;
@@ -16,18 +15,16 @@ interface User {
   company_name: string;
 }
 
-// Routes interface - FIXED: Remove attendance_detail
 interface Routes {
   logout: string;
   home: string;
   approver_index: string;
-  // Approval routes
+  dashboard_stats: string;
   pending_attendance: string;
   approve_attendance: string;
   reject_attendance: string;
   attendance_history: string;
   mandors_pending: string;
-  // Index signature for additional routes
   [key: string]: string;
 }
 
@@ -43,10 +40,53 @@ const ApproverIndex: React.FC<ApproverIndexProps> = ({
   routes,
   csrf_token
 }) => {
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const getInitialSection = (): string => {
+    if (window.location.hash) {
+      const hashSection = window.location.hash.substring(1);
+      if (['dashboard', 'approval', 'history'].includes(hashSection)) {
+        return hashSection;
+      }
+    }
+    
+    const savedSection = localStorage.getItem('approver_active_section');
+    if (savedSection && ['dashboard', 'approval', 'history'].includes(savedSection)) {
+      return savedSection;
+    }
+    
+    return 'dashboard';
+  };
+
+  const [activeSection, setActiveSection] = useState<string>(getInitialSection);
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
+    localStorage.setItem('approver_active_section', section);
+    window.history.replaceState(null, '', `#${section}`);
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hashSection = window.location.hash.substring(1);
+      if (['dashboard', 'approval', 'history'].includes(hashSection)) {
+        setActiveSection(hashSection);
+        localStorage.setItem('approver_active_section', hashSection);
+      }
+    };
+
+    if (!window.location.hash && activeSection) {
+      window.history.replaceState(null, '', `#${activeSection}`);
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [activeSection]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('approver_active_section');
+    window.location.href = routes.logout;
   };
 
   return (
@@ -60,7 +100,9 @@ const ApproverIndex: React.FC<ApproverIndexProps> = ({
       {activeSection === 'dashboard' && (
         <DashboardApprover
           onSectionChange={handleSectionChange}
-          routes={routes}
+          routes={{
+            dashboard_stats: routes.dashboard_stats
+          }}
           csrf_token={csrf_token}
         />
       )}
