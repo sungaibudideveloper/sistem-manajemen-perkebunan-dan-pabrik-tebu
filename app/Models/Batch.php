@@ -18,6 +18,7 @@ class Batch extends Model
         'plot',
         'batcharea',
         'batchdate',
+        'tanggalulangtahun',
         'lifecyclestatus',
         'previousbatchno',
         'plantinglkhno',
@@ -35,6 +36,7 @@ class Batch extends Model
 
     protected $casts = [
         'batchdate' => 'date',
+        'tanggalulangtahun' => 'date',
         'tanggalpanen' => 'date',
         'batcharea' => 'decimal:2',
         'pkp' => 'integer',
