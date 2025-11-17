@@ -29,7 +29,7 @@ class PanenTebuController extends Controller
         $nav = "Panen Tebu";
 
         $kontraktor = DB::table('kontraktor')->where('companycode', session('companycode'))->get();
-        $tabel_harga = DB::table('harga_panentebu')->where('companycode', session('companycode'))->get();
+        $tabel_harga = DB::table('hargapanentebu')->where('companycode', session('companycode'))->get();
         // dd($tabel_harga);
 
         return view('report.panen-tebu.index', compact('title', 'nav', 'kontraktor', 'tabel_harga'));
@@ -37,12 +37,14 @@ class PanenTebuController extends Controller
 
     public function proses(Request $request){
         // dd(round(2.538, 0, PHP_ROUND_HALF_UP));
-
+        // dd($request);
         $companycode = session('companycode');
         // dd($request);
         $timbangan = new Timbangan;
 
+
         $data = $timbangan->getData($companycode, $request->idkontraktor, $request->start_date, $request->end_date);
+        $tabel_harga = DB::table('hargapanentebu')->where('companycode', session('companycode'))->where('kodeharga', $request->kode_harga)->get();
         // dd($data);
 
         $viewData = [
@@ -50,7 +52,7 @@ class PanenTebuController extends Controller
                 'kontraktor' => $request->idkontraktor,
                 'startDate' => $request->start_date,
                 'endDate' => $request->end_date,
-
+                'tabelharga' => collect($tabel_harga)
             ];
 
          return view('report.panen-tebu.result', $viewData);

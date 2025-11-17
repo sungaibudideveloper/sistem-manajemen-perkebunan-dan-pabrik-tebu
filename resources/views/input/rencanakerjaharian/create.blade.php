@@ -229,34 +229,36 @@
                     </div>
 
                     <div class="flex items-end gap-2">
+                      <!-- Laki-laki -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">L</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.laki"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
+                      <!-- Perempuan -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">P</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.perempuan"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
                       <div class="flex-1">
@@ -1274,13 +1276,29 @@ function validateFormWithWorkerCard() {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
       }
+    }
+  });
 
-      if (activity) {
-        const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            errors.push(`Baris ${rowNum}: Grup material harus dipilih`);
+  rows.forEach((row, index) => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    
+    if (blok && activity) {
+      const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
+      if (hasMaterialOptions) {
+        const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+        const materialValue = materialGroupInput?.value || '';
+        
+        // Cek langsung dari Alpine component jika DOM value kosong
+        if (!materialValue) {
+          const materialPicker = row.querySelector('[x-data*="materialPicker"]');
+          if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
+            const selectedGroup = materialPicker._x_dataStack[0].selectedGroup;
+            if (!selectedGroup || !selectedGroup.herbisidagroupid) {
+              errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
+            }
+          } else {
+            errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
           }
         }
       }
@@ -1306,7 +1324,6 @@ function validateFormWithWorkerCard() {
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
     
-    // Check if activities that require vehicles have at least one vehicle assigned
     const activities = Alpine.store('activityPerRow').selected;
     Object.values(activities).forEach(activity => {
       if (activity && activity.activitycode && activity.usingvehicle === 1) {

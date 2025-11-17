@@ -231,34 +231,36 @@
                     </div>
 
                     <div class="flex items-end gap-2">
+                      <!-- Laki-laki -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">L</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.laki"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
+                      <!-- Perempuan -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">P</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.perempuan"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
                       <div class="flex-1">
@@ -899,9 +901,7 @@ function kendaraanInfoCard() {
     currentActivityCode: null,
 
     init() {
-      // Wait for activities to be registered first
       setTimeout(() => {
-        
         // Load existing kendaraan data
         if (window.existingKendaraan && Object.keys(window.existingKendaraan).length > 0) {
           for (const [activityCode, vehicles] of Object.entries(window.existingKendaraan)) {
@@ -917,12 +917,10 @@ function kendaraanInfoCard() {
                 helperName: vehicle.helper_nama || null
               };
             });
-
           }
-        } else {
-          console.log('No existing kendaraan data found');
+          console.log('Loaded existing kendaraan:', this.kendaraan);
         }
-      }, 400);
+      }, 600);
 
       this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
         this.syncKendaraanFromActivities(activities);
@@ -933,6 +931,11 @@ function kendaraanInfoCard() {
       const currentActivityCodes = Object.values(activities)
         .filter(act => act && act.activitycode && act.usingvehicle === 1)
         .map(act => act.activitycode);
+      
+      // Don't delete if no activities yet (still loading)
+      if (currentActivityCodes.length === 0 && Object.keys(activities).length === 0) {
+        return;
+      }
       
       Object.keys(this.kendaraan).forEach(activityCode => {
         if (!currentActivityCodes.includes(activityCode)) {
@@ -948,9 +951,22 @@ function kendaraanInfoCard() {
 
     openKendaraanModal() {
       const activities = Alpine.store('activityPerRow').selected;
-      const activityCodes = Object.values(activities)
+      
+      let activityCodes = Object.values(activities)
         .filter(act => act && act.activitycode && act.usingvehicle === 1)
         .map(act => act.activitycode);
+
+      if (activityCodes.length === 0) {
+        const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+        if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+          const workers = workerCardElement._x_dataStack[0].workers;
+          activityCodes = Object.keys(workers)
+            .filter(activityCode => {
+              const activity = window.activitiesData?.find(a => a.activitycode === activityCode);
+              return activity && activity.usingvehicle === 1;
+            });
+        }
+      }
 
       if (activityCodes.length === 0) {
         showToast('Pilih aktivitas yang menggunakan kendaraan terlebih dahulu', 'warning', 3000);
@@ -1397,10 +1413,12 @@ function attachUniqueValidationListeners(row, rowIndex) {
 function validateFormWithWorkerCard() {
   const errors = [];
 
+  // Validate mandor
   if (!document.querySelector('input[name="mandor_id"]').value) {
     errors.push('Silakan pilih Mandor terlebih dahulu');
   }
 
+  // Validate rows
   const rows = document.querySelectorAll('#rkh-table tbody tr.rkh-row');
   let hasCompleteRow = false;
 
@@ -1424,19 +1442,36 @@ function validateFormWithWorkerCard() {
           errors.push(`Baris ${rowNum}: Activity "${activity}" belum di-mapping jenistenagakerja`);
         }
       }
+    }
+  });
 
-      if (activity) {
-        const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
-        if (hasMaterialOptions) {
-          const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
-          if (!materialGroupInput || !materialGroupInput.value) {
-            errors.push(`Baris ${rowNum}: Grup material harus dipilih`);
+  rows.forEach((row, index) => {
+    const blok = row.querySelector('input[name$="[blok]"]').value;
+    const activity = row.querySelector('input[name$="[nama]"]').value;
+    
+    if (blok && activity) {
+      const hasMaterialOptions = window.herbisidaData?.some(item => item.activitycode === activity);
+      if (hasMaterialOptions) {
+        const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
+        const materialValue = materialGroupInput?.value || '';
+        
+        // Cek langsung dari Alpine component jika DOM value kosong
+        if (!materialValue) {
+          const materialPicker = row.querySelector('[x-data*="materialPicker"]');
+          if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
+            const selectedGroup = materialPicker._x_dataStack[0].selectedGroup;
+            if (!selectedGroup || !selectedGroup.herbisidagroupid) {
+              errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
+            }
+          } else {
+            errors.push(`Baris ${index + 1}: Grup material harus dipilih`);
           }
         }
       }
     }
   });
 
+  // Validate workers
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -1450,6 +1485,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
+  // Validate kendaraan
   const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
@@ -1464,6 +1500,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
+  // Check for duplicates
   const duplicates = Alpine.store('uniqueCombinations').getAllDuplicates();
   if (duplicates.size > 0) {
     for (const [key, duplicateInfo] of duplicates) {

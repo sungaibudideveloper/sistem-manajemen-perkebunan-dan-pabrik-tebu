@@ -267,12 +267,9 @@ class LkhGeneratorService
                 'luasrkh' => $luasArea,
                 'luashasil' => 0.00,
                 'luassisa' => $luasArea,
+                'batchno' => $activity->batchno ?? null,
                 'createdat' => now()
             ];
-            
-            if ($isPanenActivity) {
-                $plotDetail['batchno'] = $activity->batchno ?? null;
-            }
             
             LkhDetailPlot::create($plotDetail);
             $plotDetails[] = $plotDetail;

@@ -33,10 +33,16 @@ class TrashController extends Controller
 
         $data = $query->paginate($perPage);
 
+        $companies = DB::table('company')
+            ->select('companycode', 'name')
+            ->orderBy('companycode')
+            ->get();
+
         return view('pabrik.trash.index', [
             'title' => 'Trash Pabrik',
             'navbar' => 'Pabrik',
             'nav' => 'Trash',
+            'companies' => $companies,
             'data' => $data
         ]);
     }
@@ -142,16 +148,16 @@ class TrashController extends Controller
             $sogolanPct = $beratKotor > 0 ? round(($sogolan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $siwlanPct = $beratKotor > 0 ? round(($siwilan / $beratKotor) * 100, 2) : 0; // 2 desimal
             $tanahEtcRounded = round($tanahEtc, 2); // 2 desimal
-            
+
             // Calculate totals dengan 3 desimal
             $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3); // 3 desimal
             $nettoTrash = round($totalTrash - $toleransi, 3); // 3 desimal menggunakan toleransi dari request
-            
+
             // Pastikan netto trash tidak kurang dari 0
             if ($nettoTrash < 0) {
                 $nettoTrash = 0;
             }
-            
+
             // Insert trash record using DB
             DB::table('trash')->insert([
                 'suratjalanno' => $request->no_surat_jalan,
@@ -159,13 +165,13 @@ class TrashController extends Controller
                 'jenis' => $request->jenis,
                 'toleransi' => $toleransi,
                 'pucuk' => $pucukPct,
-                'daun_gulma' => $daunPct,
+                'daungulma' => $daunPct,
                 'sogolan' => $sogolanPct,
                 'siwilan' => $siwlanPct,
                 'tebumati' => $tebumatiPct,
-                'tanah_etc' => $tanahEtcRounded,
+                'tanahetc' => $tanahEtcRounded,
                 'total' => $totalTrash,
-                'netto_trash' => $nettoTrash,
+                'nettotrash' => $nettoTrash,
                 'createdby' => Auth::user()->userid,
                 'createddate' => now()->format('Y-m-d H:i:s'),
             ]);
@@ -244,7 +250,7 @@ class TrashController extends Controller
             // Calculate totals dengan 3 desimal (SAMA SEPERTI STORE)
             $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3);
             $nettoTrash = round($totalTrash - $toleransi, 3); // Menggunakan toleransi dari request
-            
+
             // Pastikan netto trash tidak kurang dari 0
             if ($nettoTrash < 0) {
                 $nettoTrash = 0;
@@ -261,13 +267,13 @@ class TrashController extends Controller
                     'jenis' => $request->jenis,
                     'toleransi' => $toleransi,
                     'pucuk' => $pucukPct,
-                    'daun_gulma' => $daunPct,
+                    'daungulma' => $daunPct,
                     'sogolan' => $sogolanPct,
                     'siwilan' => $siwlanPct,
                     'tebumati' => $tebumatiPct,
-                    'tanah_etc' => $tanahEtcRounded,
+                    'tanahetc' => $tanahEtcRounded,
                     'total' => $totalTrash,
-                    'netto_trash' => $nettoTrash,
+                    'nettotrash' => $nettoTrash,
                     // Note: createdby dan createddate tidak diupdate karena ini adalah data audit
                 ]);
 
@@ -324,5 +330,161 @@ class TrashController extends Controller
         $cleaned = str_replace([' ', ','], ['', '.'], $value);
 
         return (float) $cleaned;
+    }
+
+    public function generateReport(Request $request)
+    {
+        try {
+            // Validasi input
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+                'report_type' => 'required|in:harian,mingguan',
+                'company' => 'required'
+            ]);
+
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+            $reportType = $request->report_type;
+            $company = $request->company;
+
+            // Query dengan JOIN untuk mendapatkan data lengkap
+            $query = DB::table('trash as t')
+                ->select([
+                    't.suratjalanno',
+                    't.companycode',
+                    't.jenis',
+                    't.createddate',
+                    't.pucuk',
+                    't.daungulma',
+                    't.sogolan',
+                    't.siwilan',
+                    't.tebumati',
+                    't.tanahetc',
+                    't.total',
+                    't.toleransi',
+                    't.nettotrash',
+                    'sj.plot',
+                    'sj.varietas',
+                    'sj.kategori',
+                    'sj.nomorpolisi',
+                    'k.namakontraktor',
+                    'sk.namasubkontraktor'
+                ])
+                ->leftJoin('suratjalanpos as sj', 't.suratjalanno', '=', 'sj.suratjalanno')
+                ->leftJoin('kontraktor as k', 'sj.namakontraktor', '=', 'k.id')
+                ->leftJoin('subkontraktor as sk', 'sj.namasubkontraktor', '=', 'sk.id')
+                ->whereBetween(DB::raw('DATE(t.createddate)'), [$startDate, $endDate]);
+
+            // Apply company filter properly
+            if ($company !== 'all' && !empty($company)) {
+                if (is_array($company)) {
+                    // If multiple companies selected, filter by those companies
+                    $query->whereIn('t.companycode', $company);
+                } else {
+                    // If single company selected, use LIKE for partial match
+                    $query->where('t.companycode', 'LIKE', $company . '%');
+                }
+            }
+
+            $data = $query->orderBy('t.createddate')->get()->toArray();
+
+            // Convert Collection to simple array structure with JOIN data
+            $simpleData = [];
+            foreach ($data as $item) {
+                $simpleData[] = [
+                    'suratjalanno' => $item->suratjalanno ?? '',
+                    'companycode' => $item->companycode ?? '',
+                    'jenis' => $item->jenis ?? '',
+                    'createddate' => $item->createddate ?? '',
+                    'pucuk' => floatval($item->pucuk ?? 0),
+                    'daungulma' => floatval($item->daun_gulma ?? 0),
+                    'sogolan' => floatval($item->sogolan ?? 0),
+                    'siwilan' => floatval($item->siwilan ?? 0),
+                    'tebumati' => floatval($item->tebumati ?? 0),
+                    'tanahetc' => floatval($item->tanah_etc ?? 0),
+                    'total' => floatval($item->total ?? 0),
+                    'toleransi' => floatval($item->toleransi ?? 0),
+                    'nettotrash' => floatval($item->netto_trash ?? 0),
+                    // Data dari JOIN
+                    'plot' => $item->plot ?? '',
+                    'varietas' => $item->varietas ?? '',
+                    'kategori' => $item->kategori ?? '',
+                    'nomorpolisi' => $item->nomorpolisi ?? '',
+                    'namakontraktor' => $item->namakontraktor ?? '',
+                    'namasubkontraktor' => $item->namasubkontraktor ?? ''
+                ];
+            }
+
+            // Simple grouping
+            $dataGrouped = [];
+            
+            // Fix: Handle both array and string company values
+            $isAllCompanies = ($company === 'all') || (is_array($company) && in_array('all', $company)) || (is_array($company) && count($company) > 1);
+            
+            if ($reportType === 'harian' && $isAllCompanies) {
+                foreach ($simpleData as $item) {
+                    $date = date('Y-m-d', strtotime($item['createddate']));
+                    if (!isset($dataGrouped[$date])) {
+                        $dataGrouped[$date] = [];
+                    }
+                    $dataGrouped[$date][] = $item;
+                }
+            } else {
+                foreach ($simpleData as $item) {
+                    $jenis = $item['jenis'];
+                    $companyCode = $item['companycode'];
+                    
+                    if (!isset($dataGrouped[$jenis])) {
+                        $dataGrouped[$jenis] = [];
+                    }
+                    if (!isset($dataGrouped[$jenis][$companyCode])) {
+                        $dataGrouped[$jenis][$companyCode] = [];
+                    }
+                    $dataGrouped[$jenis][$companyCode][] = $item;
+                }
+            }
+
+            // Debug: uncomment baris ini kalau mau lihat data
+            // dd($dataGrouped);
+
+            // Get actual companies that appear in the filtered data
+            $actualCompanies = [];
+            if ($reportType === 'harian' && $isAllCompanies) {
+                // For harian, collect all companies from all dates
+                foreach ($dataGrouped as $dateItems) {
+                    foreach ($dateItems as $item) {
+                        if (!in_array($item['companycode'], $actualCompanies)) {
+                            $actualCompanies[] = $item['companycode'];
+                        }
+                    }
+                }
+            } else {
+                // For mingguan, collect companies from grouped data
+                foreach ($dataGrouped as $jenisData) {
+                    foreach ($jenisData as $companyCode => $items) {
+                        if (!in_array($companyCode, $actualCompanies)) {
+                            $actualCompanies[] = $companyCode;
+                        }
+                    }
+                }
+            }
+
+            // Sort companies for consistent display
+            sort($actualCompanies);
+
+            return view('pabrik.trash.report', [
+                'dataGrouped' => $dataGrouped,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'reportType' => $reportType,
+                'company' => $company,
+                'actualCompanies' => $actualCompanies  // Add actual companies that appear in data
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 }

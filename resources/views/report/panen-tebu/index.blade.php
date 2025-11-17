@@ -58,6 +58,42 @@
                     @enderror
                 </div>
 
+                <!-- Kode Harga -->
+                <div class="space-y-2">
+                    <label for="kode_harga" class="block text-sm font-medium text-gray-700">
+                        Kode Harga <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <select id="kode_harga" 
+                                    name="kode_harga" 
+                                    required
+                                    onchange="toggleInfoButton()"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900">
+                                <option value="">Pilih Kode Harga</option>
+                                @foreach($tabel_harga as $harga)
+                                <option value="{{$harga->kodeharga}}" {{ old('kode_harga') == $harga->kodeharga ? 'selected' : '' }}>
+                                    {{$harga->kodeharga}}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="button" 
+                                id="info_detail_btn"
+                                onclick="showHargaDetail()" 
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Info Detail
+                        </button>
+                    </div>
+                    @error('kode_harga')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Range Tanggal -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
@@ -123,7 +159,68 @@
         </div>
     </div>
 
+    <!-- Modal Info Detail Harga -->
+    <div id="harga_detail_modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeHargaModal()"></div>
+            
+            <!-- Modal panel -->
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <!-- Modal header -->
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg leading-6 font-bold text-gray-900 mb-1">
+                                Harga Panen Tebu Giling (<span id="modal_company_code"></span>)
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-1">
+                                Periode Giling Tahun <span id="modal_periode"></span>
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                No Kode : <span id="modal_kode_harga"></span>
+                            </p>
+                        </div>
+                        <button type="button" onclick="closeHargaModal()" class="rounded-md bg-white text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="sr-only">Close</span>
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Table content -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Manual<br>Rp /kg</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">GL Kebun<br>Rp /kg</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">GL Kontraktor<br>Rp /kg</th>
+                                </tr>
+                            </thead>
+                            <tbody id="harga_table_body" class="bg-white divide-y divide-gray-200">
+                                <!-- Content will be filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" onclick="closeHargaModal()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Data harga untuk modal (akan diisi oleh Blade)
+        const hargaData = @json($tabel_harga);
+
         // Searchable Select Functions
         function toggleDropdown() {
             const dropdown = document.getElementById('kontraktor_dropdown');
@@ -167,6 +264,112 @@
             }
         }
 
+        // Toggle Info Detail button
+        function toggleInfoButton() {
+            const select = document.getElementById('kode_harga');
+            const button = document.getElementById('info_detail_btn');
+            
+            if (select.value) {
+                button.disabled = false;
+            } else {
+                button.disabled = true;
+            }
+        }
+
+        // Show Harga Detail Modal
+        function showHargaDetail() {
+            const selectedKode = document.getElementById('kode_harga').value;
+            if (!selectedKode) return;
+
+            const selectedHarga = hargaData.find(item => item.kodeharga === selectedKode);
+            if (!selectedHarga) return;
+
+            // Update modal title
+            document.getElementById('modal_kode_harga').textContent = selectedKode;
+            document.getElementById('modal_periode').textContent = selectedHarga.periode;
+            document.getElementById('modal_company_code').textContent = selectedHarga.companycode;
+
+            // Build table content
+            const tableBody = document.getElementById('harga_table_body');
+            tableBody.innerHTML = `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebang</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_tebang)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_tebang)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_tebang)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Muat</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_muat)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_muat)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_muat)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Angkutan</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_angkutan)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_angkutan)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_angkutan)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Fee Kontraktor</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_feekont)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_feekont)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_feekont)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Non Premi</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_nonpremi)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_nonpremi)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_nonpremi)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">BSM</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_bsm)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_bsm)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_bsm)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebu Sulit</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_tebusulit)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_tebusulit)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_tebusulit)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Premi Ton</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_premiton)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_premiton)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_premiton)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Extra Fooding</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.extra_fooding)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebu Tidak Seset</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.tebu_tdk_seset)}</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Langsir</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.langsir)}</td>
+                </tr>
+            `;
+
+            // Show modal
+            document.getElementById('harga_detail_modal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        // Close Harga Detail Modal
+        function closeHargaModal() {
+            document.getElementById('harga_detail_modal').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Format number with thousands separator
+        function formatNumber(num) {
+            return parseInt(num || 0).toLocaleString('id-ID');
+        }
+
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('kontraktor_dropdown');
@@ -191,6 +394,9 @@
                     }
                 }
             }
+
+            // Initialize info button state
+            toggleInfoButton();
 
             // Existing date validation code
             const startDateInput = document.getElementById('start_date');
@@ -219,17 +425,21 @@
         // Enhanced form validation
         document.querySelector('form').addEventListener('submit', function(e) {
             const namaKontraktor = document.getElementById('nama_kontraktor').value;
+            const kodeHarga = document.getElementById('kode_harga').value;
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
             const searchInput = document.getElementById('kontraktor_search');
 
-            if (!namaKontraktor || !startDate || !endDate) {
+            if (!namaKontraktor || !kodeHarga || !startDate || !endDate) {
                 e.preventDefault();
                 
-                // Highlight empty kontraktor field
+                // Highlight empty fields
                 if (!namaKontraktor) {
                     searchInput.classList.add('border-red-500');
                     searchInput.focus();
+                }
+                if (!kodeHarga) {
+                    document.getElementById('kode_harga').classList.add('border-red-500');
                 }
                 
                 alert('Mohon lengkapi semua field yang wajib diisi');
@@ -254,6 +464,13 @@
                 Generating...
             `;
         });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeHargaModal();
+            }
+        });
     </script>
 
     <style>
@@ -267,7 +484,7 @@
         }
         
         /* Focus states for inputs */
-        input:focus {
+        input:focus, select:focus {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
@@ -319,7 +536,7 @@
             background: #a8a8a8;
         }
         
-        /* Error state for search input */
+        /* Error state for inputs */
         .border-red-500 {
             border-color: #ef4444 !important;
         }
@@ -327,6 +544,37 @@
         /* Ensure dropdown appears above other elements */
         .relative {
             position: relative;
+        }
+
+        /* Modal animation */
+        .fixed {
+            backdrop-filter: blur(4px);
+        }
+
+        /* Table styling improvements */
+        table th {
+            position: sticky;
+            top: 0;
+            background-color: #f9fafb;
+        }
+
+        /* Scroll styling for modal table */
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
     </style>
 

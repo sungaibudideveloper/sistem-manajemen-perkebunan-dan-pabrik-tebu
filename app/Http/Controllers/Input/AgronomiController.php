@@ -3,15 +3,17 @@
 namespace App\Http\Controllers\Input;
 
 use Carbon\Carbon;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
-use App\Http\Controllers\Controller;
-use App\Models\Notification;
+use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
+use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
 class AgronomiController extends Controller
 {
@@ -511,9 +513,9 @@ class AgronomiController extends Controller
                 $join->on('agrohdr.blok', '=', 'blok.blok')
                     ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('agrohdr.plot', '=', 'plot.plot')
-                    ->whereColumn('agrohdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('plotting', function ($join) {
+                $join->on('agrohdr.plot', '=', 'plotting.plot')
+                    ->whereColumn('agrohdr.companycode', '=', 'plotting.companycode');
             })
             ->where('agrolst.companycode', session('companycode'))
             ->where('agrohdr.companycode', session('companycode'))
@@ -524,14 +526,13 @@ class AgronomiController extends Controller
                 'agrohdr.varietas',
                 'agrohdr.kat',
                 'agrohdr.tanggaltanam',
-                'company.name as compName',
+                'company.nama as compName',
                 'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
-                'plot.jaraktanam',
+                'plotting.plot as plotName',
+                'plotting.luasarea',
+                'plotting.jaraktanam',
             )
             ->orderBy('agrohdr.tanggalpengamatan', 'desc');
-
 
         if ($startDate) {
             $query->whereDate('agrohdr.tanggalpengamatan', '>=', $startDate);
@@ -541,128 +542,154 @@ class AgronomiController extends Controller
         }
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('agro_lst.no_sample', 'like', "%{$search}%")
-                    ->orWhere('plotting.kd_plot', 'like', "%{$search}%")
-                    ->orWhere('agro_hdr.varietas', 'like', "%{$search}%")
-                    ->orWhere('agro_hdr.kat', 'like', "%{$search}%");
+                $q->where('agrolst.nosample', 'like', "%{$search}%")
+                    ->orWhere('plotting.plot', 'like', "%{$search}%")
+                    ->orWhere('agrohdr.varietas', 'like', "%{$search}%")
+                    ->orWhere('agrohdr.kat', 'like', "%{$search}%");
             });
         }
 
         $now = Carbon::now();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+        // Tentukan nama file
+        if ($startDate && $endDate) {
+            $filename = "AgronomiReport_{$startDate}_sd_{$endDate}.xlsx";
+        } else {
+            $filename = "AgronomiReport.xlsx";
+        }
 
-        $sheet->setCellValue('A1', 'No. Sample');
-        $sheet->setCellValue('B1', 'Kebun');
-        $sheet->setCellValue('C1', 'Blok');
-        $sheet->setCellValue('D1', 'Plot');
-        $sheet->setCellValue('E1', 'Luas');
-        $sheet->setCellValue('F1', 'Varietas');
-        $sheet->setCellValue('G1', 'Kategori');
-        $sheet->setCellValue('H1', 'Tanggal Tanam');
-        $sheet->setCellValue('I1', 'Umur Tanam');
-        $sheet->setCellValue('J1', 'Jarak Tanam');
-        $sheet->setCellValue('K1', 'Tanggal Pengamatan');
-        $sheet->setCellValue('L1', 'Bulan Pengamatan');
-        $sheet->setCellValue('M1', 'No. Urut');
-        $sheet->setCellValue('N1', 'Jumlah Batang');
-        $sheet->setCellValue('O1', 'Panjang GAP');
-        $sheet->setCellValue('P1', '%GAP');
-        $sheet->setCellValue('Q1', '%Germinasi');
-        $sheet->setCellValue('R1', 'pH Tanah');
-        $sheet->setCellValue('S1', 'Populasi');
-        $sheet->setCellValue('T1', 'Kotak Gulma');
-        $sheet->setCellValue('U1', '%Penutupan Gulma');
-        $sheet->setCellValue('V1', 'Tinggi Primer');
-        $sheet->setCellValue('W1', 'Tinggi Sekunder');
-        $sheet->setCellValue('X1', 'Tinggi Tersier');
-        $sheet->setCellValue('Y1', 'Tinggi Kuarter');
-        $sheet->setCellValue('Z1', 'Diameter Primer');
-        $sheet->setCellValue('AA1', 'Diameter Sekunder');
-        $sheet->setCellValue('AB1', 'Diameter Tersier');
-        $sheet->setCellValue('AC1', 'Diameter Kuarter');
+        // Buat direktori temp jika belum ada
+        $tempDir = storage_path('app/temp');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
 
-        $sheet->getStyle('A1:AC1')->getFont()->setBold(true);
-        $sheet->freezePane('A2');
+        $tempFile = $tempDir . '/' . $filename;
 
-        $row = 2;
-        $processedCount = 0;
+        // Buat writer dengan Spout dan set temp folder
+        $writer = WriterEntityFactory::createXLSXWriter();
 
-        // Gunakan chunk() biasa karena tidak ada kolom id
-        $query->chunk(500, function ($agronomiChunk) use ($sheet, &$row, $now, &$processedCount) {
+        // SET TEMP FOLDER - INI YANG PENTING!
+        $writer->setTempFolder($tempDir);
+
+        $writer->openToFile($tempFile);
+
+        // Style untuk header (bold)
+        $headerStyle = (new StyleBuilder())
+            ->setFontBold()
+            ->build();
+
+        // Buat header row
+        $headerCells = [
+            WriterEntityFactory::createCell('No. Sample'),
+            WriterEntityFactory::createCell('Kebun'),
+            WriterEntityFactory::createCell('Blok'),
+            WriterEntityFactory::createCell('Plot'),
+            WriterEntityFactory::createCell('Luas'),
+            WriterEntityFactory::createCell('Varietas'),
+            WriterEntityFactory::createCell('Kategori'),
+            WriterEntityFactory::createCell('Tanggal Tanam'),
+            WriterEntityFactory::createCell('Umur Tanam'),
+            WriterEntityFactory::createCell('Jarak Tanam'),
+            WriterEntityFactory::createCell('Tanggal Pengamatan'),
+            WriterEntityFactory::createCell('Bulan Pengamatan'),
+            WriterEntityFactory::createCell('No. Urut'),
+            WriterEntityFactory::createCell('Jumlah Batang'),
+            WriterEntityFactory::createCell('Panjang GAP'),
+            WriterEntityFactory::createCell('%GAP'),
+            WriterEntityFactory::createCell('%Germinasi'),
+            WriterEntityFactory::createCell('pH Tanah'),
+            WriterEntityFactory::createCell('Populasi'),
+            WriterEntityFactory::createCell('Kotak Gulma'),
+            WriterEntityFactory::createCell('%Penutupan Gulma'),
+            WriterEntityFactory::createCell('Tinggi Primer'),
+            WriterEntityFactory::createCell('Tinggi Sekunder'),
+            WriterEntityFactory::createCell('Tinggi Tersier'),
+            WriterEntityFactory::createCell('Tinggi Kuarter'),
+            WriterEntityFactory::createCell('Diameter Primer'),
+            WriterEntityFactory::createCell('Diameter Sekunder'),
+            WriterEntityFactory::createCell('Diameter Tersier'),
+            WriterEntityFactory::createCell('Diameter Kuarter'),
+        ];
+
+        $headerRow = WriterEntityFactory::createRow($headerCells, $headerStyle);
+        $writer->addRow($headerRow);
+
+        // Proses data dalam chunk untuk efisiensi memori
+        $query->chunk(1000, function ($agronomiChunk) use ($writer, $now) {
+            $rows = [];
+
             foreach ($agronomiChunk as $list) {
-
                 $tanggaltanam = Carbon::parse($list->tanggaltanam);
                 $umurTanam = $tanggaltanam->diffInMonths($now);
 
                 $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
                 $bulanPengamatan = $tanggalpengamatan->format('F');
 
-                $sheet->setCellValue('A' . $row, $list->nosample);
-                $sheet->setCellValue('B' . $row, $list->compName);
-                $sheet->setCellValue('C' . $row, $list->blokName);
-                $sheet->setCellValue('D' . $row, $list->plotName);
-                $sheet->setCellValue('E' . $row, $list->luasarea);
-                $sheet->setCellValue('F' . $row, $list->varietas);
-                $sheet->setCellValue('G' . $row, $list->kat);
-                $sheet->setCellValue('H' . $row, $tanggaltanam->format('Y-m-d'));
-                $sheet->setCellValue('I' . $row, round($umurTanam) . ' Bulan');
-                $sheet->setCellValue('J' . $row, $list->jaraktanam);
-                $sheet->setCellValue('K' . $row, $list->tanggalpengamatan);
-                $sheet->setCellValue('L' . $row, $bulanPengamatan);
-                $sheet->setCellValue('M' . $row, $list->nourut);
-                $sheet->setCellValue('N' . $row, $list->jumlahbatang);
-                $sheet->setCellValue('O' . $row, $list->pan_gap);
-                $sheet->setCellValue('P' . $row, $list->per_gap);
-                $sheet->setCellValue('Q' . $row, $list->per_germinasi);
-                $sheet->setCellValue('R' . $row, $list->ph_tanah);
-                $sheet->setCellValue('S' . $row, $list->populasi);
-                $sheet->setCellValue('T' . $row, $list->ktk_gulma);
-                $sheet->setCellValue('U' . $row, $list->per_gulma);
-                $sheet->setCellValue('V' . $row, $list->t_primer);
-                $sheet->setCellValue('W' . $row, $list->t_sekunder);
-                $sheet->setCellValue('X' . $row, $list->t_tersier);
-                $sheet->setCellValue('Y' . $row, $list->t_kuarter);
-                $sheet->setCellValue('Z' . $row, $list->d_primer);
-                $sheet->setCellValue('AA' . $row, $list->d_sekunder);
-                $sheet->setCellValue('AB' . $row, $list->d_tersier);
-                $sheet->setCellValue('AC' . $row, $list->d_kuarter);
+                // Format persentase (konversi ke desimal untuk Excel)
+                // $perGap = is_numeric($list->per_gap) ? $list->per_gap / 100 : $list->per_gap;
+                // $perGerminasi = is_numeric($list->per_germinasi) ? $list->per_germinasi / 100 : $list->per_germinasi;
+                // $perGulma = is_numeric($list->per_gulma) ? $list->per_gulma / 100 : $list->per_gulma;
 
-                $sheet->getStyle('P' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $decimalStyle = (new StyleBuilder())
+                    ->setFormat('0.00')
+                    ->build();
 
-                $sheet->getStyle('Q' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $cells = [
+                    WriterEntityFactory::createCell($list->nosample),
+                    WriterEntityFactory::createCell($list->compName),
+                    WriterEntityFactory::createCell($list->blokName),
+                    WriterEntityFactory::createCell($list->plotName),
+                    WriterEntityFactory::createCell(round((float) $list->luasarea, 10)),
+                    WriterEntityFactory::createCell($list->varietas),
+                    WriterEntityFactory::createCell($list->kat),
+                    WriterEntityFactory::createCell($tanggaltanam->format('Y-m-d')),
+                    WriterEntityFactory::createCell(round($umurTanam) . ' Bulan'),
+                    WriterEntityFactory::createCell(round((float) $list->jaraktanam, 10)),
+                    WriterEntityFactory::createCell($list->tanggalpengamatan),
+                    WriterEntityFactory::createCell($bulanPengamatan),
+                    WriterEntityFactory::createCell($list->nourut),
+                    WriterEntityFactory::createCell($list->jumlahbatang),
+                    WriterEntityFactory::createCell($list->pan_gap),
 
-                $sheet->getStyle('U' . $row)
-                    ->getNumberFormat()
-                    ->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                    // Gunakan value asli 0.8 dengan style persentase
+                    WriterEntityFactory::createCell(round((float) $list->per_gap, 10), $decimalStyle),
+                    WriterEntityFactory::createCell(round((float) $list->per_germinasi, 10), $decimalStyle),
 
-                $row++;
-                $processedCount++;
+                    WriterEntityFactory::createCell(round((float) $list->ph_tanah, 10)),
+                    WriterEntityFactory::createCell(round((float) $list->populasi, 10)),
+                    WriterEntityFactory::createCell($list->ktk_gulma),
+
+                    // Untuk per_gulma juga gunakan style yang sama
+                    WriterEntityFactory::createCell(round((float) $list->per_gulma, 10), $decimalStyle),
+
+                    WriterEntityFactory::createCell($list->t_primer),
+                    WriterEntityFactory::createCell($list->t_sekunder),
+                    WriterEntityFactory::createCell($list->t_tersier),
+                    WriterEntityFactory::createCell($list->t_kuarter),
+                    WriterEntityFactory::createCell(round((float) $list->d_primer, 1), (new StyleBuilder())->setFormat('0.0')->build()),
+                    WriterEntityFactory::createCell(round((float) $list->d_sekunder, 2), $decimalStyle),
+                    WriterEntityFactory::createCell(round((float) $list->d_tersier, 3), (new StyleBuilder())->setFormat('0.000')->build()),
+                    WriterEntityFactory::createCell(round((float) $list->d_kuarter, 4), (new StyleBuilder())->setFormat('0.0000')->build()),
+                ];
+
+                $rows[] = WriterEntityFactory::createRow($cells);
             }
+
+            // Tulis semua rows dalam chunk sekaligus
+            $writer->addRows($rows);
+
+            // Bebaskan memori
+            unset($rows);
             gc_collect_cycles();
         });
 
-        $writer = new Xlsx($spreadsheet);
-        if ($startDate && $endDate) {
-            $filename = "AgronomiReport_{$startDate}_sd_{$endDate}.xlsx";
-        } else {
-            $filename = "AgronomiReport.xlsx";
-        }
-        return response()->stream(
-            function () use ($writer) {
-                $writer->save('php://output');
-            },
-            200,
-            [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment;filename="' . $filename . '"',
-                'Cache-Control' => 'max-age=0',
-            ]
-        );
+        $writer->close();
+
+        // Return file sebagai download dan hapus setelah dikirim
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ])->deleteFileAfterSend(true);
     }
 }
