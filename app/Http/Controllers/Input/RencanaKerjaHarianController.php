@@ -3950,35 +3950,39 @@ public function loadAbsenByDate(Request $request)
     private function getAlatData($companycode, $date)
     {
         return DB::table('rkhhdr as h')
+            ->join('rkhlstkendaraan as rk', function($join) {
+                $join->on('h.rkhno', '=', 'rk.rkhno')
+                    ->on('h.companycode', '=', 'rk.companycode');
+            })
             ->join('rkhlst as l', function($join) {
                 $join->on('h.rkhno', '=', 'l.rkhno')
-                    ->on('h.companycode', '=', 'l.companycode');
+                    ->on('h.companycode', '=', 'l.companycode')
+                    ->on('rk.activitycode', '=', 'l.activitycode'); // Match activity
             })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
             ->leftJoin('tenagakerja as operator', function($join) use ($companycode) {
-                $join->on('l.operatorid', '=', 'operator.tenagakerjaid')
+                $join->on('rk.operatorid', '=', 'operator.tenagakerjaid')
                     ->where('operator.companycode', '=', $companycode);
             })
             ->leftJoin('tenagakerja as helper', function($join) use ($companycode) {
-                $join->on('l.helperid', '=', 'helper.tenagakerjaid')
+                $join->on('rk.helperid', '=', 'helper.tenagakerjaid')
                     ->where('helper.companycode', '=', $companycode);
             })
             ->leftJoin('kendaraan as k', function($join) use ($companycode) {
-                $join->on('l.operatorid', '=', 'k.idtenagakerja')
+                $join->on('rk.nokendaraan', '=', 'k.nokendaraan')
                     ->where('k.companycode', '=', $companycode)
                     ->where('k.isactive', '=', 1);
             })
             ->where('h.companycode', $companycode)
             ->whereDate('h.rkhdate', $date)
-            ->where('l.usingvehicle', 1)
             ->select([
-                'l.rkhno',
+                'h.rkhno',
                 'l.blok',
                 'l.plot',
                 'l.luasarea',
-                'l.operatorid',
-                'l.helperid',
+                'rk.operatorid',
+                'rk.helperid',
                 'u.name as mandor_nama',
                 'a.activityname',
                 'operator.nama as operator_nama',

@@ -229,34 +229,36 @@
                     </div>
 
                     <div class="flex items-end gap-2">
+                      <!-- Laki-laki -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">L</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.laki"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
+                      <!-- Perempuan -->
                       <div class="flex-1">
                         <label class="text-[10px] text-gray-600 block mb-1">P</label>
-                        <select
+                        <input
+                          type="number"
                           x-model="worker.perempuan"
-                          @change="updateWorkerTotal(activityCode)"
-                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 bg-white"
+                          @input="updateWorkerTotal(activityCode)"
+                          oninput="if(this.value.length > 3) this.value = this.value.slice(0,3);"
+                          min="0"
+                          max="999"
+                          placeholder="-"
+                          class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           required
                         >
-                          <option value="">-</option>
-                          @for ($i = 0; $i <= 50; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                          @endfor
-                        </select>
                       </div>
 
                       <div class="flex-1">
