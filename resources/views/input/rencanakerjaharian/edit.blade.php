@@ -901,9 +901,7 @@ function kendaraanInfoCard() {
     currentActivityCode: null,
 
     init() {
-      // Wait for activities to be registered first
       setTimeout(() => {
-        
         // Load existing kendaraan data
         if (window.existingKendaraan && Object.keys(window.existingKendaraan).length > 0) {
           for (const [activityCode, vehicles] of Object.entries(window.existingKendaraan)) {
@@ -919,12 +917,10 @@ function kendaraanInfoCard() {
                 helperName: vehicle.helper_nama || null
               };
             });
-
           }
-        } else {
-          console.log('No existing kendaraan data found');
+          console.log('Loaded existing kendaraan:', this.kendaraan);
         }
-      }, 400);
+      }, 600);
 
       this.$watch('Alpine.store("activityPerRow").selected', (activities) => {
         this.syncKendaraanFromActivities(activities);
@@ -935,6 +931,11 @@ function kendaraanInfoCard() {
       const currentActivityCodes = Object.values(activities)
         .filter(act => act && act.activitycode && act.usingvehicle === 1)
         .map(act => act.activitycode);
+      
+      // Don't delete if no activities yet (still loading)
+      if (currentActivityCodes.length === 0 && Object.keys(activities).length === 0) {
+        return;
+      }
       
       Object.keys(this.kendaraan).forEach(activityCode => {
         if (!currentActivityCodes.includes(activityCode)) {
@@ -950,9 +951,22 @@ function kendaraanInfoCard() {
 
     openKendaraanModal() {
       const activities = Alpine.store('activityPerRow').selected;
-      const activityCodes = Object.values(activities)
+      
+      let activityCodes = Object.values(activities)
         .filter(act => act && act.activitycode && act.usingvehicle === 1)
         .map(act => act.activitycode);
+
+      if (activityCodes.length === 0) {
+        const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
+        if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
+          const workers = workerCardElement._x_dataStack[0].workers;
+          activityCodes = Object.keys(workers)
+            .filter(activityCode => {
+              const activity = window.activitiesData?.find(a => a.activitycode === activityCode);
+              return activity && activity.usingvehicle === 1;
+            });
+        }
+      }
 
       if (activityCodes.length === 0) {
         showToast('Pilih aktivitas yang menggunakan kendaraan terlebih dahulu', 'warning', 3000);
