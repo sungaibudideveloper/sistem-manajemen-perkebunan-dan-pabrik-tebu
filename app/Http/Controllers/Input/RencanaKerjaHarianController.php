@@ -667,6 +667,8 @@ class RencanaKerjaHarianController extends Controller
 
                 $kontraktorSummary = $this->getKontraktorSummaryForLkh($companycode, $lkhno);
                 $subkontraktorDetail = $this->getSubkontraktorDetailForLkh($companycode, $lkhno);
+                
+                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
 
                 return view('input.rencanakerjaharian.lkh-report-panen', [
                     'title' => 'Laporan Kegiatan Harian (LKH) - Panen',
@@ -674,6 +676,7 @@ class RencanaKerjaHarianController extends Controller
                     'nav' => 'Rencana Kerja Harian',
                     'lkhData' => $lkhData,
                     'lkhPanenDetails' => $lkhPanenDetails,
+                    'lkhWorkerDetails' => $lkhWorkerDetails,
                     'approvals' => $approvals,
                     'kontraktorSummary' => $kontraktorSummary,
                     'subkontraktorDetail' => $subkontraktorDetail 
