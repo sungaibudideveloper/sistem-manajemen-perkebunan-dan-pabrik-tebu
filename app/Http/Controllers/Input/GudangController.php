@@ -226,7 +226,7 @@ class GudangController extends Controller
         ]);
 //172.17.1.39
         $companyinv = company::where('companycode', session('companycode'))->first();
-        $response = Http::withOptions([
+        $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
         ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
@@ -426,7 +426,7 @@ class GudangController extends Controller
 
             // API Call
             if($details->whereNotNull('nouse')->count() < 1) {  
-                $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
+                $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
                     ->asJson()
                     ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
                         'connection' => 'TESTING',
