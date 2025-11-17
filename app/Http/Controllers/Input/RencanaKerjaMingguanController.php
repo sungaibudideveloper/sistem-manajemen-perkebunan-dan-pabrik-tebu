@@ -259,6 +259,9 @@ class RencanaKerjaMingguanController extends Controller
                 'a.activitycode',
                 'act.activityname',
                 'b.totalestimasi',
+                'b.blok',
+                'b.plot',
+                'b.totalluasactual',
                 DB::raw('SUM(d.luashasil) AS hasil'),
                 DB::raw('b.totalestimasi - SUM(d.luashasil) AS sisa')
             )
@@ -270,7 +273,10 @@ class RencanaKerjaMingguanController extends Controller
                 'a.enddate',
                 'a.activitycode',
                 'act.activityname',
-                'b.totalestimasi'
+                'b.totalestimasi',
+                'b.blok',
+                'b.plot',
+                'b.totalluasactual'
             )
             ->get();
 
