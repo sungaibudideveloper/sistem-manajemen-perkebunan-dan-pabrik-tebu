@@ -163,18 +163,20 @@
             <div class="space-y-3">
                 @foreach($pendingRKH as $rkh)
                 <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
-                    <!-- Card Header - More Compact -->
+                    <!-- Card Header -->
                     <div class="bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-2.5 border-b">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-3 flex-1">
                                 <input type="checkbox" 
-                                       value="{{ $rkh->rkhno }}"
-                                       @change="toggleRkhSelection('{{ $rkh->rkhno }}')"
-                                       :checked="selectedRKHs.includes('{{ $rkh->rkhno }}')"
-                                       class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                                    value="{{ $rkh->rkhno }}"
+                                    @change="toggleRkhSelection('{{ $rkh->rkhno }}')"
+                                    :checked="selectedRKHs.includes('{{ $rkh->rkhno }}')"
+                                    class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                                 <div class="flex-1">
+                                    {{-- ✅ FIXED: target="_blank" --}}
                                     <a href="{{ route('input.rencanakerjaharian.show', $rkh->rkhno) }}" 
-                                       class="text-base font-bold text-emerald-700 hover:text-emerald-800">
+                                    target="_blank"
+                                    class="text-base font-bold text-emerald-700 hover:text-emerald-800">
                                         {{ $rkh->rkhno }}
                                     </a>
                                     <p class="text-xs text-gray-600">
@@ -188,22 +190,32 @@
                         </div>
                     </div>
 
-                    <!-- Card Body - More Compact -->
+                    <!-- Card Body -->
                     <div class="px-4 py-2.5 space-y-1.5">
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                            <span class="text-gray-600 mr-1">Mandor:</span>
-                            <span class="font-medium text-gray-900">{{ $rkh->mandor_nama ?? '-' }}</span>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span class="text-gray-600 mr-1">Mandor:</span>
+                                <span class="font-medium text-gray-900">{{ $rkh->mandor_nama ?? '-' }}</span>
+                            </div>
+                            
+                            <div class="text-xs text-gray-600 flex items-center space-x-3">
+                                <span>Kendaraan: <span class="font-medium">{{ $rkh->has_kendaraan ? 'Ya' : 'Tidak' }}</span></span>
+                                <span>Material: <span class="font-medium">{{ $rkh->has_material ? 'Ya' : 'Tidak' }}</span></span>
+                            </div>
                         </div>
                         
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        {{-- Activity list --}}
+                        <div class="flex items-start text-sm">
+                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
-                            <span class="text-gray-600 mr-1">Activity:</span>
-                            <span class="font-medium text-gray-900 text-xs">{{ $rkh->activity_group_name ?? '-' }}</span>
+                            <div class="flex-1">
+                                <span class="text-gray-600">Activities:</span>
+                                <span class="font-medium text-gray-900 text-xs block mt-0.5">{{ $rkh->activities_list }}</span>
+                            </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 pt-1">
@@ -313,18 +325,20 @@
             <div class="space-y-3">
                 @foreach($pendingLKH as $lkh)
                 <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
-                    <!-- Card Header - More Compact -->
+                    <!-- Card Header -->
                     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2.5 border-b">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-3 flex-1">
                                 <input type="checkbox" 
-                                       value="{{ $lkh->lkhno }}"
-                                       @change="toggleLkhSelection('{{ $lkh->lkhno }}')"
-                                       :checked="selectedLKHs.includes('{{ $lkh->lkhno }}')"
-                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    value="{{ $lkh->lkhno }}"
+                                    @change="toggleLkhSelection('{{ $lkh->lkhno }}')"
+                                    :checked="selectedLKHs.includes('{{ $lkh->lkhno }}')"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 <div class="flex-1">
+                                    {{-- ✅ FIXED: target="_blank" --}}
                                     <a href="{{ route('input.rencanakerjaharian.showLKH', $lkh->lkhno) }}" 
-                                       class="text-base font-bold text-blue-700 hover:text-blue-800">
+                                    target="_blank"
+                                    class="text-base font-bold text-blue-700 hover:text-blue-800">
                                         {{ $lkh->lkhno }}
                                     </a>
                                     <p class="text-xs text-gray-600">
@@ -338,14 +352,21 @@
                         </div>
                     </div>
 
-                    <!-- Card Body - More Compact -->
+                    <!-- Card Body -->
                     <div class="px-4 py-2.5 space-y-1.5">
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                            <span class="text-gray-600 mr-1">Mandor:</span>
-                            <span class="font-medium text-gray-900">{{ $lkh->mandor_nama ?? '-' }}</span>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span class="text-gray-600 mr-1">Mandor:</span>
+                                <span class="font-medium text-gray-900">{{ $lkh->mandor_nama ?? '-' }}</span>
+                            </div>
+                            
+                            <div class="text-xs text-gray-600 flex items-center space-x-3">
+                                <span>Kendaraan: <span class="font-medium">{{ $lkh->has_kendaraan ? 'Ya' : 'Tidak' }}</span></span>
+                                <span>Material: <span class="font-medium">{{ $lkh->has_material ? 'Ya' : 'Tidak' }}</span></span>
+                            </div>
                         </div>
                         
                         <div class="flex items-center text-sm">

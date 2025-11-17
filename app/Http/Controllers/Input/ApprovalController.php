@@ -457,7 +457,7 @@ class ApprovalController extends Controller
 
     /**
      * Get pending RKH approvals for current user
-     * UPDATED: Added date filter support
+     * UPDATED: Include activity details, material usage, and kendaraan info
      */
     private function getPendingRKHApprovals($companycode, $currentUser, $filterDate = null, $allDate = false)
     {
@@ -465,7 +465,7 @@ class ApprovalController extends Controller
             ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
             ->leftJoin('approval as app', function($join) use ($companycode) {
                 $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
+                    ->where('app.companycode', '=', $companycode);
             })
             ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
             ->where('r.companycode', $companycode)
@@ -479,12 +479,11 @@ class ApprovalController extends Controller
                 });
             });
 
-        // Apply date filter if not showing all dates
         if (!$allDate && $filterDate) {
             $query->whereDate('r.rkhdate', $filterDate);
         }
 
-        return $query->select([
+        $results = $query->select([
                 'r.*',
                 'm.name as mandor_nama',
                 'ag.groupname as activity_group_name',
@@ -498,11 +497,43 @@ class ApprovalController extends Controller
             ])
             ->orderBy('r.rkhdate', 'desc')
             ->get();
+
+        // ✅ Enrich with activity details, material & kendaraan info
+        return $results->map(function($rkh) use ($companycode) {
+            // Get activities dari rkhlst
+            $activities = DB::table('rkhlst as l')
+                ->join('activity as a', 'l.activitycode', '=', 'a.activitycode')
+                ->where('l.companycode', $companycode)
+                ->where('l.rkhno', $rkh->rkhno)
+                ->select('a.activityname')
+                ->distinct()
+                ->pluck('activityname')
+                ->join(', ');
+
+            // Check material usage
+            $hasMaterial = DB::table('rkhlst')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkh->rkhno)
+                ->where('usingmaterial', 1)
+                ->exists();
+
+            // Check kendaraan usage
+            $hasKendaraan = DB::table('rkhlstkendaraan')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkh->rkhno)
+                ->exists();
+
+            $rkh->activities_list = $activities ?: '-';
+            $rkh->has_material = $hasMaterial;
+            $rkh->has_kendaraan = $hasKendaraan;
+
+            return $rkh;
+        });
     }
 
     /**
      * Get pending LKH approvals for current user
-     * UPDATED: Added date filter support
+     * UPDATED: Include activity name and material/kendaraan info
      */
     private function getPendingLKHApprovals($companycode, $currentUser, $filterDate = null, $allDate = false)
     {
@@ -521,12 +552,11 @@ class ApprovalController extends Controller
                 });
             });
 
-        // Apply date filter if not showing all dates
         if (!$allDate && $filterDate) {
             $query->whereDate('h.lkhdate', $filterDate);
         }
 
-        return $query->select([
+        $results = $query->select([
                 'h.*',
                 'm.name as mandor_nama',
                 'a.activityname',
@@ -539,6 +569,26 @@ class ApprovalController extends Controller
             ])
             ->orderBy('h.lkhdate', 'desc')
             ->get();
+
+        // ✅ Enrich with material & kendaraan info
+        return $results->map(function($lkh) use ($companycode) {
+            // Check material usage
+            $hasMaterial = DB::table('lkhdetailmaterial')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->exists();
+
+            // Check kendaraan usage
+            $hasKendaraan = DB::table('lkhdetailkendaraan')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkh->lkhno)
+                ->exists();
+
+            $lkh->has_material = $hasMaterial;
+            $lkh->has_kendaraan = $hasKendaraan;
+
+            return $lkh;
+        });
     }
 
     private function getUserInfo($currentUser)
