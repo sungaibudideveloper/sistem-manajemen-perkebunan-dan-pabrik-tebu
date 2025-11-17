@@ -1,6 +1,8 @@
 // POST http://172.17.1.180/api/mobile/insert-upah-tenaga-kerja
+// POST http://sugarcane.sblampung.com/api/mobile/insert-upah-tenaga-kerja
 POST http://localhost/tebu/public/api/mobile/insert-upah-tenaga-kerja
 Content-Type: application/json
+Authorization: Bearer 2|6BQGCVlrhymLd4wbb08fWpJlFyHL0bX9GQcBQRni34cec752
 
 {
   "companycode": "TBL1",
