@@ -151,7 +151,7 @@ class GudangController extends Controller
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
-        $response = Http::withOptions(['headers' => ['Accept' => 'application/json']])
+        $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
         ->asJson()
         ->get('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/costcenter_api', [
             'connection' => '172.17.1.39',
