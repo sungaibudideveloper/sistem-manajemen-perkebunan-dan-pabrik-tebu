@@ -40,7 +40,7 @@ Route::group(['middleware' => ['auth', 'permission:Edit Agronomi']], function ()
 // =====================================
 // HPT ROUTES
 // =====================================
-Route::group(['middleware' => ['auth', 'permission:HPT']], function () {
+Route::group(['middleware' => ['auth', 'permission:Hpt']], function () {
     Route::get('input/hpt', [HPTController::class, 'index'])->name('input.hpt.index');
     Route::post('input/hpt', [HPTController::class, 'handle'])->name('input.hpt.handle');
     Route::get('input/hpt/show/{nosample}/{companycode}/{tanggalpengamatan}', [HPTController::class, 'show'])
