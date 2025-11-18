@@ -4,7 +4,7 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     
     <style>
-        h1{text-align:center;color:#333;margin-bottom:40px;}
+        h1{text-align:center;color:#333;}
         table{width:100%;border-collapse:separate;border-spacing:0;box-shadow:0 3px 8px rgba(0,0,0,.1);animation:fadeIn 0.4s ease-in;}
         th,td{border:1px solid #ddd;padding:6px 8px;font-size:13px;vertical-align:middle;background-clip:padding-box;}
         tbody tr{transition:background-color .2s;}
@@ -43,14 +43,14 @@
         
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex space-x-4">
-                <a href="?crop=pc&fill={{$fillFilter}}" 
-                   class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
-                    📊 Data PC
-                </a>
-                <a href="?crop=rc&fill={{$fillFilter}}" 
-                   class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
-                    📊 Data RC
-                </a>
+                <a href="?crop=pc&activity={{$activityFilter}}" 
+                class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
+                 📊 Data PC
+             </a>
+             <a href="?crop=rc&activity={{$activityFilter}}" 
+                class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
+                 📊 Data RC
+             </a>
                 
                 <button 
                 @click="activeTab = activeTab === 'map' ? 'table' : 'map'; activeTab === 'map' && $nextTick(() => initMapIfNeeded())" 
@@ -59,10 +59,23 @@
                 🗺️ Tampilan Map
                 </button>
             
-                <div class="ml-auto flex gap-2">
-                    <a href="?crop={{$cropType}}&fill=all" class="py-1 px-3 rounded text-xs font-medium {{$fillFilter==='all'?'bg-green-600 text-white':'bg-gray-200 hover:bg-gray-300'}}">Semua</a>
-                    <a href="?crop={{$cropType}}&fill=filled" class="py-1 px-3 rounded text-xs font-medium {{$fillFilter==='filled'?'bg-green-600 text-white':'bg-gray-200 hover:bg-gray-300'}}">Terisi</a>
-                    <a href="?crop={{$cropType}}&fill=empty" class="py-1 px-3 rounded text-xs font-medium {{$fillFilter==='empty'?'bg-green-600 text-white':'bg-gray-200 hover:bg-gray-300'}}">Kosong</a>
+                <div class="ml-auto flex items-center gap-3">
+                    <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
+                    <select 
+                        onchange="window.location.href='?crop={{$cropType}}&activity=' + this.value"
+                        class="py-1 px-3 rounded border border-gray-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="all" {{$activityFilter==='all'?'selected':''}}>📋 Semua Activity</option>
+                        @foreach($activityMap as $code => $label)
+                            <option value="{{$code}}" {{$activityFilter===$code?'selected':''}}>
+                                {{$code}} - {{$label}}
+                            </option>
+                        @endforeach
+                    </select>
+                    
+                    {{-- Display count --}}
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        {{count($plotHeaders)}} plot
+                    </span>
                 </div>
             </nav>
         </div>
@@ -247,17 +260,18 @@
                     title: `Plot ${header.plot}`,
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
-                        scale: 8,
+                        scale: 20, // ✅ Jauh lebih besar (dari 12 → 20)
                         fillColor: blockColor,
-                        fillOpacity: 0.9,
-                        strokeColor: '#2c3e50',
+                        fillOpacity: 0.8,
+                        strokeColor: '#ffffff',
                         strokeWeight: 2
                     },
                     label: {
                         text: header.plot,
-                        color: '#2c3e50',
-                        fontSize: '11px',
-                        fontWeight: '600'
+                        color: '#ffffff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        className: 'marker-label' // ✅ Untuk custom positioning
                     }
                 });
                 
