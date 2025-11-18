@@ -294,59 +294,59 @@
             tableBody.innerHTML = `
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebang</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_tebang)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_tebang)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualtebang)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebuntebang)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_tebang)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Muat</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_muat)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_muat)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualmuat)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunmuat)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_muat)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Angkutan</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_angkutan)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_angkutan)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_angkutan)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualangkutan)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunangkutan)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktorangkutan)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Fee Kontraktor</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_feekont)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_feekont)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualfeekont)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunfeekont)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_feekont)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Non Premi</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_nonpremi)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_nonpremi)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualnonpremi)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunnonpremi)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_nonpremi)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">BSM</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_bsm)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_bsm)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualbsm)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunbsm)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_bsm)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebu Sulit</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_tebusulit)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_tebusulit)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualtebusulit)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebuntebusulit)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_tebusulit)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Premi Ton</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manual_premiton)}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebun_premiton)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.manualpremiton)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500 border-r border-gray-300">Rp ${formatNumber(selectedHarga.glkebunpremiton)}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500">Rp ${formatNumber(selectedHarga.glkontraktor_premiton)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Extra Fooding</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.extra_fooding)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.extrafooding)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Tebu Tidak Seset</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.tebu_tdk_seset)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-500" colspan="3">Rp ${formatNumber(selectedHarga.tebutdkseset)}</td>
                 </tr>
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">Langsir</td>
