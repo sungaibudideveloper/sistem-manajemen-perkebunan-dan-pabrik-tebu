@@ -64,6 +64,10 @@ class TrashController extends Controller
                 ->where('suratjalanno', $noSuratJalan)
                 ->first();
 
+            $cektrashsuratjalan = DB::table('trash')
+                ->where('suratjalanno', $noSuratJalan)
+                ->first();
+
             if ($suratJalan) {
                 return response()->json([
                     'exists' => true,
@@ -121,7 +125,7 @@ class TrashController extends Controller
             $exists = DB::table('trash')
                 ->where('suratjalanno', $request->no_surat_jalan)
                 ->where('companycode', $request->companycode)
-                ->where('jenis', $request->jenis)
+                
                 ->exists();
 
             if ($exists) {
@@ -333,7 +337,7 @@ class TrashController extends Controller
     }
 
     public function generateReport(Request $request)
-    {
+    {   
         try {
             // Validasi input
             $request->validate([
@@ -398,14 +402,14 @@ class TrashController extends Controller
                     'jenis' => $item->jenis ?? '',
                     'createddate' => $item->createddate ?? '',
                     'pucuk' => floatval($item->pucuk ?? 0),
-                    'daungulma' => floatval($item->daun_gulma ?? 0),
+                    'daungulma' => floatval($item->daungulma ?? 0),
                     'sogolan' => floatval($item->sogolan ?? 0),
                     'siwilan' => floatval($item->siwilan ?? 0),
                     'tebumati' => floatval($item->tebumati ?? 0),
-                    'tanahetc' => floatval($item->tanah_etc ?? 0),
+                    'tanahetc' => floatval($item->tanahetc ?? 0),
                     'total' => floatval($item->total ?? 0),
                     'toleransi' => floatval($item->toleransi ?? 0),
-                    'nettotrash' => floatval($item->netto_trash ?? 0),
+                    'nettotrash' => floatval($item->nettotrash ?? 0),
                     // Data dari JOIN
                     'plot' => $item->plot ?? '',
                     'varietas' => $item->varietas ?? '',
@@ -479,6 +483,7 @@ class TrashController extends Controller
                 'endDate' => $endDate,
                 'reportType' => $reportType,
                 'company' => $company,
+                'user' => Auth::user()->userid,
                 'actualCompanies' => $actualCompanies  // Add actual companies that appear in data
             ]);
         } catch (\Exception $e) {

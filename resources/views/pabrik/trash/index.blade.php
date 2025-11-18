@@ -387,7 +387,6 @@
         </div>
 
         <!-- Modal Report -->
-        <!-- Modal Report -->
         <div x-show="showReportModal" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto"
             x-transition:enter="ease-out duration-300"
@@ -424,6 +423,21 @@
 
                                     <!-- Form Fields -->
                                     <div class="space-y-4">
+
+                                        <!-- Report Type -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                Tipe Report <span class="text-red-500">*</span>
+                                            </label>
+                                            <select name="report_type" x-model="reportForm.report_type"
+                                                @change="updateCompanyOptions()"
+                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                <option value="">Pilih Tipe Report</option>
+                                                <option value="harian">Laporan Harian</option>
+                                                <option value="mingguan">Laporan Mingguan</option>
+                                            </select>
+                                        </div>
+
                                         <!-- Date Range -->
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
@@ -444,19 +458,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Report Type -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                                Tipe Report <span class="text-red-500">*</span>
-                                            </label>
-                                            <select name="report_type" x-model="reportForm.report_type"
-                                                @change="updateCompanyOptions()"
-                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
-                                                <option value="">Pilih Tipe Report</option>
-                                                <option value="harian">Laporan Harian</option>
-                                                <option value="mingguan">Laporan Mingguan</option>
-                                            </select>
-                                        </div>
 
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">
