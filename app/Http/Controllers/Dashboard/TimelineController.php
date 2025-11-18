@@ -32,7 +32,7 @@ class TimelineController extends Controller
 
    
     public function plot(Request $request)
-{
+    {
     $companyCode = session('companycode');
     $fillFilter  = $request->get('fill', 'all');
     $cropType    = $request->get('crop', 'pc');
@@ -110,19 +110,45 @@ class TimelineController extends Controller
         }
     }
 
-    // Agregasi hasil per plot x activitycode dengan tanggal terbaru
-    $activityDataRaw = DB::table('lkhdetailplot as ldp')
-        ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
-        ->where('ldp.companycode', $companyCode)
-        ->whereIn('lh.activitycode', $allActivityCodes)
-        ->select(
-            'ldp.plot', 
-            'lh.activitycode', 
-            DB::raw('SUM(ldp.luashasil) as total_luas'),
-            DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
-        )
-        ->groupBy('ldp.plot', 'lh.activitycode')
-        ->get();
+    // ✅ Query 1: Aggregate untuk total (untuk table & perhitungan)
+$activityDataRaw = DB::table('lkhdetailplot as ldp')
+->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+->where('ldp.companycode', $companyCode)
+->whereIn('lh.activitycode', $allActivityCodes)
+->select(
+    'ldp.plot', 
+    'lh.activitycode', 
+    DB::raw('SUM(ldp.luashasil) as total_luas'),
+    DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
+)
+->groupBy('ldp.plot', 'lh.activitycode')
+->get();
+
+// ✅ Query 2: Detail per LKH (untuk info window map)
+$activityDetailRaw = DB::table('lkhdetailplot as ldp')
+->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+->where('ldp.companycode', $companyCode)
+->whereIn('lh.activitycode', $allActivityCodes)
+->select(
+    'ldp.plot', 
+    'lh.activitycode',
+    'lh.lkhno',
+    'ldp.luashasil',
+    'lh.lkhdate'
+)
+->orderBy('ldp.plot')
+->orderBy('lh.activitycode')
+->orderBy('lh.lkhdate', 'desc')
+->get();
+// ✅ Group detail by plot & activity
+$lkhDetails = [];
+foreach ($activityDetailRaw as $detail) {
+$lkhDetails[$detail->plot][$detail->activitycode][] = [
+    'lkhno' => $detail->lkhno,
+    'luas_hasil' => (float)$detail->luashasil,
+    'tanggal' => $detail->lkhdate
+];
+}
 
     // ✅ Gabungkan activity yang dipecah
     $activityData = collect();
@@ -183,40 +209,129 @@ class TimelineController extends Controller
         });
     }
 
-    $filteredPlots = $plotHeaders->pluck('plot')->toArray(); // Ambil plot yang sudah difilter
+    $filteredPlots = $plotHeaders->pluck('plot')->toArray();
 
+    // ✅ Query map data (tetap sama)
     $plotDataForMap = DB::table('testgpslst as a')
         ->leftJoin('testgpshdr as d', 'a.plot', '=', 'd.plot')
         ->where('a.companycode', $companyCode)
-        ->whereIn('a.plot', $filteredPlots) // ✅ Filter map data sesuai plot yang tampil
+        ->whereIn('a.plot', $filteredPlots)
         ->select('a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude')
         ->get();
-
-    $plotHeadersForMap = $plotDataForMap
-        ->map(fn($it) => (object)[
-            'plot' => $it->plot,
-            'centerlatitude' => $it->centerlatitude,
-            'centerlongitude' => $it->centerlongitude
-        ])
-        ->unique('plot')
-        ->values();
+    
+    // ✅ GABUNG: Process plotHeadersForMap + plotActivityDetails sekaligus
+    $plotHeadersForMap = [];
+    $plotActivityDetails = [];
+    
+    foreach ($filteredPlots as $plotCode) {
+        // Ambil center coordinates dari plotDataForMap
+        $centerData = $plotDataForMap->firstWhere('plot', $plotCode);
         
-
-    return view('dashboard.timeline-plot.index', [
-        'title'             => 'Timeline',
-        'nav'               => 'Timeline',
-        'navbar'            => 'Timeline',
-        'plotHeaders'       => $plotHeaders,
-        'plotHeadersForMap' => $plotHeadersForMap,
-        'activityMap'       => $activityMap,
-        'activityData'      => $activityData,
-        'activityGrouping'  => $activityGrouping,
-        'activityFilter'    => $activityFilter,
-        'plotData'          => $plotDataForMap,
-        'fillFilter'        => $fillFilter,
-        'cropType'          => $cropType,
-    ]);
+        if ($centerData) {
+            // Data untuk map markers
+            $plotHeadersForMap[] = (object)[
+                'plot' => $plotCode,
+                'centerlatitude' => $centerData->centerlatitude,
+                'centerlongitude' => $centerData->centerlongitude
+            ];
+        }
+        
+        // Data untuk activity details
+        $plotInfo = $plotHeaders->firstWhere('plot', $plotCode);
+    $activities = $activityData->get($plotCode);
+    $luasRkh = $plotInfo->luasarea ?? 0;
+    
+    if ($activities && $luasRkh > 0) {
+        $activityList = [];
+        $totalLuasHasil = 0;
+        $allComplete = true; // ✅ Flag untuk cek semua activity complete
+        $hasActivity = false;
+        
+        foreach ($activities as $actCode => $act) {
+            $luasHasil = $act->total_luas ?? 0;
+            $percentage = ($luasHasil / $luasRkh) * 100;
+            
+            $activityList[] = [
+                'code' => $actCode,
+                'label' => $activityMap[$actCode] ?? $actCode,
+                'luas_hasil' => $luasHasil,
+                'percentage' => $percentage,
+                'tanggal' => $act->tanggal_terbaru ?? null,
+                'lkh_details' => $lkhDetails[$plotCode][$actCode] ?? []
+            ];
+            
+            $totalLuasHasil += $luasHasil;
+            $hasActivity = true;
+            
+            // ✅ Cek apakah activity ini < 100%
+            if ($percentage < 100) {
+                $allComplete = false;
+            }
+        }
+        
+        // Rata-rata persentase = total luas hasil / luas RKH
+        $avgPercentage = ($totalLuasHasil / $luasRkh) * 100;
+        
+        // ✅ Tentukan warna marker berdasarkan SEMUA activity
+        if (!$hasActivity || $totalLuasHasil == 0) {
+            $markerColor = 'black'; // Hitam: tidak ada data
+        } elseif ($allComplete) {
+            $markerColor = 'green'; // Hijau: SEMUA activity >= 100%
+        } else {
+            $markerColor = 'orange'; // Oranye: ADA yang < 100%
+        }
+        
+        $plotActivityDetails[$plotCode] = [
+            'activities' => $activityList,
+            'avg_percentage' => $avgPercentage,
+            'marker_color' => $markerColor,
+            'luas_rkh' => $luasRkh,
+            'total_luas_hasil' => $totalLuasHasil
+        ];
+    } else {
+        $plotActivityDetails[$plotCode] = [
+            'activities' => [],
+            'avg_percentage' => 0,
+            'marker_color' => 'black',
+            'luas_rkh' => $luasRkh,
+            'total_luas_hasil' => 0
+        ];
+    }
 }
+    
+// dd([
+//     '1_activityData_A003' => $activityData->get('A003'),
+    
+//     '2_filteredPlots_has_A003' => in_array('A003', $filteredPlots),
+    
+//     '3_plotActivityDetails_A003' => $plotActivityDetails['A003'] ?? 'TIDAK ADA KEY A003',
+    
+//     '4_plotActivityDetails_keys' => array_keys($plotActivityDetails),
+    
+//     '5_plotHeaders_A003' => $plotHeaders->firstWhere('plot', 'A003'),
+    
+//     '6_centerData_A003' => $plotDataForMap->firstWhere('plot', 'A003'),
+// ]);
+
+    // Convert array ke collection untuk consistency
+    $plotHeadersForMap = collect($plotHeadersForMap);
+        
+        return view('dashboard.timeline-plot.index', [
+            'title'             => 'Timeline',
+            'nav'               => 'Timeline',
+            'navbar'            => 'Timeline',
+            'plotHeaders'       => $plotHeaders,
+            'plotHeadersForMap' => $plotHeadersForMap,
+            'activityMap'       => $activityMap,
+            'activityData'      => $activityData,
+            'activityGrouping'  => $activityGrouping,
+            'activityFilter'    => $activityFilter,
+            'plotData'          => $plotDataForMap,
+            'plotActivityDetails'=> $plotActivityDetails,
+            'fillFilter'        => $fillFilter,
+            'cropType'          => $cropType,
+        ]);
+    }
 
 
 

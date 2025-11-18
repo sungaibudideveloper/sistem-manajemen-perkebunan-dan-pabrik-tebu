@@ -222,147 +222,132 @@
     <script>
         const plotHeaders = @json($plotHeadersForMap ?? []);
         const plotData = @json($plotData ?? []);
+        const plotActivityDetails = @json($plotActivityDetails ?? []);
         
-        let map;
-        let markers = [];
-        let polygons = [];
+        let map, markers = [], polygons = [];
         
         function initMapIfNeeded() {
             if (window.mapInitialized) return;
             
-            const centerLat = plotHeaders.length > 0 ? parseFloat(plotHeaders[0].centerlatitude) : -4.12893;
-            const centerLng = plotHeaders.length > 0 ? parseFloat(plotHeaders[0].centerlongitude) : 105.2971;
-            
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: centerLat, lng: centerLng },
-                zoom: 13,
-                mapTypeId: 'roadmap'
+                center: { lat: parseFloat(plotHeaders[0]?.centerlatitude || -4.12893), lng: parseFloat(plotHeaders[0]?.centerlongitude || 105.2971) },
+                zoom: 13
             });
             
             createMapContent();
-            
             window.mapInitialized = true;
         }
         
         function createMapContent() {
-            const blockColorMap = createBlockColorMap();
-            
-            plotHeaders.forEach(header => {
-                const blockLetter = header.plot.charAt(0);
-                const blockColor = blockColorMap[blockLetter];
+            // Markers
+            plotHeaders.forEach(h => {
+                const d = plotActivityDetails[h.plot] || {marker_color:'black', avg_percentage:0, activities:[], luas_rkh:0, total_luas_hasil:0};
+                const color = d.marker_color === 'green' ? '#22c55e' : d.marker_color === 'orange' ? '#f97316' : '#000';
                 
                 const marker = new google.maps.Marker({
-                    position: { 
-                        lat: parseFloat(header.centerlatitude), 
-                        lng: parseFloat(header.centerlongitude) 
-                    },
+                    position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
                     map: map,
-                    title: `Plot ${header.plot}`,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 20, // ✅ Jauh lebih besar (dari 12 → 20)
-                        fillColor: blockColor,
-                        fillOpacity: 0.8,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 2
-                    },
-                    label: {
-                        text: header.plot,
-                        color: '#ffffff',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        className: 'marker-label' // ✅ Untuk custom positioning
-                    }
+                    icon: {path: google.maps.SymbolPath.CIRCLE, scale: 25, fillColor: color, fillOpacity: 0.8, strokeColor: '#fff', strokeWeight: 3},
+                    label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
                 });
                 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="padding: 12px; font-family: Arial, sans-serif;">
-                            <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 13px;">Plot ${header.plot}</h3>
-                            <div style="font-size: 12px; color: #7f8c8d;">
-                                <div style="margin: 3px 0;"><strong>Block:</strong> ${blockLetter}</div>
-                                <div style="margin: 3px 0;"><strong>Latitude:</strong> ${parseFloat(header.centerlatitude).toFixed(6)}</div>
-                                <div style="margin: 3px 0;"><strong>Longitude:</strong> ${parseFloat(header.centerlongitude).toFixed(6)}</div>
-                            </div>
+        let acts = '';
+        if (d.activities?.length > 0) {
+            acts = `<div style="margin-top:10px;border-top:1px solid #ddd;padding-top:10px"><strong>Activities (${d.activities.length}):</strong><div style="max-height:200px;overflow-y:auto;margin-top:5px">`;
+            d.activities.forEach((a,i) => {
+                const p = parseFloat(a.percentage).toFixed(2);
+                const c = p >= 100 ? '#22c55e' : p > 0 ? '#f97316' : '#6b7280';
+                
+                acts += `<div style="margin:5px 0;padding:8px;background:#f9fafb;border-radius:4px;border-left:3px solid ${c}">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                        <div style="font-weight:600;color:#374151;font-size:11px">${i+1}. ${a.code} - ${a.label}</div>
+                        <div style="font-weight:700;color:${c};font-size:12px">${p}%</div>
+                    </div>
+                    <div style="color:#6b7280;font-size:10px;margin-bottom:4px">
+                        Luas: <strong>${parseFloat(a.luas_hasil).toFixed(2)} HA</strong> / ${parseFloat(d.luas_rkh).toFixed(2)} HA
+                        ${a.lkh_details && a.lkh_details.length > 0 ? ` <span style="color:#9ca3af">(${a.lkh_details.length} LKH)</span>` : ''}
+                    </div>`;
+                
+                // ✅ Detail LKH
+                if (a.lkh_details && a.lkh_details.length > 0) {
+                    acts += `<div style="margin-top:6px;padding:6px;background:#fff;border-radius:3px;border:1px solid #e5e7eb">
+                        <div style="font-size:9px;color:#6b7280;font-weight:600;margin-bottom:3px">Detail LKH:</div>`;
+                    
+                    a.lkh_details.forEach((lkh) => {
+                        acts += `<div style="font-size:9px;color:#374151;padding:2px 0;display:flex;justify-content:space-between;gap:8px">
+                            <span style="flex:1">📄 ${lkh.lkhno}</span>
+                            <span style="font-weight:600;white-space:nowrap">${parseFloat(lkh.luas_hasil).toFixed(2)} HA</span>
+                            <span style="color:#9ca3af;white-space:nowrap">${new Date(lkh.tanggal).toLocaleDateString('id-ID', {day:'2-digit',month:'short'})}</span>
+                        </div>`;
+                    });
+                    
+                    acts += `</div>`;
+                }
+                
+                acts += `<div style="background:#e5e7eb;height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
+                        <div style="background:${c};height:100%;width:${Math.min(p,100)}%"></div>
+                    </div>
+                    ${a.tanggal ? `<div style="color:#9ca3af;font-size:9px;margin-top:3px">📅 Terakhir: ${new Date(a.tanggal).toLocaleDateString('id-ID')}</div>` : ''}
+                </div>`;
+            });
+            acts += '</div></div>';
+        } else {
+            acts = '<div style="margin-top:10px;padding:8px;background:#f3f4f6;border-radius:4px;color:#6b7280;font-size:11px;text-align:center">Tidak ada data</div>';
+        }
+                
+                const info = new google.maps.InfoWindow({
+                    content: `<div style="padding:12px;min-width:280px;max-width:350px">
+                        <h3 style="margin:0 0 10px 0;color:#2c3e50;font-size:15px;font-weight:bold;border-bottom:2px solid #e5e7eb;padding-bottom:6px">📍 Plot ${h.plot}</h3>
+                        <div style="font-size:11px;color:#6b7280;background:#f9fafb;padding:8px;border-radius:4px;margin-bottom:8px">
+                            <div><strong>Luas RKH:</strong> ${parseFloat(d.luas_rkh).toFixed(2)} HA</div>
+                            <div><strong>Total Hasil:</strong> ${parseFloat(d.total_luas_hasil).toFixed(2)} HA</div>
                         </div>
-                    `
+                        <div style="background:linear-gradient(135deg,${color}22,${color}11);padding:10px;border-radius:6px;border:2px solid ${color};margin-bottom:8px;text-align:center">
+                            <div style="color:#6b7280;font-size:10px;font-weight:600;text-transform:uppercase;margin-bottom:4px">Progress</div>
+                            <div style="color:${color};font-weight:700;font-size:24px">${parseFloat(d.avg_percentage).toFixed(1)}%</div>
+                        </div>
+                        ${acts}
+                    </div>`
                 });
                 
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-                
+                marker.addListener('click', () => info.open(map, marker));
                 markers.push(marker);
             });
             
-            plotHeaders.forEach(header => {
-                const blockLetter = header.plot.charAt(0);
-                const blockColor = blockColorMap[blockLetter];
+            // Polygons
+            plotHeaders.forEach(h => {
+                const pts = plotData.filter(p => p.plot === h.plot);
+                if (pts.length < 3) return;
                 
-                const gpsPoints = plotData.filter(item => item.plot === header.plot);
+                const colors = {'A':'#2C3E50','B':'#16A085','C':'#D35400','D':'#8E44AD','E':'#27AE60','F':'#2980B9','G':'#C0392B','H':'#F39C12','I':'#34495E','J':'#7F8C8D','K':'#1ABC9C'};
+                const color = colors[h.plot.charAt(0)] || '#000';
                 
-                if (gpsPoints.length < 3) return;
-                
-                const polygonCoordinates = gpsPoints.map(item => ({
-                    lat: parseFloat(item.latitude),
-                    lng: parseFloat(item.longitude)
+                polygons.push(new google.maps.Polygon({
+                    paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
+                    strokeColor: color, strokeOpacity: 0.8, strokeWeight: 2,
+                    fillColor: color, fillOpacity: 0.12, map: map
                 }));
-                
-                const polygon = new google.maps.Polygon({
-                    paths: polygonCoordinates,
-                    strokeColor: blockColor,
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: blockColor,
-                    fillOpacity: 0.12,
-                    map: map
-                });
-                
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="padding: 12px; font-family: Arial, sans-serif;">
-                            <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 13px;">Plot ${header.plot}</h3>
-                            <div style="font-size: 12px; color: #7f8c8d;">
-                                <div style="margin: 3px 0;"><strong>Block:</strong> ${blockLetter}</div>
-                                <div style="margin: 3px 0;"><strong>GPS Points:</strong> ${gpsPoints.length}</div>
-                                <div style="margin: 3px 0;"><strong>Area Status:</strong> Mapped</div>
-                            </div>
-                        </div>
-                    `
-                });
-                
-                polygon.addListener('click', (e) => {
-                    infoWindow.setPosition(e.latLng);
-                    infoWindow.open(map);
-                });
-                
-                polygons.push(polygon);
             });
             
+            
+            // ✅ Zoom fokus ke area plot
             const bounds = new google.maps.LatLngBounds();
-            plotData.forEach(point => {
-                bounds.extend(new google.maps.LatLng(
-                    parseFloat(point.latitude), 
-                    parseFloat(point.longitude)
-                ));
+            plotHeaders.forEach(h => {
+                bounds.extend(new google.maps.LatLng(parseFloat(h.centerlatitude), parseFloat(h.centerlongitude)));
             });
-            map.fitBounds(bounds);
-        }
-        
-        function createBlockColorMap() {
-            const blocks = [...new Set(plotHeaders.map(item => item.plot.charAt(0)))].sort();
-            const colorMap = {};
-            
-            const professionalColors = [
-                '#2C3E50', '#16A085', '#D35400', '#8E44AD', '#27AE60', '#2980B9',
-                '#C0392B', '#F39C12', '#34495E', '#7F8C8D', '#1ABC9C', '#E74C3C'
-            ];
-            
-            blocks.forEach((block, index) => {
-                colorMap[block] = professionalColors[index % professionalColors.length];
-            });
-            
-            return colorMap;
+
+            if (plotHeaders.length > 0) {
+                map.fitBounds(bounds);
+                
+                // ✅ Limit zoom level agar tidak terlalu dekat/jauh
+                google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+                    const z = map.getZoom();
+                    if (z > 16) map.setZoom(16);  // Tidak terlalu dekat
+                    if (z < 12) map.setZoom(12);  // Tidak terlalu jauh
+                });
+            }
+
+
         }
     </script>
     
