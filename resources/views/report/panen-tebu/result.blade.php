@@ -162,20 +162,20 @@
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" colspan="2">Tebang Muat Tebu Giling Manual</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" colspan="2">Tebang Muat Tebu Giling GL</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Kirim <br><br> Rp 35/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Extra Fooding <br><br> Rp {{number_format($tabelharga[0]->extra_fooding ?? 0)}}/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Tdk Diseset <br><br> Rp {{number_format($tabelharga[0]->tebu_tdk_seset ?? 0)}}/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Fee Kontraktor/P <br><br> Rp {{number_format($tabelharga[0]->manual_feekont ?? 0)}}/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Sulit <br><br> Rp {{number_format($tabelharga[0]->manual_tebusulit ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Extra Fooding <br><br> Rp {{number_format($tabelharga[0]->extrafooding ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Tdk Diseset <br><br> Rp {{number_format($tabelharga[0]->tebutdk_seset ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Fee Kontraktor/P <br><br> Rp {{number_format($tabelharga[0]->manualfeekont ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Tebu Sulit <br><br> Rp {{number_format($tabelharga[0]->manualtebusulit ?? 0)}}/kg</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Langsir <br><br> Rp {{number_format($tabelharga[0]->langsir ?? 0)}}/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Insentif BSM/P <br><br> Rp {{number_format($tabelharga[0]->manual_bsm ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Insentif BSM/P <br><br> Rp {{number_format($tabelharga[0]->manualbsm ?? 0)}}/kg</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide" rowspan="2">Ket Kg <br>(BSM)</th>
                                 </tr>
                                 
                                 <!-- Second row of headers (Sub headers) -->
                                 <tr class="bg-gray-100">
                                     <!-- Sub-columns for "Tebang Muat Tebu Giling Manual" -->
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium <br><br> Rp {{number_format(($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))}}/kg</th>
-                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium <br><br> Rp {{number_format($tabelharga[0]->manual_nonpremi ?? 0)}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium <br><br> Rp {{number_format(($tabelharga[0]->manualtebang ?? 0) + ($tabelharga[0]->manualmuat ?? 0))}}/kg</th>
+                                    <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium <br><br> Rp {{number_format($tabelharga[0]->manualnonpremi ?? 0)}}/kg</th>
                                     <!-- Sub-columns for "Tebang Muat Tebu Giling GL" -->
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide">Premium GL <br><br> Rp {{number_format(($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))}}/kg</th>
                                     <th class="text-center font-semibold text-xs uppercase tracking-wide">Non Premium GL <br><br> Rp {{number_format($tabelharga[0]->glkebun_nonpremi ?? 0)}}/kg</th>
@@ -345,7 +345,7 @@
             <div class="overflow-x-auto">
                 <table class="report-table min-w-full border-2 border-gray-400">
                     <thead>
-                        <tr class="bg-blue-100 border-b-2 border-blue-400">
+                        <tr class="bg-gray-100 border-b-2 border-gray-400">
                             <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">No</th>
                             <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">Kategori</th>
                             <th class="text-center font-bold text-sm uppercase tracking-wide py-3 px-4 border-r border-gray-300">Berat (KG)</th>
@@ -358,153 +358,164 @@
                             <td class="text-center py-2 px-4 border-r border-gray-300">1</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling Manual (Premium)</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalPremiumManual) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0)) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalPremiumManual * (($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->manualtebang ?? 0) + ($tabelharga[0]->manualmuat ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalPremiumManual * (($tabelharga[0]->manualtebang ?? 0) + ($tabelharga[0]->manualmuat ?? 0))) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">2</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling Manual (Non Premium)</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalNonPremiumManual) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_nonpremi ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalNonPremiumManual * ($tabelharga[0]->manual_nonpremi ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manualnonpremi ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalNonPremiumManual * ($tabelharga[0]->manualnonpremi ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">3</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling GL (Premium)</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalPremiumGL) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0)) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalPremiumGL * (($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format(($tabelharga[0]->glkebuntebang ?? 0) + ($tabelharga[0]->glkebunmuat ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalPremiumGL * (($tabelharga[0]->glkebuntebang ?? 0) + ($tabelharga[0]->glkebunmuat ?? 0))) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">4</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebang Muat Tebu Giling GL (Non Premium)</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalNonPremiumGL) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->glkebun_nonpremi ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalNonPremiumGL * ($tabelharga[0]->glkebun_nonpremi ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->glkebunnonpremi ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalNonPremiumGL * ($tabelharga[0]->glkebunnonpremi ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">5</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Kirim</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalKirimKontraktor) }}</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300">35</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalKirimKontraktor * 35) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalKirimKontraktor * 35) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">6</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Extra Fooding</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalExtraFooding) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->extra_fooding ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalExtraFooding * ($tabelharga[0]->extra_fooding ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->extrafooding ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalExtraFooding * ($tabelharga[0]->extrafooding ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">7</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebu Tidak Di Seset</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalTebuTidakSeset) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->tebu_tdk_seset ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalTebuTidakSeset * ($tabelharga[0]->tebu_tdk_seset ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->tebutdkseset ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalTebuTidakSeset * ($tabelharga[0]->tebutdkseset ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">8</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Tebu Sulit</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalTebuSulit) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_tebusulit ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalTebuSulit * ($tabelharga[0]->manual_tebusulit ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manualtebusulit ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalTebuSulit * ($tabelharga[0]->manualtebusulit ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">9</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Langsir</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalLangsir) }}</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->langsir ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalLangsir * ($tabelharga[0]->langsir ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalLangsir * ($tabelharga[0]->langsir ?? 0)) }}</td>
                         </tr>
                         <tr class="hover:bg-gray-50">
                             <td class="text-center py-2 px-4 border-r border-gray-300">10</td>
                             <td class="text-left py-2 px-4 border-r border-gray-300 font-medium">Insentif BSM/P</td>
                             <td class="text-right py-2 px-4 border-r border-gray-300 font-semibold">{{ number_format($grandTotalInsentifBSM) }}</td>
-                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manual_bsm ?? 0) }}</td>
-                            <td class="text-right py-2 px-4 font-bold text-green-700">{{ number_format($grandTotalInsentifBSM * ($tabelharga[0]->manual_bsm ?? 0)) }}</td>
+                            <td class="text-right py-2 px-4 border-r border-gray-300">{{ number_format($tabelharga[0]->manualbsm ?? 0) }}</td>
+                            <td class="text-right py-2 px-4 font-bold text-gray-800">{{ number_format($grandTotalInsentifBSM * ($tabelharga[0]->manualbsm ?? 0)) }}</td>
                         </tr>
                         
                         <!-- Grand Total Row -->
                         @php
                             $finalTotal = 
-                                ($grandTotalPremiumManual * (($tabelharga[0]->manual_tebang ?? 0) + ($tabelharga[0]->manual_muat ?? 0))) +
-                                ($grandTotalNonPremiumManual * ($tabelharga[0]->manual_nonpremi ?? 0)) +
-                                ($grandTotalPremiumGL * (($tabelharga[0]->glkebun_tebang ?? 0) + ($tabelharga[0]->glkebun_muat ?? 0))) +
-                                ($grandTotalNonPremiumGL * ($tabelharga[0]->glkebun_nonpremi ?? 0)) +
+                                ($grandTotalPremiumManual * (($tabelharga[0]->manualtebang ?? 0) + ($tabelharga[0]->manualmuat ?? 0))) +
+                                ($grandTotalNonPremiumManual * ($tabelharga[0]->manualnonpremi ?? 0)) +
+                                ($grandTotalPremiumGL * (($tabelharga[0]->glkebuntebang ?? 0) + ($tabelharga[0]->glkebunmuat ?? 0))) +
+                                ($grandTotalNonPremiumGL * ($tabelharga[0]->glkebunnonpremi ?? 0)) +
                                 ($grandTotalKirimKontraktor * 35) +
-                                ($grandTotalExtraFooding * ($tabelharga[0]->extra_fooding ?? 0)) +
-                                ($grandTotalTebuTidakSeset * ($tabelharga[0]->tebu_tdk_seset ?? 0)) +
-                                ($grandTotalTebuSulit * ($tabelharga[0]->manual_tebusulit ?? 0)) +
+                                ($grandTotalExtraFooding * ($tabelharga[0]->extrafooding ?? 0)) +
+                                ($grandTotalTebuTidakSeset * ($tabelharga[0]->tebutdkseset ?? 0)) +
+                                ($grandTotalTebuSulit * ($tabelharga[0]->manualtebusulit ?? 0)) +
                                 ($grandTotalLangsir * ($tabelharga[0]->langsir ?? 0)) +
-                                ($grandTotalInsentifBSM * ($tabelharga[0]->manual_bsm ?? 0));
+                                ($grandTotalInsentifBSM * ($tabelharga[0]->manualbsm ?? 0));
                         @endphp
-                        <tr class="bg-blue-200 border-t-4 border-blue-600 font-bold text-lg">
-                            <td colspan="4" class="text-center py-4 px-4 font-black uppercase text-blue-900">GRAND TOTAL</td>
-                            <td class="text-right py-4 px-4 font-black text-blue-900 text-xl">{{ number_format($finalTotal) }}</td>
+                        <tr class="bg-gray-200 border-t-4 border-gray-600 font-bold text-lg">
+                            <td colspan="4" class="text-center py-4 px-4 font-black uppercase text-gray-900">GRAND TOTAL</td>
+                            <td class="text-right py-4 px-4 font-black text-gray-900 text-xl">{{ number_format($finalTotal) }}</td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-            
-            <!-- Summary Info -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div class="font-semibold text-blue-900">Total Berat Bersih:</div>
-                    <div class="text-lg font-bold text-blue-800">
-                        @php
-                            $totalBeratBersih = 0;
-                            foreach ($data as $dt) {
-                                $trashKebunCalc = ($dt->trash_percentage > 3) ? $dt->trash_percentage - 3 : 0;
-                                $potKgCalc = ($trashKebunCalc > 0) ? round($dt->netto * $trashKebunCalc / 100, 0, PHP_ROUND_HALF_UP) : 0;
-                                $totalBeratBersih += ($dt->netto - $potKgCalc);
-                            }
-                        @endphp
-                        {{ number_format($totalBeratBersih) }} KG
-                    </div>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <div class="font-semibold text-green-900">Total Netto:</div>
-                    <div class="text-lg font-bold text-green-800">{{ number_format(collect($data)->sum('netto')) }} KG</div>
-                </div>
-                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <div class="font-semibold text-yellow-900">Total Bruto:</div>
-                    <div class="text-lg font-bold text-yellow-800">{{ number_format(collect($data)->sum('bruto')) }} KG</div>
-                </div>
             </div>
         </div>
 
         <!-- Footer/Signature Section -->
         <div class="mt-16 print-break">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                <!-- Kontraktor Signature -->
+            <!-- Date and Location -->
+            <div class="text-right mb-8">
+                <p class="text-sm font-semibold">Terbanggi Besar, <span id="currentDate"></span></p>
+            </div>
+            
+            <div class="grid grid-cols-7 gap-4 text-center text-xs">
+                <!-- 1. Est. Manager -->
                 <div>
-                    <p class="text-sm font-semibold mb-16">Kontraktor</p>
+                    <p class="font-semibold mb-16">Mengetahui</p>
                     <div class="border-t-2 border-gray-400 pt-2">
-                        <p class="text-sm font-bold">{{ $kontraktor }}</p>
+                        <p class="font-bold">Est. Manager</p>
                     </div>
                 </div>
                 
-                <!-- Manager Signature -->
+                <!-- 2. Askep -->
                 <div>
-                    <p class="text-sm font-semibold mb-16">Mengetahui</p>
+                    <p class="font-semibold mb-16">&nbsp;</p>
                     <div class="border-t-2 border-gray-400 pt-2">
-                        <p class="text-sm font-bold">Manager Kebun</p>
+                        <p class="font-bold">Askep</p>
                     </div>
                 </div>
                 
-                <!-- Approval Signature -->
+                <!-- 3. KTU -->
                 <div>
-                    <p class="text-sm font-semibold mb-16">Menyetujui</p>
+                    <p class="font-semibold mb-16">Diperiksa</p>
                     <div class="border-t-2 border-gray-400 pt-2">
-                        <p class="text-sm font-bold">General Manager</p>
+                        <p class="font-bold">KTU</p>
+                    </div>
+                </div>
+                
+                <!-- 4. PP&C -->
+                <div>
+                    <p class="font-semibold mb-16">&nbsp;</p>
+                    <div class="border-t-2 border-gray-400 pt-2">
+                        <p class="font-bold">PP&C</p>
+                    </div>
+                </div>
+                
+                <!-- 5. Audit -->
+                <div>
+                    <p class="font-semibold mb-16">&nbsp;</p>
+                    <div class="border-t-2 border-gray-400 pt-2">
+                        <p class="font-bold">Audit</p>
+                    </div>
+                </div>
+                
+                <!-- 6. Diterima -->
+                <div>
+                    <p class="font-semibold mb-16">Diterima</p>
+                    <div class="border-t-2 border-gray-400 pt-2">
+                        <p class="font-bold">(...........)</p>
+                    </div>
+                </div>
+                
+                <!-- 7. Adm.panen -->
+                <div>
+                    <p class="font-semibold mb-16">Disiapkan</p>
+                    <div class="border-t-2 border-gray-400 pt-2">
+                        <p class="font-bold">Adm.panen</p>
                     </div>
                 </div>
             </div>
             
             <!-- Footer Info -->
             <div class="mt-8 text-center text-xs text-gray-500 border-t border-gray-200 pt-4">
-                <p>Dokumen ini digenerate secara otomatis pada {{ \Carbon\Carbon::now()->format('d/m/Y H:i:s') }}</p>
+                <p>Dokumen ini digenerate secara otomatis pada <span id="currentDateTime"></span></p>
                 <p>{{ session('companycode') ?? 'PT. PERKEBUNAN NUSANTARA' }}</p>
             </div>
         </div>
@@ -512,6 +523,47 @@
 
     <!-- JavaScript -->
     <script>
+        // Function to get current date in Indonesian format
+        function getCurrentDate() {
+            const months = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+            
+            const now = new Date();
+            const day = now.getDate();
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            
+            return `${day} ${month} ${year}`;
+        }
+
+        // Function to get current datetime
+        function getCurrentDateTime() {
+            const now = new Date();
+            return now.toLocaleString('id-ID', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // Update the date and datetime on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = getCurrentDate();
+            document.getElementById('currentDateTime').textContent = getCurrentDateTime();
+            
+            console.log('Report loaded successfully');
+            console.log('Data received:', {
+                kontraktor: '{{ $kontraktor }}',
+                startDate: '{{ $startDate }}',
+                endDate: '{{ $endDate }}'
+            });
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             // Ctrl+P for print
@@ -533,16 +585,6 @@
 
         window.addEventListener('afterprint', function() {
             console.log('Print dialog closed');
-        });
-
-        // Auto focus for better UX
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Report loaded successfully');
-            console.log('Data received:', {
-                kontraktor: '{{ $kontraktor }}',
-                startDate: '{{ $startDate }}',
-                endDate: '{{ $endDate }}'
-            });
         });
     </script>
 

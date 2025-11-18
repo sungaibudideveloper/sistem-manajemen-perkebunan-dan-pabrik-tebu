@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Input;
 
 use Carbon\Carbon;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\NotificationController;
-use App\Models\Notification;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
+use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
 class HPTController extends Controller
 {
@@ -612,24 +614,26 @@ class HPTController extends Controller
                 $join->on('hpthdr.blok', '=', 'blok.blok')
                     ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('hpthdr.plot', '=', 'plot.plot')
-                    ->whereColumn('hpthdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('plotting', function ($join) {
+                $join->on('hpthdr.plot', '=', 'plotting.plot')
+                    ->whereColumn('hpthdr.companycode', '=', 'plotting.companycode');
             })
             ->where('hptlst.companycode', session('companycode'))
             ->where('hpthdr.companycode', session('companycode'))
+            ->where('hpthdr.status', '=', 'Posted')
+            ->where('hptlst.status', '=', 'Posted')
             ->select(
                 'hptlst.*',
                 'hpthdr.varietas',
                 'hpthdr.kat',
                 'hpthdr.tanggalpengamatan',
-                'company.name as compName',
+                'hpthdr.tanggaltanam',
+                'company.nama as compName',
                 'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
+                'plotting.plot as plotName',
+                'plotting.luasarea',
             )
             ->orderBy('hpthdr.tanggalpengamatan', 'desc');
-
 
         if ($startDate) {
             $query->whereDate('hpthdr.tanggalpengamatan', '>=', $startDate);
@@ -639,193 +643,207 @@ class HPTController extends Controller
         }
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('hpt_lst.no_sample', 'like', "%{$search}%")
-                    ->orWhere('plotting.kd_plot', 'like', "%{$search}%")
-                    ->orWhere('hpt_hdr.varietas', 'like', "%{$search}%")
-                    ->orWhere('hpt_hdr.kat', 'like', "%{$search}%");
+                $q->where('hptlst.nosample', 'like', "%{$search}%")
+                    ->orWhere('plotting.plot', 'like', "%{$search}%")
+                    ->orWhere('hpthdr.varietas', 'like', "%{$search}%")
+                    ->orWhere('hpthdr.kat', 'like', "%{$search}%");
             });
         }
 
         $now = Carbon::now();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $headers = [
-            'A' => 'No. Sample',
-            'B' => 'Kebun',
-            'C' => 'Blok',
-            'D' => 'Plot',
-            'E' => 'Luas',
-            'F' => 'Tanggal Tanam',
-            'G' => 'Umur Tanam',
-            'H' => 'Varietas',
-            'I' => 'Kategori',
-            'J' => 'Tanggal Pengamatan',
-            'K' => 'Bulan Pengamatan',
-            'L' => 'No. Urut',
-            'M' => 'Jumlah Batang',
-            'N' => 'PPT',
-            'O' => 'PPT Aktif',
-            'P' => 'PBT',
-            'Q' => 'PBT Aktif',
-            'R' => 'Skor 0',
-            'S' => 'Skor 1',
-            'T' => 'Skor 2',
-            'U' => 'Skor 3',
-            'V' => 'Skor 4',
-            'W' => '%PPT',
-            'X' => '%PPT Aktif',
-            'Y' => '%PBT',
-            'Z' => '%PBT Aktif',
-            'AA' => 'Σni*vi',
-            'AB' => 'Intensitas Kerusakan',
-            'AC' => 'Telur PPT',
-            'AD' => 'Larva PPT 1',
-            'AE' => 'Larva PPT 2',
-            'AF' => 'Larva PPT 3',
-            'AG' => 'Larva PPT 4',
-            'AH' => 'Pupa PPT',
-            'AI' => 'Ngengat PPT',
-            'AJ' => 'Kosong PPT',
-            'AK' => 'Telur PBT',
-            'AL' => 'Larva PBT 1',
-            'AM' => 'Larva PBT 2',
-            'AN' => 'Larva PBT 3',
-            'AO' => 'Larva PBT 4',
-            'AP' => 'Pupa PBT',
-            'AQ' => 'Ngengat PBT',
-            'AR' => 'Kosong PBT',
-            'AS' => 'DH',
-            'AT' => 'DT',
-            'AU' => 'KBP',
-            'AV' => 'KBB',
-            'AW' => 'KP',
-            'AX' => 'Cabuk',
-            'AY' => 'Belalang',
-            'AZ' => 'BTG Terserang Ul.Grayak',
-            'BA' => 'Jumlah Ul.Grayak',
-            'BB' => 'BTG Terserang SMUT',
-            'BC' => 'SMUT Stadia 1',
-            'BD' => 'SMUT Stadia 2',
-            'BE' => 'SMUT Stadia 3',
-            'BF' => 'Jumlah Larva PPT',
-            'BG' => 'Jumlah Larva PBT'
-        ];
-
-        foreach ($headers as $col => $header) {
-            $sheet->setCellValue($col . '1', $header);
+        // Tentukan nama file
+        if ($startDate && $endDate) {
+            $filename = "HPTReport_{$startDate}_sd_{$endDate}.xlsx";
+        } else {
+            $filename = "HPTReport.xlsx";
         }
 
-        $sheet->getStyle('A1:BG1')->getFont()->setBold(true);
-        $sheet->freezePane('A2');
+        // Buat direktori temp jika belum ada
+        $tempDir = storage_path('app/temp');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
 
-        $row = 2;
-        $processedCount = 0;
+        $tempFile = $tempDir . '/' . $filename;
 
-        // Gunakan chunk() biasa karena tidak ada kolom id
-        $query->chunk(500, function ($hptChunk) use ($sheet, &$row, $now, &$processedCount) {
+        // Buat writer dengan Spout dan set temp folder
+        $writer = WriterEntityFactory::createXLSXWriter();
+        $writer->setTempFolder($tempDir);
+        $writer->openToFile($tempFile);
+
+        // Style untuk header (bold)
+        $headerStyle = (new StyleBuilder())
+            ->setFontBold()
+            ->build();
+
+        // Buat header row
+        $headerCells = [
+            WriterEntityFactory::createCell('No. Sample'),
+            WriterEntityFactory::createCell('Kebun'),
+            WriterEntityFactory::createCell('Blok'),
+            WriterEntityFactory::createCell('Plot'),
+            WriterEntityFactory::createCell('Luas'),
+            WriterEntityFactory::createCell('Tanggal Tanam'),
+            WriterEntityFactory::createCell('Umur Tanam'),
+            WriterEntityFactory::createCell('Varietas'),
+            WriterEntityFactory::createCell('Kategori'),
+            WriterEntityFactory::createCell('Tanggal Pengamatan'),
+            WriterEntityFactory::createCell('Bulan Pengamatan'),
+            WriterEntityFactory::createCell('No. Urut'),
+            WriterEntityFactory::createCell('Jumlah Batang'),
+            WriterEntityFactory::createCell('PPT'),
+            WriterEntityFactory::createCell('PPT Aktif'),
+            WriterEntityFactory::createCell('PBT'),
+            WriterEntityFactory::createCell('PBT Aktif'),
+            WriterEntityFactory::createCell('Skor 0'),
+            WriterEntityFactory::createCell('Skor 1'),
+            WriterEntityFactory::createCell('Skor 2'),
+            WriterEntityFactory::createCell('Skor 3'),
+            WriterEntityFactory::createCell('Skor 4'),
+            WriterEntityFactory::createCell('%PPT'),
+            WriterEntityFactory::createCell('%PPT Aktif'),
+            WriterEntityFactory::createCell('%PBT'),
+            WriterEntityFactory::createCell('%PBT Aktif'),
+            WriterEntityFactory::createCell('Σni*vi'),
+            WriterEntityFactory::createCell('Intensitas Kerusakan'),
+            WriterEntityFactory::createCell('Telur PPT'),
+            WriterEntityFactory::createCell('Larva PPT 1'),
+            WriterEntityFactory::createCell('Larva PPT 2'),
+            WriterEntityFactory::createCell('Larva PPT 3'),
+            WriterEntityFactory::createCell('Larva PPT 4'),
+            WriterEntityFactory::createCell('Pupa PPT'),
+            WriterEntityFactory::createCell('Ngengat PPT'),
+            WriterEntityFactory::createCell('Kosong PPT'),
+            WriterEntityFactory::createCell('Telur PBT'),
+            WriterEntityFactory::createCell('Larva PBT 1'),
+            WriterEntityFactory::createCell('Larva PBT 2'),
+            WriterEntityFactory::createCell('Larva PBT 3'),
+            WriterEntityFactory::createCell('Larva PBT 4'),
+            WriterEntityFactory::createCell('Pupa PBT'),
+            WriterEntityFactory::createCell('Ngengat PBT'),
+            WriterEntityFactory::createCell('Kosong PBT'),
+            WriterEntityFactory::createCell('DH'),
+            WriterEntityFactory::createCell('DT'),
+            WriterEntityFactory::createCell('KBP'),
+            WriterEntityFactory::createCell('KBB'),
+            WriterEntityFactory::createCell('KP'),
+            WriterEntityFactory::createCell('Cabuk'),
+            WriterEntityFactory::createCell('Belalang'),
+            WriterEntityFactory::createCell('BTG Terserang Ul.Grayak'),
+            WriterEntityFactory::createCell('Jumlah Ul.Grayak'),
+            WriterEntityFactory::createCell('BTG Terserang SMUT'),
+            WriterEntityFactory::createCell('SMUT Stadia 1'),
+            WriterEntityFactory::createCell('SMUT Stadia 2'),
+            WriterEntityFactory::createCell('SMUT Stadia 3'),
+            WriterEntityFactory::createCell('Jumlah Larva PPT'),
+            WriterEntityFactory::createCell('Jumlah Larva PBT'),
+        ];
+
+        $headerRow = WriterEntityFactory::createRow($headerCells, $headerStyle);
+        $writer->addRow($headerRow);
+
+        // Proses data dalam chunk untuk efisiensi memori
+        $query->chunk(1000, function ($hptChunk) use ($writer, $now) {
+            $rows = [];
+
             foreach ($hptChunk as $list) {
-
                 $tanggaltanam = Carbon::parse($list->tanggaltanam);
                 $umurTanam = $tanggaltanam->diffInMonths($now);
 
                 $tanggalpengamatan = Carbon::parse($list->tanggalpengamatan);
                 $bulanPengamatan = $tanggalpengamatan->format('F');
 
-                $sheet->setCellValue('A' . $row, $list->nosample);
-                $sheet->setCellValue('B' . $row, $list->compName);
-                $sheet->setCellValue('C' . $row, $list->blokName);
-                $sheet->setCellValue('D' . $row, $list->plotName);
-                $sheet->setCellValue('E' . $row, $list->luasarea);
-                $sheet->setCellValue('F' . $row, $tanggaltanam->format('Y-m-d'));
-                $sheet->setCellValue('G' . $row, round($umurTanam) . ' Bulan');
-                $sheet->setCellValue('H' . $row, $list->varietas);
-                $sheet->setCellValue('I' . $row, $list->kat);
-                $sheet->setCellValue('J' . $row, $list->tanggalpengamatan);
-                $sheet->setCellValue('K' . $row, $bulanPengamatan);
-                $sheet->setCellValue('L' . $row, $list->nourut);
-                $sheet->setCellValue('M' . $row, $list->jumlahbatang);
-                $sheet->setCellValue('N' . $row, $list->ppt);
-                $sheet->setCellValue('O' . $row, $list->ppt_aktif);
-                $sheet->setCellValue('P' . $row, $list->pbt);
-                $sheet->setCellValue('Q' . $row, $list->pbt_aktif);
-                $sheet->setCellValue('R' . $row, $list->skor0);
-                $sheet->setCellValue('S' . $row, $list->skor1);
-                $sheet->setCellValue('T' . $row, $list->skor2);
-                $sheet->setCellValue('U' . $row, $list->skor3);
-                $sheet->setCellValue('V' . $row, $list->skor4);
-                $sheet->setCellValue('W' . $row, $list->per_ppt);
-                $sheet->setCellValue('X' . $row, $list->per_ppt_aktif);
-                $sheet->setCellValue('Y' . $row, $list->per_pbt);
-                $sheet->setCellValue('Z' . $row, $list->per_pbt_aktif);
-                $sheet->setCellValue('AA' . $row, $list->sum_ni);
-                $sheet->setCellValue('AB' . $row, $list->int_rusak);
-                $sheet->setCellValue('AC' . $row, $list->telur_ppt);
-                $sheet->setCellValue('AD' . $row, $list->larva_ppt1);
-                $sheet->setCellValue('AE' . $row, $list->larva_ppt2);
-                $sheet->setCellValue('AF' . $row, $list->larva_ppt3);
-                $sheet->setCellValue('AG' . $row, $list->larva_ppt4);
-                $sheet->setCellValue('AH' . $row, $list->pupa_ppt);
-                $sheet->setCellValue('AI' . $row, $list->ngengat_ppt);
-                $sheet->setCellValue('AJ' . $row, $list->kosong_ppt);
-                $sheet->setCellValue('AK' . $row, $list->telur_pbt);
-                $sheet->setCellValue('AL' . $row, $list->larva_pbt1);
-                $sheet->setCellValue('AM' . $row, $list->larva_pbt2);
-                $sheet->setCellValue('AN' . $row, $list->larva_pbt3);
-                $sheet->setCellValue('AO' . $row, $list->larva_pbt4);
-                $sheet->setCellValue('AP' . $row, $list->pupa_pbt);
-                $sheet->setCellValue('AQ' . $row, $list->ngengat_pbt);
-                $sheet->setCellValue('AR' . $row, $list->kosong_pbt);
-                $sheet->setCellValue('AS' . $row, $list->dh);
-                $sheet->setCellValue('AT' . $row, $list->dt);
-                $sheet->setCellValue('AU' . $row, $list->kbp);
-                $sheet->setCellValue('AV' . $row, $list->kbb);
-                $sheet->setCellValue('AW' . $row, $list->kp);
-                $sheet->setCellValue('AX' . $row, $list->cabuk);
-                $sheet->setCellValue('AY' . $row, $list->belalang);
-                $sheet->setCellValue('AZ' . $row, $list->serang_grayak);
-                $sheet->setCellValue('BA' . $row, $list->jum_grayak);
-                $sheet->setCellValue('BB' . $row, $list->serang_smut);
-                $sheet->setCellValue('BC' . $row, $list->smut_stadia1);
-                $sheet->setCellValue('BD' . $row, $list->smut_stadia2);
-                $sheet->setCellValue('BE' . $row, $list->smut_stadia3);
-                $sheet->setCellValue('BF' . $row, $list->jum_larva_ppt);
-                $sheet->setCellValue('BG' . $row, $list->jum_larva_pbt);
+                // // Format persentase (konversi ke desimal untuk Excel)
+                // $perPpt = is_numeric($list->per_ppt) ? $list->per_ppt / 100 : $list->per_ppt;
+                // $perPptAktif = is_numeric($list->per_ppt_aktif) ? $list->per_ppt_aktif / 100 : $list->per_ppt_aktif;
+                // $perPbt = is_numeric($list->per_pbt) ? $list->per_pbt / 100 : $list->per_pbt;
+                // $perPbtAktif = is_numeric($list->per_pbt_aktif) ? $list->per_pbt_aktif / 100 : $list->per_pbt_aktif;
+                // $intRusak = is_numeric($list->int_rusak) ? $list->int_rusak / 100 : $list->int_rusak;
 
-                $sheet->getStyle('W' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-                $sheet->getStyle('X' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-                $sheet->getStyle('Y' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-                $sheet->getStyle('Z' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
-                $sheet->getStyle('AB' . $row)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                $decimalStyle = (new StyleBuilder())
+                    ->setFormat('0.000000000')
+                    ->build();
 
-                $row++;
-                $processedCount++;
+                $cells = [
+                    WriterEntityFactory::createCell($list->nosample),
+                    WriterEntityFactory::createCell($list->compName),
+                    WriterEntityFactory::createCell($list->blokName),
+                    WriterEntityFactory::createCell($list->plotName),
+                    WriterEntityFactory::createCell(round((float) $list->luasarea, 10)),
+                    WriterEntityFactory::createCell($tanggaltanam->format('Y-m-d')),
+                    WriterEntityFactory::createCell(round($umurTanam) . ' Bulan'),
+                    WriterEntityFactory::createCell($list->varietas),
+                    WriterEntityFactory::createCell($list->kat),
+                    WriterEntityFactory::createCell($list->tanggalpengamatan),
+                    WriterEntityFactory::createCell($bulanPengamatan),
+                    WriterEntityFactory::createCell($list->nourut),
+                    WriterEntityFactory::createCell($list->jumlahbatang),
+                    WriterEntityFactory::createCell($list->ppt),
+                    WriterEntityFactory::createCell($list->ppt_aktif),
+                    WriterEntityFactory::createCell($list->pbt),
+                    WriterEntityFactory::createCell($list->pbt_aktif),
+                    WriterEntityFactory::createCell($list->skor0),
+                    WriterEntityFactory::createCell($list->skor1),
+                    WriterEntityFactory::createCell($list->skor2),
+                    WriterEntityFactory::createCell($list->skor3),
+                    WriterEntityFactory::createCell($list->skor4),
+                    WriterEntityFactory::createCell(round((float) $list->per_ppt, 10), $decimalStyle),
+                    WriterEntityFactory::createCell(round((float) $list->per_ppt_aktif, 10), $decimalStyle),
+                    WriterEntityFactory::createCell(round((float) $list->per_pbt, 10), $decimalStyle),
+                    WriterEntityFactory::createCell(round((float) $list->per_pbt_aktif, 10), $decimalStyle),
+                    WriterEntityFactory::createCell($list->sum_ni),
+                    WriterEntityFactory::createCell(round((float) $list->int_rusak, 10), $decimalStyle),
+                    WriterEntityFactory::createCell($list->telur_ppt),
+                    WriterEntityFactory::createCell($list->larva_ppt1),
+                    WriterEntityFactory::createCell($list->larva_ppt2),
+                    WriterEntityFactory::createCell($list->larva_ppt3),
+                    WriterEntityFactory::createCell($list->larva_ppt4),
+                    WriterEntityFactory::createCell($list->pupa_ppt),
+                    WriterEntityFactory::createCell($list->ngengat_ppt),
+                    WriterEntityFactory::createCell($list->kosong_ppt),
+                    WriterEntityFactory::createCell($list->telur_pbt),
+                    WriterEntityFactory::createCell($list->larva_pbt1),
+                    WriterEntityFactory::createCell($list->larva_pbt2),
+                    WriterEntityFactory::createCell($list->larva_pbt3),
+                    WriterEntityFactory::createCell($list->larva_pbt4),
+                    WriterEntityFactory::createCell($list->pupa_pbt),
+                    WriterEntityFactory::createCell($list->ngengat_pbt),
+                    WriterEntityFactory::createCell($list->kosong_pbt),
+                    WriterEntityFactory::createCell($list->dh),
+                    WriterEntityFactory::createCell($list->dt),
+                    WriterEntityFactory::createCell($list->kbp),
+                    WriterEntityFactory::createCell($list->kbb),
+                    WriterEntityFactory::createCell($list->kp),
+                    WriterEntityFactory::createCell($list->cabuk),
+                    WriterEntityFactory::createCell($list->belalang),
+                    WriterEntityFactory::createCell($list->serang_grayak),
+                    WriterEntityFactory::createCell($list->jum_grayak),
+                    WriterEntityFactory::createCell($list->serang_smut),
+                    WriterEntityFactory::createCell($list->smut_stadia1),
+                    WriterEntityFactory::createCell($list->smut_stadia2),
+                    WriterEntityFactory::createCell($list->smut_stadia3),
+                    WriterEntityFactory::createCell($list->jum_larva_ppt),
+                    WriterEntityFactory::createCell($list->jum_larva_pbt),
+                ];
+
+                $rows[] = WriterEntityFactory::createRow($cells);
             }
 
-            // Log progress setiap chunk
-            // \Log::info("Processed {$processedCount} records so far...");
+            // Tulis semua rows dalam chunk sekaligus
+            $writer->addRows($rows);
 
-            // Optional: Clear memory setiap chunk
+            // Bebaskan memori
+            unset($rows);
             gc_collect_cycles();
         });
 
-        $writer = new Xlsx($spreadsheet);
-        if ($startDate && $endDate) {
-            $filename = "HPTReport_{$startDate}_sd_{$endDate}.xlsx";
-        } else {
-            $filename = "HPTReport.xlsx";
-        }
-        return response()->stream(
-            function () use ($writer) {
-                $writer->save('php://output');
-            },
-            200,
-            [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment;filename="' . $filename . '"',
-                'Cache-Control' => 'max-age=0',
-            ]
-        );
+        $writer->close();
+
+        // Return file sebagai download dan hapus setelah dikirim
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ])->deleteFileAfterSend(true);
     }
 }

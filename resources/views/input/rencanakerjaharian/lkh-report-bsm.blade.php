@@ -93,7 +93,7 @@
             </div>
         </div>
 
-        {{-- Statistics - Only if completed data exists --}}
+        {{-- Statistics - Fix label only --}}
         @php
             $completedData = $lkhBsmDetails->where('status', 'COMPLETED');
             $gradeA = $completedData->where('grade', 'A')->count();
@@ -114,15 +114,15 @@
                 </div>
                 <div class="p-3 border-r border-gray-300 bg-gray-50">
                     <div class="text-2xl font-bold text-gray-900">{{ $gradeA }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade A (≥80)</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade A (Score &lt;1200)</div>
                 </div>
                 <div class="p-3 border-r border-gray-300">
                     <div class="text-2xl font-bold text-gray-900">{{ $gradeB }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade B (60-79)</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade B (Score 1200-2000)</div>
                 </div>
                 <div class="p-3 bg-gray-50">
                     <div class="text-2xl font-bold text-gray-900">{{ $gradeC }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade C (<60)</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade C (Score &gt;2000)</div>
                 </div>
             </div>
         </div>

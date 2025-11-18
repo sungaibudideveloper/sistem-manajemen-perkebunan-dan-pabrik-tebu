@@ -82,7 +82,12 @@ class TimelineController extends Controller
             '3.1.2'  => 'Late Pre Emergence',
         ];
     }
-
+    //validasi
+    $activityFilter = $request->get('activity', 'all');
+    if ($activityFilter !== 'all' && !array_key_exists($activityFilter, $activityMap)) {
+        $activityFilter = 'all';
+    }
+    
     // ✅ Activity yang perlu digabung (berlaku untuk semua crop type)
     $activityGrouping = [
         '2.1.11' => ['2.1.11a', '2.1.11b'],
@@ -171,17 +176,19 @@ class TimelineController extends Controller
         }
     }
 
-    // Filter filled/empty
-    if ($fillFilter === 'filled') {
-        $plotHeaders = $plotHeaders->filter(fn($p) => $activityData->has($p->plot));
-    } elseif ($fillFilter === 'empty') {
-        $plotHeaders = $plotHeaders->filter(fn($p) => !$activityData->has($p->plot));
+    if ( $activityFilter !== 'all' ) {
+        $plotHeaders = $plotHeaders->filter(function($plot) use ($activityData, $activityFilter) {
+            return $activityData->has($plot->plot) && 
+                   $activityData->get($plot->plot)->has($activityFilter);
+        });
     }
 
-    // Map data
+    $filteredPlots = $plotHeaders->pluck('plot')->toArray(); // Ambil plot yang sudah difilter
+
     $plotDataForMap = DB::table('testgpslst as a')
         ->leftJoin('testgpshdr as d', 'a.plot', '=', 'd.plot')
         ->where('a.companycode', $companyCode)
+        ->whereIn('a.plot', $filteredPlots) // ✅ Filter map data sesuai plot yang tampil
         ->select('a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude')
         ->get();
 
@@ -193,9 +200,10 @@ class TimelineController extends Controller
         ])
         ->unique('plot')
         ->values();
+        
 
     return view('dashboard.timeline-plot.index', [
-        'title'             => 'Dashboard Timeline',
+        'title'             => 'Timeline',
         'nav'               => 'Timeline',
         'navbar'            => 'Timeline',
         'plotHeaders'       => $plotHeaders,
@@ -203,6 +211,7 @@ class TimelineController extends Controller
         'activityMap'       => $activityMap,
         'activityData'      => $activityData,
         'activityGrouping'  => $activityGrouping,
+        'activityFilter'    => $activityFilter,
         'plotData'          => $plotDataForMap,
         'fillFilter'        => $fillFilter,
         'cropType'          => $cropType,

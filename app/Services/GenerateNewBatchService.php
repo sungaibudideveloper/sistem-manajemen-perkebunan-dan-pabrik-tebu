@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * GenerateNewBatchService
+ * GenerateNewBatchService - FIXED VERSION
  * 
  * Auto-generate new batch based on LKH approval:
- * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3
- * 2. Planting completed (2.2.7) → RC3→PC or new PC
+ * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (empty)
+ * 2. Planting completed (2.2.7) → UPDATE existing PC batch (set tanggalulangtahun & plantinglkhno)
  * 3. Set tanggalpanen on first panen LKH approval
  */
 class GenerateNewBatchService
@@ -40,16 +40,16 @@ class GenerateNewBatchService
             
             // Route 1: Panen activities
             if (in_array($lkh->activitycode, self::PANEN_ACTIVITIES)) {
-                // ✅ NEW: Set tanggalpanen first (before transition check)
+                // Set tanggalpanen first (before transition check)
                 $this->setTanggalPanen($lkhno, $companycode, $lkh);
                 
                 // Then check for batch transition
                 return $this->generateFromPanen($lkhno, $companycode);
             }
             
-            // Route 2: Planting activity
+            // Route 2: Planting activity - UPDATE existing PC batch (NOT create new)
             if ($lkh->activitycode === self::PLANTING_ACTIVITY) {
-                return $this->generateFromPlanting($lkhno, $companycode);
+                return $this->updatePCBatchFromPlanting($lkhno, $companycode, $lkh);
             }
             
             // Not a batch-generating activity
@@ -63,7 +63,6 @@ class GenerateNewBatchService
     
     /**
      * Set tanggalpanen for first panen LKH approval
-     * NEW METHOD: Handle tanggalpanen logic
      * 
      * @param string $lkhno
      * @param string $companycode
@@ -96,7 +95,7 @@ class GenerateNewBatchService
                     continue;
                 }
                 
-                // ✅ ONLY set tanggalpanen if NULL (first panen)
+                // ONLY set tanggalpanen if NULL (first panen)
                 if ($batch->tanggalpanen === null) {
                     $batch->update([
                         'tanggalpanen' => $lkh->lkhdate,
@@ -117,7 +116,7 @@ class GenerateNewBatchService
                         'updatedat' => now()
                     ]);
                     
-                    Log::info("Updated lastactivity for batch {$plot->batchno} (tanggalpanen already set)", [
+                    Log::info("Updated lastactivity for batch {$plot->batchno}", [
                         'plot' => $plot->plot,
                         'existing_tanggalpanen' => $batch->tanggalpanen,
                         'lkhno' => $lkhno
@@ -132,7 +131,7 @@ class GenerateNewBatchService
     }
     
     /**
-     * Generate next batch from panen completion (PC→RC1, RC1→RC2, RC2→RC3)
+     * Generate next batch from panen completion (PC→RC1, RC1→RC2, RC2→RC3, RC3→PC empty)
      */
     private function generateFromPanen($lkhno, $companycode)
     {
@@ -174,10 +173,13 @@ class GenerateNewBatchService
     }
     
     /**
-     * Generate new PC batch from planting activity (RC3→PC or new plot)
+     * UPDATE existing PC batch from planting activity (NOT create new batch)
+     * NEW LOGIC: Just update tanggalulangtahun & plantinglkhno
      */
-    private function generateFromPlanting($lkhno, $companycode)
+    private function updatePCBatchFromPlanting($lkhno, $companycode, $lkh)
     {
+        DB::beginTransaction();
+        
         try {
             // Get plots from planting LKH
             $plantingPlots = LkhDetailPlot::where('companycode', $companycode)
@@ -185,26 +187,60 @@ class GenerateNewBatchService
                 ->get();
             
             if ($plantingPlots->isEmpty()) {
+                DB::rollBack();
                 return ['success' => false, 'message' => 'No plots found in planting LKH'];
             }
             
-            $createdBatches = [];
+            $updatedBatches = [];
             
             foreach ($plantingPlots as $plotData) {
-                $result = $this->createBatchFromPlanting($lkhno, $plotData, $companycode);
-                if ($result['success']) {
-                    $createdBatches[] = $result;
+                // Get active PC batch for this plot
+                $pcBatch = Batch::where('companycode', $companycode)
+                    ->where('plot', $plotData->plot)
+                    ->where('lifecyclestatus', 'PC')
+                    ->where('isactive', 1)
+                    ->whereNull('tanggalulangtahun') // PC yang belum di-tanam
+                    ->first();
+                
+                if (!$pcBatch) {
+                    Log::warning("No empty PC batch found for plot {$plotData->plot}, skipping planting update");
+                    continue;
                 }
+                
+                // UPDATE PC batch with planting info
+                $pcBatch->update([
+                    'tanggalulangtahun' => $lkh->lkhdate,
+                    'plantinglkhno' => $lkhno,
+                    'lastactivity' => self::PLANTING_ACTIVITY,
+                    'updateby' => Auth::user()->userid ?? 'SYSTEM',
+                    'updatedat' => now()
+                ]);
+                
+                $updatedBatches[] = [
+                    'batchno' => $pcBatch->batchno,
+                    'plot' => $plotData->plot,
+                    'tanggalulangtahun' => $lkh->lkhdate
+                ];
+                
+                Log::info("PC batch updated with planting info", [
+                    'batchno' => $pcBatch->batchno,
+                    'plot' => $plotData->plot,
+                    'lkhno' => $lkhno,
+                    'tanggalulangtahun' => $lkh->lkhdate
+                ]);
             }
+            
+            DB::commit();
             
             return [
                 'success' => true,
-                'message' => count($createdBatches) . ' PC batch(es) created from planting',
-                'batches' => $createdBatches
+                'message' => count($updatedBatches) . ' PC batch(es) updated with planting info',
+                'batches' => $updatedBatches
             ];
             
         } catch (\Exception $e) {
-            Log::error("Generate from planting failed: " . $e->getMessage());
+            DB::rollBack();
+            Log::error("Failed to update PC batch from planting: " . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -233,7 +269,8 @@ class GenerateNewBatchService
     }
     
     /**
-     * Create next batch from panen (PC→RC1, RC1→RC2, RC2→RC3)
+     * Create next batch from panen
+     * PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (empty, tanggalulangtahun=NULL)
      */
     private function createNextBatchFromPanen($currentBatchNo, $companycode)
     {
@@ -262,7 +299,8 @@ class GenerateNewBatchService
             // Generate new batch
             $newBatchNo = $this->generateBatchNo($companycode, now());
             
-            $newBatch = Batch::create([
+            // Prepare batch data
+            $batchData = [
                 'batchno' => $newBatchNo,
                 'companycode' => $companycode,
                 'plot' => $currentBatch->plot,
@@ -270,8 +308,7 @@ class GenerateNewBatchService
                 'batchdate' => now()->format('Y-m-d'),
                 'lifecyclestatus' => $nextLifecycle,
                 'previousbatchno' => $currentBatchNo,
-                'plantinglkhno' => $currentBatch->plantinglkhno, // Copy dari PC
-                'tanggalpanen' => null, // ✅ Reset for new cycle
+                'tanggalpanen' => null,
                 'kontraktorid' => $currentBatch->kontraktorid,
                 'kodevarietas' => $currentBatch->kodevarietas,
                 'pkp' => $currentBatch->pkp,
@@ -279,7 +316,26 @@ class GenerateNewBatchService
                 'isactive' => 1,
                 'inputby' => Auth::user()->userid ?? 'SYSTEM',
                 'createdat' => now()
-            ]);
+            ];
+            
+            // ✅ LOGIC 1: tanggalulangtahun (HANYA NULL kalau RC3→PC)
+            if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
+                // RC3→PC: Empty PC (belum tanam)
+                $batchData['tanggalulangtahun'] = null;
+            } else {
+                // PC→RC1, RC1→RC2, RC2→RC3: ALWAYS set = batchdate
+                $batchData['tanggalulangtahun'] = now()->format('Y-m-d');
+            }
+            
+            // ✅ LOGIC 2: plantinglkhno (INDEPENDENT, copy kalau ada)
+            $batchData['plantinglkhno'] = $currentBatch->plantinglkhno ?? null;
+            
+            // ✅ SPECIAL: RC3→PC set plantinglkhno = NULL (paksa)
+            if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
+                $batchData['plantinglkhno'] = null;
+            }
+            
+            $newBatch = Batch::create($batchData);
             
             // Update masterlist
             DB::table('masterlist')
@@ -291,8 +347,11 @@ class GenerateNewBatchService
             
             Log::info("Batch transitioned from panen", [
                 'old_batch' => $currentBatchNo,
+                'old_lifecycle' => $currentBatch->lifecyclestatus,
                 'new_batch' => $newBatchNo,
-                'lifecycle' => $nextLifecycle
+                'new_lifecycle' => $nextLifecycle,
+                'tanggalulangtahun' => $batchData['tanggalulangtahun'],
+                'plantinglkhno' => $batchData['plantinglkhno']
             ]);
             
             return [
@@ -311,77 +370,7 @@ class GenerateNewBatchService
     }
     
     /**
-     * Create new PC batch from planting (RC3→PC or new plot)
-     */
-    private function createBatchFromPlanting($lkhno, $plotData, $companycode)
-    {
-        DB::beginTransaction();
-        
-        try {
-            // Check previous batch
-            $previousBatch = Batch::where('companycode', $companycode)
-                ->where('plot', $plotData->plot)
-                ->where('isactive', 0)
-                ->orderBy('closedat', 'desc')
-                ->first();
-            
-            // Close previous batch if still active (should not happen, but safety)
-            Batch::where('companycode', $companycode)
-                ->where('plot', $plotData->plot)
-                ->where('isactive', 1)
-                ->update(['isactive' => 0, 'closedat' => now()]);
-            
-            // Generate new PC batch
-            $newBatchNo = $this->generateBatchNo($companycode, now());
-            
-            $newBatch = Batch::create([
-                'batchno' => $newBatchNo,
-                'companycode' => $companycode,
-                'plot' => $plotData->plot,
-                'batcharea' => $plotData->luasrkh,
-                'batchdate' => now()->format('Y-m-d'),
-                'lifecyclestatus' => 'PC',
-                'previousbatchno' => $previousBatch ? $previousBatch->batchno : null,
-                'plantinglkhno' => $lkhno, // ✅ Record planting LKH
-                'tanggalpanen' => null,
-                'kontraktorid' => $previousBatch ? $previousBatch->kontraktorid : null,
-                'isactive' => 1,
-                'inputby' => Auth::user()->userid ?? 'SYSTEM',
-                'createdat' => now()
-            ]);
-            
-            // Update masterlist
-            DB::table('masterlist')
-                ->updateOrInsert(
-                    ['companycode' => $companycode, 'plot' => $plotData->plot],
-                    ['activebatchno' => $newBatchNo, 'isactive' => 1]
-                );
-            
-            DB::commit();
-            
-            Log::info("PC batch created from planting", [
-                'lkhno' => $lkhno,
-                'new_batch' => $newBatchNo,
-                'plot' => $plotData->plot,
-                'previous_batch' => $previousBatch ? $previousBatch->batchno : 'None'
-            ]);
-            
-            return [
-                'success' => true,
-                'batchno' => $newBatchNo,
-                'plot' => $plotData->plot,
-                'lifecycle' => 'PC'
-            ];
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Failed to create PC batch from planting: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-    
-    /**
-     * Get next lifecycle (PC→RC1→RC2→RC3)
+     * Get next lifecycle (PC→RC1→RC2→RC3→PC empty)
      */
     private function getNextLifecycle($current)
     {
@@ -389,7 +378,7 @@ class GenerateNewBatchService
             'PC' => 'RC1',
             'RC1' => 'RC2',
             'RC2' => 'RC3',
-            'RC3' => 'PC',
+            'RC3' => 'PC', // Empty PC (tanggalulangtahun=NULL)
             default => 'PC'
         };
     }

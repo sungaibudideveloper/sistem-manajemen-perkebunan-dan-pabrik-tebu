@@ -306,6 +306,92 @@
             </div>
         </div>
 
+        {{-- Section 4: TENAGA HARIAN --}}
+        <div class="mb-8">
+            <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
+                <h3 class="font-bold text-sm uppercase tracking-wide">Tenaga Harian</h3>
+            </div>
+            
+            @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
+            <div class="overflow-x-auto border-x border-b border-gray-300 rounded-b-md">
+                <table class="w-full border-collapse bg-white text-xs">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-8">No</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-40">Nama Pekerja</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-32">NIK</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Masuk</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Selesai</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Kerja</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Overtime</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Premi</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Harian</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Lembur</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Total Upah</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($lkhWorkerDetails as $index => $worker)
+                        <tr class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm font-medium">
+                                {{ $worker->tenagakerja->nama ?? $worker->tenagakerjaid ?? 'N/A' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono">
+                                {{ $worker->tenagakerja->nik ?? '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
+                                {{ $worker->jammasuk ? \Carbon\Carbon::parse($worker->jammasuk)->format('H:i') : '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
+                                {{ $worker->jamselesai ? \Carbon\Carbon::parse($worker->jamselesai)->format('H:i') : '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-center text-sm">
+                                {{ ($worker->totaljamkerja ?? 0) > 0 ? number_format($worker->totaljamkerja, 0) . ' jam' : '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-center text-sm">
+                                {{ ($worker->overtimehours ?? 0) > 0 ? number_format($worker->overtimehours, 0) . ' jam' : '-' }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                Rp {{ number_format($worker->upahlembur ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
+                                Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm text-gray-600">
+                                {{ $worker->keterangan ?? '-' }}
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-gray-100 font-semibold">
+                        <tr>
+                            <td colspan="9" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
+                                Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
+                                Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-300 px-2 py-2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @else
+            <div class="border-x border-b border-gray-300 rounded-b-md bg-gray-50 py-6">
+                <p class="text-center text-gray-500 text-sm">Tidak menggunakan tenaga harian</p>
+            </div>
+            @endif
+        </div>
+
         <!-- Keterangan Section -->
         @if($lkhData->keterangan)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
