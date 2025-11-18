@@ -265,8 +265,8 @@ class LkhGeneratorService
                 'blok' => $activity->blok,
                 'plot' => $activity->plot,
                 'luasrkh' => $luasArea,
-                'luashasil' => 0.00,
-                'luassisa' => $luasArea,
+                'luashasil' => null,
+                'luassisa' => null,
                 'batchno' => $activity->batchno ?? null,
                 'createdat' => now()
             ];
