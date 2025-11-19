@@ -262,12 +262,10 @@
 
 <script>
     window.addEventListener('scroll', function() {
-        const scrollToTopButton = document.getElementById('scrollToTop');
-        if (window.scrollY > 100) {
-            scrollToTopButton.style.display = 'block';
-        } else {
-            scrollToTopButton.style.display = 'none';
-        }
+    const scrollToTopButton = document.getElementById('scrollToTop');
+    if (!scrollToTopButton) return; // Langsung return kalau tidak ada
+    
+    scrollToTopButton.style.display = (window.scrollY > 100) ? 'block' : 'none';
     });
 
     function scrollToTop() {
