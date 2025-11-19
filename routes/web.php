@@ -90,43 +90,76 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 });
 
 Route::get('utility/deploy', function () {
-    $output = "START\n\n";
-    
-    try {
-        chdir(base_path());
+    return response()->stream(function () {
+        echo '<pre style="background:#000;color:#0f0;padding:20px;white-space:pre-wrap;font-family:monospace;">';
+        echo str_pad('', 4096) . "\n"; // Browser buffer padding
+        flush();
         
-        // Git config
-        $output .= "1. Git safe directory...\n";
-        shell_exec('git config --global --add safe.directory "' . base_path() . '" 2>&1');
-        $output .= "OK\n\n";
+        echo "=== DEPLOYMENT START ===\n\n";
+        flush();
         
-        // Git pull - INI YANG PENTING
-        $output .= "2. Git pull...\n";
-        $pullResult = shell_exec('git pull origin main --no-edit --ff-only 2>&1');
-        $output .= $pullResult . "\n\n";
+        try {
+            chdir(base_path());
+            
+            // 1. Git safe directory
+            echo "1. Git safe directory...\n";
+            flush();
+            shell_exec('git config --global --add safe.directory "' . base_path() . '" 2>&1');
+            echo "   ✓ OK\n\n";
+            flush();
+            
+            // 2. Stash
+            echo "2. Stashing local changes...\n";
+            flush();
+            $stashResult = shell_exec('git stash 2>&1');
+            echo "   " . htmlspecialchars($stashResult) . "\n";
+            flush();
+            
+            // 3. Git pull
+            echo "3. Git pull...\n";
+            flush();
+            $pullResult = shell_exec('git pull origin main 2>&1');
+            echo "   " . htmlspecialchars($pullResult) . "\n";
+            flush();
+            
+            // 4. Pop stash
+            echo "4. Restoring local changes...\n";
+            flush();
+            $popResult = shell_exec('git stash pop 2>&1');
+            echo "   " . htmlspecialchars($popResult) . "\n";
+            flush();
+            
+            // 5. Clear cache
+            echo "5. Clearing cache...\n";
+            flush();
+            Artisan::call('config:clear');
+            Artisan::call('cache:clear');
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
+            echo "   ✓ All caches cleared\n\n";
+            flush();
+            
+            // 6. Current commit
+            echo "6. Current commit:\n";
+            $commit = shell_exec('git log -1 --oneline 2>&1');
+            echo "   " . htmlspecialchars($commit) . "\n\n";
+            flush();
+            
+            echo "=== ✅ SUCCESS ===\n";
+            
+        } catch (Exception $e) {
+            echo "\n=== ❌ ERROR ===\n";
+            echo htmlspecialchars($e->getMessage()) . "\n";
+        }
         
-        // Clear cache
-        $output .= "3. Clearing cache...\n";
-        Artisan::call('config:clear');
-        Artisan::call('cache:clear');
-        Artisan::call('route:clear');
-        Artisan::call('view:clear');
-        $output .= "OK\n\n";
+        echo '</pre>';
+        flush();
         
-        // Current commit
-        $output .= "4. Current commit:\n";
-        $commit = shell_exec('git log -1 --oneline 2>&1');
-        $output .= $commit . "\n";
-        
-        $output .= "\nDONE!";
-        
-    } catch (Exception $e) {
-        $output .= "ERROR: " . $e->getMessage();
-    }
-    
-    return '<pre style="background:#000;color:#0f0;padding:20px;white-space:pre-wrap;">' 
-           . htmlspecialchars($output) 
-           . '</pre>';
+    }, 200, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+        'Cache-Control' => 'no-cache',
+        'X-Accel-Buffering' => 'no',
+    ]);
 });
 require __DIR__.'/pabrik.php';
 require __DIR__.'/masterdata.php';
