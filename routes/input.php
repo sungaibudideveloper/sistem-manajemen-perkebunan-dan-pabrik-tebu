@@ -126,7 +126,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/operator-report-data', 'getOperatorReportData')->name('operator-report-data');
 
             // Panen Info route
-            Route::get('/batch/panen-info/{plot}', 'getPanenInfo')->name('getPanenInfo');
+            Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
 
             // Other utility routes
             Route::post('/update-status', 'updateStatus')->name('updateStatus');

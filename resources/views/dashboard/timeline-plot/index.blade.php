@@ -46,11 +46,17 @@
                 <a href="?crop=pc&activity={{$activityFilter}}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data PC
-             </a>
-             <a href="?crop=rc&activity={{$activityFilter}}" 
+                </a>
+                
+                <a href="?crop=rc&activity={{$activityFilter}}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data RC
-             </a>
+                </a>
+                
+                <a href="?crop=p&activity={{$activityFilter}}" 
+                class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='p'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
+                 🌾 Data Panen
+                </a>
                 
                 <button 
                 @click="activeTab = activeTab === 'map' ? 'table' : 'map'; activeTab === 'map' && $nextTick(() => initMapIfNeeded())" 

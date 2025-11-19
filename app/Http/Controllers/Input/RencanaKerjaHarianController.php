@@ -4504,69 +4504,129 @@ public function loadAbsenByDate(Request $request)
     }
 
     /**
-     * Get panen info for specific plot
-     * API Endpoint untuk info panen batch saat create RKH
+     * Get plot info (luas, sisa, batch) for any activity
      * 
      * @param string $plot
+     * @param string $activitycode
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getPanenInfo($plot)
+    public function getPlotInfo($plot, $activitycode)
     {
         try {
             $companycode = Session::get('companycode');
             
-            // Get active batch for this plot
-            $batch = DB::table('masterlist')
-                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
-                ->where('masterlist.companycode', $companycode)
-                ->where('masterlist.plot', $plot)
-                ->where('masterlist.isactive', 1)
-                ->where('batch.isactive', 1)
-                ->select([
-                    'batch.batchno',
-                    'batch.lifecyclestatus',
-                    'batch.batcharea',
-                    'batch.tanggalpanen'
-                ])
+            // 1. Get luas plot
+            $plotData = DB::table('plot')
+                ->where('companycode', $companycode)
+                ->where('plot', $plot)
                 ->first();
             
-            if (!$batch) {
+            if (!$plotData) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Plot tidak memiliki batch aktif'
+                    'message' => 'Plot tidak ditemukan'
                 ]);
             }
             
-            // ✅ FIXED: Calculate STC = batcharea - total sudah panen SAMPAI HARI INI (approved only)
-            $totalSudahPanen = DB::table('lkhdetailplot as ldp')
+            $luasPlot = $plotData->luasarea ?? 0;
+            
+            // 2. Calculate luas sisa (per activity)
+            $totalSudahDikerjakan = DB::table('lkhdetailplot as ldp')
                 ->join('lkhhdr as lh', function($join) {
                     $join->on('ldp.lkhno', '=', 'lh.lkhno')
                         ->on('ldp.companycode', '=', 'lh.companycode');
                 })
                 ->where('ldp.companycode', $companycode)
-                ->where('ldp.batchno', $batch->batchno)
-                ->where('lh.approvalstatus', '1') // ✅ HANYA yang APPROVED
-                ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d')) // ✅ FIXED: <= hari ini (bukan < hari ini)
+                ->where('ldp.plot', $plot)
+                ->where('lh.activitycode', $activitycode)
+                ->where('lh.approvalstatus', '1')
                 ->sum('ldp.luashasil');
             
-            $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
+            $luasSisa = $luasPlot - ($totalSudahDikerjakan ?? 0);
             
+            // 3. Check if panen activity
+            $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
+            $isPanenActivity = in_array($activitycode, $panenActivities);
+            
+            $batchInfo = null;
+            
+            if ($isPanenActivity) {
+                // Get batch info for panen
+                $batch = DB::table('masterlist')
+                    ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                    ->where('masterlist.companycode', $companycode)
+                    ->where('masterlist.plot', $plot)
+                    ->where('masterlist.isactive', 1)
+                    ->where('batch.isactive', 1)
+                    ->select([
+                        'batch.batchno',
+                        'batch.lifecyclestatus',
+                        'batch.batcharea',
+                        'batch.tanggalpanen'
+                    ])
+                    ->first();
+                
+                if ($batch) {
+                    // Calculate batch-specific sisa
+                    $totalSudahPanen = DB::table('lkhdetailplot as ldp')
+                        ->join('lkhhdr as lh', function($join) {
+                            $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                                ->on('ldp.companycode', '=', 'lh.companycode');
+                        })
+                        ->where('ldp.companycode', $companycode)
+                        ->where('ldp.batchno', $batch->batchno)
+                        ->where('lh.approvalstatus', '1')
+                        ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d'))
+                        ->sum('ldp.luashasil');
+                    
+                    $batchSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
+                    
+                    $batchInfo = [
+                        'batchno' => $batch->batchno,
+                        'lifecyclestatus' => $batch->lifecyclestatus,
+                        'tanggalpanen' => $batch->tanggalpanen ? Carbon::parse($batch->tanggalpanen)->format('d/m/Y') : 'Belum Panen',
+                        'batcharea' => number_format($batch->batcharea, 2),
+                        'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
+                        'luassisa_batch' => number_format($batchSisa, 2)
+                    ];
+                }
+            }
+            
+            // 4. Get tanggal terakhir activity (untuk non-panen)
+            $tanggalActivity = null;
+            if (!$isPanenActivity) {
+                $lastLkh = DB::table('lkhdetailplot as ldp')
+                    ->join('lkhhdr as lh', function($join) {
+                        $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                            ->on('ldp.companycode', '=', 'lh.companycode');
+                    })
+                    ->where('ldp.companycode', $companycode)
+                    ->where('ldp.plot', $plot)
+                    ->where('lh.activitycode', $activitycode)
+                    ->where('lh.approvalstatus', '1')
+                    ->orderBy('lh.lkhdate', 'desc')
+                    ->first();
+                
+                $tanggalActivity = $lastLkh ? Carbon::parse($lastLkh->lkhdate)->format('d/m/Y') : null;
+            }
+
             return response()->json([
                 'success' => true,
-                'batchno' => $batch->batchno,
-                'lifecyclestatus' => $batch->lifecyclestatus,
-                'tanggalpanen' => $batch->tanggalpanen ? Carbon::parse($batch->tanggalpanen)->format('d/m/Y') : 'Belum Panen',
-                'batcharea' => number_format($batch->batcharea, 2),
-                'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
+                'plot' => $plot,
+                'activitycode' => $activitycode,
+                'luasplot' => number_format($luasPlot, 2),
+                'totalsudahdikerjakan' => number_format($totalSudahDikerjakan ?? 0, 2),
                 'luassisa' => number_format($luasSisa, 2),
-                'plot' => $plot
+                'tanggal' => $isPanenActivity ? ($batchInfo['tanggalpanen'] ?? null) : $tanggalActivity, // ✅ NEW
+                'ispanen' => $isPanenActivity,
+                'batchinfo' => $batchInfo
             ]);
             
         } catch (\Exception $e) {
-            \Log::error("Error getting panen info for plot {$plot}: " . $e->getMessage());
+            \Log::error("Error getting plot info for {$plot}/{$activitycode}: " . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memuat info panen: ' . $e->getMessage()
+                'message' => 'Gagal memuat info plot: ' . $e->getMessage()
             ], 500);
         }
     }
