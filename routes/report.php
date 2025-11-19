@@ -20,6 +20,11 @@ Route::group(['middleware' => ['auth', 'permission:Report HPT']], function () {
     Route::get('report/hpt/excel', [HPTController::class, 'excel'])->name('report.hpt.exportExcel');
 });
 
+Route::group(['middleware' => ['auth', 'permission:Trash Report']], function () {
+    Route::match(['GET', 'POST'], 'report/trash-report', [ReportController::class, 'trash'])->name('report.trash-report.index');
+});
+
+
 Route::group(['middleware' => ['auth', 'permission:Report Zpk']], function () {
     Route::match(['GET', 'POST'], 'report/report-zpk', [ReportController::class, 'zpk'])->name('report.report-zpk.index');
     Route::get('report/report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report.report-zpk.exportExcel');
