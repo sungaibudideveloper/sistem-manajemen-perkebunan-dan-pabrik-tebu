@@ -90,76 +90,85 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
 });
 
 Route::get('utility/deploy', function () {
-    return response()->stream(function () {
-        echo '<pre style="background:#000;color:#0f0;padding:20px;white-space:pre-wrap;font-family:monospace;">';
-        echo str_pad('', 4096) . "\n"; // Browser buffer padding
-        flush();
+    // Disable output buffering
+    if (ob_get_level()) ob_end_clean();
+    
+    // Start fresh buffer
+    ob_start();
+    
+    echo '<pre style="background:#000;color:#0f0;padding:20px;white-space:pre-wrap;font-family:monospace;">';
+    echo "=== DEPLOYMENT START ===\n\n";
+    ob_flush();
+    flush();
+    
+    try {
+        chdir(base_path());
         
-        echo "=== DEPLOYMENT START ===\n\n";
-        flush();
+        // 1. Git safe directory
+        echo "1. Git safe directory...\n";
+        ob_flush(); flush();
+        shell_exec('git config --global --add safe.directory "' . base_path() . '" 2>&1');
+        echo "   ✓ OK\n\n";
+        ob_flush(); flush();
         
-        try {
-            chdir(base_path());
-            
-            // 1. Git safe directory
-            echo "1. Git safe directory...\n";
-            flush();
-            shell_exec('git config --global --add safe.directory "' . base_path() . '" 2>&1');
-            echo "   ✓ OK\n\n";
-            flush();
-            
-            // 2. Stash
-            echo "2. Stashing local changes...\n";
-            flush();
-            $stashResult = shell_exec('git stash 2>&1');
-            echo "   " . htmlspecialchars($stashResult) . "\n";
-            flush();
-            
-            // 3. Git pull
-            echo "3. Git pull...\n";
-            flush();
-            $pullResult = shell_exec('git pull origin main 2>&1');
-            echo "   " . htmlspecialchars($pullResult) . "\n";
-            flush();
-            
-            // 4. Pop stash
-            echo "4. Restoring local changes...\n";
-            flush();
-            $popResult = shell_exec('git stash pop 2>&1');
-            echo "   " . htmlspecialchars($popResult) . "\n";
-            flush();
-            
-            // 5. Clear cache
-            echo "5. Clearing cache...\n";
-            flush();
-            Artisan::call('config:clear');
-            Artisan::call('cache:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
-            echo "   ✓ All caches cleared\n\n";
-            flush();
-            
-            // 6. Current commit
-            echo "6. Current commit:\n";
-            $commit = shell_exec('git log -1 --oneline 2>&1');
-            echo "   " . htmlspecialchars($commit) . "\n\n";
-            flush();
-            
-            echo "=== ✅ SUCCESS ===\n";
-            
-        } catch (Exception $e) {
-            echo "\n=== ❌ ERROR ===\n";
-            echo htmlspecialchars($e->getMessage()) . "\n";
-        }
+        // 2. Stash local changes
+        echo "2. Stashing local changes...\n";
+        ob_flush(); flush();
+        $stashResult = shell_exec('git stash 2>&1');
+        echo "   " . htmlspecialchars($stashResult) . "\n";
+        ob_flush(); flush();
         
-        echo '</pre>';
-        flush();
+        // 3. Git pull
+        echo "3. Git pull from origin/main...\n";
+        ob_flush(); flush();
+        $pullResult = shell_exec('git pull origin main 2>&1');
+        echo "   " . htmlspecialchars($pullResult) . "\n";
+        ob_flush(); flush();
         
-    }, 200, [
-        'Content-Type' => 'text/html; charset=UTF-8',
-        'Cache-Control' => 'no-cache',
-        'X-Accel-Buffering' => 'no',
-    ]);
+        // 4. Pop stash
+        echo "4. Restoring local changes...\n";
+        ob_flush(); flush();
+        $popResult = shell_exec('git stash pop 2>&1');
+        echo "   " . htmlspecialchars($popResult) . "\n";
+        ob_flush(); flush();
+        
+        // 5. Clear cache
+        echo "5. Clearing Laravel cache...\n";
+        ob_flush(); flush();
+        Artisan::call('config:clear');
+        echo "   ✓ Config cleared\n";
+        ob_flush(); flush();
+        
+        Artisan::call('cache:clear');
+        echo "   ✓ Cache cleared\n";
+        ob_flush(); flush();
+        
+        Artisan::call('route:clear');
+        echo "   ✓ Routes cleared\n";
+        ob_flush(); flush();
+        
+        Artisan::call('view:clear');
+        echo "   ✓ Views cleared\n";
+        ob_flush(); flush();
+        
+        // 6. Current commit
+        echo "\n6. Current commit:\n";
+        $commit = shell_exec('git log -1 --oneline 2>&1');
+        echo "   " . htmlspecialchars($commit) . "\n";
+        ob_flush(); flush();
+        
+        echo "\n=== ✅ DEPLOYMENT SUCCESS ===\n";
+        
+    } catch (Exception $e) {
+        echo "\n=== ❌ ERROR ===\n";
+        echo htmlspecialchars($e->getMessage()) . "\n";
+    }
+    
+    echo '</pre>';
+    ob_flush();
+    flush();
+    
+    return ob_get_clean();
 });
 require __DIR__.'/pabrik.php';
 require __DIR__.'/masterdata.php';
