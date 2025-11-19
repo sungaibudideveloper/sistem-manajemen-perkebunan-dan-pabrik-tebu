@@ -44,7 +44,34 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             Route::post('/process-rkh', 'processRKHApproval')->name('processRKH');
             Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
         });
-        
+
+    // Utility deployment route
+    Route::get('utility/deploy', function () {
+        $output = [];
+        $results = [];
+        exec('whoami 2>&1', $outWhoami, $codeWho);
+        chdir(base_path());
+        exec('git pull origin main 2>&1', $output);
+        $results['git_pull'] = implode("\n", $output);
+
+        $output = [];
+        exec('npm run build 2>&1', $output);
+        $results['npm_build'] = implode("\n", $output);
+
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('route:clear');
+        Artisan::call('view:clear');
+        $results['cache'] = 'All caches cleared';
+
+        $html = '<h3>Deployment Completed!</h3>';
+        $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
+        $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
+        $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
+
+        return $html;
+    });
+
     // User notification routes
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
@@ -89,86 +116,5 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
     });
 });
 
-Route::get('utility/deploy', function () {
-    // Disable output buffering
-    if (ob_get_level()) ob_end_clean();
-    
-    // Start fresh buffer
-    ob_start();
-    
-    echo '<pre style="background:#000;color:#0f0;padding:20px;white-space:pre-wrap;font-family:monospace;">';
-    echo "=== DEPLOYMENT START ===\n\n";
-    ob_flush();
-    flush();
-    
-    try {
-        chdir(base_path());
-        
-        // 1. Git safe directory
-        echo "1. Git safe directory...\n";
-        ob_flush(); flush();
-        shell_exec('git config --global --add safe.directory "' . base_path() . '" 2>&1');
-        echo "   ✓ OK\n\n";
-        ob_flush(); flush();
-        
-        // 2. Stash local changes
-        echo "2. Stashing local changes...\n";
-        ob_flush(); flush();
-        $stashResult = shell_exec('git stash 2>&1');
-        echo "   " . htmlspecialchars($stashResult) . "\n";
-        ob_flush(); flush();
-        
-        // 3. Git pull
-        echo "3. Git pull from origin/main...\n";
-        ob_flush(); flush();
-        $pullResult = shell_exec('git pull origin main 2>&1');
-        echo "   " . htmlspecialchars($pullResult) . "\n";
-        ob_flush(); flush();
-        
-        // 4. Pop stash
-        echo "4. Restoring local changes...\n";
-        ob_flush(); flush();
-        $popResult = shell_exec('git stash pop 2>&1');
-        echo "   " . htmlspecialchars($popResult) . "\n";
-        ob_flush(); flush();
-        
-        // 5. Clear cache
-        echo "5. Clearing Laravel cache...\n";
-        ob_flush(); flush();
-        Artisan::call('config:clear');
-        echo "   ✓ Config cleared\n";
-        ob_flush(); flush();
-        
-        Artisan::call('cache:clear');
-        echo "   ✓ Cache cleared\n";
-        ob_flush(); flush();
-        
-        Artisan::call('route:clear');
-        echo "   ✓ Routes cleared\n";
-        ob_flush(); flush();
-        
-        Artisan::call('view:clear');
-        echo "   ✓ Views cleared\n";
-        ob_flush(); flush();
-        
-        // 6. Current commit
-        echo "\n6. Current commit:\n";
-        $commit = shell_exec('git log -1 --oneline 2>&1');
-        echo "   " . htmlspecialchars($commit) . "\n";
-        ob_flush(); flush();
-        
-        echo "\n=== ✅ DEPLOYMENT SUCCESS ===\n";
-        
-    } catch (Exception $e) {
-        echo "\n=== ❌ ERROR ===\n";
-        echo htmlspecialchars($e->getMessage()) . "\n";
-    }
-    
-    echo '</pre>';
-    ob_flush();
-    flush();
-    
-    return ob_get_clean();
-});
 require __DIR__.'/pabrik.php';
 require __DIR__.'/masterdata.php';
