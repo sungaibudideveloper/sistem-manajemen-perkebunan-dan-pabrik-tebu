@@ -405,7 +405,7 @@
                 <th class="py-3 px-2 text-xs font-semibold">Aktivitas</th>
                 <th class="py-3 px-2 text-xs font-semibold">Blok</th>
                 <th class="py-3 px-2 text-xs font-semibold">Plot</th>
-                <th class="py-3 px-2 text-xs font-semibold">Info Panen</th>
+                <th class="py-3 px-2 text-xs font-semibold">Info Plot</th>
                 <th class="py-3 px-2 text-xs font-semibold">Luas<br>(ha)</th>
                 <th class="py-3 px-2 text-xs font-semibold">Material</th>
                 <th class="py-3 px-2 text-xs font-semibold">Aksi</th>
