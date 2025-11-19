@@ -45,34 +45,105 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
         });
 
-    // Utility deployment route
-    Route::get('utility/deploy', function () {
-        $output = [];
-        $results = [];
+   Route::get('utility/deploy', function () {
+    // ⚠️ PENTING: Tambah authentication!
+    if (request()->get('secret') !== config('app.deploy_secret')) {
+        abort(403, 'Unauthorized');
+    }
+    
+    $results = [];
+    $errors = [];
+    
+    try {
+        // 1. CEK WHOAMI
         exec('whoami 2>&1', $outWhoami, $codeWho);
-dd($outWhoami);
-        chdir(base_path());
-        exec('git pull origin main 2>&1', $output);
-        $results['git_pull'] = implode("\n", $output);
-
-        $output = [];
-        exec('npm run build 2>&1', $output);
-        $results['npm_build'] = implode("\n", $output);
-
+        $results['user'] = implode("\n", $outWhoami);
+        
+        // 2. CEK WORKING DIRECTORY
+        $basePath = base_path();
+        $results['base_path'] = $basePath;
+        
+        if (!chdir($basePath)) {
+            throw new Exception("Failed to change directory to: $basePath");
+        }
+        
+        // 3. CEK GIT STATUS
+        exec('git status 2>&1', $gitStatus, $gitStatusCode);
+        $results['git_status'] = implode("\n", $gitStatus);
+        
+        if ($gitStatusCode !== 0) {
+            $errors[] = "Git not available or not a git repository";
+        }
+        
+        // 4. GIT PULL (jika git tersedia)
+        if (empty($errors)) {
+            exec('git pull origin main 2>&1', $gitPull, $gitPullCode);
+            $results['git_pull'] = implode("\n", $gitPull);
+            $results['git_pull_code'] = $gitPullCode;
+            
+            if ($gitPullCode !== 0) {
+                $errors[] = "Git pull failed with code: $gitPullCode";
+            }
+        }
+        
+        // 5. NPM BUILD (cek dulu npm ada atau tidak)
+        exec('which npm 2>&1', $npmPath, $npmCheckCode);
+        
+        if ($npmCheckCode === 0) {
+            exec('npm run build 2>&1', $npmBuild, $npmBuildCode);
+            $results['npm_build'] = implode("\n", $npmBuild);
+            $results['npm_build_code'] = $npmBuildCode;
+            
+            if ($npmBuildCode !== 0) {
+                $errors[] = "NPM build failed with code: $npmBuildCode";
+            }
+        } else {
+            $errors[] = "NPM not found in PATH";
+            $results['npm_build'] = "NPM not available";
+        }
+        
+        // 6. ARTISAN COMMANDS (ini biasanya aman)
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('route:clear');
         Artisan::call('view:clear');
-        $results['cache'] = 'All caches cleared';
-
-        $html = '<h3>Deployment Completed!</h3>';
-        $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
-        $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
-        $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
-
-        return $html;
-    });
-
+        Artisan::call('optimize');
+        
+        $results['artisan_cache'] = 'All caches cleared and optimized';
+        
+    } catch (Exception $e) {
+        $errors[] = $e->getMessage();
+    }
+    
+    // 7. FORMAT OUTPUT
+    $html = '<html><head><style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h3 { color: #4ec9b0; }
+        h4 { color: #569cd6; margin-top: 20px; }
+        pre { background: #2d2d2d; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .error { color: #f48771; background: #3c1f1f; padding: 10px; border-left: 4px solid #f48771; margin: 10px 0; }
+        .success { color: #4ec9b0; }
+    </style></head><body>';
+    
+    if (!empty($errors)) {
+        $html .= '<div class="error"><h3>⚠️ Errors:</h3>';
+        foreach ($errors as $error) {
+            $html .= '<p>• ' . htmlspecialchars($error) . '</p>';
+        }
+        $html .= '</div>';
+    }
+    
+    $html .= '<h3 class="success">✓ Deployment Process Log</h3>';
+    
+    foreach ($results as $key => $value) {
+        $title = ucwords(str_replace('_', ' ', $key));
+        $html .= "<h4>{$title}:</h4><pre>" . htmlspecialchars($value) . "</pre>";
+    }
+    
+    $html .= '</body></html>';
+    
+    return $html;
+});
     // User notification routes
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
