@@ -30,4 +30,6 @@ Route::group(['middleware' => ['auth', 'permission:Trash']], function () {
 
      Route::post('/pabrik/trash/report', [TrashController::class, 'generateReport'])
           ->name('pabrik.trash.report');
+
+     Route::any('/pabrik/trash/report/preview', [TrashController::class, 'reportPreview'])->name('pabrik.trash.report.preview');
 });

@@ -243,6 +243,30 @@ class ReportController extends Controller
         return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'zpk'));
     }
 
+    public function trash(Request $request)
+    {
+        $title = "Report Trash";
+        $nav = "Trash Report";
+        $search = $request->input('search', '');
+
+        $company = DB::table('company')->get();
+
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $reportType = $request->input('report_type', 'summary');
+
+        if ($request->isMethod('post')) {
+            $request->validate([
+                'perPage' => 'required|integer|min:1',
+            ]);
+            $request->session()->put('perPage', $request->input('perPage'));
+        }
+
+        $perPage = $request->session()->get('perPage', 10);
+
+        return view('report.trash.index', compact('company', 'nav', 'perPage', 'startDate', 'endDate', 'title', 'search', 'reportType'));
+    }
+
     public function excelZPK(Request $request)
     {
         // $startDate = $request->input('start_date');
