@@ -25,6 +25,8 @@
         th.sticky-v[rowspan="2"]{min-width:70px;}  /* Saldo, Realisasi, % */
         th.sticky-v[colspan="2"]{min-width:140px;}  /* Activity headers */
 
+        .total-row td:not(.sticky-h){min-width:70px;}
+
         /* ✅ Khusus blok */
         .sticky-h.blok{background:#14532d;color:white;text-align:center;}
         tbody .sticky-h.blok{background:#14532d;}
@@ -100,7 +102,7 @@
                                 @php
                                     $isGrouped = isset($activityGrouping[$activitycode]);
                                 @endphp
-                                <th class="sticky-v" colspan="2" style="text-align:center;">
+                                <th class="sticky-v" colspan="3" style="text-align:center;">
                                     <span style="{{ $isGrouped ? 'text-decoration: underline; text-decoration-color: #fbbf24; text-decoration-thickness: 2px; text-underline-offset: 3px;' : '' }}">
                                         {{ $activitycode }}
                                     </span>
@@ -108,7 +110,7 @@
                                         <span style="color:#fbbf24;font-size:12px;" title="Gabungan dari {{ implode(' + ', $activityGrouping[$activitycode]) }}"></span>
                                     @endif
                                     <br>{{ $label }}<br>
-                                    <small style="font-weight:normal;">HA / Tanggal</small>
+                                    <small style="font-weight:normal;">HA / % / Tanggal</small>
                                 </th>
                             @endforeach
                             
@@ -136,6 +138,7 @@
                             @foreach($activityMap as $activitycode => $label)
                                 @php 
                                     $totalActivity = 0;
+                                    $totalSaldo = $plotHeaders->sum('luasarea');
                                     $allDates = [];
                                     
                                     foreach($activityData as $plot => $activities) {
@@ -149,9 +152,16 @@
                                     
                                     $grandTotalRealisasi += $totalActivity;
                                     $latestDate = !empty($allDates) ? max($allDates) : null;
+                                    
+                                    // Calculate percentage for total
+                                    $percentageTotal = $totalSaldo > 0 ? ($totalActivity / $totalSaldo) * 100 : 0;
+                                    $percentageColor = $percentageTotal >= 100 ? '#22c55e' : ($percentageTotal > 0 ? '#f97316' : '#6b7280');
                                 @endphp
                                 
                                 <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
+                                <td style="text-align:right; font-weight:bold; color: {{ $percentageColor }};">
+                                    {{ $totalActivity > 0 ? number_format($percentageTotal, 2) . '%' : '-' }}
+                                </td>
                                 <td style="text-align:center;font-size:11px;">
                                     {{ $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M y') : '-' }}
                                 </td>
@@ -174,44 +184,65 @@
                         
                         {{-- DATA PER PLOT --}}
                         @foreach($blokPlots as $blok=>$plots)
-                            @foreach($plots as $index=>$plot)
-                                <tr>
-                                    @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
-                                    <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                    <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
-                                    
-                                    @php
-                                        $totalRealisasiPlot = 0;
+                        @foreach($plots as $index=>$plot)
+                            <tr>
+                                @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
+                                <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
+                                <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                
+                                @php
+                                    $totalRealisasiPlot = 0;
+                                @endphp
+                                
+                                @foreach($activityMap as $activitycode => $label)
+                                    @php 
+                                        $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                        $value = $activity->total_luas ?? 0;
+                                        $tanggal = $activity->tanggal_terbaru ?? null;
+                                        $totalRealisasiPlot += $value;
+                                        
+                                        // Calculate percentage for this activity
+                                        $percentage = $plot->luasarea > 0 ? ($value / $plot->luasarea) * 100 : 0;
+                                        $percentageColor = $percentage >= 100 ? '#22c55e' : ($percentage > 0 ? '#f97316' : '#6b7280');
                                     @endphp
                                     
-                                    @foreach($activityMap as $activitycode => $label)
-                                        @php 
-                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
-                                            $value = $activity->total_luas ?? 0;
-                                            $tanggal = $activity->tanggal_terbaru ?? null;
-                                            $totalRealisasiPlot += $value;
-                                        @endphp
+                                    <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
+                                    <td style="text-align:right; font-weight:600; color: {{ $percentageColor }};">
+                                        {{ $value > 0 ? number_format($percentage, 2) . '%' : '-' }}
+                                    </td>
+                                    <td style="text-align:center;font-size:11px;">
+                                        {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
+                                    </td>
+                                @endforeach
+                                
+                                {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
+                                <td style="text-align:right;">
+                                    {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
+                                </td>
+                                
+                                {{-- Persentase --}}
+                                <td style="text-align:right;">
+                                    @php
+                                        // ✅ Hitung rata-rata persentase per activity
+                                        $totalPercentage = 0;
+                                        $activityCount = 0;
                                         
-                                        <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
-                                        <td style="text-align:right;font-size:11px;">
-                                            {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
-                                        </td>
-                                    @endforeach
-                                    
-                                    {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
-                                    <td style="text-align:right;">
-                                        {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
-                                    </td>
-                                    
-                                    {{-- Persentase --}}
-                                    <td style="text-align:right;">
-                                        @php
-                                            $persen = $plot->luasarea > 0 ? ($totalRealisasiPlot / $plot->luasarea) * 100 : 0;
-                                        @endphp
-                                        {{ number_format($persen, 2) }}%
-                                    </td>
-                                </tr>
-                            @endforeach
+                                        foreach($activityMap as $activitycode => $label) {
+                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                            if ($activity) {
+                                                $value = $activity->total_luas ?? 0;
+                                                $percentage = $plot->luasarea > 0 ? ($value / $plot->luasarea) * 100 : 0;
+                                                $totalPercentage += $percentage;
+                                                $activityCount++;
+                                            }
+                                        }
+                                        
+                                        $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
+                                    @endphp
+                                    {{ number_format($avgPersen, 2) }}%
+                                </td>
+                            </tr>
+                        @endforeach
                         @endforeach
                     </tbody>
                 </table>
