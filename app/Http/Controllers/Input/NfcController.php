@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
  * NfcController
  * 
  * Manages NFC card inventory tracking
- * Simple balance system: Kantor (warehouse) vs Mandor
+ * Balance system: Kantor (warehouse) vs Mandor
+ * POS balance is auto-calculated from suratjalanpos (1 SJ = 1 NFC card)
  */
 class NfcController extends Controller
 {
@@ -32,6 +33,22 @@ class NfcController extends Controller
             ->whereNull('mandorid')
             ->value('balance') ?? 0;
         
+        // ✅ POS balance = COUNT of suratjalanpos (1 SJ = 1 NFC card)
+        $posBalance = DB::table('suratjalanpos')
+            ->where('companycode', $companycode)
+            ->count();
+        
+        // Get cards at POS per mandor for reference
+        $posDataByMandor = DB::table('suratjalanpos')
+            ->where('companycode', $companycode)
+            ->groupBy('mandorid')
+            ->select([
+                'mandorid',
+                DB::raw('COUNT(*) as cards_at_pos')
+            ])
+            ->get()
+            ->keyBy('mandorid');
+        
         // Get all mandor balances
         $mandorBalances = DB::table('nfc as n')
             ->leftJoin('user as u', 'n.mandorid', '=', 'u.userid')
@@ -46,9 +63,15 @@ class NfcController extends Controller
                 'n.notes'
             ])
             ->orderBy('u.name')
-            ->get();
+            ->get()
+            ->map(function($mandor) use ($posDataByMandor) {
+                $cardsAtPos = $posDataByMandor[$mandor->mandorid]->cards_at_pos ?? 0;
+                $mandor->cards_at_pos = $cardsAtPos;
+                $mandor->actual_balance = $mandor->balance - $cardsAtPos;
+                return $mandor;
+            });
         
-        // Get recent transactions (all types)
+        // Get recent transactions (exclude auto POS transactions)
         $recentTransactions = DB::table('nfctransaction as nt')
             ->leftJoin('user as u', 'nt.mandorid', '=', 'u.userid')
             ->where('nt.companycode', $companycode)
@@ -82,6 +105,7 @@ class NfcController extends Controller
             'navbar' => 'Input',
             'nav' => 'NFC',
             'kantorBalance' => $kantorBalance,
+            'posBalance' => $posBalance,
             'mandorBalances' => $mandorBalances,
             'recentTransactions' => $recentTransactions,
             'mandorList' => $mandorList
@@ -96,6 +120,7 @@ class NfcController extends Controller
         $request->validate([
             'mandorid' => 'required|exists:user,userid',
             'qty' => 'required|integer|min:1',
+            'transactiondate' => 'required|date',
             'notes' => 'nullable|string|max:500'
         ]);
 
@@ -122,7 +147,7 @@ class NfcController extends Controller
             DB::table('nfctransaction')->insert([
                 'transactionno' => $transactionNo,
                 'companycode' => $companycode,
-                'transactiondate' => now()->format('Y-m-d'),
+                'transactiondate' => $request->transactiondate,
                 'transactiontype' => 'OUT',
                 'mandorid' => $request->mandorid,
                 'qty' => $request->qty,
@@ -164,6 +189,7 @@ class NfcController extends Controller
         $request->validate([
             'mandorid' => 'required|exists:user,userid',
             'qty' => 'required|integer|min:1',
+            'transactiondate' => 'required|date',
             'notes' => 'nullable|string|max:500'
         ]);
 
@@ -173,13 +199,15 @@ class NfcController extends Controller
 
             DB::beginTransaction();
 
-            // Check mandor balance
+            // Check mandor balance (harus cek actual balance - cards at POS)
             $mandorBalance = $this->getBalance($companycode, $request->mandorid);
+            $cardsAtPos = $this->getCardsAtPos($companycode, $request->mandorid);
+            $actualBalance = $mandorBalance - $cardsAtPos;
             
-            if ($mandorBalance < $request->qty) {
+            if ($actualBalance < $request->qty) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Balance mandor tidak cukup. Tersedia: {$mandorBalance} kartu"
+                    'message' => "Balance mandor tidak cukup. Tersedia: {$actualBalance} kartu (Total: {$mandorBalance}, At POS: {$cardsAtPos})"
                 ], 400);
             }
 
@@ -190,7 +218,7 @@ class NfcController extends Controller
             DB::table('nfctransaction')->insert([
                 'transactionno' => $transactionNo,
                 'companycode' => $companycode,
-                'transactiondate' => now()->format('Y-m-d'),
+                'transactiondate' => $request->transactiondate,
                 'transactiontype' => 'IN',
                 'mandorid' => $request->mandorid,
                 'qty' => $request->qty,
@@ -225,12 +253,81 @@ class NfcController extends Controller
     }
 
     /**
+     * Process IN from POS (POS → Kantor)
+     * Return NFC cards from POS back to warehouse
+     */
+    public function posIn(Request $request)
+    {
+        $request->validate([
+            'qty' => 'required|integer|min:1',
+            'transactiondate' => 'required|date',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        try {
+            $companycode = Session::get('companycode');
+            $currentUser = Auth::user()->userid;
+
+            DB::beginTransaction();
+
+            // Check POS balance (real-time from suratjalanpos count)
+            $posBalance = DB::table('suratjalanpos')
+                ->where('companycode', $companycode)
+                ->count();
+            
+            if ($posBalance < $request->qty) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Balance POS tidak cukup. Tersedia: {$posBalance} kartu (dari SJ yang sudah dicetak)"
+                ], 400);
+            }
+
+            // Generate transaction number
+            $transactionNo = $this->generateTransactionNo($companycode);
+
+            // Create transaction record
+            DB::table('nfctransaction')->insert([
+                'transactionno' => $transactionNo,
+                'companycode' => $companycode,
+                'transactiondate' => $request->transactiondate,
+                'transactiontype' => 'IN',
+                'mandorid' => 'POS',
+                'qty' => $request->qty,
+                'notes' => $request->notes ?? 'Return from POS to warehouse',
+                'inputby' => $currentUser,
+                'createdat' => now()
+            ]);
+
+            // Update kantor balance (increase)
+            $this->updateBalance($companycode, null, $request->qty);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil menerima {$request->qty} kartu NFC dari POS",
+                'transactionno' => $transactionNo
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("NFC POS IN Error: " . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses transaksi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Process EXTERNAL IN transaction (Pembelian/Penambahan stock dari luar)
      */
     public function externalIn(Request $request)
     {
         $request->validate([
             'qty' => 'required|integer|min:1',
+            'transactiondate' => 'required|date',
             'notes' => 'required|string|max:500'
         ]);
 
@@ -247,7 +344,7 @@ class NfcController extends Controller
             DB::table('nfctransaction')->insert([
                 'transactionno' => $transactionNo,
                 'companycode' => $companycode,
-                'transactiondate' => now()->format('Y-m-d'),
+                'transactiondate' => $request->transactiondate,
                 'transactiontype' => 'IN',
                 'mandorid' => 'EXTERNAL',
                 'qty' => $request->qty,
@@ -286,6 +383,7 @@ class NfcController extends Controller
         $request->validate([
             'qty' => 'required|integer|min:1',
             'reason' => 'required|in:DAMAGED,LOST,DISPOSAL',
+            'transactiondate' => 'required|date',
             'notes' => 'required|string|max:500'
         ]);
 
@@ -309,9 +407,9 @@ class NfcController extends Controller
             $transactionNo = $this->generateTransactionNo($companycode);
 
             $reasonText = match($request->reason) {
-                'DAMAGED' => 'Kartu Rusak',
-                'LOST' => 'Kartu Hilang',
-                'DISPOSAL' => 'Disposal/Penghapusan',
+                'DAMAGED' => 'Damaged',
+                'LOST' => 'Lost',
+                'DISPOSAL' => 'Disposal',
                 default => 'Unknown'
             };
 
@@ -319,7 +417,7 @@ class NfcController extends Controller
             DB::table('nfctransaction')->insert([
                 'transactionno' => $transactionNo,
                 'companycode' => $companycode,
-                'transactiondate' => now()->format('Y-m-d'),
+                'transactiondate' => $request->transactiondate,
                 'transactiontype' => 'OUT',
                 'mandorid' => 'EXTERNAL',
                 'qty' => $request->qty,
@@ -372,6 +470,17 @@ class NfcController extends Controller
     }
 
     /**
+     * Get cards at POS for specific mandor (from suratjalanpos count)
+     */
+    private function getCardsAtPos($companycode, $mandorid)
+    {
+        return DB::table('suratjalanpos')
+            ->where('companycode', $companycode)
+            ->where('mandorid', $mandorid)
+            ->count();
+    }
+
+    /**
      * Update balance (create if not exists)
      */
     private function updateBalance($companycode, $mandorid, $qtyChange)
@@ -394,7 +503,7 @@ class NfcController extends Controller
                 ->update([
                     'balance' => DB::raw("balance + {$qtyChange}"),
                     'lasttransaction' => now(),
-                    'updateby' => Auth::user()->userid,
+                    'updateby' => Auth::user()->userid ?? 'SYSTEM',
                     'updatedat' => now()
                 ]);
         } else {
@@ -404,7 +513,7 @@ class NfcController extends Controller
                 'mandorid' => $mandorid,
                 'balance' => max(0, $qtyChange), // Prevent negative initial balance
                 'lasttransaction' => now(),
-                'inputby' => Auth::user()->userid,
+                'inputby' => Auth::user()->userid ?? 'SYSTEM',
                 'createdat' => now()
             ]);
         }

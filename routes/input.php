@@ -189,6 +189,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/transaction-out', 'transactionOut')->name('transaction-out');
             Route::post('/transaction-in', 'transactionIn')->name('transaction-in');
+            Route::post('/pos-in', 'posIn')->name('pos-in'); // NEW
             Route::post('/external-in', 'externalIn')->name('external-in');
             Route::post('/external-out', 'externalOut')->name('external-out');
         });
