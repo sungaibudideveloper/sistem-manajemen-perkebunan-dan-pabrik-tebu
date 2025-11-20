@@ -39,12 +39,25 @@ class TimelineController extends Controller
 
     // Header plot
     $plotHeaders = DB::table('plot as p')
-        ->where('p.companycode', $companyCode)
-        ->select('p.plot', 'p.luasarea')
-        ->orderBy('p.plot')
-        ->get();
+    ->leftJoin('masterlist as m', function($join) {
+        $join->on('p.plot', '=', 'm.plot')
+             ->on('p.companycode', '=', 'm.companycode');
+    })
+    ->leftJoin('batch as b', function($join) {
+        $join->on('m.activebatchno', '=', 'b.batchno')
+             ->on('m.companycode', '=', 'b.companycode');
+    })
+    ->where('p.companycode', $companyCode)
+    ->select(
+        'p.plot', 
+        'p.luasarea',
+        'b.lifecyclestatus',
+        'b.batchdate',
+        DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
+    )
+    ->orderBy('p.plot')
+    ->get();;
 
-    // ✅ Activity map DAN grouping berdasarkan crop type
 // ✅ Activity map DAN grouping berdasarkan crop type
 if ($cropType === 'rc') {
     $activityMap = [
@@ -117,23 +130,32 @@ if ($cropType === 'rc') {
         }
     }
 
-    // ✅ Query 1: Aggregate untuk total (untuk table & perhitungan)
+// ✅ Query 1: Aggregate untuk total LUAS dan AVG PERCENTAGE
 $activityDataRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+->join('plot as p', function($join) {
+    $join->on('ldp.plot', '=', 'p.plot')
+         ->on('ldp.companycode', '=', 'p.companycode');
+})
 ->where('ldp.companycode', $companyCode)
 ->whereIn('lh.activitycode', $allActivityCodes)
 ->select(
     'ldp.plot', 
     'lh.activitycode', 
     DB::raw('SUM(ldp.luashasil) as total_luas'),
+    DB::raw('AVG((ldp.luashasil / p.luasarea) * 100) as avg_percentage'),
     DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
 )
-->groupBy('ldp.plot', 'lh.activitycode')
+->groupBy('ldp.plot', 'lh.activitycode', 'p.luasarea')
 ->get();
 
-// ✅ Query 2: Detail per LKH (untuk info window map)
+// ✅ Query 2: Detail per LKH dengan persentase
 $activityDetailRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
+->join('plot as p', function($join) {
+    $join->on('ldp.plot', '=', 'p.plot')
+         ->on('ldp.companycode', '=', 'p.companycode');
+})
 ->where('ldp.companycode', $companyCode)
 ->whereIn('lh.activitycode', $allActivityCodes)
 ->select(
@@ -141,19 +163,22 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
     'lh.activitycode',
     'lh.lkhno',
     'ldp.luashasil',
-    'lh.lkhdate'
+    'lh.lkhdate',
+    DB::raw('(ldp.luashasil / p.luasarea) * 100 as percentage')
 )
 ->orderBy('ldp.plot')
 ->orderBy('lh.activitycode')
 ->orderBy('lh.lkhdate', 'desc')
 ->get();
-// ✅ Group detail by plot & activity
+
+// ✅ Group detail by plot & activity dengan persentase
 $lkhDetails = [];
 foreach ($activityDetailRaw as $detail) {
 $lkhDetails[$detail->plot][$detail->activitycode][] = [
     'lkhno' => $detail->lkhno,
     'luas_hasil' => (float)$detail->luashasil,
-    'tanggal' => $detail->lkhdate
+    'tanggal' => $detail->lkhdate,
+    'percentage' => (float)$detail->percentage
 ];
 }
 
@@ -168,6 +193,8 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
                 $subCodes = $activityGrouping[$mainCode];
                 
                 $combinedLuas = 0;
+                $combinedPercentage = 0;
+                $subCount = 0;
                 $latestDate = null;
                 
                 foreach ($subCodes as $subCode) {
@@ -177,6 +204,8 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
                     
                     if ($subActivity) {
                         $combinedLuas += $subActivity->total_luas;
+                        $combinedPercentage += $subActivity->avg_percentage;
+                        $subCount++;
                         
                         if ($subActivity->tanggal_terbaru) {
                             if (!$latestDate || $subActivity->tanggal_terbaru > $latestDate) {
@@ -190,6 +219,7 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
                     $plotActivities->put($mainCode, (object)[
                         'activitycode' => $mainCode,
                         'total_luas' => $combinedLuas,
+                        'avg_percentage' => $subCount > 0 ? $combinedPercentage / $subCount : 0,
                         'tanggal_terbaru' => $latestDate
                     ]);
                 }
@@ -244,66 +274,73 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
         }
         
         // Data untuk activity details
-        $plotInfo = $plotHeaders->firstWhere('plot', $plotCode);
-    $activities = $activityData->get($plotCode);
-    $luasRkh = $plotInfo->luasarea ?? 0;
+$plotInfo = $plotHeaders->firstWhere('plot', $plotCode);
+$activities = $activityData->get($plotCode);
+$luasRkh = $plotInfo->luasarea ?? 0;
+
+if ($activities && $luasRkh > 0) {
+    $activityList = [];
+    $totalPercentage = 0; // ✅ Jumlah persentase
+    $totalLuasHasil = 0;  // ✅ Total luas hasil (untuk info saja)
+    $activityCount = 0;   // ✅ Jumlah activity
+    $allComplete = true;
+    $hasActivity = false;
     
-    if ($activities && $luasRkh > 0) {
-        $activityList = [];
-        $totalLuasHasil = 0;
-        $allComplete = true; // ✅ Flag untuk cek semua activity complete
-        $hasActivity = false;
+    foreach ($activities as $actCode => $act) {
+        $luasHasil = $act->total_luas ?? 0;
+        $percentage = $act->avg_percentage ?? 0;
         
-        foreach ($activities as $actCode => $act) {
-            $luasHasil = $act->total_luas ?? 0;
-            $percentage = ($luasHasil / $luasRkh) * 100;
-            
-            $activityList[] = [
-                'code' => $actCode,
-                'label' => $activityMap[$actCode] ?? $actCode,
-                'luas_hasil' => $luasHasil,
-                'percentage' => $percentage,
-                'tanggal' => $act->tanggal_terbaru ?? null,
-                'lkh_details' => $lkhDetails[$plotCode][$actCode] ?? []
-            ];
-            
-            $totalLuasHasil += $luasHasil;
-            $hasActivity = true;
-            
-            // ✅ Cek apakah activity ini < 100%
-            if ($percentage < 100) {
-                $allComplete = false;
-            }
-        }
-        
-        // Rata-rata persentase = total luas hasil / luas RKH
-        $avgPercentage = ($totalLuasHasil / $luasRkh) * 100;
-        
-        // ✅ Tentukan warna marker berdasarkan SEMUA activity
-        if (!$hasActivity || $totalLuasHasil == 0) {
-            $markerColor = 'black'; // Hitam: tidak ada data
-        } elseif ($allComplete) {
-            $markerColor = 'green'; // Hijau: SEMUA activity >= 100%
-        } else {
-            $markerColor = 'orange'; // Oranye: ADA yang < 100%
-        }
-        
-        $plotActivityDetails[$plotCode] = [
-            'activities' => $activityList,
-            'avg_percentage' => $avgPercentage,
-            'marker_color' => $markerColor,
-            'luas_rkh' => $luasRkh,
-            'total_luas_hasil' => $totalLuasHasil
+        $activityList[] = [
+            'code' => $actCode,
+            'label' => $activityMap[$actCode] ?? $actCode,
+            'luas_hasil' => $luasHasil,
+            'percentage' => $percentage,
+            'tanggal' => $act->tanggal_terbaru ?? null,
+            'lkh_details' => $lkhDetails[$plotCode][$actCode] ?? []
         ];
-    } else {
-        $plotActivityDetails[$plotCode] = [
-            'activities' => [],
-            'avg_percentage' => 0,
-            'marker_color' => 'black',
-            'luas_rkh' => $luasRkh,
-            'total_luas_hasil' => 0
-        ];
+        
+        $totalPercentage += $percentage;
+        $totalLuasHasil += $luasHasil;
+        $activityCount++;
+        $hasActivity = true;
+        
+        if ($percentage < 100) {
+            $allComplete = false;
+        }
     }
+    
+    // ✅ BENAR: Rata-rata persentase dari semua activity
+    $avgPercentage = $activityCount > 0 ? ($totalPercentage / $activityCount) : 0;
+    
+    // ✅ Tentukan warna marker berdasarkan avg_percentage
+    if (!$hasActivity || $avgPercentage == 0) {
+        $markerColor = 'black'; // Hitam: tidak ada data
+    } elseif ($allComplete) {
+        $markerColor = 'green'; // Hijau: SEMUA activity >= 100%
+    } else {
+        $markerColor = 'orange'; // Oranye: ADA yang < 100%
+    }
+    
+    $plotActivityDetails[$plotCode] = [
+        'activities' => $activityList,
+        'avg_percentage' => $avgPercentage,
+        'marker_color' => $markerColor,
+        'luas_rkh' => $luasRkh,
+        'total_luas_hasil' => $totalLuasHasil,
+        'lifecyclestatus' => $plotInfo->lifecyclestatus ?? '-',  
+        'umur_hari' => $plotInfo->umur_hari ?? 0 
+    ];
+} else {
+    $plotActivityDetails[$plotCode] = [
+        'activities' => [],
+        'avg_percentage' => 0,
+        'marker_color' => 'black',
+        'luas_rkh' => $luasRkh,
+        'total_luas_hasil' => 0,
+        'lifecyclestatus' => $plotInfo->lifecyclestatus ?? '-',  
+        'umur_hari' => $plotInfo->umur_hari ?? 0 
+    ];
+}
 }
     
 // dd([
