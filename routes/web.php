@@ -20,6 +20,7 @@ use App\Http\Controllers\LiveChatController;
 */
 
 // Authentication routes
+ Route::any('/timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
@@ -50,7 +51,9 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
         $output = [];
         $results = [];
         exec('whoami 2>&1', $outWhoami, $codeWho);
+dd($outWhoami);
         chdir(base_path());
+        exec('git pull origin main 2>&1', $output);
         exec('git pull origin main 2>&1', $output);
         $results['git_pull'] = implode("\n", $output);
 
