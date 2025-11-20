@@ -42,8 +42,10 @@ class RencanaKerjaMingguanController extends Controller
 
         $search = $request->input('search', '');
         $isClosing = $request->input('isclosing', 0);
-        // $startDate = $request->input('start_date', now()->toDateString());
-        // $endDate = $request->input('end_date', now()->toDateString());
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $userid = Auth::user()->userid;
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -60,7 +62,17 @@ class RencanaKerjaMingguanController extends Controller
             //         ->whereColumn('rkmhdr.companycode', '=', 'rkmlst.companycode');
             // })
             ->join('activity', 'activity.activitycode', '=', 'rkmhdr.activitycode')
-            ->where('rkmhdr.companycode', '=', session('companycode'));
+            ->where('rkmhdr.companycode', '=', session('companycode'))
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('rkmhdr.rkmdate', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('rkmhdr.rkmdate', '<=', $endDate);
+            });
+
+        if ($userid != 'Admin') {
+            $querys->where('rkmhdr.inputby', '=', $userid);
+        }
         // ->where('rkmlst.companycode', '=', session('companycode'))
         // ->where('rkmhdr.isclosing', '=', $isClosing);
         if (!empty($search)) {
@@ -71,6 +83,8 @@ class RencanaKerjaMingguanController extends Controller
         }
 
         $rkm = $querys->select('rkmhdr.*', 'activity.activityname')
+            ->orderBy('rkmdate', 'desc')
+            ->orderBy('createdat', 'desc')
             ->paginate($perPage);
 
         foreach ($rkm as $index => $item) {
