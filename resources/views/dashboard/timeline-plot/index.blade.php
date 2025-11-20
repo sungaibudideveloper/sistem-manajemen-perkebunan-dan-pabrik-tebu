@@ -353,7 +353,7 @@
                             <div><strong>Luas RKH:</strong> ${parseFloat(d.luas_rkh).toFixed(2)} HA</div>
                             <div><strong>Total Hasil:</strong> ${parseFloat(d.total_luas_hasil).toFixed(2)} HA</div>
                             <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb">
-                                <strong>Lifecycle:</strong> 
+                                <strong>Status:</strong> 
                                 <span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:3px;font-weight:600">${d.lifecyclestatus}</span>
                             </div>
                             <div><strong>Umur:</strong> <span style="color:#059669;font-weight:600">${umurText}</span></div>

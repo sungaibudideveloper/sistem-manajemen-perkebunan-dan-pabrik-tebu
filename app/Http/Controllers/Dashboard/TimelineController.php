@@ -41,22 +41,25 @@ class TimelineController extends Controller
     $plotHeaders = DB::table('plot as p')
     ->leftJoin('masterlist as m', function($join) {
         $join->on('p.plot', '=', 'm.plot')
-             ->on('p.companycode', '=', 'm.companycode');
+            ->on('p.companycode', '=', 'm.companycode');
+            ->where('m.isactive', '=', 1);
     })
     ->leftJoin('batch as b', function($join) {
         $join->on('m.activebatchno', '=', 'b.batchno')
-             ->on('m.companycode', '=', 'b.companycode');
+            ->on('m.companycode', '=', 'b.companycode');
+            ->where('m.isactive', '=', 1);
     })
     ->where('p.companycode', $companyCode)
     ->select(
         'p.plot', 
         'p.luasarea',
+        'b.batcharea',        // ✅ TAMBAH INI
         'b.lifecyclestatus',
         'b.batchdate',
         DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
     )
     ->orderBy('p.plot')
-    ->get();;
+    ->get();
 
 // ✅ Activity map DAN grouping berdasarkan crop type
 if ($cropType === 'rc') {
@@ -133,30 +136,44 @@ if ($cropType === 'rc') {
 // ✅ Query 1: Aggregate untuk total LUAS dan AVG PERCENTAGE
 $activityDataRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
-->join('plot as p', function($join) {
-    $join->on('ldp.plot', '=', 'p.plot')
-         ->on('ldp.companycode', '=', 'p.companycode');
+->join('masterlist as m', function($join) {
+    $join->on('ldp.plot', '=', 'm.plot')
+         ->on('ldp.companycode', '=', 'm.companycode');
+         ->where('m.isactive', '=', 1);
+})
+->join('batch as b', function($join) {
+    $join->on('m.activebatchno', '=', 'b.batchno')
+         ->on('m.companycode', '=', 'b.companycode');
+         ->where('m.isactive', '=', 1);
 })
 ->where('ldp.companycode', $companyCode)
+->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
 ->whereIn('lh.activitycode', $allActivityCodes)
 ->select(
     'ldp.plot', 
     'lh.activitycode', 
     DB::raw('SUM(ldp.luashasil) as total_luas'),
-    DB::raw('AVG((ldp.luashasil / p.luasarea) * 100) as avg_percentage'),
+    DB::raw('(SUM(ldp.luashasil) / MAX(b.batcharea)) * 100 as avg_percentage'),  // ✅ Pakai batcharea
     DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
 )
-->groupBy('ldp.plot', 'lh.activitycode', 'p.luasarea')
+->groupBy('ldp.plot', 'lh.activitycode')
 ->get();
 
 // ✅ Query 2: Detail per LKH dengan persentase
 $activityDetailRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
-->join('plot as p', function($join) {
-    $join->on('ldp.plot', '=', 'p.plot')
-         ->on('ldp.companycode', '=', 'p.companycode');
+->join('masterlist as m', function($join) {
+    $join->on('ldp.plot', '=', 'm.plot')
+         ->on('ldp.companycode', '=', 'm.companycode');
+         ->where('m.isactive', '=', 1);
+})
+->join('batch as b', function($join) {
+    $join->on('m.activebatchno', '=', 'b.batchno')
+         ->on('m.companycode', '=', 'b.companycode');
+         ->where('m.isactive', '=', 1);
 })
 ->where('ldp.companycode', $companyCode)
+->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
 ->whereIn('lh.activitycode', $allActivityCodes)
 ->select(
     'ldp.plot', 
@@ -164,7 +181,7 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
     'lh.lkhno',
     'ldp.luashasil',
     'lh.lkhdate',
-    DB::raw('(ldp.luashasil / p.luasarea) * 100 as percentage')
+    DB::raw('(ldp.luashasil / b.batcharea) * 100 as percentage')  // ✅ Pakai batcharea
 )
 ->orderBy('ldp.plot')
 ->orderBy('lh.activitycode')
@@ -276,13 +293,17 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
         // Data untuk activity details
 $plotInfo = $plotHeaders->firstWhere('plot', $plotCode);
 $activities = $activityData->get($plotCode);
-$luasRkh = $plotInfo->luasarea ?? 0;
+$luasRkh = $plotInfo->batcharea ?? 0;  // ✅ GANTI: Pakai batcharea (bukan luasarea)
+
+// ✅ Pindahkan ke luar if untuk efisiensi
+$lifecycleStatus = $plotInfo->lifecyclestatus ?? '-';
+$umurHari = $plotInfo->umur_hari ?? 0;
 
 if ($activities && $luasRkh > 0) {
     $activityList = [];
-    $totalPercentage = 0; // ✅ Jumlah persentase
-    $totalLuasHasil = 0;  // ✅ Total luas hasil (untuk info saja)
-    $activityCount = 0;   // ✅ Jumlah activity
+    $totalPercentage = 0;
+    $totalLuasHasil = 0;
+    $activityCount = 0;
     $allComplete = true;
     $hasActivity = false;
     
@@ -309,16 +330,14 @@ if ($activities && $luasRkh > 0) {
         }
     }
     
-    // ✅ BENAR: Rata-rata persentase dari semua activity
     $avgPercentage = $activityCount > 0 ? ($totalPercentage / $activityCount) : 0;
     
-    // ✅ Tentukan warna marker berdasarkan avg_percentage
     if (!$hasActivity || $avgPercentage == 0) {
-        $markerColor = 'black'; // Hitam: tidak ada data
+        $markerColor = 'black';
     } elseif ($allComplete) {
-        $markerColor = 'green'; // Hijau: SEMUA activity >= 100%
+        $markerColor = 'green';
     } else {
-        $markerColor = 'orange'; // Oranye: ADA yang < 100%
+        $markerColor = 'orange';
     }
     
     $plotActivityDetails[$plotCode] = [
@@ -327,8 +346,8 @@ if ($activities && $luasRkh > 0) {
         'marker_color' => $markerColor,
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => $totalLuasHasil,
-        'lifecyclestatus' => $plotInfo->lifecyclestatus ?? '-',  
-        'umur_hari' => $plotInfo->umur_hari ?? 0 
+        'lifecyclestatus' => $lifecycleStatus,  // ✅ Dari variable
+        'umur_hari' => $umurHari                // ✅ Dari variable
     ];
 } else {
     $plotActivityDetails[$plotCode] = [
@@ -337,8 +356,8 @@ if ($activities && $luasRkh > 0) {
         'marker_color' => 'black',
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => 0,
-        'lifecyclestatus' => $plotInfo->lifecyclestatus ?? '-',  
-        'umur_hari' => $plotInfo->umur_hari ?? 0 
+        'lifecyclestatus' => $lifecycleStatus,  // ✅ Dari variable
+        'umur_hari' => $umurHari                // ✅ Dari variable
     ];
 }
 }
