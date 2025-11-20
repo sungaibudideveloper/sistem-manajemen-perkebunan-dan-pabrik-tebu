@@ -41,7 +41,7 @@ class UsernameLoginController extends Controller
             // Regenerate session untuk security
             $request->session()->regenerate();
 
-            if ($user->idjabatan == 5) {
+            if ($user->idjabatan == 20) {
                 return redirect()->route('mandor.splash');
             }
 
