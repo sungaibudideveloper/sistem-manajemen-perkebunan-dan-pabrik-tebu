@@ -41,12 +41,12 @@ class TimelineController extends Controller
     $plotHeaders = DB::table('plot as p')
     ->leftJoin('masterlist as m', function($join) {
         $join->on('p.plot', '=', 'm.plot')
-            ->on('p.companycode', '=', 'm.companycode');
+            ->on('p.companycode', '=', 'm.companycode')
             ->where('m.isactive', '=', 1);
     })
     ->leftJoin('batch as b', function($join) {
         $join->on('m.activebatchno', '=', 'b.batchno')
-            ->on('m.companycode', '=', 'b.companycode');
+            ->on('m.companycode', '=', 'b.companycode')
             ->where('m.isactive', '=', 1);
     })
     ->where('p.companycode', $companyCode)
@@ -138,12 +138,12 @@ $activityDataRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
 ->join('masterlist as m', function($join) {
     $join->on('ldp.plot', '=', 'm.plot')
-         ->on('ldp.companycode', '=', 'm.companycode');
+         ->on('ldp.companycode', '=', 'm.companycode')
          ->where('m.isactive', '=', 1);
 })
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
-         ->on('m.companycode', '=', 'b.companycode');
+         ->on('m.companycode', '=', 'b.companycode')
          ->where('m.isactive', '=', 1);
 })
 ->where('ldp.companycode', $companyCode)
@@ -164,12 +164,12 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
 ->join('lkhhdr as lh', 'ldp.lkhno', '=', 'lh.lkhno')
 ->join('masterlist as m', function($join) {
     $join->on('ldp.plot', '=', 'm.plot')
-         ->on('ldp.companycode', '=', 'm.companycode');
+         ->on('ldp.companycode', '=', 'm.companycode')
          ->where('m.isactive', '=', 1);
 })
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
-         ->on('m.companycode', '=', 'b.companycode');
+         ->on('m.companycode', '=', 'b.companycode')
          ->where('m.isactive', '=', 1);
 })
 ->where('ldp.companycode', $companyCode)
