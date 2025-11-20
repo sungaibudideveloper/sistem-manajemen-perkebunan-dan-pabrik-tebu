@@ -3329,6 +3329,11 @@ public function loadAbsenByDate(Request $request)
      */
     private function getRkhDetails($companycode, $rkhno)
     {
+        $rkhDate = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->value('rkhdate');
+        
         return DB::table('rkhlst as r')
             ->leftJoin('rkhlstworker as w', function($join) {
                 $join->on('r.companycode', '=', 'w.companycode')
@@ -3353,7 +3358,20 @@ public function loadAbsenByDate(Request $request)
                 'a.jenistenagakerja',
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
-                'b.batcharea'
+                'b.batcharea',
+                'b.tanggalpanen',
+                
+                // ✅ Calculate total sudah dikerjakan
+                DB::raw("(
+                    SELECT COALESCE(SUM(ldp.luashasil), 0)
+                    FROM lkhdetailplot ldp
+                    JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno 
+                                AND ldp.companycode = lh.companycode
+                    WHERE ldp.plot = r.plot
+                    AND lh.activitycode = r.activitycode
+                    AND lh.approvalstatus = '1'
+                    AND lh.lkhdate < '{$rkhDate}'
+                ) as total_sudah_dikerjakan")
             ])
             ->get();
     }

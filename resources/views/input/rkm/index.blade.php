@@ -42,6 +42,53 @@
                             </div>
                         </div>
                     </div>
+                    <div>
+                        <div class="relative inline-block text-left w-full">
+                            <div>
+                                <button type="button"
+                                    class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                    id="menu-button" aria-expanded="false" aria-haspopup="true"
+                                    onclick="toggleDropdown()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                                        class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Date Filter</span>
+                                    <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="absolute z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
+                                id="menu-dropdown">
+                                <div class="py-1 px-4" role="menu" aria-orientation="vertical"
+                                    aria-labelledby="menu-button">
+                                    <div class="py-2">
+                                        <label for="start_date" class="block text-sm font-medium text-gray-700">Start
+                                            Date</label>
+                                        <input type="date" id="start_date" name="start_date"
+                                            value="{{ old('start_date', $startDate ?? '') }}"
+                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                    </div>
+
+                                    <div class="py-2">
+                                        <label for="end_date" class="block text-sm font-medium text-gray-700">End
+                                            Date</label>
+                                        <input type="date" id="end_date" name="end_date"
+                                            value="{{ old('end_date', $endDate ?? '') }}"
+                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
+                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="relative">
                         <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
                             <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
@@ -69,8 +116,11 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">RKM Date</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Start Date</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">End Date</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Aktivitas</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Nama Aktivitas</th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Aktivitas
+                            </th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Nama Aktivitas
+                            </th>
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Input By</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Aksi</th>
                         </tr>
                     </thead>
@@ -93,6 +143,8 @@
                                     {{ $item->activitycode ?? '' }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->activityname ?? '' }}</td>
+                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                    {{ $item->inputby ?? '' }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
                                     <div class="flex items-center justify-center">
                                         <button class="group flex items-center"
@@ -268,6 +320,21 @@
         </div>
     </div>
 
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('menu-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        document.addEventListener("click", function(event) {
+            const dropdown = document.getElementById("menu-dropdown");
+            const button = document.getElementById("menu-button");
+
+            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add("hidden");
+            }
+        });
+    </script>
     <script>
         const modal = document.getElementById('targetDateModal');
         const openModalBtn = document.getElementById('openModalBtn');
