@@ -20,7 +20,6 @@ use App\Http\Controllers\LiveChatController;
 */
 
 // Authentication routes
- Route::any('/timbangan/dev/v1/insertdata', [Timbangan::class, 'insertData']);
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UsernameLoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [UsernameLoginController::class, 'logout'])->name('logout');
