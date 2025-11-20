@@ -222,6 +222,13 @@ Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->
 Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
 Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
 
+Route::middleware(['auth', 'permission:Tenaga Kerja'])->group(function () {
+    Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
+    Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
+    Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
+    Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
+});
+
 // Menu management
 Route::middleware(['auth', 'permission:Menu'])->group(function () {
     Route::get('usermanagement/menu', [MenuController::class, 'index'])->name('usermanagement.menu.index');
@@ -325,11 +332,11 @@ Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
     Route::get('usermanagement/user', [UserManagementController::class, 'userIndex'])->name('usermanagement.user.index');
     Route::post('usermanagement/user', [UserManagementController::class, 'userStore'])->name('usermanagement.user.store');
     Route::get('usermanagement/user/create', [UserManagementController::class, 'userCreate'])->name('usermanagement.user.create');
-    
+
     Route::get('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyIndex'])->name('usermanagement.user-company-permissions.index');
     Route::post('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyStore'])->name('usermanagement.user-company-permissions.store');
     Route::post('usermanagement/user-company-permissions/assign', [UserManagementController::class, 'userCompanyAssign'])->name('usermanagement.user-company-permissions.assign');
-    
+
     Route::get('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionIndex'])->name('usermanagement.user-permissions.index');
     Route::post('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionStore'])->name('usermanagement.user-permissions.store');
 });
@@ -351,7 +358,7 @@ Route::middleware(['auth', 'permission:Master'])->group(function () {
     Route::post('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionStore'])->name('usermanagement.permissions-masterdata.store');
     Route::put('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionUpdate'])->name('usermanagement.permissions-masterdata.update');
     Route::delete('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionDestroy'])->name('usermanagement.permissions-masterdata.destroy');
-    
+
     Route::get('usermanagement/test-permission/{userid}/{permission}', [UserManagementController::class, 'testUserPermission'])->name('usermanagement.test-permission');
 });
 
@@ -370,7 +377,7 @@ Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
     Route::get('usermanagement/support-ticket', [UserManagementController::class, 'ticketIndex'])->name('usermanagement.support-ticket.index');
     Route::put('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketUpdate'])->name('usermanagement.support-ticket.update');
     Route::delete('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketDestroy'])->name('usermanagement.support-ticket.destroy');
-    
+
     Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])->name('usermanagement.user-activity-permission.index');
     Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])->name('usermanagement.user-activity-permission.assign');
     Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])->name('usermanagement.user-activity-permission.destroy');
@@ -384,11 +391,11 @@ Route::post('support-ticket/submit', [UserManagementController::class, 'ticketSt
 
 // User Management AJAX endpoints
 Route::middleware('auth')->prefix('usermanagement/ajax')->name('usermanagement.ajax.')->group(function () {
-    
+
     // Get jabatan permissions for modal/form dropdown
     Route::get('/jabatan/{idjabatan}/permissions', [UserManagementController::class, 'getJabatanPermissions'])
         ->name('jabatan-permissions');
-    
+
     // Get user permissions for display in modal
     Route::get('/user/{userid}/permissions', [UserManagementController::class, 'getUserPermissionsSimple'])
         ->name('user-permissions');
