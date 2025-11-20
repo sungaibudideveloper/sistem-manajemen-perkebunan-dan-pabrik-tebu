@@ -50,7 +50,9 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
         $output = [];
         $results = [];
         exec('whoami 2>&1', $outWhoami, $codeWho);
+dd($outWhoami);
         chdir(base_path());
+        exec('git pull origin main 2>&1', $output);
         exec('git pull origin main 2>&1', $output);
         $results['git_pull'] = implode("\n", $output);
 
