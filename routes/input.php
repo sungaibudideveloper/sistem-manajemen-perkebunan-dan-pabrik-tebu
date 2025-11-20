@@ -10,6 +10,7 @@ use App\Http\Controllers\Input\GudangBbmController;
 use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\RencanaKerjaMingguanController;
+use App\Http\Controllers\Input\NfcController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -174,4 +175,22 @@ Route::middleware('auth')->group(function () {
     Route::get('input/gudang-bbm', [GudangBbmController::class, 'index'])->name('input.gudang-bbm.index');
     Route::get('input/gudang-bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('input.gudang-bbm.show');
     Route::post('input/gudang-bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('input.gudang-bbm.confirm');
+});
+
+
+// =====================================
+// NFC CARD MANAGEMENT ROUTES
+// =====================================
+Route::middleware('auth')->group(function () {
+    Route::prefix('input/nfc')
+        ->name('input.nfc.')
+        ->controller(NfcController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/transaction-out', 'transactionOut')->name('transaction-out');
+            Route::post('/transaction-in', 'transactionIn')->name('transaction-in');
+            Route::post('/pos-in', 'posIn')->name('pos-in'); // NEW
+            Route::post('/external-in', 'externalIn')->name('external-in');
+            Route::post('/external-out', 'externalOut')->name('external-out');
+        });
 });

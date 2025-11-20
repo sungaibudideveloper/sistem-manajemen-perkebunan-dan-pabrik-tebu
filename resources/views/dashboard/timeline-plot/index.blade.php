@@ -25,6 +25,8 @@
         th.sticky-v[rowspan="2"]{min-width:70px;}  /* Saldo, Realisasi, % */
         th.sticky-v[colspan="2"]{min-width:140px;}  /* Activity headers */
 
+        .total-row td:not(.sticky-h){min-width:70px;}
+
         /* ✅ Khusus blok */
         .sticky-h.blok{background:#14532d;color:white;text-align:center;}
         tbody .sticky-h.blok{background:#14532d;}
@@ -100,7 +102,7 @@
                                 @php
                                     $isGrouped = isset($activityGrouping[$activitycode]);
                                 @endphp
-                                <th class="sticky-v" colspan="2" style="text-align:center;">
+                                <th class="sticky-v" colspan="3" style="text-align:center;">
                                     <span style="{{ $isGrouped ? 'text-decoration: underline; text-decoration-color: #fbbf24; text-decoration-thickness: 2px; text-underline-offset: 3px;' : '' }}">
                                         {{ $activitycode }}
                                     </span>
@@ -108,7 +110,7 @@
                                         <span style="color:#fbbf24;font-size:12px;" title="Gabungan dari {{ implode(' + ', $activityGrouping[$activitycode]) }}"></span>
                                     @endif
                                     <br>{{ $label }}<br>
-                                    <small style="font-weight:normal;">HA / Tanggal</small>
+                                    <small style="font-weight:normal;">HA / % / Tanggal</small>
                                 </th>
                             @endforeach
                             
@@ -134,24 +136,35 @@
                             @endphp
                             
                             @foreach($activityMap as $activitycode => $label)
-                                @php 
-                                    $totalActivity = 0;
-                                    $allDates = [];
-                                    
-                                    foreach($activityData as $plot => $activities) {
-                                        if($act = $activities->get($activitycode)) {
-                                            $totalActivity += $act->total_luas;
-                                            if($act->tanggal_terbaru) {
-                                                $allDates[] = $act->tanggal_terbaru;
-                                            }
+                            @php 
+                                $totalActivity = 0;
+                                $totalPercentage = 0;
+                                $plotCount = 0;
+                                $allDates = [];
+                                
+                                foreach($activityData as $plot => $activities) {
+                                    if($act = $activities->get($activitycode)) {
+                                        $totalActivity += $act->total_luas;
+                                        $totalPercentage += ($act->avg_percentage ?? 0);
+                                        $plotCount++;
+                                        if($act->tanggal_terbaru) {
+                                            $allDates[] = $act->tanggal_terbaru;
                                         }
                                     }
-                                    
-                                    $grandTotalRealisasi += $totalActivity;
-                                    $latestDate = !empty($allDates) ? max($allDates) : null;
-                                @endphp
+                                }
                                 
+                                $grandTotalRealisasi += $totalActivity;
+                                $latestDate = !empty($allDates) ? max($allDates) : null;
+                                
+                                // Calculate average percentage for total
+                                $avgPercentage = $plotCount > 0 ? $totalPercentage / $plotCount : 0;
+                                $percentageColor = $avgPercentage >= 100 ? '#22c55e' : ($avgPercentage > 0 ? '#f97316' : '#6b7280');
+                            @endphp
+                        
                                 <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
+                                <td style="text-align:right; font-weight:bold; color: {{ $percentageColor }};">
+                                    {{ $avgPercentage > 0 ? number_format($avgPercentage, 2) . '%' : '-' }}
+                                </td>
                                 <td style="text-align:center;font-size:11px;">
                                     {{ $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M y') : '-' }}
                                 </td>
@@ -174,44 +187,63 @@
                         
                         {{-- DATA PER PLOT --}}
                         @foreach($blokPlots as $blok=>$plots)
-                            @foreach($plots as $index=>$plot)
-                                <tr>
-                                    @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
-                                    <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                    <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
-                                    
-                                    @php
-                                        $totalRealisasiPlot = 0;
+                        @foreach($plots as $index=>$plot)
+                            <tr>
+                                @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
+                                <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
+                                <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                
+                                @php
+                                    $totalRealisasiPlot = 0;
+                                @endphp
+                                
+                                @foreach($activityMap as $activitycode => $label)
+                                    @php 
+                                        $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                        $value = $activity->total_luas ?? 0;
+                                        $percentage = $activity->avg_percentage ?? 0;
+                                        $tanggal = $activity->tanggal_terbaru ?? null;
+                                        $totalRealisasiPlot += $value;
+                                        
+                                        $percentageColor = $percentage >= 100 ? '#22c55e' : ($percentage > 0 ? '#f97316' : '#6b7280');
                                     @endphp
                                     
-                                    @foreach($activityMap as $activitycode => $label)
-                                        @php 
-                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
-                                            $value = $activity->total_luas ?? 0;
-                                            $tanggal = $activity->tanggal_terbaru ?? null;
-                                            $totalRealisasiPlot += $value;
-                                        @endphp
+                                    <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
+                                    <td style="text-align:right; font-weight:600; color: {{ $percentageColor }};">
+                                        {{ $value > 0 ? number_format($percentage, 2) . '%' : '-' }}
+                                    </td>
+                                    <td style="text-align:center;font-size:11px;">
+                                        {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
+                                    </td>
+                                @endforeach
+                                
+                                {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
+                                <td style="text-align:right;">
+                                    {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
+                                </td>
+                                
+                                {{-- Persentase --}}
+                                <td style="text-align:right;">
+                                    @php
+                                        // ✅ Hitung rata-rata persentase per activity
+                                        $totalPercentage = 0;
+                                        $activityCount = 0;
                                         
-                                        <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
-                                        <td style="text-align:right;font-size:11px;">
-                                            {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
-                                        </td>
-                                    @endforeach
-                                    
-                                    {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
-                                    <td style="text-align:right;">
-                                        {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
-                                    </td>
-                                    
-                                    {{-- Persentase --}}
-                                    <td style="text-align:right;">
-                                        @php
-                                            $persen = $plot->luasarea > 0 ? ($totalRealisasiPlot / $plot->luasarea) * 100 : 0;
-                                        @endphp
-                                        {{ number_format($persen, 2) }}%
-                                    </td>
-                                </tr>
-                            @endforeach
+                                        foreach($activityMap as $activitycode => $label) {
+                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                            if ($activity) {
+                                                $percentage = $activity->avg_percentage ?? 0;
+                                                $totalPercentage += $percentage;
+                                                $activityCount++;
+                                            }
+                                        }
+                                        
+                                        $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
+                                    @endphp
+                                    {{ number_format($avgPersen, 2) }}%
+                                </td>
+                            </tr>
+                        @endforeach
                         @endforeach
                     </tbody>
                 </table>
@@ -247,7 +279,15 @@
         function createMapContent() {
             // Markers
             plotHeaders.forEach(h => {
-                const d = plotActivityDetails[h.plot] || {marker_color:'black', avg_percentage:0, activities:[], luas_rkh:0, total_luas_hasil:0};
+                const d = plotActivityDetails[h.plot] || {
+                    marker_color:'black', 
+                    avg_percentage:0, 
+                    activities:[], 
+                    luas_rkh:0, 
+                    total_luas_hasil:0,
+                    lifecyclestatus: '-',
+                    umur_hari: 0
+                };
                 const color = d.marker_color === 'green' ? '#22c55e' : d.marker_color === 'orange' ? '#f97316' : '#000';
                 
                 const marker = new google.maps.Marker({
@@ -256,8 +296,13 @@
                     icon: {path: google.maps.SymbolPath.CIRCLE, scale: 25, fillColor: color, fillOpacity: 0.8, strokeColor: '#fff', strokeWeight: 3},
                     label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
                 });
-                
-        let acts = '';
+
+                let umurText = '-';
+                if (d.umur_hari > 0) {
+                    umurText = `${d.umur_hari} hari`;
+                }
+
+                let acts = '';
         if (d.activities?.length > 0) {
             acts = `<div style="margin-top:10px;border-top:1px solid #ddd;padding-top:10px"><strong>Activities (${d.activities.length}):</strong><div style="max-height:200px;overflow-y:auto;margin-top:5px">`;
             d.activities.forEach((a,i) => {
@@ -307,6 +352,11 @@
                         <div style="font-size:11px;color:#6b7280;background:#f9fafb;padding:8px;border-radius:4px;margin-bottom:8px">
                             <div><strong>Luas RKH:</strong> ${parseFloat(d.luas_rkh).toFixed(2)} HA</div>
                             <div><strong>Total Hasil:</strong> ${parseFloat(d.total_luas_hasil).toFixed(2)} HA</div>
+                            <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb">
+                                <strong>Status:</strong> 
+                                <span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:3px;font-weight:600">${d.lifecyclestatus}</span>
+                            </div>
+                            <div><strong>Umur:</strong> <span style="color:#059669;font-weight:600">${umurText}</span></div>
                         </div>
                         <div style="background:linear-gradient(135deg,${color}22,${color}11);padding:10px;border-radius:6px;border:2px solid ${color};margin-bottom:8px;text-align:center">
                             <div style="color:#6b7280;font-size:10px;font-weight:600;text-transform:uppercase;margin-bottom:4px">Progress</div>
