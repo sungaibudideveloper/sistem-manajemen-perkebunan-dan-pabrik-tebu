@@ -21,7 +21,7 @@
         <div class="p-6 space-y-4">
             <div>
                 <label for="create_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal RKH:</label>
-                <input type="date" id="create_date" x-model="createDate" :min="today" :max="maxDate"
+                <input type="date" id="create_date" x-model="createDate" :max="maxDate"
                        class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
                 <p class="text-xs text-gray-500 mt-1">Pilih tanggal untuk membuat RKH (maksimal 7 hari ke depan)</p>
             </div>

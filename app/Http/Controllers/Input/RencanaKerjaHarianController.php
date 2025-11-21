@@ -2712,10 +2712,11 @@ public function loadAbsenByDate(Request $request)
     private function validateDateRange($selectedDate)
     {
         $targetDate = Carbon::parse($selectedDate);
-        $today = Carbon::today();
+        // $today = Carbon::today();
         $maxDate = Carbon::today()->addDays(7);
         
-        return $targetDate->gte($today) && $targetDate->lte($maxDate);
+        // return $targetDate->gte($today) && $targetDate->lte($maxDate);
+        return $targetDate->lte($maxDate);
     }
 
     /**
