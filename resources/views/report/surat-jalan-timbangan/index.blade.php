@@ -163,6 +163,33 @@
                 </div>
             </div>
 
+            <!-- Quick Search Section -->
+            <div class="bg-white rounded-xl shadow-md p-4 mb-5">
+                <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0">
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Cari Nomor SJ:</h3>
+                    </div>
+                    <div class="flex-grow flex gap-2">
+                        <input 
+                            type="text" 
+                            x-model="searchSJ" 
+                            @keyup.enter="goToDetail()" 
+                            placeholder="Masukkan nomor surat jalan..."
+                            class="flex-grow text-sm border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <button 
+                            @click="goToDetail()" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Cari
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Charts Row 1: SJ & Tonase per Tanggal -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <!-- SJ per Tanggal -->
@@ -170,8 +197,8 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Jumlah Surat Jalan</h3>
                         <div class="flex gap-2">
-                            <button @click="setSJPeriod('daily')" :class="sjPeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors">Harian</button>
-                            <button @click="setSJPeriod('monthly')" :class="sjPeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors">Bulanan</button>
+                            <button @click="setSJPeriod('daily')" :disabled="chartLoading.sj" :class="sjPeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Harian</button>
+                            <button @click="setSJPeriod('monthly')" :disabled="chartLoading.sj" :class="sjPeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Bulanan</button>
                         </div>
                     </div>
                     <canvas id="sjPerTanggalChart" height="220"></canvas>
@@ -182,15 +209,15 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hasil Tonase</h3>
                         <div class="flex gap-2">
-                            <button @click="setTonasePeriod('daily')" :class="tonasePeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors">Harian</button>
-                            <button @click="setTonasePeriod('monthly')" :class="tonasePeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors">Bulanan</button>
+                            <button @click="setTonasePeriod('daily')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Harian</button>
+                            <button @click="setTonasePeriod('monthly')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Bulanan</button>
                         </div>
                     </div>
                     <canvas id="tonasePerTanggalChart" height="220"></canvas>
                 </div>
             </div>
 
-            <!-- Charts Row 2: Hourly (if single day) - REDUCED HEIGHT -->
+            <!-- Charts Row 2: Hourly (if single day) -->
             <div x-show="data.isSingleDay" class="mb-5">
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Trend Netto Per Jam (Akumulasi)</h3>
@@ -392,6 +419,7 @@
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="index + 1"></td>
                                     <td class="border border-gray-300 px-2 py-2">
                                         <a :href="`{{ route('report.report-surat-jalan-timbangan.index') }}/${item.suratjalanno}`" 
+                                           target="_blank"
                                            class="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
                                            x-text="item.suratjalanno"></a>
                                     </td>
@@ -455,6 +483,11 @@
             activeRange: '',
             sjPeriod: 'daily',
             tonasePeriod: 'daily',
+            searchSJ: '',
+            chartLoading: {
+                sj: false,
+                tonase: false
+            },
             data: {
                 summary: {},
                 details: [],
@@ -500,10 +533,6 @@
                 kontraktor: null,
                 subkontraktor: null
             },
-            chartTimers: {
-                sj: null,
-                tonase: null
-            },
 
             async loadData() {
                 this.loading = true;
@@ -546,6 +575,7 @@
 
                 if (this.charts.hourly) {
                     this.charts.hourly.destroy();
+                    this.charts.hourly = null;
                 }
 
                 this.charts.hourly = new Chart(ctx, {
@@ -588,6 +618,7 @@
 
                 if (this.charts.status) {
                     this.charts.status.destroy();
+                    this.charts.status = null;
                 }
 
                 this.charts.status = new Chart(ctx, {
@@ -612,86 +643,72 @@
                 });
             },
 
-            setSJPeriod(period) {
-                if (this.sjPeriod === period) return;
+            async setSJPeriod(period) {
+                if (this.sjPeriod === period || this.chartLoading.sj) return;
+                
+                this.chartLoading.sj = true;
                 this.sjPeriod = period;
                 
-                // Clear previous timer
-                if (this.chartTimers.sj) {
-                    clearTimeout(this.chartTimers.sj);
-                }
+                // Render immediately
+                this.renderSJPerTanggalChart();
                 
-                // Debounce with 300ms delay
-                this.chartTimers.sj = setTimeout(() => {
-                    this.renderSJPerTanggalChart();
-                }, 300);
+                // Keep button disabled for 3 seconds
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                this.chartLoading.sj = false;
             },
 
-            setTonasePeriod(period) {
-                if (this.tonasePeriod === period) return;
+            async setTonasePeriod(period) {
+                if (this.tonasePeriod === period || this.chartLoading.tonase) return;
+                
+                this.chartLoading.tonase = true;
                 this.tonasePeriod = period;
                 
-                // Clear previous timer
-                if (this.chartTimers.tonase) {
-                    clearTimeout(this.chartTimers.tonase);
-                }
+                // Render immediately
+                this.renderTonasePerTanggalChart();
                 
-                // Debounce with 300ms delay
-                this.chartTimers.tonase = setTimeout(() => {
-                    this.renderTonasePerTanggalChart();
-                }, 300);
+                // Keep button disabled for 3 seconds
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                this.chartLoading.tonase = false;
             },
 
             renderSJPerTanggalChart() {
                 const ctx = document.getElementById('sjPerTanggalChart');
                 if (!ctx) return;
 
-                // Destroy existing chart safely
                 if (this.charts.sjPerTanggal) {
-                    try {
-                        this.charts.sjPerTanggal.destroy();
-                    } catch (e) {
-                        console.warn('Chart destroy error:', e);
-                    }
+                    this.charts.sjPerTanggal.destroy();
                     this.charts.sjPerTanggal = null;
                 }
 
-                // Wait for DOM to be ready
-                requestAnimationFrame(() => {
-                    const chartData = this.sjPeriod === 'monthly' ? this.data.sjMonthly : this.data.sjDaily;
+                const chartData = this.sjPeriod === 'monthly' ? this.data.sjMonthly : this.data.sjDaily;
 
-                    try {
-                        this.charts.sjPerTanggal = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: chartData.map(d => d.label),
-                                datasets: [{
-                                    label: 'Jumlah SJ',
-                                    data: chartData.map(d => d.value),
-                                    backgroundColor: '#3b82f6',
-                                    borderRadius: 6
-                                }]
+                this.charts.sjPerTanggal = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            label: 'Jumlah SJ',
+                            data: chartData.map(d => d.value),
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f3f4f6' }
                             },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        grid: { color: '#f3f4f6' }
-                                    },
-                                    x: {
-                                        grid: { display: false },
-                                        ticks: { font: { size: 9 } }
-                                    }
-                                }
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { size: 9 } }
                             }
-                        });
-                    } catch (e) {
-                        console.error('Chart render error:', e);
+                        }
                     }
                 });
             },
@@ -700,52 +717,40 @@
                 const ctx = document.getElementById('tonasePerTanggalChart');
                 if (!ctx) return;
 
-                // Destroy existing chart safely
                 if (this.charts.tonasePerTanggal) {
-                    try {
-                        this.charts.tonasePerTanggal.destroy();
-                    } catch (e) {
-                        console.warn('Chart destroy error:', e);
-                    }
+                    this.charts.tonasePerTanggal.destroy();
                     this.charts.tonasePerTanggal = null;
                 }
 
-                // Wait for DOM to be ready
-                requestAnimationFrame(() => {
-                    const chartData = this.tonasePeriod === 'monthly' ? this.data.tonaseMonthly : this.data.tonaseDaily;
+                const chartData = this.tonasePeriod === 'monthly' ? this.data.tonaseMonthly : this.data.tonaseDaily;
 
-                    try {
-                        this.charts.tonasePerTanggal = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: chartData.map(d => d.label),
-                                datasets: [{
-                                    label: 'Tonase (kg)',
-                                    data: chartData.map(d => d.value),
-                                    backgroundColor: '#10b981',
-                                    borderRadius: 6
-                                }]
+                this.charts.tonasePerTanggal = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            label: 'Tonase (kg)',
+                            data: chartData.map(d => d.value),
+                            backgroundColor: '#10b981',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f3f4f6' }
                             },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        grid: { color: '#f3f4f6' }
-                                    },
-                                    x: {
-                                        grid: { display: false },
-                                        ticks: { font: { size: 9 } }
-                                    }
-                                }
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { size: 9 } }
                             }
-                        });
-                    } catch (e) {
-                        console.error('Chart render error:', e);
+                        }
                     }
                 });
             },
@@ -756,6 +761,7 @@
 
                 if (this.charts.durasi) {
                     this.charts.durasi.destroy();
+                    this.charts.durasi = null;
                 }
 
                 this.charts.durasi = new Chart(ctx, {
@@ -795,6 +801,7 @@
 
                 if (this.charts.kontraktor) {
                     this.charts.kontraktor.destroy();
+                    this.charts.kontraktor = null;
                 }
 
                 this.charts.kontraktor = new Chart(ctx, {
@@ -847,6 +854,7 @@
 
                 if (this.charts.subkontraktor) {
                     this.charts.subkontraktor.destroy();
+                    this.charts.subkontraktor = null;
                 }
 
                 this.charts.subkontraktor = new Chart(ctx, {
@@ -895,6 +903,17 @@
 
             applyFilters() {
                 this.loadData();
+            },
+
+            goToDetail() {
+                if (!this.searchSJ || this.searchSJ.trim() === '') {
+                    alert('Masukkan nomor surat jalan terlebih dahulu');
+                    return;
+                }
+                
+                const suratjalanno = this.searchSJ.trim();
+                const url = `{{ route('report.report-surat-jalan-timbangan.index') }}/${suratjalanno}`;
+                window.open(url, '_blank');
             },
 
             resetFilters() {
@@ -972,7 +991,7 @@
                 if (!minutes) return '-';
                 const mins = parseFloat(minutes);
                 if (mins < 60) {
-                    return mins.toFixed(2) + ' menit';
+                    return Math.round(mins) + ' menit';
                 }
                 const hours = Math.floor(mins / 60);
                 const remainingMins = Math.round(mins % 60);
@@ -994,7 +1013,6 @@
 
             formatTime24FromJam(jam) {
                 if (!jam) return '-';
-                // jam format: "04:18:20" atau "04:18"
                 const parts = jam.split(':');
                 if (parts.length >= 2) {
                     return `${parts[0]}:${parts[1]}`;
@@ -1013,7 +1031,6 @@
             },
 
             exportSummary() {
-                // Export summary by mandor
                 let html = '<table border="1"><thead><tr><th>Mandor</th><th>Total SJ</th><th>Total Netto (kg)</th></tr></thead><tbody>';
                 const mandorSummary = {};
                 
