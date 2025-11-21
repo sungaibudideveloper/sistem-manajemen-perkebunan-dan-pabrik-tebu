@@ -398,8 +398,8 @@
                 // ✅ Limit zoom level agar tidak terlalu dekat/jauh
                 google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
                     const z = map.getZoom();
-                    if (z > 16) map.setZoom(16);  // Tidak terlalu dekat
-                    if (z < 12) map.setZoom(12);  // Tidak terlalu jauh
+                    if (z > 15) map.setZoom(15);  // Tidak terlalu dekat
+                    if (z < 14) map.setZoom(14);  // Tidak terlalu jauh (NAIKKAN dari 12 ke 14)
                 });
             }
 

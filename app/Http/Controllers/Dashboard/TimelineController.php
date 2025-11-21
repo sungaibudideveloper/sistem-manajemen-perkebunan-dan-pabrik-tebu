@@ -42,12 +42,12 @@ class TimelineController extends Controller
     ->leftJoin('masterlist as m', function($join) {
         $join->on('p.plot', '=', 'm.plot')
             ->on('p.companycode', '=', 'm.companycode')
-            ->where('m.isactive', '=', 1);
+            ;
     })
     ->leftJoin('batch as b', function($join) {
         $join->on('m.activebatchno', '=', 'b.batchno')
             ->on('m.companycode', '=', 'b.companycode')
-            ->where('m.isactive', '=', 1);
+            ;
     })
     ->where('p.companycode', $companyCode)
     ->select(
@@ -139,12 +139,12 @@ $activityDataRaw = DB::table('lkhdetailplot as ldp')
 ->join('masterlist as m', function($join) {
     $join->on('ldp.plot', '=', 'm.plot')
          ->on('ldp.companycode', '=', 'm.companycode')
-         ->where('m.isactive', '=', 1);
+         ;
 })
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
          ->on('m.companycode', '=', 'b.companycode')
-         ->where('m.isactive', '=', 1);
+         ;
 })
 ->where('ldp.companycode', $companyCode)
 ->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
@@ -165,12 +165,12 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
 ->join('masterlist as m', function($join) {
     $join->on('ldp.plot', '=', 'm.plot')
          ->on('ldp.companycode', '=', 'm.companycode')
-         ->where('m.isactive', '=', 1);
+         ;
 })
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
          ->on('m.companycode', '=', 'b.companycode')
-         ->where('m.isactive', '=', 1);
+         ;
 })
 ->where('ldp.companycode', $companyCode)
 ->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
@@ -362,19 +362,31 @@ if ($activities && $luasRkh > 0) {
 }
 }
     
+// ✅ Tambahkan ini tepat sebelum return view
 // dd([
-//     '1_activityData_A003' => $activityData->get('A003'),
+//     '1_masterlist_A003' => DB::table('masterlist')
+//         ->where('plot', 'A003')
+//         ->where('companycode', $companyCode)
+//         ->get(),
     
-//     '2_filteredPlots_has_A003' => in_array('A003', $filteredPlots),
+//     '2_batch_A003' => DB::table('batch')
+//         ->where('plot', 'A003')
+//         ->where('companycode', $companyCode)
+//         ->get(),
     
-//     '3_plotActivityDetails_A003' => $plotActivityDetails['A003'] ?? 'TIDAK ADA KEY A003',
+//     '3_lkhdetailplot_A003' => DB::table('lkhdetailplot')
+//         ->where('plot', 'A003')
+//         ->where('companycode', $companyCode)
+//         ->get(),
     
-//     '4_plotActivityDetails_keys' => array_keys($plotActivityDetails),
+//     '4_plotHeaders_A003' => $plotHeaders->where('plot', 'A003')->first(),
     
-//     '5_plotHeaders_A003' => $plotHeaders->firstWhere('plot', 'A003'),
+//     '5_activityDataRaw_A003' => $activityDataRaw->where('plot', 'A003')->values(),
     
-//     '6_centerData_A003' => $plotDataForMap->firstWhere('plot', 'A003'),
+//     '6_activityDetailRaw_A003' => $activityDetailRaw->where('plot', 'A003')->values(),
 // ]);
+
+// return view(...) ← Ini yang lama
 
     // Convert array ke collection untuk consistency
     $plotHeadersForMap = collect($plotHeadersForMap);
