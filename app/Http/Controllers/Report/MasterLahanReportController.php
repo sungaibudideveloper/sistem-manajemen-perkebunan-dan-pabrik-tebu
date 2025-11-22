@@ -41,7 +41,10 @@ class MasterLahanReportController extends Controller
 
             // Base query
             $query = DB::table('masterlist as m')
-                ->join('batch as b', 'm.activebatchno', '=', 'b.batchno')
+                ->join('batch as b', function($join) use ($companycode) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->on('m.companycode', '=', 'b.companycode');
+                })
                 ->where('m.companycode', $companycode)
                 ->where('m.isactive', 1)
                 ->where('b.isactive', 1);
