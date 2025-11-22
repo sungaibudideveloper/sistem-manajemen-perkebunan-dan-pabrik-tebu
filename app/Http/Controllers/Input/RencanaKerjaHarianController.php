@@ -4703,7 +4703,7 @@ public function loadAbsenByDate(Request $request)
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
             
-            if ($luas > $luasSisa) {
+            if (round($luas, 2) > round($luasSisa, 2)) {
                 $errors[] = "Baris " . ($index + 1) . ": Luas panen ({$luas} Ha) melebihi luas sisa (" . number_format($luasSisa, 2) . " Ha) untuk plot {$plot}.";
             }
         }

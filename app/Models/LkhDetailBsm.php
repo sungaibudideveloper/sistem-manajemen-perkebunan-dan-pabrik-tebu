@@ -58,19 +58,22 @@ class LkhDetailBsm extends Model
      * @param float $averageScore
      * @return string|null
      */
-    public static function calculateGrade($averageScore)
+    public static function calculateGrade($averageScore, $kodetebang)
     {
-        if ($averageScore === null) {
-            return null;
-        }
-
-        if ($averageScore >= 80) {
-            return 'A';
-        } elseif ($averageScore >= 60) {
-            return 'B';
-        } else {
+        if ($averageScore === null) return null;
+        
+        $isPremium = stripos($kodetebang ?? '', 'premium') !== false;
+        
+        if ($isPremium) {
+            if ($averageScore < 1200) return 'A';
+            if ($averageScore <= 1700) return 'B';
             return 'C';
         }
+        
+        // Non-premium
+        if ($averageScore < 1000) return 'A';
+        if ($averageScore <= 2000) return 'B';
+        return 'C';
     }
 
     /**
@@ -106,9 +109,8 @@ class LkhDetailBsm extends Model
         $nilaisegar = $data['nilaisegar'] ?? $this->nilaisegar;
         $nilaimanis = $data['nilaimanis'] ?? $this->nilaimanis;
 
-        // Auto-calculate average and grade
         $averageScore = self::calculateAverageScore($nilaibersih, $nilaisegar, $nilaimanis);
-        $grade = self::calculateGrade($averageScore);
+        $grade = self::calculateGrade($averageScore, $this->kodetebang);
 
         return $this->update([
             'nilaibersih' => $nilaibersih,

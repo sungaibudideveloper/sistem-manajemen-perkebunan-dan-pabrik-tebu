@@ -807,44 +807,52 @@ class LkhGeneratorService
         $bsmRecords = [];
         
         foreach ($activities as $activity) {
-            // Get batch info for this plot
-            $batchInfo = DB::table('masterlist')
-                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
-                ->where('masterlist.companycode', $companycode)
-                ->where('masterlist.plot', $activity->plot)
-                ->where('masterlist.isactive', 1)
-                ->where('batch.isactive', 1)
-                ->select(['batch.batchno', 'batch.lifecyclestatus'])
-                ->first();
+            // Get all SJ for this plot on this date
+            $suratJalans = DB::table('suratjalanpos')
+                ->where('companycode', $companycode)
+                ->where('plot', $activity->plot)
+                ->where('suratjalanno', 'LIKE', "%-{$lkhno}-%") // Match pattern
+                ->get();
             
-            $bsmRecord = [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'plot' => $activity->plot,
-                'batchno' => $batchInfo ? $batchInfo->batchno : null,
-                'nilaibersih' => null,
-                'nilaisegar' => null,
-                'nilaimanis' => null,
-                'averagescore' => null,
-                'grade' => null,
-                'keterangan' => null,
-                'inputby' => auth()->user()->userid ?? 'SYSTEM',
-                'createdat' => now()
-            ];
+            if ($suratJalans->isEmpty()) {
+                Log::warning("No SJ found for plot {$activity->plot} in LKH {$lkhno}");
+                continue;
+            }
             
-            DB::table('lkhdetailbsm')->insert($bsmRecord);
-            $bsmRecords[] = $bsmRecord;
-            
-            Log::info("BSM placeholder created", [
-                'lkhno' => $lkhno,
-                'plot' => $activity->plot,
-                'batchno' => $batchInfo ? $batchInfo->batchno : 'N/A'
-            ]);
+            foreach ($suratJalans as $sj) {
+                $batchInfo = DB::table('masterlist')
+                    ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+                    ->where('masterlist.companycode', $companycode)
+                    ->where('masterlist.plot', $activity->plot)
+                    ->where('masterlist.isactive', 1)
+                    ->where('batch.isactive', 1)
+                    ->first();
+                
+                $bsmRecord = [
+                    'companycode' => $companycode,
+                    'lkhno' => $lkhno,
+                    'suratjalanno' => $sj->suratjalanno,
+                    'plot' => $activity->plot,
+                    'kodetebang' => $sj->kodetebang,
+                    'batchno' => $batchInfo?->batchno,
+                    'nilaibersih' => null,
+                    'nilaisegar' => null,
+                    'nilaimanis' => null,
+                    'averagescore' => null,
+                    'grade' => null,
+                    'keterangan' => null,
+                    'inputby' => auth()->user()->userid ?? 'SYSTEM',
+                    'createdat' => now()
+                ];
+                
+                DB::table('lkhdetailbsm')->insert($bsmRecord);
+                $bsmRecords[] = $bsmRecord;
+            }
         }
         
         return [
             'success' => true,
-            'total_plots' => count($bsmRecords),
+            'total_records' => count($bsmRecords),
             'records' => $bsmRecords
         ];
     }
