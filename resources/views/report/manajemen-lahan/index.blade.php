@@ -140,6 +140,14 @@
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <div class="flex-1 min-w-[140px]">
+                        <label class="block text-xs font-medium text-gray-600 mb-1.5">Group</label>
+                        <select x-model="filters.group" class="w-full text-xs border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Current Company</option>
+                            <option value="all-tbl">All TBL (TBL1/2/3)</option>
+                            <option value="all-divisi">All Divisi</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[140px]">
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Blok</label>
                         <select x-model="filters.blok" class="w-full text-xs border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">All Blok</option>
@@ -237,6 +245,7 @@
                         <thead>
                             <tr class="bg-gray-100">
                                 <th class="border border-gray-300 px-3 py-2">No</th>
+                                <th class="border border-gray-300 px-3 py-2">Company</th>
                                 <th class="border border-gray-300 px-3 py-2">Blok</th>
                                 <th class="border border-gray-300 px-3 py-2">Plot</th>
                                 <th class="border border-gray-300 px-3 py-2">Type</th>
@@ -254,6 +263,7 @@
                             <template x-for="(item, index) in data.details" :key="item.plot">
                                 <tr class="hover:bg-blue-50 transition-colors">
                                     <td class="border border-gray-300 px-3 py-2 text-center" x-text="index + 1"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center font-semibold" x-text="item.blok"></td>
                                     <td class="border border-gray-300 px-3 py-2 font-bold text-blue-600" x-text="item.plot"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center">
@@ -300,6 +310,7 @@
                 ageDistribution: {}
             },
             filters: {
+                group: '',
                 blok: '',
                 varietas: '',
                 lifecycle: '',
