@@ -1478,7 +1478,7 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Get LKH BSM details for show
-     * NEW METHOD: For BSM activity reports
+     * UPDATED: Include suratjalanno and kodetebang
      * 
      * @param string $companycode
      * @param string $lkhno
@@ -1497,8 +1497,10 @@ class RencanaKerjaHarianController extends Controller
             ->where('bsm.lkhno', $lkhno)
             ->select([
                 'bsm.id',
+                'bsm.suratjalanno',
                 'ldp.blok',
                 'bsm.plot',
+                'bsm.kodetebang',
                 'bsm.batchno',
                 'bsm.nilaibersih',
                 'bsm.nilaisegar',
@@ -1516,13 +1518,17 @@ class RencanaKerjaHarianController extends Controller
             ])
             ->orderBy('ldp.blok')
             ->orderBy('bsm.plot')
+            ->orderBy('bsm.suratjalanno')
             ->get()
             ->map(function($item) {
                 return (object)[
                     'id' => $item->id,
+                    'suratjalanno' => $item->suratjalanno,
                     'blok' => $item->blok ?? '-',
                     'plot' => $item->plot,
                     'plot_display' => ($item->blok ?? '-') . '-' . $item->plot,
+                    'kodetebang' => $item->kodetebang ?? '-',
+                    'kodetebang_label' => stripos($item->kodetebang ?? '', 'premium') !== false ? 'Premium' : 'Non-Premium',
                     'batchno' => $item->batchno ?? '-',
                     'kodestatus' => $item->kodestatus ?? '-',
                     'batcharea' => number_format((float)($item->batcharea ?? 0), 2),
@@ -1540,7 +1546,7 @@ class RencanaKerjaHarianController extends Controller
                     'updatedat' => $item->updatedat ? Carbon::parse($item->updatedat)->format('d/m/Y H:i') : '-',
                 ];
             });
-    }
+        }
 
     /** 
      * Get LKH material details for show
