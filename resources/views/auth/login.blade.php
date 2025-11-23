@@ -15,7 +15,7 @@
     @vite(['resources/css/login.css'])
     
     <!-- Alpine.js for modal -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     
     <!-- Google reCAPTCHA v2 -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
