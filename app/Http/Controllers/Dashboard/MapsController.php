@@ -29,8 +29,14 @@ class MapsController extends Controller
       //$list1 = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
       //new
       $list = DB::table('testgpslst as a')
-      ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
-      ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
+      ->leftJoin('plot as b', function($join) {
+          $join->on('a.plot', '=', 'b.plot')
+               ->on('a.companycode', '=', 'b.companycode');
+      })
+      ->leftJoin('masterlist as c', function($join) {
+          $join->on('b.plot', '=', 'c.plot')
+               ->on('b.companycode', '=', 'c.companycode');
+      })
       ->where('a.companycode', session('companycode'))
       ->whereIn('a.plot', Arr::pluck($header, 'plot'))
       ->select('a.plot', 'a.latitude', 'a.longitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
@@ -65,9 +71,18 @@ class MapsController extends Controller
         $detailsPlots = Arr::pluck($details, 'plot');
         
         $list = DB::table('testgpslst as a')
-            ->leftJoin('plot as b', 'a.plot', '=', 'b.plot')
-            ->leftJoin('masterlist as c', 'b.plot', '=', 'c.plot')
-            ->leftJoin('testgpshdr as d', 'a.plot', '=', 'd.plot')
+            ->leftJoin('plot as b', function($join) {
+                $join->on('a.plot', '=', 'b.plot')
+                     ->on('a.companycode', '=', 'b.companycode');
+            })
+            ->leftJoin('masterlist as c', function($join) {
+                $join->on('b.plot', '=', 'c.plot')
+                     ->on('b.companycode', '=', 'c.companycode');
+            })
+            ->leftJoin('testgpshdr as d', function($join) {
+                $join->on('a.plot', '=', 'd.plot')
+                     ->on('a.companycode', '=', 'd.companycode');
+            })
             ->where('a.companycode', session('companycode'))
             ->whereIn('a.plot', $detailsPlots)
             ->select('a.companycode', 'a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')

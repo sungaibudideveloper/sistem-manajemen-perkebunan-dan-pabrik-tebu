@@ -68,7 +68,10 @@ class GudangController extends Controller
 
         // Query dengan filter
         $usehdr = usematerialhdr::from('usematerialhdr as a')
-        ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
+        ->join('rkhhdr as b', function($join) {
+            $join->on('a.rkhno', '=', 'b.rkhno')
+                 ->on('a.companycode', '=', 'b.companycode');
+        })
         ->join('user as c', 'b.mandorid', '=', 'c.userid')
         ->leftJoinSub(
             usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
