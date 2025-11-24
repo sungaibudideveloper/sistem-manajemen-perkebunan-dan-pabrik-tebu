@@ -75,7 +75,11 @@ class RekapUpahMingguanController extends Controller
 
         $rum = $querys
             ->select(
-                'lkhhdr.*',
+                'lkhhdr.lkhno',
+                'lkhhdr.activitycode',
+                'lkhhdr.companycode',
+                'lkhhdr.status',
+                'lkhhdr.jenistenagakerja',
                 'activity.activityname',
                 DB::raw("GROUP_CONCAT(DISTINCT lkhdetailplot.plot ORDER BY lkhdetailplot.plot SEPARATOR ', ') as plots")
             )
