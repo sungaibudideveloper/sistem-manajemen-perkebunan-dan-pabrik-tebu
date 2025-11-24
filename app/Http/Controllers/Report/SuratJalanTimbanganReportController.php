@@ -240,6 +240,20 @@ class SuratJalanTimbanganReportController extends Controller
                 ->sortByDesc('value')
                 ->values();
 
+            // Rit per kontraktor (ALL kontraktors)
+            $ritPerKontraktor = $details->groupBy('nama_kontraktor_lengkap')
+                ->map(function($group) {
+                    return [
+                        'kontraktor' => $group->first()->nama_kontraktor_lengkap ?: 'Unknown',
+                        'total_rit' => $group->count(),
+                        'sudah_timbang' => $group->whereNotNull('netto')->count(),
+                        'pending' => $group->whereNull('netto')->count(),
+                        'total_netto' => $group->whereNotNull('netto')->sum('netto'),
+                    ];
+                })
+                ->sortByDesc('total_rit')
+                ->values();
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -249,6 +263,7 @@ class SuratJalanTimbanganReportController extends Controller
                     'hourlyTrend' => $hourlyTrend,
                     'statusBreakdown' => $statusBreakdown,
                     'vehiclePerformance' => $vehiclePerformance,
+                    'ritPerKontraktor' => $ritPerKontraktor,
                     'sjDaily' => $sjDaily,
                     'sjMonthly' => $sjMonthly,
                     'tonaseDaily' => $tonaseDaily,

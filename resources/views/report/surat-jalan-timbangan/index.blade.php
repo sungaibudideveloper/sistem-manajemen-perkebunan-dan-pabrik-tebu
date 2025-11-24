@@ -366,16 +366,50 @@
                 </div>
             </div>
 
-            <!-- Charts Row 5: Kontraktor & Subkontraktor (2 horizontal bars) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <!-- Kontraktor by Tonase -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+            <!-- Charts Row 5: Rit, Kontraktor & Subkontraktor (ratio 1:2:2) -->
+            <div class="grid grid-cols-1 md:grid-cols-8 gap-5 mb-5">
+                <!-- Rit per Kontraktor (1 kolom - Table) -->
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-2">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Jumlah Rit per Kontraktor</h3>
+                    <div class="overflow-y-auto max-h-80">
+                        <table class="min-w-full text-xs">
+                            <thead class="sticky top-0 bg-gray-100 z-10">
+                                <tr>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-left">Kontraktor</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Total<br>Rit</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Sudah<br>Timbang</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Pending</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-right">Total<br>Netto<br>(ton)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, index) in data.ritPerKontraktor" :key="item.kontraktor">
+                                    <tr class="hover:bg-blue-50">
+                                        <td class="border border-gray-300 px-2 py-1.5 font-semibold text-xs" x-text="item.kontraktor"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="item.total_rit"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.sudah_timbang"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.pending"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
+                                    </tr>
+                                </template>
+                                <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kontraktor by Tonase (2 kolom - Chart) -->
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Kontraktor by Tonase</h3>
                     <canvas id="kontraktorChart" height="220"></canvas>
                 </div>
 
-                <!-- Subkontraktor by Tonase -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+                <!-- Subkontraktor by Tonase (2 kolom - Chart) -->
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Sub Kontraktor by Tonase</h3>
                     <canvas id="subkontraktorChart" height="220"></canvas>
                 </div>
@@ -513,6 +547,7 @@
                 hourlyTrend: [],
                 statusBreakdown: [],
                 vehiclePerformance: [],
+                ritPerKontraktor: [],
                 sjDaily: [],
                 sjMonthly: [],
                 tonaseDaily: [],
