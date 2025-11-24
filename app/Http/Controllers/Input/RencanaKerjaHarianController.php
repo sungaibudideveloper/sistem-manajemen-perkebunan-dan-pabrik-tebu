@@ -2759,15 +2759,20 @@ public function loadAbsenByDate(Request $request)
             'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
             'masterlist' => DB::table('masterlist as m')
-                ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
+                ->leftJoin('batch as b', function($join) use ($companycode) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->where('b.companycode', '=', $companycode); // ✅ Filter batch by company
+                })
                 ->leftJoin(DB::raw('(
                     SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
                     FROM lkhdetailplot ldp
                     JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
-                    WHERE lh.approvalstatus = "1"
+                    WHERE lh.companycode = "' . $companycode . '" 
+                    AND lh.approvalstatus = "1"
                     GROUP BY batchno
                 ) as panen_summary'), 'b.batchno', '=', 'panen_summary.batchno')
                 ->where('m.companycode', $companycode)
+                ->where('m.isactive', 1)
                 ->select([
                     'm.companycode',
                     'm.plot',
@@ -2781,8 +2786,8 @@ public function loadAbsenByDate(Request $request)
                     DB::raw('COALESCE(panen_summary.total_panen, 0) as total_panen'),
                     DB::raw("CASE 
                         WHEN b.tanggalpanen IS NOT NULL 
-                             AND b.isactive = 1
-                             AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
+                            AND b.isactive = 1
+                            AND b.batcharea > COALESCE(panen_summary.total_panen, 0)
                         THEN 1
                         ELSE 0
                     END as is_on_panen"),
@@ -2790,7 +2795,7 @@ public function loadAbsenByDate(Request $request)
                         SELECT activitycode 
                         FROM lkhdetailplot ldp2
                         JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
-                        WHERE ldp2.companycode = m.companycode
+                        WHERE ldp2.companycode = "' . $companycode . '"
                         AND ldp2.plot = m.plot
                         AND lh2.approvalstatus = "1"
                         ORDER BY lh2.lkhdate DESC
@@ -2801,27 +2806,34 @@ public function loadAbsenByDate(Request $request)
                         FROM lkhdetailplot ldp2
                         JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
                         JOIN activity a2 ON lh2.activitycode = a2.activitycode
-                        WHERE ldp2.companycode = m.companycode
+                        WHERE ldp2.companycode = "' . $companycode . '"
                         AND ldp2.plot = m.plot
                         AND lh2.approvalstatus = "1"
                         ORDER BY lh2.lkhdate DESC
                         LIMIT 1
                     ) as last_activityname')
                 ])
-                ->groupBy('m.companycode', 'm.plot', 'm.blok', 'm.activebatchno', 'm.isactive',
-                         'b.lifecyclestatus', 'b.batcharea', 'b.tanggalpanen', 'b.isactive',
-                         'panen_summary.total_panen')
+                ->orderBy('m.blok')
                 ->orderBy('m.plot')
                 ->get(),
 
-            'plots' => DB::table('plot')->where('companycode', $companycode)->get(),
+            'plots' => DB::table('plot')
+                ->where('companycode', $companycode)
+                ->orderBy('plot')
+                ->get(),
+
             'absentenagakerja' => $absenModel->getDataAbsenFull($companycode, $targetDate),
             'herbisidagroups' => $herbisidadosages->getFullHerbisidaGroupData($companycode),
             'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
+            // masterlistData untuk JavaScript - filter by company
             'masterlistData' => DB::table('masterlist as m')
-                ->leftJoin('batch as b', 'm.activebatchno', '=', 'b.batchno')
-                ->where('m.companycode', $companycode)
+                ->leftJoin('batch as b', function($join) use ($companycode) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->where('b.companycode', '=', $companycode);
+                })
+                ->where('m.companycode', $companycode) // Filter by company
+                ->where('m.isactive', 1)
                 ->select([
                     'm.companycode',
                     'm.plot',
@@ -2831,12 +2843,15 @@ public function loadAbsenByDate(Request $request)
                     'b.lifecyclestatus',
                     'b.batcharea'
                 ])
+                ->orderBy('m.blok')
                 ->orderBy('m.plot')
                 ->get(),
 
-            'plotsData' => DB::table('plot')->where('companycode', $companycode)->get(),
+            'plotsData' => DB::table('plot')
+                ->where('companycode', $companycode)
+                ->orderBy('plot')
+                ->get(),
             
-            // ✅ UPDATED: operatorsData untuk frontend compatibility
             'operatorsData' => $this->getOperatorsWithVehicles($companycode),
             
             'helpersData' => TenagaKerja::where('companycode', $companycode)
