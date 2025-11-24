@@ -96,6 +96,9 @@
         {{-- Statistics - Fix label only --}}
         @php
             $completedData = $lkhBsmDetails->where('status', 'COMPLETED');
+            $premiumData = $completedData->where('kodetebang_label', 'Premium');
+            $nonPremiumData = $completedData->where('kodetebang_label', 'Non-Premium');
+            
             $gradeA = $completedData->where('grade', 'A')->count();
             $gradeB = $completedData->where('grade', 'B')->count();
             $gradeC = $completedData->where('grade', 'C')->count();
@@ -107,22 +110,64 @@
         @if($completedData->count() > 0)
         <div class="mb-6">
             <h3 class="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">Statistik BSM</h3>
-            <div class="grid grid-cols-4 gap-4 text-center text-sm border border-gray-300">
+            
+            {{-- Overall Stats --}}
+            <div class="grid grid-cols-5 gap-4 text-center text-sm border border-gray-300 mb-4">
                 <div class="p-3 border-r border-gray-300">
                     <div class="text-2xl font-bold text-gray-900">{{ number_format($avgScore, 2) }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Rata-rata Score</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Avg Score</div>
                 </div>
                 <div class="p-3 border-r border-gray-300 bg-gray-50">
-                    <div class="text-2xl font-bold text-gray-900">{{ $gradeA }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade A (Score &lt;1200)</div>
+                    <div class="text-2xl font-bold text-green-700">{{ $gradeA }}</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade A</div>
                 </div>
                 <div class="p-3 border-r border-gray-300">
-                    <div class="text-2xl font-bold text-gray-900">{{ $gradeB }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade B (Score 1200-2000)</div>
+                    <div class="text-2xl font-bold text-yellow-700">{{ $gradeB }}</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade B</div>
                 </div>
-                <div class="p-3 bg-gray-50">
-                    <div class="text-2xl font-bold text-gray-900">{{ $gradeC }}</div>
-                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade C (Score &gt;2000)</div>
+                <div class="p-3 border-r border-gray-300 bg-gray-50">
+                    <div class="text-2xl font-bold text-red-700">{{ $gradeC }}</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Grade C</div>
+                </div>
+                <div class="p-3 bg-blue-50">
+                    <div class="text-2xl font-bold text-blue-700">{{ $lkhBsmDetails->pluck('suratjalanno')->unique()->count() }}</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wide">Total SJ</div>
+                </div>
+            </div>
+            
+            {{-- Premium vs Non-Premium Breakdown --}}
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="border border-blue-300 bg-blue-50 p-3">
+                    <h4 class="font-bold text-blue-900 mb-2">Premium</h4>
+                    <div class="space-y-1 text-gray-700">
+                        <div class="flex justify-between">
+                            <span>Total SJ:</span>
+                            <strong>{{ $premiumData->count() }}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Avg Score:</span>
+                            <strong>{{ number_format($premiumData->avg('averagescore'), 2) }}</strong>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-600">
+                            <span>A (&lt;1200) | B (1200-1700) | C (&gt;1700)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="border border-gray-300 bg-gray-50 p-3">
+                    <h4 class="font-bold text-gray-900 mb-2">Non-Premium</h4>
+                    <div class="space-y-1 text-gray-700">
+                        <div class="flex justify-between">
+                            <span>Total SJ:</span>
+                            <strong>{{ $nonPremiumData->count() }}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Avg Score:</span>
+                            <strong>{{ number_format($nonPremiumData->avg('averagescore'), 2) }}</strong>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-600">
+                            <span>A (&lt;1000) | B (1000-2000) | C (&gt;2000)</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -131,19 +176,21 @@
         {{-- Section 1: Detail Hasil Cek BSM --}}
         <div class="mb-6">
             <h3 class="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide border-b border-gray-400 pb-1">
-                Detail Hasil Cek BSM Per Plot
+                Detail Hasil Cek BSM Per Surat Jalan
             </h3>
             
             <table class="w-full border-collapse border border-gray-400 text-xs">
                 <thead>
                     <tr class="bg-gray-200">
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">No</th>
+                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Surat Jalan</th>
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Plot</th>
+                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Kodetebang</th>
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Batch</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Status</th>
                         <th colspan="3" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900 bg-gray-300">Nilai BSM</th>
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Average</th>
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Grade</th>
+                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Status</th>
                         <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Keterangan</th>
                     </tr>
                     <tr class="bg-gray-300">
@@ -156,17 +203,14 @@
                     @forelse($lkhBsmDetails as $index => $detail)
                     <tr class="{{ $detail->status == 'COMPLETED' ? 'bg-gray-50' : '' }}">
                         <td class="border border-gray-400 px-2 py-2 text-center">{{ $index + 1 }}</td>
-                        <td class="border border-gray-400 px-2 py-2 font-semibold">
-                            {{ $detail->plot_display }}
+                        <td class="border border-gray-400 px-2 py-2 font-mono text-xs">{{ $detail->suratjalanno }}</td>
+                        <td class="border border-gray-400 px-2 py-2 font-semibold">{{ $detail->plot_display }}</td>
+                        <td class="border border-gray-400 px-2 py-2 text-center">
+                            <span class="text-xs {{ $detail->kodetebang_label == 'Premium' ? 'font-bold text-blue-700' : 'text-gray-700' }}">
+                                {{ $detail->kodetebang_label }}
+                            </span>
                         </td>
                         <td class="border border-gray-400 px-2 py-2 text-center font-mono">{{ $detail->batchno }}</td>
-                        <td class="border border-gray-400 px-2 py-2 text-center">
-                            @if($detail->status == 'COMPLETED')
-                                <span class="font-medium text-green-700">✓ COMPLETED</span>
-                            @else
-                                <span class="font-medium text-orange-700">PENDING</span>
-                            @endif
-                        </td>
                         
                         {{-- Nilai BSM --}}
                         <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
@@ -203,24 +247,31 @@
                         {{-- Grade --}}
                         <td class="border border-gray-400 px-2 py-2 text-center">
                             @if($detail->grade == 'A')
-                                <span class="font-bold text-gray-900">A</span>
+                                <span class="font-bold text-green-700">A</span>
                             @elseif($detail->grade == 'B')
-                                <span class="font-bold text-gray-900">B</span>
+                                <span class="font-bold text-yellow-700">B</span>
                             @elseif($detail->grade == 'C')
-                                <span class="font-bold text-gray-900">C</span>
+                                <span class="font-bold text-red-700">C</span>
                             @else
                                 <span class="text-gray-400">-</span>
                             @endif
                         </td>
                         
-                        <td class="border border-gray-400 px-2 py-2 text-gray-700">
-                            {{ $detail->keterangan }}
+                        {{-- Status --}}
+                        <td class="border border-gray-400 px-2 py-2 text-center">
+                            @if($detail->status == 'COMPLETED')
+                                <span class="font-medium text-green-700">✓ COMPLETED</span>
+                            @else
+                                <span class="font-medium text-orange-700">PENDING</span>
+                            @endif
                         </td>
+                        
+                        <td class="border border-gray-400 px-2 py-2 text-gray-700">{{ $detail->keterangan }}</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="10" class="border border-gray-400 px-2 py-4 text-center text-gray-500">
-                            Tidak ada data BSM
+                        <td colspan="12" class="border border-gray-400 px-2 py-4 text-center text-gray-500">
+                            Tidak ada data BSM. Android akan insert data per Surat Jalan.
                         </td>
                     </tr>
                     @endforelse

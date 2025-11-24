@@ -13,11 +13,10 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
- * UPDATED LkhGeneratorService - With Kendaraan Support
+ * UPDATED LkhGeneratorService - BSM Placeholder Generation REMOVED
  * 
- * Generate LKH from fully approved RKH using unified structure:
- * - ALL activities use: lkhdetailplot + lkhdetailworker + lkhdetailmaterial + lkhdetailkendaraan
- * - Kendaraan assignments dari rkhlstkendaraan → lkhdetailkendaraan
+ * BSM activity (4.7) generates only LKH header.
+ * Android team will insert lkhdetailbsm records directly per SJ.
  */
 class LkhGeneratorService
 {
@@ -38,7 +37,7 @@ class LkhGeneratorService
 
     /**
      * Generate LKH from fully approved RKH
-     * UPDATED: Include kendaraan generation
+     * UPDATED: NO BSM placeholder generation
      * 
      * @param string $rkhno
      * @return array
@@ -98,7 +97,9 @@ class LkhGeneratorService
                 
                 // Generate LKH Detail Plots (SKIP untuk BSM activity)
                 $plotResult = [];
-                if ($activitycode !== self::BSM_ACTIVITY) {
+                $isBsm = ($activitycode === self::BSM_ACTIVITY);
+                
+                if (!$isBsm) {
                     $plotResult = $this->createLkhDetailPlots(
                         $lkhno, 
                         $groupActivities, 
@@ -107,7 +108,7 @@ class LkhGeneratorService
                     );
                 }
                 
-                // ✅ NEW: Generate LKH Detail Kendaraan
+                // Generate LKH Detail Kendaraan
                 $kendaraanResult = $this->generateLkhKendaraanRecords(
                     $rkh->rkhno,
                     $lkhno,
@@ -118,7 +119,6 @@ class LkhGeneratorService
                 
                 // Detect activity type
                 $isPanen = in_array($activitycode, self::PANEN_ACTIVITIES);
-                $isBsm = ($activitycode === self::BSM_ACTIVITY);
                 
                 // Base LKH data
                 $lkhData = [
@@ -131,15 +131,14 @@ class LkhGeneratorService
                     'jenis_label' => $this->getJenisLabel($jenistenagakerja),
                     'total_luas' => $lkhHeaderResult['total_luas'],
                     'planned_workers' => $lkhHeaderResult['planned_workers'],
-                    'kendaraan_count' => $kendaraanResult['total_vehicles'], // ✅ NEW
+                    'kendaraan_count' => $kendaraanResult['total_vehicles'],
                     'status' => 'DRAFT'
                 ];
                 
-                // SPECIAL HANDLING: Generate BSM placeholders if BSM activity
+                // ✅ UPDATED: BSM activity - NO placeholder generation
                 if ($isBsm) {
-                    $bsmResult = $this->createBsmPlaceholders($lkhno, $groupActivities, $rkh->companycode);
-                    $lkhData['bsm_plots'] = $bsmResult['total_plots'];
-                    $lkhData['bsm_status'] = 'PENDING_INPUT';
+                    $lkhData['bsm_status'] = 'WAITING_ANDROID_INPUT';
+                    $lkhData['bsm_note'] = 'Android will insert BSM records per SJ';
                 }
                 
                 $generatedLkh[] = $lkhData;
@@ -191,7 +190,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Create LKH Header (unchanged - no kendaraan info in header)
+     * Create LKH Header
      * 
      * @param Rkhhdr $rkh
      * @param string $lkhno
@@ -243,7 +242,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Create LKH Detail Plot records (unchanged)
+     * Create LKH Detail Plot records
      * 
      * @param string $lkhno
      * @param \Illuminate\Support\Collection $activities
@@ -281,11 +280,6 @@ class LkhGeneratorService
     /**
      * Generate LKH kendaraan records from RKH kendaraan assignments
      * 
-     * Flow:
-     * 1. Get kendaraan assignments dari rkhlstkendaraan untuk activity ini
-     * 2. Get plots untuk activity ini dari rkhlst
-     * 3. Generate lkhdetailkendaraan untuk setiap kombinasi kendaraan-plot
-     * 
      * @param string $rkhno
      * @param string $lkhno
      * @param string $activitycode
@@ -296,7 +290,7 @@ class LkhGeneratorService
     private function generateLkhKendaraanRecords($rkhno, $lkhno, $activitycode, $companycode, $activities)
     {
         try {
-            // 1. Get kendaraan assignments dari RKH untuk activity ini
+            // Get kendaraan assignments dari RKH
             $kendaraanAssignments = DB::table('rkhlstkendaraan')
                 ->where('rkhno', $rkhno)
                 ->where('activitycode', $activitycode)
@@ -313,7 +307,7 @@ class LkhGeneratorService
                 ];
             }
             
-            // 2. Get plots untuk activity ini
+            // Get plots
             $plots = $activities->pluck('plot')->unique()->values();
             
             if ($plots->isEmpty()) {
@@ -325,7 +319,7 @@ class LkhGeneratorService
                 ];
             }
             
-            // 3. Generate lkhdetailkendaraan untuk setiap kombinasi kendaraan-plot
+            // Generate lkhdetailkendaraan
             $records = [];
             
             foreach ($kendaraanAssignments as $assignment) {
@@ -354,14 +348,12 @@ class LkhGeneratorService
                 'lkhno' => $lkhno,
                 'activitycode' => $activitycode,
                 'total_vehicles' => $kendaraanAssignments->count(),
-                'total_plots' => $plots->count(),
                 'total_records' => count($records)
             ]);
             
             return [
                 'success' => true,
                 'total_vehicles' => $kendaraanAssignments->count(),
-                'total_plots' => $plots->count(),
                 'total_records' => count($records),
                 'records' => $records
             ];
@@ -378,8 +370,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Generate LKH number based on RKH number and index
-     * Format: LKH{DDMM}{XX}{YY}-{INDEX}
+     * Generate LKH number
      * 
      * @param string $rkhno
      * @param int $index
@@ -387,14 +378,12 @@ class LkhGeneratorService
      */
     private function generateLkhNumber($rkhno, $index)
     {
-        // RKH format: RKH04080125
-        // LKH format: LKH04080125-1
-        $rkhPart = substr($rkhno, 3); // Remove "RKH" prefix
+        $rkhPart = substr($rkhno, 3);
         return "LKH{$rkhPart}-{$index}";
     }
 
     /**
-     * Get jenis tenaga kerja label
+     * Get jenis label
      * 
      * @param int $jenistenagakerja
      * @return string
@@ -442,7 +431,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Get approval requirements for activity
+     * Get approval requirements
      * 
      * @param string $companycode
      * @param string $activitycode
@@ -484,114 +473,75 @@ class LkhGeneratorService
     }
 
     /**
-     * Get LKH summary for specific RKH
-     * UPDATED: Include kendaraan info
+     * Get BSM summary for specific LKH
+     * UPDATED: Include suratjalanno and kodetebang
      * 
-     * @param string $rkhno
+     * @param string $lkhno
      * @return array
      */
-    public function getLkhSummaryForRkh($rkhno)
+    public function getBsmSummaryForLkh($lkhno)
     {
-        $lkhList = Lkhhdr::where('rkhno', $rkhno)
-            ->with(['activity'])
+        $bsmRecords = DB::table('lkhdetailbsm as bsm')
+            ->leftJoin('batch as b', 'bsm.batchno', '=', 'b.batchno')
+            ->where('bsm.lkhno', $lkhno)
+            ->select([
+                'bsm.*',
+                'b.lifecyclestatus'
+            ])
             ->get();
-
-        $summary = [
-            'total_lkh' => $lkhList->count(),
-            'by_status' => $lkhList->groupBy('status')->map(function ($group) {
-                return $group->count();
-            })->toArray(),
-            'by_jenis' => $lkhList->groupBy('jenistenagakerja')->map(function ($group) {
+        
+        if ($bsmRecords->isEmpty()) {
+            return [
+                'total_records' => 0,
+                'completed' => 0,
+                'pending' => 0,
+                'message' => 'No BSM records found. Android will insert records per SJ.',
+                'details' => []
+            ];
+        }
+        
+        $completed = $bsmRecords->filter(function($record) {
+            return $record->nilaibersih !== null && 
+                   $record->nilaisegar !== null && 
+                   $record->nilaimanis !== null;
+        });
+        
+        $gradeDistribution = $completed->groupBy('grade')->map(function($group) {
+            return $group->count();
+        })->toArray();
+        
+        $kodetebangDistribution = $bsmRecords->groupBy('kodetebang')->map(function($group) {
+            return $group->count();
+        })->toArray();
+        
+        return [
+            'total_records' => $bsmRecords->count(),
+            'total_sj' => $bsmRecords->pluck('suratjalanno')->unique()->count(),
+            'completed' => $completed->count(),
+            'pending' => $bsmRecords->count() - $completed->count(),
+            'average_score_overall' => $completed->avg('averagescore'),
+            'grade_distribution' => $gradeDistribution,
+            'kodetebang_distribution' => $kodetebangDistribution,
+            'details' => $bsmRecords->map(function($record) {
                 return [
-                    'count' => $group->count(),
-                    'label' => $this->getJenisLabel($group->first()->jenistenagakerja)
-                ];
-            })->toArray(),
-            'details' => $lkhList->map(function ($lkh) {
-                $plots = DB::table('lkhdetailplot as ldp')
-                    ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
-                    ->where('ldp.companycode', $lkh->companycode)
-                    ->where('ldp.lkhno', $lkh->lkhno)
-                    ->select([
-                        'ldp.blok',
-                        'ldp.plot',
-                        'ldp.luasrkh',
-                        'ldp.batchno',
-                        'b.lifecyclestatus' 
-                    ])
-                    ->get()
-                    ->map(function($item) {
-                        $plotInfo = $item->blok . '-' . $item->plot . ' (' . $item->luasrkh . ' ha)';
-                        
-                        if ($item->batchno) {
-                            $plotInfo .= ' [' . $item->batchno . '-' . $item->lifecyclestatus . ']';
-                        }
-                        
-                        return $plotInfo;
-                    })
-                    ->join(', ');
-
-                // Get workers count
-                $assignedWorkers = LkhDetailWorker::where('companycode', $lkh->companycode)
-                    ->where('lkhno', $lkh->lkhno)
-                    ->count();
-
-                // Get material count
-                $materialCount = DB::table('lkhdetailmaterial')
-                    ->where('companycode', $lkh->companycode)
-                    ->where('lkhno', $lkh->lkhno)
-                    ->count();
-
-                // ✅ NEW: Get kendaraan count
-                $kendaraanCount = DB::table('lkhdetailkendaraan')
-                    ->where('companycode', $lkh->companycode)
-                    ->where('lkhno', $lkh->lkhno)
-                    ->count();
-                
-                // ✅ NEW: Get kendaraan details
-                $kendaraanList = DB::table('lkhdetailkendaraan as lk')
-                    ->leftJoin('kendaraan as k', 'lk.nokendaraan', '=', 'k.nokendaraan')
-                    ->leftJoin('tenagakerja as tk', 'lk.operatorid', '=', 'tk.tenagakerjaid')
-                    ->where('lk.companycode', $lkh->companycode)
-                    ->where('lk.lkhno', $lkh->lkhno)
-                    ->select([
-                        'lk.nokendaraan',
-                        'k.jenis as vehicle_type',
-                        'tk.nama as operator_nama'
-                    ])
-                    ->get()
-                    ->map(function($kendaraan) {
-                        return $kendaraan->nokendaraan . ' (' . 
-                               ($kendaraan->vehicle_type ?? 'Unknown') . ' - ' . 
-                               ($kendaraan->operator_nama ?? 'No operator') . ')';
-                    })
-                    ->unique()
-                    ->join(', ');
-
-                return [
-                    'lkhno' => $lkh->lkhno,
-                    'activitycode' => $lkh->activitycode,
-                    'activityname' => $lkh->activity->activityname ?? 'Unknown',
-                    'jenis_label' => $this->getJenisLabel($lkh->jenistenagakerja),
-                    'plots' => $plots ?: 'No plots assigned',
-                    'status' => $lkh->status,
-                    'workers_assigned' => $assignedWorkers,
-                    'material_count' => $materialCount,
-                    'kendaraan_count' => $kendaraanCount, // ✅ NEW
-                    'kendaraan_list' => $kendaraanList ?: 'No kendaraan', // ✅ NEW
-                    'totalhasil' => $lkh->totalhasil,
-                    'totalsisa' => $lkh->totalsisa,
-                    'totalupah' => $lkh->totalupahall
+                    'suratjalanno' => $record->suratjalanno,
+                    'plot' => $record->plot,
+                    'kodetebang' => $record->kodetebang,
+                    'batchno' => $record->batchno,
+                    'lifecyclestatus' => $record->lifecyclestatus ?? 'N/A',
+                    'nilaibersih' => $record->nilaibersih,
+                    'nilaisegar' => $record->nilaisegar,
+                    'nilaimanis' => $record->nilaimanis,
+                    'averagescore' => $record->averagescore,
+                    'grade' => $record->grade,
+                    'status' => $record->averagescore ? 'COMPLETED' : 'PENDING'
                 ];
             })->toArray()
         ];
-
-        return $summary;
     }
 
     /**
-     * Calculate and update LKH wages (unchanged - no kendaraan impact)
-     * Works for harian, borongan, and kontraktor
+     * Calculate and update LKH wages
      * 
      * @param string $lkhno
      * @return array
@@ -696,43 +646,7 @@ class LkhGeneratorService
     }
 
     /**
-     * Bulk generate LKH for multiple RKH
-     * 
-     * @param array $rkhList
-     * @return array
-     */
-    public function bulkGenerateLkh($rkhList)
-    {
-        $results = [];
-        $successCount = 0;
-        $failCount = 0;
-
-        foreach ($rkhList as $rkhno) {
-            $result = $this->generateLkhFromRkh($rkhno);
-            $results[$rkhno] = $result;
-            
-            if ($result['success']) {
-                $successCount++;
-            } else {
-                $failCount++;
-            }
-        }
-
-        return [
-            'success' => $successCount > 0,
-            'message' => "Bulk generate completed: {$successCount} success, {$failCount} failed",
-            'results' => $results,
-            'summary' => [
-                'total_processed' => count($rkhList),
-                'success_count' => $successCount,
-                'fail_count' => $failCount
-            ]
-        ];
-    }
-
-    /**
-     * Regenerate LKH (for special cases)
-     * UPDATED: Include kendaraan deletion
+     * Regenerate LKH
      * 
      * @param string $rkhno
      * @param bool $forceRegenerate
@@ -750,35 +664,30 @@ class LkhGeneratorService
             // Delete existing LKH and all details
             $existingLkh = Lkhhdr::where('rkhno', $rkhno)->get();
             foreach ($existingLkh as $lkh) {
-                // Delete workers
                 LkhDetailWorker::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
                 
-                // Delete plots
                 LkhDetailPlot::where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
                 
-                // Delete materials
                 DB::table('lkhdetailmaterial')
                     ->where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
                 
-                // ✅ NEW: Delete kendaraan
                 DB::table('lkhdetailkendaraan')
                     ->where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
                 
-                // Delete BSM details if exists
+                // ⚠️ WARNING: This will delete BSM records inserted by Android
                 DB::table('lkhdetailbsm')
                     ->where('companycode', $lkh->companycode)
                     ->where('lkhno', $lkh->lkhno)
                     ->delete();
                 
-                // Delete header
                 $lkh->delete();
             }
 
@@ -791,110 +700,5 @@ class LkhGeneratorService
             DB::rollBack();
             throw $e;
         }
-    }
-
-    /**
-     * Create empty BSM placeholders for BSM activity (4.7)
-     * Team mobile akan mengisi nilai B, S, M nanti
-     * 
-     * @param string $lkhno
-     * @param \Illuminate\Support\Collection $activities
-     * @param string $companycode
-     * @return array
-     */
-    private function createBsmPlaceholders($lkhno, $activities, $companycode)
-    {
-        $bsmRecords = [];
-        
-        foreach ($activities as $activity) {
-            // Get batch info for this plot
-            $batchInfo = DB::table('masterlist')
-                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
-                ->where('masterlist.companycode', $companycode)
-                ->where('masterlist.plot', $activity->plot)
-                ->where('masterlist.isactive', 1)
-                ->where('batch.isactive', 1)
-                ->select(['batch.batchno', 'batch.lifecyclestatus'])
-                ->first();
-            
-            $bsmRecord = [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'plot' => $activity->plot,
-                'batchno' => $batchInfo ? $batchInfo->batchno : null,
-                'nilaibersih' => null,
-                'nilaisegar' => null,
-                'nilaimanis' => null,
-                'averagescore' => null,
-                'grade' => null,
-                'keterangan' => null,
-                'inputby' => auth()->user()->userid ?? 'SYSTEM',
-                'createdat' => now()
-            ];
-            
-            DB::table('lkhdetailbsm')->insert($bsmRecord);
-            $bsmRecords[] = $bsmRecord;
-            
-            Log::info("BSM placeholder created", [
-                'lkhno' => $lkhno,
-                'plot' => $activity->plot,
-                'batchno' => $batchInfo ? $batchInfo->batchno : 'N/A'
-            ]);
-        }
-        
-        return [
-            'success' => true,
-            'total_plots' => count($bsmRecords),
-            'records' => $bsmRecords
-        ];
-    }
-
-    /**
-     * Get BSM summary for specific LKH
-     * 
-     * @param string $lkhno
-     * @return array
-     */
-    public function getBsmSummaryForLkh($lkhno)
-    {
-        $bsmRecords = DB::table('lkhdetailbsm as bsm')
-            ->leftJoin('batch as b', 'bsm.batchno', '=', 'b.batchno')
-            ->where('bsm.lkhno', $lkhno)
-            ->select([
-                'bsm.*',
-                'b.lifecyclestatus'
-            ])
-            ->get();
-        
-        $completed = $bsmRecords->filter(function($record) {
-            return $record->nilaibersih !== null && 
-                $record->nilaisegar !== null && 
-                $record->nilaimanis !== null;
-        });
-        
-        $gradeDistribution = $completed->groupBy('grade')->map(function($group) {
-            return $group->count();
-        })->toArray();
-        
-        return [
-            'total_plots' => $bsmRecords->count(),
-            'completed' => $completed->count(),
-            'pending' => $bsmRecords->count() - $completed->count(),
-            'average_score_overall' => $completed->avg('averagescore'),
-            'grade_distribution' => $gradeDistribution,
-            'details' => $bsmRecords->map(function($record) {
-                return [
-                    'plot' => $record->plot,
-                    'batchno' => $record->batchno,
-                    'lifecyclestatus' => $record->lifecyclestatus ?? 'N/A',
-                    'nilaibersih' => $record->nilaibersih,
-                    'nilaisegar' => $record->nilaisegar,
-                    'nilaimanis' => $record->nilaimanis,
-                    'averagescore' => $record->averagescore,
-                    'grade' => $record->grade,
-                    'status' => $record->averagescore ? 'COMPLETED' : 'PENDING'
-                ];
-            })->toArray()
-        ];
     }
 }

@@ -31,6 +31,7 @@ class MasterLahanReportController extends Controller
             $companycode = Session::get('companycode');
             
             // Get filters from request
+            $filterGroup = $request->input('group');
             $filterBlok = $request->input('blok');
             $filterVarietas = $request->input('varietas');
             $filterLifecycle = $request->input('lifecycle');
@@ -41,12 +42,24 @@ class MasterLahanReportController extends Controller
 
             // Base query
             $query = DB::table('masterlist as m')
-                ->join('batch as b', 'm.activebatchno', '=', 'b.batchno')
-                ->where('m.companycode', $companycode)
+                ->join('batch as b', function($join) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->on('m.companycode', '=', 'b.companycode');
+                })
                 ->where('m.isactive', 1)
                 ->where('b.isactive', 1);
 
-            // Apply filters
+            // Apply group filter
+            if ($filterGroup === 'all-tbl') {
+                $query->whereIn('m.companycode', ['TBL1', 'TBL2', 'TBL3']);
+            } elseif ($filterGroup === 'all-divisi') {
+                // No company filter - show all
+            } else {
+                // Default: current session company only
+                $query->where('m.companycode', $companycode);
+            }
+
+            // Apply other filters
             if ($filterBlok) {
                 $query->where('m.blok', $filterBlok);
             }
@@ -72,6 +85,7 @@ class MasterLahanReportController extends Controller
             // Get detailed data
             $detailData = $query
                 ->select([
+                    'm.companycode',
                     'm.plot',
                     'm.blok',
                     'b.batchno',
@@ -85,6 +99,7 @@ class MasterLahanReportController extends Controller
                     'b.kontraktorid',
                     DB::raw('DATEDIFF(CURDATE(), b.batchdate) as age_days')
                 ])
+                ->orderBy('m.companycode')
                 ->orderBy('m.blok')
                 ->orderBy('m.plot')
                 ->get();
@@ -103,23 +118,36 @@ class MasterLahanReportController extends Controller
                 'rc3_area' => $detailData->where('lifecyclestatus', 'RC3')->sum('batcharea'),
             ];
 
-            // Get filter options (for dropdowns)
+            // Get filter options (for dropdowns) - adjust based on group filter
+            $filterOptionsQuery = DB::table('masterlist as m')
+                ->join('batch as b', function($join) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->on('m.companycode', '=', 'b.companycode');
+                })
+                ->where('m.isactive', 1)
+                ->where('b.isactive', 1);
+
+            // Apply same group filter for filter options
+            if ($filterGroup === 'all-tbl') {
+                $filterOptionsQuery->whereIn('m.companycode', ['TBL1', 'TBL2', 'TBL3']);
+            } elseif ($filterGroup === 'all-divisi') {
+                // No filter
+            } else {
+                $filterOptionsQuery->where('m.companycode', $companycode);
+            }
+
             $filterOptions = [
-                'bloks' => DB::table('masterlist')
-                    ->where('companycode', $companycode)
-                    ->where('isactive', 1)
-                    ->whereNotNull('blok')
+                'bloks' => (clone $filterOptionsQuery)
+                    ->whereNotNull('m.blok')
                     ->distinct()
-                    ->orderBy('blok')
-                    ->pluck('blok'),
+                    ->orderBy('m.blok')
+                    ->pluck('m.blok'),
                     
-                'varietas' => DB::table('batch')
-                    ->where('companycode', $companycode)
-                    ->where('isactive', 1)
-                    ->whereNotNull('kodevarietas')
+                'varietas' => (clone $filterOptionsQuery)
+                    ->whereNotNull('b.kodevarietas')
                     ->distinct()
-                    ->orderBy('kodevarietas')
-                    ->pluck('kodevarietas'),
+                    ->orderBy('b.kodevarietas')
+                    ->pluck('b.kodevarietas'),
             ];
 
             // Lifecycle distribution for chart
@@ -150,10 +178,10 @@ class MasterLahanReportController extends Controller
 
             // Age distribution
             $ageDistribution = [
-                'young' => $detailData->where('age_days', '<=', 90)->count(), // 0-90 days
-                'growing' => $detailData->whereBetween('age_days', [91, 180])->count(), // 91-180 days
-                'mature' => $detailData->whereBetween('age_days', [181, 365])->count(), // 181-365 days
-                'overdue' => $detailData->where('age_days', '>', 365)->count(), // >365 days
+                'young' => $detailData->where('age_days', '<=', 90)->count(),
+                'growing' => $detailData->whereBetween('age_days', [91, 180])->count(),
+                'mature' => $detailData->whereBetween('age_days', [181, 365])->count(),
+                'overdue' => $detailData->where('age_days', '>', 365)->count(),
             ];
 
             return response()->json([

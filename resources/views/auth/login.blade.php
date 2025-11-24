@@ -15,160 +15,10 @@
     @vite(['resources/css/login.css'])
     
     <!-- Alpine.js for modal -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="{{ asset('asset/alpinejs.min.js') }}"></script>
     
     <!-- Google reCAPTCHA v2 -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    
-    <style>
-        html, body {
-            height: 100%;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-        }
-        
-        body {
-            overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .login-container {
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-        }
-        
-        .login-right-side {
-            height: 100vh;
-            height: 100dvh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-            padding-top: max(80px, env(safe-area-inset-top));
-            padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-        }
-        
-        @media (max-width: 640px) {
-            .login-right-side {
-                padding-left: 1.5rem;
-                padding-right: 1.5rem;
-            }
-            
-            .mobile-scale {
-                transform: scale(0.75);
-                transform-origin: top center;
-                width: 133.33%;
-                margin-left: -16.665%;
-            }
-            
-            .login-content-wrapper {
-                padding-top: 0.5rem;
-                padding-bottom: 1rem;
-            }
-        }
-        
-        @media (max-width: 1023px) {
-            .login-right-side {
-                scroll-behavior: smooth;
-            }
-        }
-        
-        @media screen and (max-width: 768px) {
-            input[type="text"],
-            input[type="password"],
-            select {
-                font-size: 16px !important;
-            }
-        }
-        
-        .glass-effect {
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        
-        input[type="checkbox"] {
-            width: 1rem !important;
-            height: 1rem !important;
-            min-width: 1rem !important;
-            min-height: 1rem !important;
-            max-width: 1rem !important;
-            max-height: 1rem !important;
-            flex-shrink: 0;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            border: 2px solid #d1d5db;
-            border-radius: 0.25rem;
-            background-color: white;
-            cursor: pointer;
-            position: relative;
-            display: inline-block;
-            vertical-align: middle;
-        }
-        
-        input[type="checkbox"]:checked {
-            background-color: #16a34a;
-            border-color: #16a34a;
-        }
-        
-        input[type="checkbox"]:checked::after {
-            content: '';
-            position: absolute;
-            left: 0.25rem;
-            top: 0.05rem;
-            width: 0.3rem;
-            height: 0.5rem;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-        
-        input[type="checkbox"]:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
-        }
-        
-        @media (max-width: 640px) {
-            button, a {
-                min-height: 44px;
-            }
-            
-            button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
-        
-        .logo-container {
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 1rem;
-            padding: 0.75rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        
-        .logo-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        
-        @media (max-width: 640px) {
-            .logo-container {
-                width: 64px;
-                height: 64px;
-                background: rgb(5, 122, 85);
-            }
-        }
-
-        [x-cloak] { display: none !important; }
-    </style>
 </head>
 
 <body class="h-full bg-gray-50">
@@ -217,7 +67,7 @@
         </div>
         
         <!-- Right Side - Login Form -->
-        <div class="login-right-side flex-1 flex items-start justify-center">
+        <div class="login-right-side flex-1 flex lg:items-center items-start justify-center">
             <div class="w-full max-w-md login-content-wrapper">
                 <div class="mobile-scale">
                     <div class="lg:hidden mb-8 text-center">
