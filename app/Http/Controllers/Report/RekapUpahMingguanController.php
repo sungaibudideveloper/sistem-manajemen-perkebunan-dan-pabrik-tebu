@@ -63,6 +63,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.companycode',
                 'lkhhdr.status',
                 'lkhhdr.jenistenagakerja',
+                'lkhhdr.totalupahall',
                 'activity.activityname'
             );
 
@@ -80,6 +81,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.companycode',
                 'lkhhdr.status',
                 'lkhhdr.jenistenagakerja',
+                'lkhhdr.totalupahall',
                 'activity.activityname',
                 DB::raw("GROUP_CONCAT(DISTINCT lkhdetailplot.plot ORDER BY lkhdetailplot.plot SEPARATOR ', ') as plots")
             )
