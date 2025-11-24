@@ -392,6 +392,14 @@
                                         <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
                                     </tr>
                                 </template>
+                                <!-- TOTAL ROW -->
+                                <tr class="bg-gray-100 font-bold border-t-2 border-gray-400">
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right">TOTAL</td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center text-blue-700" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.total_rit, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.sudah_timbang, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.pending, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right text-green-700" x-text="formatTon(data.ritPerKontraktor?.reduce((sum, item) => sum + (item.total_netto || 0), 0) || 0)"></td>
+                                </tr>
                                 <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
                                     <tr>
                                         <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
