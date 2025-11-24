@@ -13,6 +13,14 @@
         <!-- Main Content -->
         <div x-show="!loading" style="display: none;" x-transition>
             
+            <!-- Header Title -->
+            <div class="bg-white border-b-2 border-gray-200 rounded-xl shadow-sm p-5 mb-5">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    Data Lahan Company: 
+                    <span class="font-bold text-gray-900" x-text="getCurrentCompanyTitle()"></span>
+                </h2>
+            </div>
+
             <!-- Lifecycle Summary Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
                 <!-- PC Card -->
@@ -260,7 +268,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="(item, index) in data.details" :key="item.plot">
+                            <template x-for="(item, index) in data.details" :key="`${item.companycode}-${item.batchno}`">
                                 <tr class="hover:bg-blue-50 transition-colors">
                                     <td class="border border-gray-300 px-3 py-2 text-center" x-text="index + 1"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
@@ -319,6 +327,9 @@
                 age_min: '',
                 age_max: ''
             },
+            appliedFilters: {
+                group: ''
+            },
             charts: {
                 lifecycle: null,
                 varietas: null,
@@ -335,6 +346,7 @@
                     
                     if (result.success) {
                         this.data = result.data;
+                        this.appliedFilters.group = this.filters.group; // SIMPAN FILTER YANG APPLIED
                         await this.$nextTick();
                         this.renderCharts();
                     } else {
@@ -345,6 +357,16 @@
                     alert('Failed to load data');
                 } finally {
                     this.loading = false;
+                }
+            },
+
+            getCurrentCompanyTitle() {
+                if (this.appliedFilters.group === 'all-tbl') {
+                    return 'TBL Group (TBL1, TBL2 & TBL3)';
+                } else if (this.appliedFilters.group === 'all-divisi') {
+                    return 'All Division';
+                } else {
+                    return '{{ Session::get("companycode") }}';
                 }
             },
 

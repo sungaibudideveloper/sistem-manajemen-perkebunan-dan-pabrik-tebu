@@ -29,34 +29,46 @@ class SuratJalanTimbanganReportController extends Controller
             $startDate = $request->start_date ?: Carbon::today()->format('Y-m-d');
             $endDate = $request->end_date ?: Carbon::today()->format('Y-m-d');
             
+            // Get group filter
+            $filterGroup = $request->input('group');
+            
             // Check if single day
             $isSingleDay = $startDate === $endDate;
             
-            // Get filter options first
-            $filterOptions = $this->getFilterOptions($companyCode, $startDate, $endDate);
+            // Get filter options first (PASS filterGroup)
+            $filterOptions = $this->getFilterOptions($companyCode, $startDate, $endDate, $filterGroup);
             
             // Build query with filters
             $query = DB::table('suratjalanpos as sj')
                 ->leftJoin('timbanganpayload as tp', function($join) {
                     $join->on('sj.companycode', '=', 'tp.companycode')
-                         ->on('sj.suratjalanno', '=', 'tp.suratjalanno');
+                        ->on('sj.suratjalanno', '=', 'tp.suratjalanno');
                 })
                 ->leftJoin('user as mandor', function($join) {
                     $join->on('sj.mandorid', '=', 'mandor.userid')
-                         ->where('mandor.idjabatan', '=', 5);
+                        ->where('mandor.idjabatan', '=', 5);
                 })
                 ->leftJoin('kontraktor as k', function($join) {
                     $join->on('sj.namakontraktor', '=', 'k.id')
-                         ->on('sj.companycode', '=', 'k.companycode');
+                        ->on('sj.companycode', '=', 'k.companycode');
                 })
                 ->leftJoin('subkontraktor as sk', function($join) {
                     $join->on('sj.namasubkontraktor', '=', 'sk.id')
-                         ->on('sj.companycode', '=', 'sk.companycode');
+                        ->on('sj.companycode', '=', 'sk.companycode');
                 })
-                ->where('sj.companycode', $companyCode)
                 ->whereBetween('sj.tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
 
-            // Apply filters
+            // Apply group filter
+            if ($filterGroup === 'all-tbl') {
+                $query->whereIn('sj.companycode', ['TBL1', 'TBL2', 'TBL3']);
+            } elseif ($filterGroup === 'all-divisi') {
+                // No company filter - show all
+            } else {
+                // Default: current session company only
+                $query->where('sj.companycode', $companyCode);
+            }
+
+            // Apply other filters
             if ($request->filled('mandor')) {
                 $query->where('sj.mandorid', $request->mandor);
             }
@@ -82,6 +94,7 @@ class SuratJalanTimbanganReportController extends Controller
 
             // Get details
             $details = $query->select(
+                'sj.companycode',
                 'sj.suratjalanno',
                 'sj.mandorid',
                 'mandor.name as nama_mandor',
@@ -269,16 +282,27 @@ class SuratJalanTimbanganReportController extends Controller
         }
     }
 
-    private function getFilterOptions($companyCode, $startDate, $endDate)
+    private function getFilterOptions($companyCode, $startDate, $endDate, $filterGroup = null)
     {
+        // Base query for filter options
+        $baseQuery = DB::table('suratjalanpos as sj')
+            ->whereBetween('sj.tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        
+        // Apply same group filter
+        if ($filterGroup === 'all-tbl') {
+            $baseQuery->whereIn('sj.companycode', ['TBL1', 'TBL2', 'TBL3']);
+        } elseif ($filterGroup === 'all-divisi') {
+            // No filter
+        } else {
+            $baseQuery->where('sj.companycode', $companyCode);
+        }
+
         // Get mandor list
-        $mandors = DB::table('suratjalanpos as sj')
+        $mandors = (clone $baseQuery)
             ->leftJoin('user as mandor', function($join) {
                 $join->on('sj.mandorid', '=', 'mandor.userid')
-                     ->where('mandor.idjabatan', '=', 5);
+                    ->where('mandor.idjabatan', '=', 5);
             })
-            ->where('sj.companycode', $companyCode)
-            ->whereBetween('sj.tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->select('sj.mandorid', 'mandor.name as nama_mandor')
             ->distinct()
             ->orderBy('sj.mandorid')
@@ -291,42 +315,34 @@ class SuratJalanTimbanganReportController extends Controller
             });
 
         // Get plots
-        $plots = DB::table('suratjalanpos')
-            ->where('companycode', $companyCode)
-            ->whereBetween('tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+        $plots = (clone $baseQuery)
             ->distinct()
-            ->pluck('plot')
+            ->pluck('sj.plot')
             ->sort()
             ->values();
 
         // Get kontraktor
-        $kontraktors = DB::table('suratjalanpos')
-            ->where('companycode', $companyCode)
-            ->whereBetween('tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->whereNotNull('namakontraktor')
+        $kontraktors = (clone $baseQuery)
+            ->whereNotNull('sj.namakontraktor')
             ->distinct()
-            ->pluck('namakontraktor')
+            ->pluck('sj.namakontraktor')
             ->sort()
             ->values();
 
         // Get nopol
-        $nopols = DB::table('suratjalanpos')
-            ->where('companycode', $companyCode)
-            ->whereBetween('tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->whereNotNull('nomorpolisi')
+        $nopols = (clone $baseQuery)
+            ->whereNotNull('sj.nomorpolisi')
             ->distinct()
-            ->pluck('nomorpolisi')
+            ->pluck('sj.nomorpolisi')
             ->sort()
             ->values();
 
         // Get subkontraktor
-        $subkontraktors = DB::table('suratjalanpos as sj')
+        $subkontraktors = (clone $baseQuery)
             ->leftJoin('subkontraktor as sk', function($join) {
                 $join->on('sj.namasubkontraktor', '=', 'sk.id')
-                     ->on('sj.companycode', '=', 'sk.companycode');
+                    ->on('sj.companycode', '=', 'sk.companycode');
             })
-            ->where('sj.companycode', $companyCode)
-            ->whereBetween('sj.tanggalangkut', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->whereNotNull('sj.namasubkontraktor')
             ->select('sj.namasubkontraktor as id', 'sk.namasubkontraktor as name')
             ->distinct()
