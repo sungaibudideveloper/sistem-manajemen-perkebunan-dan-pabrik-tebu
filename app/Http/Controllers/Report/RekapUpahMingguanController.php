@@ -64,6 +64,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.status',
                 'lkhhdr.jenistenagakerja',
                 'lkhhdr.totalupahall',
+                'lkhhdr.lkhdate',
                 'activity.activityname'
             );
 
@@ -82,6 +83,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.status',
                 'lkhhdr.jenistenagakerja',
                 'lkhhdr.totalupahall',
+                'lkhhdr.lkhdate',
                 'activity.activityname',
                 DB::raw("GROUP_CONCAT(DISTINCT lkhdetailplot.plot ORDER BY lkhdetailplot.plot SEPARATOR ', ') as plots")
             )
@@ -118,6 +120,10 @@ class RekapUpahMingguanController extends Controller
             ->leftJoin('lkhdetailplot as b', function ($join) {
                 $join->on('a.lkhno', '=', 'b.lkhno')
                     ->on('a.companycode', '=', 'b.companycode');
+            })
+            ->leftJoin('batch as e', function ($join) {
+                $join->on('a.companycode', '=', 'e.companycode')
+                    ->on('b.plot', '=', 'e.plot');
             });
 
         if ($header->jenistenagakerja == 1) {
@@ -133,6 +139,27 @@ class RekapUpahMingguanController extends Controller
                     'b.luashasil',
                     'd.upahharian as upah',
                     'd.totalupah as total',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT nama FROM tenagakerja WHERE tenagakerjaid = d.tenagakerjaid LIMIT 1) AS namatenagakerja"),
                     DB::raw("(SELECT activityname FROM activity WHERE activitycode = a.activitycode LIMIT 1) AS activityname"),
                 );
@@ -142,10 +169,30 @@ class RekapUpahMingguanController extends Controller
                 ->select(
                     'a.*',
                     'b.*',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT activityname FROM activity WHERE activitycode = a.activitycode LIMIT 1) AS activityname"),
                     DB::raw("(SELECT amount FROM upahborongan WHERE activitycode = a.activitycode AND companycode = a.companycode LIMIT 1) AS upah")
                 );
-
 
         } else {
             $datas = collect(); // Jika tidak ada jenis tenaga kerja yang cocok
@@ -154,7 +201,7 @@ class RekapUpahMingguanController extends Controller
         $data = $datas->where('a.lkhno', $lkhno)
             ->where('a.companycode', $companycode)
             ->where('a.jenistenagakerja', $header->jenistenagakerja)
-            ->orderByDesc('a.lkhno')
+            ->orderBy('b.plot', 'asc')
             ->get();
 
 
@@ -186,6 +233,10 @@ class RekapUpahMingguanController extends Controller
             })
             ->leftJoin('activity as c', function ($join) {
                 $join->on('a.activitycode', '=', 'c.activitycode');
+            })
+            ->leftJoin('batch as e', function ($join) {
+                $join->on('a.companycode', '=', 'e.companycode')
+                    ->on('b.plot', '=', 'e.plot');
             });
 
         if ($tk == 1) {
@@ -202,6 +253,27 @@ class RekapUpahMingguanController extends Controller
                     'c.activityname',
                     'd.upahharian as upah',
                     'd.totalupah as total',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT nama FROM tenagakerja WHERE tenagakerjaid = d.tenagakerjaid LIMIT 1) AS namatenagakerja"),
                 );
 
@@ -213,6 +285,27 @@ class RekapUpahMingguanController extends Controller
                     'b.luasrkh as luasan',
                     'b.luashasil as hasil',
                     'c.activityname',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT amount FROM upahborongan WHERE activitycode = a.activitycode AND companycode = a.companycode LIMIT 1) AS upah")
                 );
 
@@ -260,6 +353,10 @@ class RekapUpahMingguanController extends Controller
             })
             ->leftJoin('activity as c', function ($join) {
                 $join->on('a.activitycode', '=', 'c.activitycode');
+            })
+            ->leftJoin('batch as e', function ($join) {
+                $join->on('a.companycode', '=', 'e.companycode')
+                    ->on('b.plot', '=', 'e.plot');
             });
 
         if ($tk == 1) {
@@ -276,6 +373,27 @@ class RekapUpahMingguanController extends Controller
                     'c.activityname',
                     'd.upahharian as upah',
                     'd.totalupah as total',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT nama FROM tenagakerja WHERE tenagakerjaid = d.tenagakerjaid LIMIT 1) AS namatenagakerja"),
                 );
         } elseif ($tk == 2) {
@@ -286,6 +404,27 @@ class RekapUpahMingguanController extends Controller
                     'b.luasrkh as luasan',
                     'b.luashasil as hasil',
                     'c.activityname',
+                    'e.lifecyclestatus',
+                    DB::raw("
+                        CONCAT(
+                            CASE MONTH(e.batchdate)
+                                WHEN 1 THEN 'JAN'
+                                WHEN 2 THEN 'FEB'
+                                WHEN 3 THEN 'MAR'
+                                WHEN 4 THEN 'APR'
+                                WHEN 5 THEN 'MEI'
+                                WHEN 6 THEN 'JUN'
+                                WHEN 7 THEN 'JUL'
+                                WHEN 8 THEN 'AGU'
+                                WHEN 9 THEN 'SEP'
+                                WHEN 10 THEN 'OKT'
+                                WHEN 11 THEN 'NOV'
+                                WHEN 12 THEN 'DES'
+                            END,
+                            \"'\", 
+                            RIGHT(YEAR(e.batchdate), 2)
+                        ) AS batchdate
+                    "),
                     DB::raw("(SELECT amount FROM upahborongan WHERE activitycode = a.activitycode AND companycode = a.companycode LIMIT 1) AS upah")
                 );
         } else {
@@ -309,6 +448,7 @@ class RekapUpahMingguanController extends Controller
         // Process data
         foreach ($data as $index => $item) {
             $item->no = $index + 1;
+            $item->statustanam = $item->batchdate . "/" . $item->lifecyclestatus;
             if ($tk == 2) {
                 $item->total = $item->upah * $item->hasil;
             }
@@ -466,9 +606,9 @@ class RekapUpahMingguanController extends Controller
 
         // Table header
         if ($tenagakerjarum == 'Harian') {
-            $headerRow = ['No.', 'Kegiatan', 'Tenaga Kerja', 'Plot', 'Luasan (Ha)', 'Hasil (Ha)', 'Cost/Unit', 'Biaya (Rp)'];
+            $headerRow = ['No.', 'Kegiatan', 'Tenaga Kerja', 'Plot', 'Luasan (Ha)', 'Status Tanam', 'Hasil (Ha)', 'Cost/Unit', 'Biaya (Rp)'];
         } else {
-            $headerRow = ['No.', 'Kegiatan', 'Plot', 'Luasan (Ha)', 'Hasil (Ha)', 'Cost/Unit', 'Biaya (Rp)'];
+            $headerRow = ['No.', 'Kegiatan', 'Plot', 'Luasan (Ha)', 'Status Tanam', 'Hasil (Ha)', 'Cost/Unit', 'Biaya (Rp)'];
         }
         $writer->addRow(WriterEntityFactory::createRowFromArray($headerRow, $tableHeaderStyle));
 
@@ -489,6 +629,7 @@ class RekapUpahMingguanController extends Controller
                             WriterEntityFactory::createCell($item->namatenagakerja ?? '', $normalStyle),
                             WriterEntityFactory::createCell($item->plot, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->luasan, 2, ',', '.'), $rightStyle),
+                            WriterEntityFactory::createCell($item->statustanam ?? '', $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->hasil, 2, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->upah ?? 0, 0, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->total ?? 0, 0, ',', '.'), $rightStyle),
@@ -500,6 +641,7 @@ class RekapUpahMingguanController extends Controller
                             WriterEntityFactory::createCell($item->namatenagakerja ?? '', $normalStyle),
                             WriterEntityFactory::createCell($item->plot, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->luasan, 2, ',', '.'), $rightStyle),
+                            WriterEntityFactory::createCell($item->statustanam ?? '', $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->hasil, 2, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->upah ?? 0, 0, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->total ?? 0, 0, ',', '.'), $rightStyle),
@@ -512,6 +654,7 @@ class RekapUpahMingguanController extends Controller
                             WriterEntityFactory::createCell($item->activityname, $mergedCellStyle),
                             WriterEntityFactory::createCell($item->plot, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->luasan, 2, ',', '.'), $rightStyle),
+                            WriterEntityFactory::createCell($item->statustanam, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->hasil, 2, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->upah ?? 0, 0, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->total ?? 0, 0, ',', '.'), $rightStyle),
@@ -522,6 +665,7 @@ class RekapUpahMingguanController extends Controller
                             WriterEntityFactory::createCell('', $normalStyle),
                             WriterEntityFactory::createCell($item->plot, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->luasan, 2, ',', '.'), $rightStyle),
+                            WriterEntityFactory::createCell($item->statustanam, $normalStyle),
                             WriterEntityFactory::createCell(number_format($item->hasil, 2, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->upah ?? 0, 0, ',', '.'), $rightStyle),
                             WriterEntityFactory::createCell(number_format($item->total ?? 0, 0, ',', '.'), $rightStyle),
@@ -545,11 +689,13 @@ class RekapUpahMingguanController extends Controller
                     WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('', $subtotalStyle),
+                    WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('Subtotal ' . $activityName, $subtotalStyle),
                     WriterEntityFactory::createCell('Rp ' . number_format($subtotal, 2, ',', '.'), $subtotalStyle),
                 ];
             } else {
                 $subtotalRow = [
+                    WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('', $subtotalStyle),
                     WriterEntityFactory::createCell('', $subtotalStyle),
@@ -573,11 +719,13 @@ class RekapUpahMingguanController extends Controller
                 WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('', $totalStyle),
+                WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('TOTAL KESELURUHAN', $totalStyle),
                 WriterEntityFactory::createCell('Rp ' . number_format($totalKeseluruhan, 2, ',', '.'), $totalStyle),
             ];
         } else {
             $totalRow = [
+                WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('', $totalStyle),
                 WriterEntityFactory::createCell('', $totalStyle),
