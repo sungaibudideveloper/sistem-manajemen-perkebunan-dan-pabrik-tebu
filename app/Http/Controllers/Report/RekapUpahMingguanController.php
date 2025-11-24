@@ -57,7 +57,7 @@ class RekapUpahMingguanController extends Controller
             ->when($endDate, function ($query) use ($endDate) {
                 $query->whereDate('lkhhdr.lkhdate', '<=', $endDate);
             })
-            ->groupBy('lkhhdr.lkhno');
+            ->groupBy('lkhhdr.*', 'activity.activityname');
 
         if (!empty($search)) {
             $querys->where(function ($query) use ($search) {
