@@ -721,7 +721,10 @@ class RencanaKerjaHarianController extends Controller
             ->value('lkhdate');
         
         return DB::table('lkhdetailplot as ldp')
-            ->leftJoin('batch as b', 'ldp.batchno', '=', 'b.batchno')
+            ->leftJoin('batch as b', function($join) use ($companycode) {
+                $join->on('ldp.batchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode); // ✅ FIXED
+            })
             ->where('ldp.companycode', $companycode)
             ->where('ldp.lkhno', $lkhno)
             ->select([
@@ -773,7 +776,7 @@ class RencanaKerjaHarianController extends Controller
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
-                // ✅ FIXED: Hari Tebang dengan fallback
+                // Hari Tebang dengan fallback
                 DB::raw("CASE 
                     WHEN b.tanggalpanen IS NULL THEN 1
                     ELSE DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
@@ -3156,7 +3159,10 @@ public function loadAbsenByDate(Request $request)
     private function getActiveBatchForPlot($companycode, $plot)
     {
         return DB::table('masterlist')
-            ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+            ->join('batch', function($join) use ($companycode) {
+                $join->on('masterlist.activebatchno', '=', 'batch.batchno')
+                    ->where('batch.companycode', '=', $companycode); // ✅ FIXED
+            })
             ->where('masterlist.companycode', $companycode)
             ->where('masterlist.plot', $plot)
             ->where('masterlist.isactive', 1)
@@ -3182,7 +3188,10 @@ public function loadAbsenByDate(Request $request)
     private function getBatchInfoForPlot($companycode, $plot)
     {
         return DB::table('masterlist')
-            ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
+            ->join('batch', function($join) use ($companycode) {
+                $join->on('masterlist.activebatchno', '=', 'batch.batchno')
+                    ->where('batch.companycode', '=', $companycode); // ✅ FIXED
+            })
             ->where('masterlist.companycode', $companycode)
             ->where('masterlist.plot', $plot)
             ->where('masterlist.isactive', 1)
@@ -3195,7 +3204,6 @@ public function loadAbsenByDate(Request $request)
             ])
             ->first();
     }
-
     /**
      * Generate unique RKH number with database lock
      */
@@ -3367,7 +3375,10 @@ public function loadAbsenByDate(Request $request)
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
+            ->leftJoin('batch as b', function($join) use ($companycode) {
+                $join->on('r.batchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode); // FIXED
+            })
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
@@ -3383,7 +3394,6 @@ public function loadAbsenByDate(Request $request)
                 'b.batcharea',
                 'b.tanggalpanen',
                 
-                // ✅ Calculate total sudah dikerjakan
                 DB::raw("(
                     SELECT COALESCE(SUM(ldp.luashasil), 0)
                     FROM lkhdetailplot ldp
@@ -3415,7 +3425,10 @@ public function loadAbsenByDate(Request $request)
                     ->on('r.activitycode', '=', 'hg.activitycode');
             })
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            ->leftJoin('batch as b', 'r.batchno', '=', 'b.batchno')
+            ->leftJoin('batch as b', function($join) use ($companycode) {
+                $join->on('r.batchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode); // FIXED
+            })
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
