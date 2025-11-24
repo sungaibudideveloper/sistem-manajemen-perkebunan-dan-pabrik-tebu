@@ -4975,4 +4975,80 @@ public function loadAbsenByDate(Request $request)
             $this->createWorkerAssignments($activitiesWorkers, $companycode, $rkhno);
         }
     }
+
+    /**
+     * Get surat jalan list for specific plot and subkontraktor
+     * NEW METHOD for LKH Panen modal
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSuratJalan(Request $request)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            $plot = $request->query('plot');
+            $subkontraktorId = $request->query('subkontraktor_id');
+            $lkhno = $request->query('lkhno');
+            
+            if (!$plot || !$subkontraktorId || !$lkhno) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Parameter tidak lengkap'
+                ], 400);
+            }
+            
+            // Get LKH date for filtering
+            $lkhData = DB::table('lkhhdr')
+                ->where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->first();
+            
+            if (!$lkhData) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'LKH tidak ditemukan'
+                ], 404);
+            }
+            
+            $lkhDate = $lkhData->lkhdate;
+            
+            // Get surat jalan list
+            $suratJalan = DB::table('suratjalanpos as sj')
+                ->leftJoin('timbanganpayload as tp', function($join) use ($companycode) {
+                    $join->on('sj.companycode', '=', 'tp.companycode')
+                        ->on('sj.suratjalanno', '=', 'tp.suratjalanno');
+                })
+                ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
+                    $join->on('sj.namasubkontraktor', '=', 'sk.id')
+                        ->where('sk.companycode', '=', $companycode);
+                })
+                ->where('sj.companycode', $companycode)
+                ->where('sj.plot', $plot)
+                ->where('sj.namasubkontraktor', $subkontraktorId)
+                ->whereDate('sj.tanggalcetakpossecurity', $lkhDate)
+                ->select([
+                    'sj.suratjalanno',
+                    'sj.tanggalcetakpossecurity',
+                    'sk.namasubkontraktor',
+                    DB::raw('CASE WHEN tp.suratjalanno IS NULL THEN "Pending" ELSE "Sudah Timbang" END as status')
+                ])
+                ->orderBy('sj.tanggalcetakpossecurity', 'desc')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'surat_jalan' => $suratJalan,
+                'subkontraktor_nama' => $suratJalan->first()->namasubkontraktor ?? null,
+                'total' => $suratJalan->count()
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error getting surat jalan list: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data surat jalan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
