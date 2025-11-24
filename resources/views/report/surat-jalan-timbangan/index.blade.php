@@ -13,6 +13,14 @@
         <!-- Main Content -->
         <div x-show="!loading" style="display: none;" x-transition>
             
+            <!-- Header Title -->
+            <div class="bg-white border-b-2 border-gray-200 rounded-xl shadow-sm p-5 mb-5">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    Data Surat Jalan & Timbangan: 
+                    <span class="font-bold text-gray-900" x-text="getCurrentCompanyTitle()"></span>
+                </h2>
+            </div>
+
             <!-- Summary Cards (3 cards only) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                 <!-- Total SJ -->
@@ -89,6 +97,14 @@
                 
                 <!-- Date Range Row -->
                 <div class="flex flex-wrap gap-3 mb-3 pb-3 border-b border-gray-200">
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-xs font-medium text-gray-600 mb-1.5">Group</label>
+                        <select x-model="filters.group" class="w-full text-xs border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Current Company</option>
+                            <option value="all-tbl">All TBL (TBL1/2/3)</option>
+                            <option value="all-divisi">All Divisi</option>
+                        </select>
+                    </div>
                     <div class="flex-1 min-w-[140px]">
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Tanggal Mulai</label>
                         <input type="date" x-model="filters.start_date" :disabled="dateRangeLocked" class="w-full text-xs border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed">
@@ -383,6 +399,7 @@
                         <thead>
                             <tr class="bg-gray-100">
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">No</th>
+                                <th rowspan="2" class="border border-gray-300 px-2 py-2">Company</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">No SJ</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Tgl SJ</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Mandor</th>
@@ -398,25 +415,26 @@
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Supir</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Kontraktor</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Sub Kontraktor</th>
-                                <th colspan="4" class="border border-gray-300 px-2 py-1 text-center bg-blue-50">Waktu</th>
+                                <th colspan="4" class="border border-gray-300 px-2 py-1 text-center bg-gray-100">Waktu</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Bruto</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Netto</th>
-                                <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-purple-50">Durasi</th>
+                                <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-gray-100">Durasi</th>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2">Status</th>
                             </tr>
                             <tr class="bg-gray-100">
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Jam<br>Angkut</th>
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Jam<br>Cetak POS</th>
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Jam<br>Masuk</th>
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Jam<br>Keluar</th>
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-purple-50">POS ke<br>Timbang<br>(min)</th>
-                                <th class="border border-gray-300 px-2 py-1 text-xs bg-purple-50">Durasi<br>Deload<br>(min)</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">Jam<br>Angkut</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">Jam<br>Cetak POS</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">Jam<br>Masuk</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">Jam<br>Keluar</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">POS ke<br>Timbang<br>(min)</th>
+                                <th class="border border-gray-300 px-2 py-1 text-xs">Durasi<br>Deload<br>(min)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="(item, index) in data.details" :key="item.suratjalanno">
+                            <template x-for="(item, index) in data.details" :key="`${item.companycode}-${item.suratjalanno}`">
                                 <tr :class="item.status === 'Sudah Timbang' ? 'bg-green-50 hover:bg-green-100' : 'bg-yellow-50 hover:bg-yellow-100'" class="transition-colors">
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="index + 1"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
                                     <td class="border border-gray-300 px-2 py-2">
                                         <a :href="`{{ route('report.report-surat-jalan-timbangan.index') }}/${item.suratjalanno}`" 
                                            target="_blank"
@@ -449,14 +467,14 @@
                                     <td class="border border-gray-300 px-2 py-2" x-text="item.namasupir || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-xs" x-text="item.nama_kontraktor_lengkap || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-xs" x-text="item.nama_subkontraktor_lengkap || '-'"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-blue-50" x-text="formatTime24(item.tanggalangkut)"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-blue-50" x-text="formatTime24(item.tanggalcetakpossecurity)"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-blue-50" x-text="formatTime24FromJam(item.jam1)"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-blue-50" x-text="formatTime24FromJam(item.jam2)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatTime24(item.tanggalangkut)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatTime24(item.tanggalcetakpossecurity)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatTime24FromJam(item.jam1)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatTime24FromJam(item.jam2)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-right" x-text="formatNumber(item.bruto)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-right font-bold" x-text="formatNumber(item.netto)"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-purple-50" x-text="formatDuration(item.durasi_pos_timbangan)"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center bg-purple-50" x-text="formatDuration(item.durasi_deload)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_pos_timbangan)"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_deload)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center">
                                         <span :class="item.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="px-2 py-1 rounded-full text-xs font-bold" x-text="item.status"></span>
                                     </td>
@@ -464,7 +482,7 @@
                             </template>
                             <template x-if="!data.details || data.details.length === 0">
                                 <tr>
-                                    <td colspan="24" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
+                                    <td colspan="25" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
                                 </tr>
                             </template>
                         </tbody>
@@ -515,6 +533,7 @@
                 isSingleDay: true
             },
             filters: {
+                group: '',
                 start_date: new Date().toISOString().split('T')[0],
                 end_date: new Date().toISOString().split('T')[0],
                 mandor: '',
@@ -523,6 +542,9 @@
                 subkontraktor: '',
                 nopol: '',
                 status: ''
+            },
+            appliedFilters: {
+                group: ''
             },
             charts: {
                 hourly: null,
@@ -543,6 +565,7 @@
                     
                     if (result.success) {
                         this.data = result.data;
+                        this.appliedFilters.group = this.filters.group;
                         
                         await this.$nextTick();
                         this.renderCharts();
@@ -554,6 +577,16 @@
                     alert('Gagal memuat data');
                 } finally {
                     this.loading = false;
+                }
+            },
+
+            getCurrentCompanyTitle() {
+                if (this.appliedFilters.group === 'all-tbl') {
+                    return 'TBL Group (TBL1, TBL2 & TBL3)';
+                } else if (this.appliedFilters.group === 'all-divisi') {
+                    return 'All Division';
+                } else {
+                    return '{{ Session::get("companycode") }}';
                 }
             },
 
@@ -649,10 +682,8 @@
                 this.chartLoading.sj = true;
                 this.sjPeriod = period;
                 
-                // Render immediately
                 this.renderSJPerTanggalChart();
                 
-                // Keep button disabled for 3 seconds
                 await new Promise(resolve => setTimeout(resolve, 3000));
                 this.chartLoading.sj = false;
             },
@@ -663,10 +694,8 @@
                 this.chartLoading.tonase = true;
                 this.tonasePeriod = period;
                 
-                // Render immediately
                 this.renderTonasePerTanggalChart();
                 
-                // Keep button disabled for 3 seconds
                 await new Promise(resolve => setTimeout(resolve, 3000));
                 this.chartLoading.tonase = false;
             },
@@ -918,6 +947,7 @@
 
             resetFilters() {
                 this.filters = {
+                    group: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: new Date().toISOString().split('T')[0],
                     mandor: '',
