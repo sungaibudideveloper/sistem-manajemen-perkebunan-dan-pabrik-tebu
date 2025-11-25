@@ -269,25 +269,29 @@ class ApprovalController extends Controller
     private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
     {
         // Get updated RKH data
-        $updatedRkh = DB::table('rkhhdr')->where('companycode', $companycode)->where('rkhno', $rkhno)->first();
+        $updatedRkh = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->first();
 
         if (!$this->isRkhFullyApproved($updatedRkh)) {
             return $responseMessage;
         }
 
-        // STEP 1: Generate LKH (CRITICAL - HARD FAILURE)
+        // STEP 1: Generate LKH (PASS COMPANYCODE)
         $lkhGenerator = new LkhGeneratorService();
         $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
         
         if (!$lkhResult['success']) {
             Log::error("LKH auto-generation failed", [
                 'rkhno' => $rkhno,
+                'companycode' => $companycode,
                 'error' => $lkhResult['message'] ?? 'Unknown error'
             ]);
-            throw new \Exception('LKH auto-generation gagal: ' . $lkhResult['message'] . '. Approval dibatalkan untuk menjaga konsistensi data.');
+            throw new \Exception('LKH auto-generation gagal: ' . $lkhResult['message']);
         }
         
-        $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';
+        $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
         
         // STEP 2: Handle Planting Activities (Create Batch) - FIXED: NOW INCLUDED
         if ($this->hasPlantingActivities($rkhno, $companycode)) {

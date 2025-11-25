@@ -47,32 +47,40 @@ class LkhGeneratorService
         try {
             DB::beginTransaction();
 
-            // 1. Validate RKH exists and fully approved
-            $query = Rkhhdr::where('rkhno', $rkhno);
-            if ($companycode) {
-                $query->where('companycode', $companycode);
+            // ✅ Get companycode dari session jika tidak di-pass
+            if (!$companycode) {
+                $companycode = session('companycode');
             }
-            $rkh = $query->first();
+
+            if (!$companycode) {
+                throw new \Exception("Company code tidak ditemukan");
+            }
+
+            // 1. Validate RKH exists and fully approved (WITH COMPANYCODE)
+            $rkh = Rkhhdr::where('rkhno', $rkhno)
+                ->where('companycode', $companycode)
+                ->first();
+                
             if (!$rkh) {
-                throw new \Exception("RKH {$rkhno} not found");
+                throw new \Exception("RKH {$rkhno} not found for company {$companycode}");
             }
 
             if (!$this->isRkhFullyApproved($rkh)) {
                 throw new \Exception("RKH {$rkhno} belum fully approved");
             }
 
-            // 2. Check if LKH already generated
+            // 2. ✅ Check if LKH already generated (COMPOUND KEY CHECK)
             $existingLkh = Lkhhdr::where('rkhno', $rkhno)
-                ->where('companycode', $rkh->companycode)
+                ->where('companycode', $companycode)
                 ->exists();
             
             if ($existingLkh) {
-                throw new \Exception("LKH untuk RKH {$rkhno} sudah pernah di-generate");
+                throw new \Exception("LKH untuk RKH {$rkhno} (company: {$companycode}) sudah pernah di-generate");
             }
 
-            // 3. Get RKH activities
+            // 3. Get RKH activities (WITH COMPANYCODE)
             $rkhActivities = Rkhlst::where('rkhno', $rkhno)
-                ->where('companycode', $rkh->companycode)
+                ->where('companycode', $companycode)
                 ->get();
 
             if ($rkhActivities->isEmpty()) {
