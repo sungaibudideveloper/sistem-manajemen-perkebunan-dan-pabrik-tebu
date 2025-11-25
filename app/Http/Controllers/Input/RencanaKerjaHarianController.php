@@ -4760,7 +4760,7 @@ public function loadAbsenByDate(Request $request)
                 ->where('lkhdetailplot.companycode', $companycode)
                 ->where('lkhdetailplot.batchno', $batch->batchno)
                 ->where('lkhhdr.approvalstatus', '1')
-                ->whereDate('lkhhdr.lkhdate', '<', now()->format('Y-m-d'))
+                ->whereDate('lkhhdr.lkhdate', '<=', now()->format('Y-m-d'))
                 ->sum('lkhdetailplot.luashasil');
             
             $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
