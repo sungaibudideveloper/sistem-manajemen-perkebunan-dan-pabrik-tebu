@@ -48,7 +48,11 @@ class LkhGeneratorService
             DB::beginTransaction();
 
             // 1. Validate RKH exists and fully approved
-            $rkh = Rkhhdr::where('rkhno', $rkhno)->first();
+            $query = Rkhhdr::where('rkhno', $rkhno);
+            if ($companycode) {
+                $query->where('companycode', $companycode);
+            }
+            $rkh = $query->first();
             if (!$rkh) {
                 throw new \Exception("RKH {$rkhno} not found");
             }

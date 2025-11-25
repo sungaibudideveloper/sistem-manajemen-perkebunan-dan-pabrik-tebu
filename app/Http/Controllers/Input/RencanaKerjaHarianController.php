@@ -3717,7 +3717,7 @@ public function loadAbsenByDate(Request $request)
 
         // STEP 1: Generate LKH (CRITICAL - HARD FAILURE)
         $lkhGenerator = new LkhGeneratorService();
-        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno);
+        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
         
         if (!$lkhResult['success']) {
             \Log::error("LKH auto-generation failed", [
