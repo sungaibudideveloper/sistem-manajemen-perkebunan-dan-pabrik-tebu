@@ -350,7 +350,7 @@
                                 @endif
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plot || ''}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.luasrkh || ''}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}/${item.lifecyclestatus}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.luashasil || ''}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.upah || '-'}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.total || '-'}</td>

@@ -33,10 +33,18 @@ class NfcController extends Controller
             ->whereNull('mandorid')
             ->value('balance') ?? 0;
         
-        // ✅ POS balance = COUNT of suratjalanpos (1 SJ = 1 NFC card)
-        $posBalance = DB::table('suratjalanpos')
+        // POS balance = COUNT of suratjalanpos (1 SJ = 1 NFC card)
+        $totalSJ = DB::table('suratjalanpos')
             ->where('companycode', $companycode)
             ->count();
+
+        $totalReturned = DB::table('nfctransaction')
+            ->where('companycode', $companycode)
+            ->where('mandorid', 'POS')
+            ->where('transactiontype', 'IN')
+            ->sum('qty');
+
+        $posBalance = $totalSJ - $totalReturned;
         
         // Get cards at POS per mandor for reference
         $posDataByMandor = DB::table('suratjalanpos')
@@ -271,9 +279,17 @@ class NfcController extends Controller
             DB::beginTransaction();
 
             // Check POS balance (real-time from suratjalanpos count)
-            $posBalance = DB::table('suratjalanpos')
+            $totalSJ = DB::table('suratjalanpos')
                 ->where('companycode', $companycode)
                 ->count();
+
+            $totalReturned = DB::table('nfctransaction')
+                ->where('companycode', $companycode)
+                ->where('mandorid', 'POS')
+                ->where('transactiontype', 'IN')
+                ->sum('qty');
+
+            $posBalance = $totalSJ - $totalReturned;
             
             if ($posBalance < $request->qty) {
                 return response()->json([

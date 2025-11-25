@@ -243,7 +243,26 @@ class PerhitunganUpahApiMobile extends Controller
             $end->addDay();
         }
         
-        return $start->diffInHours($end);
+        // Total hours including break
+        $totalHours = $start->diffInHours($end, false);
+        
+        // Define break time
+        $breakStart = Carbon::createFromFormat('H:i:s', '12:00:00');
+        $breakEnd = Carbon::createFromFormat('H:i:s', '13:00:00');
+        
+        // Check if work period overlaps with break time
+        $breakDeduction = 0;
+        
+        if ($start->lt($breakEnd) && $end->gt($breakStart)) {
+            // Work period overlaps with break
+            $overlapStart = $start->gt($breakStart) ? $start : $breakStart;
+            $overlapEnd = $end->lt($breakEnd) ? $end : $breakEnd;
+            
+            // Calculate break overlap in hours
+            $breakDeduction = $overlapStart->diffInHours($overlapEnd, false);
+        }
+        
+        return $totalHours - $breakDeduction;
     }
     
     private function getDayType($workDate)

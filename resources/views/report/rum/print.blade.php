@@ -74,6 +74,7 @@
                         @endif
                         <th class="border border-gray-300 px-4 py-2">Plot</th>
                         <th class="border border-gray-300 px-4 py-2">Luas (Ha)</th>
+                        <th class="border border-gray-300 px-4 py-2">Status Tanam</th>
                         <th class="border border-gray-300 px-4 py-2">Hasil (Ha)</th>
                         <th class="border border-gray-300 px-4 py-2">Cost/Unit</th>
                         <th class="border border-gray-300 px-4 py-2 w-[30ch]">Biaya (Rp)</th>
@@ -123,6 +124,8 @@
                                     <td class="border border-gray-300 px-4 py-2">{{ $item->plot }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-right">
                                         {{ number_format($item->luasan, 2) }}</td>
+                                    <td class="border border-gray-300 px-4 py-2">
+                                        {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-right">
                                         {{ number_format($item->hasil, 2) }}</td>
                                     <td class="border border-gray-300 px-4 py-2 text-right">{{ $item->upah }}</td>
@@ -151,7 +154,7 @@
                             <!-- Row Subtotal untuk setiap kegiatan -->
                             <tr class="bg-yellow-50 font-bold">
                                 <td class="border border-gray-300 px-4 py-2 text-center"
-                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '7' : '6' }}">
+                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
                                     Subtotal {{ $activityName }}
                                 </td>
                                 <td class="border border-gray-300 px-4 py-2 text-right">
@@ -167,7 +170,7 @@
                         <!-- Row Total Keseluruhan -->
                         <tr class="bg-green-100 font-bold text-base">
                             <td class="border border-gray-300 px-4 py-2 text-center"
-                                colspan="{{ session('tenagakerjarum') == 'Harian' ? '7' : '6' }}">
+                                colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
                                 TOTAL KESELURUHAN
                             </td>
                             <td class="border border-gray-300 px-4 py-2 text-right">
@@ -176,7 +179,7 @@
                         </tr>
                     @else
                         <tr>
-                            <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}"
+                            <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '8' }}"
                                 class="border border-gray-300 px-4 py-2 text-center">
                                 Tidak ada data
                             </td>
