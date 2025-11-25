@@ -120,6 +120,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
 
+            // LKH Panen
+            Route::get('/lkh-panen-report/get-sj', 'getSuratJalan')->name('lkh-panen-report.get-sj');
+
             // Operator Report routes
             Route::get('/operators-for-date', 'getOperatorsForDate')->name('getOperatorsForDate');
             Route::post('/generate-operator-report', 'generateOperatorReport')->name('generateOperatorReport');

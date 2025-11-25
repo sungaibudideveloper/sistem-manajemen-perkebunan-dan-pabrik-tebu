@@ -2,12 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
-use App\Http\Controllers\Input\AgronomiController;
-
 use App\Http\Controllers\Report\PivotController;
+
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\Input\AgronomiController;
 use App\Http\Controllers\Report\PanenTebuController;
 use App\Http\Controllers\Report\MasterLahanReportController;
+use App\Http\Controllers\Report\RekapUpahMingguanController;
 use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
 
 
@@ -50,8 +51,16 @@ Route::group(['middleware' => ['auth', 'permission:Report Manajemen Lahan']], fu
 Route::group(['middleware' => ['auth', 'permission:Report Surat Jalan Timbangan']], function () {
     Route::get('report/surat-jalan-timbangan', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'index'])->name('report.report-surat-jalan-timbangan.index');
     Route::get('report/surat-jalan-timbangan/data', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'getData'])->name('report.report-surat-jalan-timbangan.data');
-    
+
     // Detail page routes
     Route::get('report/surat-jalan-timbangan/{suratjalanno}', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'show'])->name('report.report-surat-jalan-timbangan.show');
     Route::get('report/surat-jalan-timbangan/{suratjalanno}/detail', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'getDetail'])->name('report.report-surat-jalan-timbangan.detail');
+});
+
+Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], function () {
+    Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan', [RekapUpahMingguanController::class, 'index'])->name('report.rekap-upah-mingguan.index');
+    Route::get('report/rekap-upah-mingguan/excel', [RekapUpahMingguanController::class, 'excelRUM'])->name('report.rekap-upah-mingguan.exportExcel');
+    Route::get('report/rekap-upah-mingguan/show/{lkhno}', [RekapUpahMingguanController::class, 'show'])->name('report.rekap-upah-mingguan.show');
+    Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('report.rekap-upah-mingguan.preview');
+    Route::get('report/rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('report.rekap-upah-mingguan.export-excel');
 });

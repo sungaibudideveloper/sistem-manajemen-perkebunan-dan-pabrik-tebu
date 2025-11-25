@@ -144,7 +144,7 @@ $activityDataRaw = DB::table('lkhdetailplot as ldp')
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
          ->on('m.companycode', '=', 'b.companycode')
-         ;
+         ->where('b.isactive', '=', 1);  // ✅ FILTER: Batch harus aktif
 })
 ->where('ldp.companycode', $companyCode)
 ->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
@@ -170,7 +170,7 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
 ->join('batch as b', function($join) {
     $join->on('m.activebatchno', '=', 'b.batchno')
          ->on('m.companycode', '=', 'b.companycode')
-         ;
+         ->where('b.isactive', '=', 1);  // ✅ FILTER: Batch harus aktif
 })
 ->where('ldp.companycode', $companyCode)
 ->whereRaw('ldp.batchno = m.activebatchno')  // ✅ FILTER: Hanya LKH dari batch aktif
