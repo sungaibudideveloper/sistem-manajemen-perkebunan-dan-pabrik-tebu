@@ -10,6 +10,7 @@ use App\Models\LkhDetailPlot;
 use App\Services\WageCalculationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 /**
@@ -49,7 +50,7 @@ class LkhGeneratorService
 
             // ✅ Get companycode dari session jika tidak di-pass
             if (!$companycode) {
-                $companycode = session('companycode');
+                $companycode = Session::get('companycode');
             }
 
             if (!$companycode) {
