@@ -4721,57 +4721,70 @@ public function loadAbsenByDate(Request $request)
      * @return array
      */
     private function validatePanenPlots($rows, $companycode)
-    {
-        $errors = [];
-        $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
-        
-        foreach ($rows as $index => $row) {
-            if (!in_array($row['nama'] ?? '', $panenActivities)) {
-                continue;
-            }
-            
-            $plot = $row['plot'] ?? '';
-            $luas = (float) ($row['luas'] ?? 0);
-            
-            if (!$plot || $luas <= 0) {
-                continue;
-            }
-            
-            // Get active batch
-            $batch = DB::table('masterlist')
-                ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
-                ->where('masterlist.companycode', $companycode)
-                ->where('masterlist.plot', $plot)
-                ->where('masterlist.isactive', 1)
-                ->where('batch.isactive', 1)
-                ->first();
-            
-            if (!$batch) {
-                $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} tidak memiliki batch aktif untuk dipanen.";
-                continue;
-            }
-            
-            // Calculate luas sisa (STC)
-            $totalSudahPanen = DB::table('lkhdetailplot')
-                ->join('lkhhdr', function($join) {
-                    $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
-                        ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
-                })
-                ->where('lkhdetailplot.companycode', $companycode)
-                ->where('lkhdetailplot.batchno', $batch->batchno)
-                ->where('lkhhdr.approvalstatus', '1')
-                ->whereDate('lkhhdr.lkhdate', '<=', now()->format('Y-m-d'))
-                ->sum('lkhdetailplot.luashasil');
-            
-            $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
-            
-            if (round($luas, 2) > round($luasSisa, 2)) {
-                $errors[] = "Baris " . ($index + 1) . ": Luas panen ({$luas} Ha) melebihi luas sisa (" . number_format($luasSisa, 2) . " Ha) untuk plot {$plot}.";
-            }
+{
+    $errors = [];
+    $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
+    
+    foreach ($rows as $index => $row) {
+        if (!in_array($row['nama'] ?? '', $panenActivities)) {
+            continue;
         }
         
-        return $errors;
+        $plot = $row['plot'] ?? '';
+        $luas = (float) ($row['luas'] ?? 0);
+        
+        if (!$plot || $luas <= 0) {
+            continue;
+        }
+        
+        // Get active batch
+        $batch = DB::table('masterlist')
+            ->join('batch', function($join) use ($companycode) {
+                $join->on('masterlist.activebatchno', '=', 'batch.batchno')
+                    ->where('batch.companycode', '=', $companycode);
+            })
+            ->where('masterlist.companycode', $companycode)
+            ->where('masterlist.plot', $plot)
+            ->where('masterlist.isactive', 1)
+            ->where('batch.isactive', 1)
+            ->first();
+        
+        if (!$batch) {
+            $errors[] = "Baris " . ($index + 1) . ": Plot {$plot} tidak memiliki batch aktif untuk dipanen.";
+            continue;
+        }
+        
+        // Calculate luas sisa (STC)
+        $totalSudahPanen = DB::table('lkhdetailplot')
+            ->join('lkhhdr', function($join) {
+                $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                    ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+            })
+            ->where('lkhdetailplot.companycode', $companycode)
+            ->where('lkhdetailplot.batchno', $batch->batchno)
+            ->where('lkhhdr.approvalstatus', '1')
+            ->whereDate('lkhhdr.lkhdate', '<=', now()->format('Y-m-d'))
+            ->sum('lkhdetailplot.luashasil');
+        
+        $luasSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
+        
+        // DEBUG LOG
+        \Log::info("Validate Panen Plot {$plot}", [
+            'batchno' => $batch->batchno,
+            'batcharea' => $batch->batcharea,
+            'totalSudahPanen' => $totalSudahPanen,
+            'luasSisa' => $luasSisa,
+            'luasInput' => $luas,
+            'companycode' => $companycode
+        ]);
+        
+        if (round($luas, 2) > round($luasSisa, 2)) {
+            $errors[] = "Baris " . ($index + 1) . ": Luas panen ({$luas} Ha) melebihi luas sisa (" . number_format($luasSisa, 2) . " Ha) untuk plot {$plot}.";
+        }
     }
+    
+    return $errors;
+}
     
     // =====================================
     // NEW SECTION: KENDARAAN MANAGEMENT
