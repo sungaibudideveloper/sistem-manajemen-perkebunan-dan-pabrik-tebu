@@ -43,15 +43,12 @@ class LkhGeneratorService
      * @param string $rkhno
      * @return array
      */
-    public function generateLkhFromRkh($rkhno)
+    public function generateLkhFromRkh($rkhno, $companycode = null)
     {
         try {
             DB::beginTransaction();
 
-            // ✅ Get companycode dari session jika tidak di-pass
-            if (!$companycode) {
-                $companycode = Session::get('companycode');
-            }
+            $companycode = $companycode ?? session('companycode');
 
             if (!$companycode) {
                 throw new \Exception("Company code tidak ditemukan");
