@@ -53,6 +53,12 @@ class PiasController extends Controller
                      ->on('ph.companycode', '=', 'rkhhdr.companycode');
             })
             ->where('rkhhdr.approvalstatus', 1)
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('rkhlst')
+                      ->whereColumn('rkhlst.rkhno', 'rkhhdr.rkhno')
+                      ->where('rkhlst.activitycode', '5.2.1');
+            })
             // Filter tanggal
             ->whereDate('rkhhdr.rkhdate', '>=', $startDate)
             ->whereDate('rkhhdr.rkhdate', '<=', $endDate);
@@ -120,6 +126,12 @@ class PiasController extends Controller
         })
         ->where('rkhhdr.rkhno', $request->input('rkhno'))
         ->where('rkhhdr.approvalstatus', 1)
+        ->whereExists(function ($query) {
+            $query->select(DB::raw(1))
+                  ->from('rkhlst')
+                  ->whereColumn('rkhlst.rkhno', 'rkhhdr.rkhno')
+                  ->where('rkhlst.activitycode', '5.2.1');
+        })
         ->select(
             'rkhhdr.*', 
             'u.name as mandor_name',
