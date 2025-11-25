@@ -274,12 +274,13 @@ class LkhGeneratorService
         
         foreach ($activities as $activity) {
             $luasArea = (float) $activity->luasarea;
+            
             $plotDetail = [
                 'companycode' => $companycode,
                 'lkhno' => $lkhno,
                 'blok' => $activity->blok,
                 'plot' => $isBlokActivity ? null : $activity->plot,
-                'luasrkh' => null,
+                'luasrkh' => $isBlokActivity ? null : $luasArea,
                 'luashasil' => null,
                 'luassisa' => null,
                 'batchno' => $isBlokActivity ? null : ($activity->batchno ?? null),
@@ -294,7 +295,15 @@ class LkhGeneratorService
                 Log::info("Blok activity LKH detail created", [
                     'lkhno' => $lkhno,
                     'blok' => $activity->blok,
-                    'plot' => 'NULL (blok activity)'
+                    'plot' => 'NULL (blok activity)',
+                    'luasrkh' => 'NULL (blok activity)'
+                ]);
+            } else {
+                Log::info("Plot activity LKH detail created", [
+                    'lkhno' => $lkhno,
+                    'blok' => $activity->blok,
+                    'plot' => $activity->plot,
+                    'luasrkh' => $luasArea
                 ]);
             }
         }
