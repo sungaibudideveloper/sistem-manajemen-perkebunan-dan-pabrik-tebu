@@ -575,9 +575,9 @@
                 lng: {{ $item->longitude }},
                 batchno: '{{ $item->batchno ?? '' }}',
                 batchdate: '{{ $item->batchdate ?? '' }}',
-                tanggalulangtahun: '{{ $item->tanggalulangtahun ?? '' }}',
-                age: {{ $item->tanggalulangtahun ? (date('Y') - date('Y', strtotime($item->tanggalulangtahun))) * 12 + (date('m') - date('m', strtotime($item->tanggalulangtahun))) : 0 }},
-                kodestatus: '{{ $item->kodestatus ?? '' }}',  
+                umur_hari: {{ $item->umur_hari ?? 0 }},
+                age: {{ $item->umur_hari ? floor($item->umur_hari / 30.44) : 0 }},
+                lifecyclestatus: '{{ $item->lifecyclestatus ?? '' }}',  
                 status: '{{ $item->status ?? '' }}',
                 batcharea: {{ $item->batcharea ?? 0 }},
                 luasarea: {{ $item->luasarea ?? 0 }}
@@ -629,7 +629,7 @@
             // Apply status filter
             if (statusFilter !== 'all') {
                 filteredListData = filteredListData.filter(item => {
-                    return item.kodestatus === statusFilter;
+                    return item.lifecyclestatus === statusFilter;
                 });
             }
 
@@ -729,7 +729,7 @@
                 const blockLetter = point.code.charAt(0);
                 const blockColor = blockColorMap[blockLetter] || '#EA4335';
                 const plotDetails = originalListData.find(item => item.code === point.code) || {};
-                const kodeStatus = plotDetails.kodestatus || 'N/A';
+                const kodeStatus = plotDetails.lifecyclestatus || 'N/A';
                 const marker = new google.maps.Marker({
                     position: { lat: point.lat, lng: point.lng },
                     map: map,
@@ -768,7 +768,7 @@
                                     <div><strong>Age:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.age || 'N/A'} months</span></div>
                                 </div>
                                 <div><strong>Plot Status:</strong> <span style="color: ${getPlotStatusColor(plotDetails.status)}; font-weight: 600;">${plotDetails.status || 'N/A'}</span></div>
-                                <div><strong>Kode Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.kodestatus || 'N/A'}</span></div>
+                                <div><strong>Lifecycle Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.lifecyclestatus || 'N/A'}</span></div>
                                 <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
                                     <div>Lat: ${point.lat.toFixed(6)}</div>
                                     <div>Lng: ${point.lng.toFixed(6)}</div>
@@ -825,7 +825,7 @@
                                 </div>
                                 <div style="background: #f3f4f6; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
                                     <div><strong>Plot Status:</strong> <span style="color: ${getPlotStatusColor(plotDetails.status)}; font-weight: 600;">${plotDetails.status || 'N/A'}</span></div>
-                                    <div><strong>Kode Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.kodestatus || 'N/A'}</span></div>
+                                    <div><strong>Lifecycle Status:</strong> <span style="color: #059669; font-weight: 600;">${plotDetails.lifecyclestatus || 'N/A'}</span></div>
                                     <div><strong>Batch No:</strong> ${plotDetails.batchno || 'N/A'}</div>
                                     <div><strong>Batch Date:</strong> ${plotDetails.batchdate || 'N/A'}</div>
                                 </div>

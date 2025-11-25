@@ -44,7 +44,21 @@ class MapsController extends Controller
       })
       ->where('a.companycode', session('companycode'))
       ->whereIn('a.plot', Arr::pluck($header, 'plot'))
-      ->select('a.plot', 'a.latitude', 'a.longitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
+      ->select(
+          'a.plot', 
+          'a.latitude', 
+          'a.longitude', 
+          'c.batchno', 
+          'c.batchdate', 
+          'c.batcharea', 
+          'c.lifecyclestatus', 
+          'c.kodevarietas', 
+          'c.isactive', 
+          'b.luasarea', 
+          'b.jaraktanam as plot_jaraktanam', 
+          'b.status',
+          DB::raw('DATEDIFF(CURDATE(), c.batchdate) as umur_hari')
+      )
       ->get();
 
       // $plotKodeStatus = collect($list)
@@ -95,7 +109,24 @@ class MapsController extends Controller
             })
             ->where('a.companycode', session('companycode'))
             ->whereIn('a.plot', $detailsPlots)
-            ->select('a.companycode', 'a.plot', 'a.latitude', 'a.longitude', 'd.centerlatitude', 'd.centerlongitude', 'c.batchno', 'c.batchdate', 'c.batcharea', 'c.tanggalulangtahun', 'c.kodevarietas', 'c.kodestatus', 'c.jaraktanam', 'c.isactive', 'b.luasarea', 'b.jaraktanam as plot_jaraktanam', 'b.status')
+            ->select(
+                'a.companycode', 
+                'a.plot', 
+                'a.latitude', 
+                'a.longitude', 
+                'd.centerlatitude', 
+                'd.centerlongitude', 
+                'c.batchno', 
+                'c.batchdate', 
+                'c.batcharea', 
+                'c.lifecyclestatus', 
+                'c.kodevarietas', 
+                'c.isactive', 
+                'b.luasarea', 
+                'b.jaraktanam as plot_jaraktanam', 
+                'b.status',
+                DB::raw('DATEDIFF(CURDATE(), c.batchdate) as umur_hari')
+            )
             ->get();
         
         $header = $list->map(function($item) {
