@@ -3720,11 +3720,15 @@ public function loadAbsenByDate(Request $request)
         $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
         
         if (!$lkhResult['success']) {
-            \Log::error("LKH auto-generation failed", [
+            $errorMsg = $lkhResult['message'] ?? 'Unknown error';
+            
+            Log::error("LKH auto-generation failed", [
                 'rkhno' => $rkhno,
-                'error' => $lkhResult['message'] ?? 'Unknown error'
+                'companycode' => $companycode,
+                'error' => $errorMsg
             ]);
-            throw new \Exception('LKH auto-generation gagal: ' . $lkhResult['message'] . '. Approval dibatalkan untuk menjaga konsistensi data.');
+            
+            throw new \Exception("LKH auto-generation gagal: {$errorMsg}. Approval dibatalkan untuk menjaga konsistensi data.");
         }
         
         $responseMessage .= '. LKH auto-generated successfully (' . $lkhResult['total_lkh'] . ' LKH created)';

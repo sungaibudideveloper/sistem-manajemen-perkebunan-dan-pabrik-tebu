@@ -283,12 +283,15 @@ class ApprovalController extends Controller
         $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
         
         if (!$lkhResult['success']) {
+            $errorMsg = $lkhResult['message'] ?? 'Unknown error';
+            
             Log::error("LKH auto-generation failed", [
                 'rkhno' => $rkhno,
                 'companycode' => $companycode,
-                'error' => $lkhResult['message'] ?? 'Unknown error'
+                'error' => $errorMsg
             ]);
-            throw new \Exception('LKH auto-generation gagal: ' . $lkhResult['message']);
+            
+            throw new \Exception("LKH auto-generation gagal: {$errorMsg}. Approval dibatalkan untuk menjaga konsistensi data.");
         }
         
         $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
