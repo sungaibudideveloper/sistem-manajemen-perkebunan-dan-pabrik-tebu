@@ -67,6 +67,7 @@
                             <option value="">Pilih Tipe</option>
                             <option value="harian">Laporan Harian</option>
                             <option value="mingguan">Laporan Mingguan</option>
+                            <option value="bulanan">Laporan Bulanan</option>
                         </select>
                     </div>
 
@@ -106,7 +107,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>
-                            Submit 
+                            Submit
                         </button>
                     </div>
                 </div>
@@ -147,7 +148,7 @@
                 // Clear existing options except the first one
                 companySelect.find('option:not(:first)').remove();
 
-                if (reportType === 'harian') {
+                if (reportType === 'harian' || reportType === 'bulanan') {
                     // For harian: only "Semua Company"
                     companySelect.append('<option value="all">Semua Company</option>');
                     companySelect.val('all');
