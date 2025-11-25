@@ -254,24 +254,36 @@ class LkhGeneratorService
     {
         $plotDetails = [];
         $isPanenActivity = in_array($activitycode, self::PANEN_ACTIVITIES);
+        $isBsmActivity = ($activitycode === self::BSM_ACTIVITY);
+        
+        $activity = DB::table('activity')->where('activitycode', $activitycode)->first();
+        $isBlokActivity = $activity ? ($activity->isblokactivity == 1) : false;
         
         foreach ($activities as $activity) {
             $luasArea = (float) $activity->luasarea;
-            
             $plotDetail = [
                 'companycode' => $companycode,
                 'lkhno' => $lkhno,
                 'blok' => $activity->blok,
-                'plot' => $activity->plot,
-                'luasrkh' => $luasArea,
+                'plot' => $isBlokActivity ? null : $activity->plot,
+                'luasrkh' => null,
                 'luashasil' => null,
                 'luassisa' => null,
-                'batchno' => $activity->batchno ?? null,
+                'batchno' => $isBlokActivity ? null : ($activity->batchno ?? null),
                 'createdat' => now()
             ];
             
             LkhDetailPlot::create($plotDetail);
             $plotDetails[] = $plotDetail;
+            
+            // Logging
+            if ($isBlokActivity) {
+                Log::info("Blok activity LKH detail created", [
+                    'lkhno' => $lkhno,
+                    'blok' => $activity->blok,
+                    'plot' => 'NULL (blok activity)'
+                ]);
+            }
         }
         
         return $plotDetails;

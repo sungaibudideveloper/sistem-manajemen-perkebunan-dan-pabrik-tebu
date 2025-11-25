@@ -2891,11 +2891,6 @@ public function loadAbsenByDate(Request $request)
             ->filter(function ($row) {
                 return !empty($row['blok']);
             })
-            ->map(function ($row) {
-                return array_map(function ($value) {
-                    return $value ?? '';
-                }, $row);
-            })
             ->values()
             ->toArray();
     }
@@ -2911,9 +2906,9 @@ public function loadAbsenByDate(Request $request)
             'keterangan'             => 'nullable|string|max:500',
             'rows'                   => 'required|array|min:1',
             'rows.*.blok'            => 'required|string',
-            'rows.*.plot'            => 'required|string',
+            'rows.*.plot'            => 'nullable|string',
             'rows.*.nama'            => 'required|string',
-            'rows.*.luas'            => 'required|numeric|min:0',
+            'rows.*.luas'            => 'nullable|numeric|min:0',
             'rows.*.batchno'         => 'nullable|string',
             'rows.*.kodestatus'      => 'nullable|string|in:PC,RC1,RC2,RC3',
             'rows.*.material_group_id' => 'nullable|integer',
@@ -2928,6 +2923,13 @@ public function loadAbsenByDate(Request $request)
             'kendaraan.*.*.usinghelper'       => 'nullable|in:0,1',
             'kendaraan.*.*.helperid'          => 'nullable|string',
         ]);
+
+        $plotValidationErrors = $this->validatePlotRequirement($request->input('rows', []));
+        if (!empty($plotValidationErrors)) {
+            throw ValidationException::withMessages([
+                'plot_validation' => $plotValidationErrors
+            ]);
+        }
 
         $plantingErrors = $this->validatePlantingPlots($request->input('rows', []), Session::get('companycode'));
         if (!empty($plantingErrors)) {
@@ -3113,33 +3115,37 @@ public function loadAbsenByDate(Request $request)
         foreach ($rows as $row) {
             $activity = Activity::where('activitycode', $row['nama'])->first();
             $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+            $isBlokActivity = $activity ? ($activity->isblokactivity == 1) : false;
 
-            $batchInfo = $this->getActiveBatchForPlot($companycode, $row['plot']);
+            $batchInfo = null;
+            if (!$isBlokActivity && !empty($row['plot'])) {
+                $batchInfo = $this->getActiveBatchForPlot($companycode, $row['plot']);
+            }
 
             $detailData = [
                 'companycode'         => $companycode,
                 'rkhno'               => $rkhno,
                 'rkhdate'             => $tanggal,
                 'blok'                => $row['blok'],
-                'plot'                => $row['plot'],
+                'plot'                => $isBlokActivity ? null : $row['plot'],
                 'activitycode'        => $row['nama'],
-                'luasarea'            => $row['luas'],
+                'luasarea'            => $row['luas'] ?? null,
                 'jenistenagakerja'    => $jenistenagakerja,
                 'usingmaterial'       => !empty($row['material_group_id']) ? 1 : 0,
                 'herbisidagroupid'    => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
                 'batchno'             => $batchInfo ? $batchInfo->batchno : null,
-                // ✅ REMOVED: usingvehicle, operatorid, usinghelper, helperid
             ];
             
             if ($batchInfo) {
                 \Log::info("Batch info attached to RKH detail", [
                     'plot' => $row['plot'],
                     'batchno' => $batchInfo->batchno,
-                    'lifecyclestatus' => $batchInfo->lifecyclestatus,
-                    'batcharea' => $batchInfo->batcharea
                 ]);
-            } else {
-                \Log::warning("Plot {$row['plot']} tidak memiliki active batch");
+            } elseif ($isBlokActivity) {
+                \Log::info("Blok activity - no batch/plot required", [
+                    'blok' => $row['blok'],
+                    'activitycode' => $row['nama']
+                ]);
             }
             
             $details[] = $detailData;
@@ -3377,7 +3383,7 @@ public function loadAbsenByDate(Request $request)
             ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
             ->leftJoin('batch as b', function($join) use ($companycode) {
                 $join->on('r.batchno', '=', 'b.batchno')
-                    ->where('b.companycode', '=', $companycode); // FIXED
+                    ->where('b.companycode', '=', $companycode);
             })
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
@@ -3389,10 +3395,17 @@ public function loadAbsenByDate(Request $request)
                 'hg.herbisidagroupname', 
                 'a.activityname', 
                 'a.jenistenagakerja',
+                'a.isblokactivity',
                 'b.batchno as batch_number',
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea',
                 'b.tanggalpanen',
+                
+                DB::raw("CASE 
+                    WHEN r.blok = 'ALL' THEN 'Semua Blok'
+                    WHEN r.plot IS NULL THEN CONCAT('Blok: ', r.blok)
+                    ELSE CONCAT(r.blok, '-', r.plot)
+                END as location_display"),
                 
                 DB::raw("(
                     SELECT COALESCE(SUM(ldp.luashasil), 0)
@@ -4555,6 +4568,7 @@ public function loadAbsenByDate(Request $request)
         
         return $errors;
     }
+    
 
     /**
      * Get plot info (luas, sisa, batch) for any activity
@@ -4567,25 +4581,41 @@ public function loadAbsenByDate(Request $request)
     {
         try {
             $companycode = Session::get('companycode');
-            
-            // 1. Get luas plot
-            $plotData = DB::table('plot')
-                ->where('companycode', $companycode)
-                ->where('plot', $plot)
+
+            // 1. Ambil plot dari MASTERLIST + BATCH (active batch)
+            $plotData = DB::table('masterlist as m')
+                ->leftJoin('batch as b', function ($join) use ($companycode) {
+                    $join->on('m.activebatchno', '=', 'b.batchno')
+                        ->where('b.companycode', '=', $companycode)
+                        ->where('b.isactive', '=', 1);
+                })
+                ->where('m.companycode', $companycode)
+                ->where('m.plot', $plot)
+                ->where('m.isactive', 1)
+                ->select([
+                    'm.plot',
+                    'm.blok',
+                    'm.activebatchno',
+                    'b.batchno',
+                    'b.batcharea',
+                    'b.lifecyclestatus',
+                    'b.tanggalpanen',
+                ])
                 ->first();
-            
+
             if (!$plotData) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Plot tidak ditemukan'
+                    'message' => 'Plot tidak ditemukan di masterlist / tidak aktif'
                 ]);
             }
-            
-            $luasPlot = $plotData->luasarea ?? 0;
-            
-            // 2. Calculate luas sisa (per activity)
+
+            // Yang dianggap "luas plot" adalah batcharea dari active batch
+            $luasPlot = (float) ($plotData->batcharea ?? 0);
+
+            // 2. Hitung total luas yang sudah dikerjakan untuk activity ini (semua LKH approved)
             $totalSudahDikerjakan = DB::table('lkhdetailplot as ldp')
-                ->join('lkhhdr as lh', function($join) {
+                ->join('lkhhdr as lh', function ($join) {
                     $join->on('ldp.lkhno', '=', 'lh.lkhno')
                         ->on('ldp.companycode', '=', 'lh.companycode');
                 })
@@ -4594,62 +4624,51 @@ public function loadAbsenByDate(Request $request)
                 ->where('lh.activitycode', $activitycode)
                 ->where('lh.approvalstatus', '1')
                 ->sum('ldp.luashasil');
-            
-            $luasSisa = $luasPlot - ($totalSudahDikerjakan ?? 0);
-            
-            // 3. Check if panen activity
+
+            $totalSudahDikerjakan = (float) $totalSudahDikerjakan;
+            $luasSisa = $luasPlot - $totalSudahDikerjakan;
+
+            // 3. Deteksi activity panen atau bukan
             $panenActivities = ['4.3.3', '4.4.3', '4.5.2'];
             $isPanenActivity = in_array($activitycode, $panenActivities);
-            
+
             $batchInfo = null;
-            
-            if ($isPanenActivity) {
-                // Get batch info for panen
-                $batch = DB::table('masterlist')
-                    ->join('batch', 'masterlist.activebatchno', '=', 'batch.batchno')
-                    ->where('masterlist.companycode', $companycode)
-                    ->where('masterlist.plot', $plot)
-                    ->where('masterlist.isactive', 1)
-                    ->where('batch.isactive', 1)
-                    ->select([
-                        'batch.batchno',
-                        'batch.lifecyclestatus',
-                        'batch.batcharea',
-                        'batch.tanggalpanen'
-                    ])
-                    ->first();
-                
-                if ($batch) {
-                    // Calculate batch-specific sisa
-                    $totalSudahPanen = DB::table('lkhdetailplot as ldp')
-                        ->join('lkhhdr as lh', function($join) {
-                            $join->on('ldp.lkhno', '=', 'lh.lkhno')
-                                ->on('ldp.companycode', '=', 'lh.companycode');
-                        })
-                        ->where('ldp.companycode', $companycode)
-                        ->where('ldp.batchno', $batch->batchno)
-                        ->where('lh.approvalstatus', '1')
-                        ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d'))
-                        ->sum('ldp.luashasil');
-                    
-                    $batchSisa = $batch->batcharea - ($totalSudahPanen ?? 0);
-                    
-                    $batchInfo = [
-                        'batchno' => $batch->batchno,
-                        'lifecyclestatus' => $batch->lifecyclestatus,
-                        'tanggalpanen' => $batch->tanggalpanen ? Carbon::parse($batch->tanggalpanen)->format('d/m/Y') : 'Belum Panen',
-                        'batcharea' => number_format($batch->batcharea, 2),
-                        'totalsudahpanen' => number_format($totalSudahPanen ?? 0, 2),
-                        'luassisa_batch' => number_format($batchSisa, 2)
-                    ];
-                }
+
+            // 4. Kalau panen, hitung info batch (STC style) berdasarkan batch aktif
+            if ($isPanenActivity && $plotData->batchno) {
+                $activeBatchNo = $plotData->batchno;
+
+                $totalSudahPanen = DB::table('lkhdetailplot as ldp')
+                    ->join('lkhhdr as lh', function ($join) {
+                        $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                            ->on('ldp.companycode', '=', 'lh.companycode');
+                    })
+                    ->where('ldp.companycode', $companycode)
+                    ->where('ldp.batchno', $activeBatchNo)
+                    ->where('lh.approvalstatus', '1')
+                    ->whereDate('lh.lkhdate', '<=', now()->format('Y-m-d'))
+                    ->sum('ldp.luashasil');
+
+                $totalSudahPanen = (float) $totalSudahPanen;
+                $batchSisa = (float) $plotData->batcharea - $totalSudahPanen;
+
+                $batchInfo = [
+                    'batchno'         => $activeBatchNo,
+                    'lifecyclestatus' => $plotData->lifecyclestatus ?? '-',
+                    'tanggalpanen'    => $plotData->tanggalpanen
+                        ? Carbon::parse($plotData->tanggalpanen)->format('d/m/Y')
+                        : 'Belum Panen',
+                    'batcharea'       => number_format((float) $plotData->batcharea, 2),
+                    'totalsudahpanen' => number_format($totalSudahPanen, 2),
+                    'luassisa_batch'  => number_format($batchSisa, 2),
+                ];
             }
-            
-            // 4. Get tanggal terakhir activity (untuk non-panen)
+
+            // 5. Tanggal terakhir activity (untuk non panen, tetap seperti sebelumnya)
             $tanggalActivity = null;
             if (!$isPanenActivity) {
                 $lastLkh = DB::table('lkhdetailplot as ldp')
-                    ->join('lkhhdr as lh', function($join) {
+                    ->join('lkhhdr as lh', function ($join) {
                         $join->on('ldp.lkhno', '=', 'lh.lkhno')
                             ->on('ldp.companycode', '=', 'lh.companycode');
                     })
@@ -4659,22 +4678,27 @@ public function loadAbsenByDate(Request $request)
                     ->where('lh.approvalstatus', '1')
                     ->orderBy('lh.lkhdate', 'desc')
                     ->first();
-                
-                $tanggalActivity = $lastLkh ? Carbon::parse($lastLkh->lkhdate)->format('d/m/Y') : null;
+
+                $tanggalActivity = $lastLkh
+                    ? Carbon::parse($lastLkh->lkhdate)->format('d/m/Y')
+                    : null;
             }
 
             return response()->json([
-                'success' => true,
-                'plot' => $plot,
-                'activitycode' => $activitycode,
-                'luasplot' => number_format($luasPlot, 2),
-                'totalsudahdikerjakan' => number_format($totalSudahDikerjakan ?? 0, 2),
-                'luassisa' => number_format($luasSisa, 2),
-                'tanggal' => $isPanenActivity ? ($batchInfo['tanggalpanen'] ?? null) : $tanggalActivity, // ✅ NEW
-                'ispanen' => $isPanenActivity,
-                'batchinfo' => $batchInfo
+                'success'               => true,
+                'plot'                  => $plot,
+                'activitycode'          => $activitycode,
+                'luasplot'              => number_format($luasPlot, 2),
+                'totalsudahdikerjakan'  => number_format($totalSudahDikerjakan, 2),
+                'luassisa'              => number_format($luasSisa, 2),
+                'tanggal'               => $isPanenActivity
+                    ? ($batchInfo['tanggalpanen'] ?? null)
+                    : $tanggalActivity,
+                'ispanen'               => $isPanenActivity,
+                'batchinfo'             => $batchInfo,
+                'blok'                  => $plotData->blok ?? null,
+                'activebatchno'         => $plotData->activebatchno,
             ]);
-            
         } catch (\Exception $e) {
             \Log::error("Error getting plot info for {$plot}/{$activitycode}: " . $e->getMessage());
             return response()->json([
@@ -5050,5 +5074,51 @@ public function loadAbsenByDate(Request $request)
                 'message' => 'Gagal memuat data surat jalan: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+
+    /**
+     * NEW: Validate plot requirement based on activity type
+     * - Plot MUST be filled for normal activities (isblokactivity = 0)
+     * - Plot MUST be NULL for blok activities (isblokactivity = 1)
+     */
+    private function validatePlotRequirement($rows)
+    {
+        $errors = [];
+        
+        foreach ($rows as $index => $row) {
+            $activityCode = $row['nama'] ?? '';
+            $plot = $row['plot'] ?? '';
+            
+            if (empty($activityCode)) {
+                continue;
+            }
+            
+            // Get activity data
+            $activity = DB::table('activity')
+                ->where('activitycode', $activityCode)
+                ->first();
+            
+            if (!$activity) {
+                $errors[] = "Baris " . ($index + 1) . ": Activity code '{$activityCode}' tidak ditemukan.";
+                continue;
+            }
+            
+            $isBlokActivity = ($activity->isblokactivity == 1);
+            
+            if ($isBlokActivity) {
+                // ✅ RULE 1: Blok activity MUST NOT have plot
+                if (!empty($plot)) {
+                    $errors[] = "Baris " . ($index + 1) . ": Activity '{$activityCode}' adalah blok activity, tidak boleh memiliki plot spesifik.";
+                }
+            } else {
+                // ✅ RULE 2: Normal activity MUST have plot
+                if (empty($plot)) {
+                    $errors[] = "Baris " . ($index + 1) . ": Activity '{$activityCode}' memerlukan plot. Plot tidak boleh kosong.";
+                }
+            }
+        }
+        
+        return $errors;
     }
 }

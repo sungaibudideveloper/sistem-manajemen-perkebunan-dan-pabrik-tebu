@@ -449,9 +449,15 @@
                       <input
                         type="text"
                         readonly
-                        @click="open = true"
-                        :value="selected.blok ? selected.blok : ''"
-                        class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        @click="currentActivityCode ? (open = true) : null"
+                        :value="selected.blok ? (selected.blok === 'ALL' ? 'Semua Blok' : selected.blok) : ''"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': currentActivityCode,
+                          'cursor-not-allowed bg-gray-100': !currentActivityCode,
+                          'border-gray-200': currentActivityCode,
+                          'border-gray-300': !currentActivityCode
+                        }"
+                        class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                       <input type="hidden" :name="`rows[${index}][blok]`" x-model="selected.blok">
                       @include('input.rencanakerjaharian.modal-blok')
@@ -464,13 +470,13 @@
                       <input
                         type="text"
                         readonly
-                        @click="isBlokSelected ? (open = true) : null"
+                        @click="isBlokSelected && !isBlokActivity ? (open = true) : null"
                         :value="selected.plot ? selected.plot : ''"
                         :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': isBlokSelected,
-                          'cursor-not-allowed bg-gray-100': !isBlokSelected,
-                          'border-gray-200': isBlokSelected,
-                          'border-gray-300': !isBlokSelected
+                          'cursor-pointer bg-white hover:bg-gray-50': isBlokSelected && !isBlokActivity,
+                          'cursor-not-allowed bg-gray-100': !isBlokSelected || isBlokActivity,
+                          'border-gray-200': isBlokSelected && !isBlokActivity,
+                          'border-gray-300': !isBlokSelected || isBlokActivity
                         }"
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
@@ -530,15 +536,20 @@
 
                   <!-- Luas -->
                   <td class="px-2 py-3">
-                      <input
-                        type="number"
-                        :name="`rows[${index}][luas]`"
-                        min="0"
-                        step="0.01"
-                        :max="getMaxLuas(index)"
-                        @input="validateLuasInput($event, index)"
-                        class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
+                    <input
+                      type="number"
+                      :name="`rows[${index}][luas]`"
+                      min="0"
+                      step="0.01"
+                      :max="getMaxLuas(index)"
+                      :readonly="!isPlotOrBlokSelected(index)"
+                      @input="validateLuasInput($event, index)"
+                      :class="{
+                        'cursor-not-allowed bg-gray-100': !isPlotOrBlokSelected(index),
+                        'bg-white': isPlotOrBlokSelected(index)
+                      }"
+                      class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
                   </td>
 
                   <!-- Material -->
@@ -1184,8 +1195,19 @@ function initializeFormSubmit() {
 }
 
 function submitForm(form) {
+
+
+
   showLoadingState();
   const formData = new FormData(form);
+
+    console.log('=== FORM DATA DEBUG ===');
+  for (let [key, value] of formData.entries()) {
+    if (key.includes('rows')) {
+      console.log(key, '=', value);
+    }
+  }
+  console.log('======================');
 
   fetch(form.action, {
     method: 'POST',
@@ -1270,10 +1292,27 @@ function validateFormWithWorkerCard() {
       hasCompleteRow = true;
       const rowNum = index + 1;
 
-      if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
-      if (!activity) errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
-      if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
+      // Check if this is a blok activity
+      const isBlokActivity = Alpine.store('activityPerRow').getActivity(index)?.isblokactivity === 1;
 
+      if (!activity) {
+        errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
+      }
+
+      // Conditional validation based on activity type
+      if (!isBlokActivity) {
+        // Normal activity - plot & luas WAJIB
+        if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
+        if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
+      } else {
+        // Blok activity - plot HARUS NULL, luas OPTIONAL
+        if (plot) {
+          errors.push(`Baris ${rowNum}: Blok activity tidak boleh memiliki plot spesifik`);
+        }
+        // Luas optional untuk blok activity (bisa kosong)
+      }
+
+      // Validate jenistenagakerja mapping
       if (activity) {
         const activityData = window.activitiesData.find(act => act.activitycode === activity);
         if (!activityData || activityData.jenistenagakerja === null) {
@@ -1283,6 +1322,7 @@ function validateFormWithWorkerCard() {
     }
   });
 
+  // Material validation (unchanged)
   rows.forEach((row, index) => {
     const blok = row.querySelector('input[name$="[blok]"]').value;
     const activity = row.querySelector('input[name$="[nama]"]').value;
@@ -1308,7 +1348,7 @@ function validateFormWithWorkerCard() {
     }
   });
 
-  // Validate workers
+  // Validate workers (unchanged)
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -1322,7 +1362,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
-  // Validate kendaraan
+  // Validate kendaraan (unchanged)
   const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
@@ -1675,6 +1715,25 @@ function validateLuasInput(event, rowIndex) {
         input.classList.remove('border-red-500', 'bg-red-50');
         input.classList.add('border-gray-200');
     }
+}
+
+/**
+ * Check if plot or blok (ALL) is selected untuk enable luas input
+ */
+function isPlotOrBlokSelected(rowIndex) {
+  // Check if plot selected
+  const plotInput = document.querySelector(`input[name="rows[${rowIndex}][plot]"]`);
+  if (plotInput && plotInput.value) {
+    return true;
+  }
+  
+  // Check if blok = "ALL" (blok activity)
+  const blokInput = document.querySelector(`input[name="rows[${rowIndex}][blok]"]`);
+  if (blokInput && blokInput.value === 'ALL') {
+    return true;
+  }
+  
+  return false;
 }
 
 // ============================================================
