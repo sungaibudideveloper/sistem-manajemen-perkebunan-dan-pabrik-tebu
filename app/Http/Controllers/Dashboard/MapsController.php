@@ -33,9 +33,14 @@ class MapsController extends Controller
           $join->on('a.plot', '=', 'b.plot')
                ->on('a.companycode', '=', 'b.companycode');
       })
-      ->leftJoin('masterlist as c', function($join) {
-          $join->on('b.plot', '=', 'c.plot')
-               ->on('b.companycode', '=', 'c.companycode');
+      ->leftJoin('masterlist as m', function($join) {
+          $join->on('b.plot', '=', 'm.plot')
+               ->on('b.companycode', '=', 'm.companycode');
+      })
+      ->leftJoin('batch as c', function($join) {
+          $join->on('m.activebatchno', '=', 'c.batchno')
+               ->on('m.companycode', '=', 'c.companycode')
+               ->where('c.isactive', '=', 1);
       })
       ->where('a.companycode', session('companycode'))
       ->whereIn('a.plot', Arr::pluck($header, 'plot'))
@@ -75,9 +80,14 @@ class MapsController extends Controller
                 $join->on('a.plot', '=', 'b.plot')
                      ->on('a.companycode', '=', 'b.companycode');
             })
-            ->leftJoin('masterlist as c', function($join) {
-                $join->on('b.plot', '=', 'c.plot')
-                     ->on('b.companycode', '=', 'c.companycode');
+            ->leftJoin('masterlist as m', function($join) {
+                $join->on('b.plot', '=', 'm.plot')
+                     ->on('b.companycode', '=', 'm.companycode');
+            })
+            ->leftJoin('batch as c', function($join) {
+                $join->on('m.activebatchno', '=', 'c.batchno')
+                     ->on('m.companycode', '=', 'c.companycode')
+                     ->where('c.isactive', '=', 1);
             })
             ->leftJoin('testgpshdr as d', function($join) {
                 $join->on('a.plot', '=', 'd.plot')
