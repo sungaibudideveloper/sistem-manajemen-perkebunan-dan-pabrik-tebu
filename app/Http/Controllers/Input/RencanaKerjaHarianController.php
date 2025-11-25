@@ -1490,11 +1490,14 @@ class RencanaKerjaHarianController extends Controller
     private function getLkhBsmDetailsForShow($companycode, $lkhno)
     {
         return DB::table('lkhdetailbsm as bsm')
-            ->leftJoin('batch as b', 'bsm.batchno', '=', 'b.batchno')
+            ->leftJoin('batch as b', function($join) use ($companycode) {
+                $join->on('bsm.batchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode);
+            })
             ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
-                $join->on('bsm.lkhno', '=', 'ldp.lkhno')
-                    ->on('bsm.plot', '=', 'ldp.plot')
-                    ->where('ldp.companycode', '=', $companycode);
+                $join->on('bsm.companycode', '=', 'ldp.companycode')  // ✅ TAMBAH ini
+                    ->on('bsm.lkhno', '=', 'ldp.lkhno')
+                    ->on('bsm.plot', '=', 'ldp.plot');
             })
             ->where('bsm.companycode', $companycode)
             ->where('bsm.lkhno', $lkhno)
@@ -1529,7 +1532,7 @@ class RencanaKerjaHarianController extends Controller
                     'suratjalanno' => $item->suratjalanno,
                     'blok' => $item->blok ?? '-',
                     'plot' => $item->plot,
-                    'plot_display' => ($item->blok ?? '-') . '-' . $item->plot,
+                    'plot_display' => $item->plot,
                     'kodetebang' => $item->kodetebang ?? '-',
                     'kodetebang_label' => stripos($item->kodetebang ?? '', 'premium') !== false ? 'Premium' : 'Non-Premium',
                     'batchno' => $item->batchno ?? '-',
