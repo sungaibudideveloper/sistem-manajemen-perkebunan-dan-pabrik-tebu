@@ -58,7 +58,10 @@ class LkhGeneratorService
             }
 
             // 2. Check if LKH already generated
-            $existingLkh = Lkhhdr::where('rkhno', $rkhno)->exists();
+            $existingLkh = Lkhhdr::where('rkhno', $rkhno)
+                ->where('companycode', $rkh->companycode)
+                ->exists();
+            
             if ($existingLkh) {
                 throw new \Exception("LKH untuk RKH {$rkhno} sudah pernah di-generate");
             }
