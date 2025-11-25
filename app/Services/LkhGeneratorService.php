@@ -226,7 +226,7 @@ class LkhGeneratorService
             'totalhasil' => null,
             'totalsisa' => null,
             'totalupahall' => null,
-            'status' => 'DRAFT', 
+            'status' => 'EMPTY', 
             'issubmit' => 0,
             'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',
