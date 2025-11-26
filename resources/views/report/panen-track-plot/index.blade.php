@@ -72,12 +72,13 @@
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Hari Ke</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Tanggal</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700 bg-green-50">HC (Ha)</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700 bg-blue-50">Kumulatif (Ha)</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700 bg-orange-50">Sisa (Ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">HC (Ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Kumulatif (Ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Sisa (Ha)</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Rit</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Ton</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Jumlah SJ</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Netto (ton)</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Surat Jalan</th>
                             </tr>
                         </thead>
@@ -405,9 +406,9 @@
 
         function renderBatchInfo(batchInfo) {
             const statusColors = {
-                'PC': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                'RC1': 'bg-green-100 text-green-800 border-green-300',
-                'RC2': 'bg-blue-100 text-blue-800 border-blue-300',
+                'PC': 'bg-green-100 text-green-800 border-green-300',
+                'RC1': 'bg-blue-100 text-blue-800 border-blue-300',
+                'RC2': 'bg-yellow-100 text-yellow-800 border-yellow-300',
                 'RC3': 'bg-purple-100 text-purple-800 border-purple-300'
             };
             
@@ -455,7 +456,7 @@
                     </p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-green-600">
-                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Hasil</p>
+                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Area yang Sudah Dipanen</p>
                     <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_hc).toFixed(2)} Ha</p>
                     <p class="text-xs text-gray-500 mt-2">
                         Rata-rata: ${parseFloat(summary.avg_hc_per_day).toFixed(2)} Ha/hari
@@ -468,11 +469,11 @@
                         <div class="bg-gray-900 h-2.5 rounded-full" style="width: ${Math.min(100, summary.percentage_complete)}%"></div>
                     </div>
                 </div>
-                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
-                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Surat Jalan</p>
-                    <p class="text-3xl font-bold text-gray-900">${summary.total_sj}</p>
+                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-green-600">
+                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Hasil Panen</p>
+                    <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_netto_ton || 0).toFixed(2)} ton</p>
                     <p class="text-xs text-gray-500 mt-2">
-                        ${parseFloat(summary.total_field_balance_rit || 0).toFixed(0)} Rit
+                        Total surat jalan: ${summary.total_sj}
                     </p>
                 </div>
             `;
@@ -488,7 +489,7 @@
                 
                 let statusBadge = '';
                 if (day.has_harvest) {
-                    statusBadge = '<span class="px-3 py-1 bg-gray-900 text-white rounded-full text-xs font-bold">PANEN</span>';
+                    statusBadge = '<span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold">PANEN</span>';
                 } else {
                     const dayOfWeek = new Date(day.tanggal).getDay();
                     if (dayOfWeek === 0) {
@@ -514,13 +515,16 @@
                         <div class="text-xs text-gray-500">${day.day_name}</div>
                     </td>
                     <td class="px-4 py-3 text-center">${statusBadge}</td>
-                    <td class="px-4 py-3 text-right font-bold ${day.has_harvest ? 'text-green-700 bg-green-50' : 'text-gray-400'}">${day.has_harvest ? parseFloat(day.hc).toFixed(2) : '-'}</td>
-                    <td class="px-4 py-3 text-right font-bold text-blue-700 bg-blue-50">${parseFloat(day.cumulative_hc).toFixed(2)}</td>
-                    <td class="px-4 py-3 text-right font-bold text-orange-700 bg-orange-50">${parseFloat(day.remaining_area).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right font-bold ${day.has_harvest ? 'text-gray-900' : 'text-gray-400'}">${day.has_harvest ? parseFloat(day.hc).toFixed(2) : '-'}</td>
+                    <td class="px-4 py-3 text-right font-bold text-gray-900">${parseFloat(day.cumulative_hc).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right font-bold text-gray-900">${parseFloat(day.remaining_area).toFixed(2)}</td>
                     <td class="px-4 py-3 text-right text-gray-700">${day.field_balance_rit ? parseFloat(day.field_balance_rit).toFixed(0) : '-'}</td>
                     <td class="px-4 py-3 text-right text-gray-700">${day.field_balance_ton ? parseFloat(day.field_balance_ton).toFixed(2) : '-'}</td>
-                    <td class="px-4 py-3 text-center">
-                        ${day.jumlah_sj > 0 ? `<span class="px-3 py-1 bg-gray-800 text-white rounded-full text-xs font-bold">${day.jumlah_sj}</span>` : '<span class="text-gray-400">-</span>'}
+                    <td class="px-4 py-3 text-center text-gray-900 font-semibold">
+                        ${day.jumlah_sj > 0 ? day.jumlah_sj : '-'}
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold text-green-700">
+                        ${day.netto_ton ? parseFloat(day.netto_ton).toFixed(2) : '-'}
                     </td>
                     <td class="px-4 py-3 text-xs">${sjList}</td>
                 `;
@@ -532,12 +536,13 @@
             tfoot.innerHTML = `
                 <tr>
                     <td colspan="3" class="px-4 py-3 text-right text-gray-900 uppercase font-bold">Total:</td>
-                    <td class="px-4 py-3 text-right text-green-700 bg-green-50 font-bold">${parseFloat(summary.total_hc).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right text-gray-900 font-bold">${parseFloat(summary.total_hc).toFixed(2)}</td>
                     <td class="px-4 py-3"></td>
-                    <td class="px-4 py-3 text-right text-orange-700 bg-orange-50 font-bold">${parseFloat(summary.remaining_area).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right text-gray-900 font-bold">${parseFloat(summary.remaining_area).toFixed(2)}</td>
                     <td class="px-4 py-3 text-center text-gray-500">-</td>
                     <td class="px-4 py-3 text-center text-gray-500">-</td>
                     <td class="px-4 py-3 text-center text-gray-900 font-bold">${summary.total_sj}</td>
+                    <td class="px-4 py-3 text-right text-green-700 font-bold">${parseFloat(summary.total_netto_ton || 0).toFixed(2)}</td>
                     <td class="px-4 py-3"></td>
                 </tr>
             `;

@@ -152,12 +152,17 @@ class PanenTrackPlotReportController extends Controller
 
             // Get surat jalan data grouped by date
             $suratJalanData = DB::table('suratjalanpos as sj')
+                ->leftJoin('timbanganpayload as tp', function($join) {
+                    $join->on('sj.companycode', '=', 'tp.companycode')
+                        ->on('sj.suratjalanno', '=', 'tp.suratjalanno');
+                })
                 ->where('sj.companycode', $companycode)
                 ->where('sj.plot', $plot)
                 ->whereNotNull('sj.tanggalcetakpossecurity')
                 ->select([
                     DB::raw('DATE(sj.tanggalcetakpossecurity) as tanggal'),
                     DB::raw('COUNT(*) as jumlah_sj'),
+                    DB::raw('SUM(tp.netto) as total_netto'),
                     DB::raw('GROUP_CONCAT(sj.suratjalanno ORDER BY sj.suratjalanno SEPARATOR ",") as list_sj')
                 ])
                 ->groupBy(DB::raw('DATE(sj.tanggalcetakpossecurity)'))
@@ -211,6 +216,7 @@ class PanenTrackPlotReportController extends Controller
                     'field_balance_rit' => $harvest ? $harvest->fieldbalancerit : null,
                     'field_balance_ton' => $harvest ? $harvest->fieldbalanceton : null,
                     'jumlah_sj' => $sj ? $sj->jumlah_sj : 0,
+                    'netto_ton' => $sj && $sj->total_netto ? $sj->total_netto / 1000 : null,
                     'list_sj' => $sj ? explode(',', $sj->list_sj) : [],
                     'lkhno' => $harvest ? $harvest->lkhno : null
                 ];
@@ -224,6 +230,8 @@ class PanenTrackPlotReportController extends Controller
             $totalSkippedDays = $totalDays - $totalHarvestDays;
             $totalHC = $harvestData->sum('hc');
             $totalSJ = $suratJalanData->sum('jumlah_sj');
+            $totalNettoKg = $suratJalanData->sum('total_netto');
+            $totalNettoTon = $totalNettoKg / 1000;
             $totalFieldBalanceRit = $harvestData->sum('fieldbalancerit');
             $totalFieldBalanceTon = $harvestData->sum('fieldbalanceton');
             $remainingArea = max(0, $batchInfo->batcharea - $totalHC);
@@ -251,6 +259,8 @@ class PanenTrackPlotReportController extends Controller
                         'total_skipped_days' => $totalSkippedDays,
                         'total_hc' => $totalHC,
                         'total_sj' => $totalSJ,
+                        'total_netto_kg' => $totalNettoKg,
+                        'total_netto_ton' => $totalNettoTon,
                         'total_field_balance_rit' => $totalFieldBalanceRit,
                         'total_field_balance_ton' => $totalFieldBalanceTon,
                         'remaining_area' => $remainingArea,
