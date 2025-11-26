@@ -518,7 +518,9 @@
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_pos_timbangan)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_deload)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="px-2 py-1 rounded-full text-xs font-bold" x-text="item.status"></span>
+                                        <span :class="item.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+                                              class="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap inline-block" 
+                                              x-text="item.status"></span>
                                     </td>
                                 </tr>
                             </template>
