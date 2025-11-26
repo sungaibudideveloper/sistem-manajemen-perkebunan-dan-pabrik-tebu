@@ -227,7 +227,13 @@ class PanenTrackPlotReportController extends Controller
 
             // Calculate summary
             $totalHarvestDays = $harvestData->count();
-            $totalSkippedDays = $totalDays - $totalHarvestDays;
+            $ongoingDays = 0;
+            $today = Carbon::now()->format('Y-m-d');
+            if ($totalDays > 0 && !$harvestData->has($today) && $endDate->format('Y-m-d') >= $today) {
+                $ongoingDays = 1;
+            }
+
+            $totalSkippedDays = $totalDays - $totalHarvestDays - $ongoingDays;
             $totalHC = $harvestData->sum('hc');
             $totalSJ = $suratJalanData->sum('jumlah_sj');
             $totalNettoKg = $suratJalanData->sum('total_netto');
@@ -256,6 +262,7 @@ class PanenTrackPlotReportController extends Controller
                     'summary' => [
                         'total_days' => $totalDays,
                         'total_harvest_days' => $totalHarvestDays,
+                        'total_ongoing_days' => $ongoingDays,
                         'total_skipped_days' => $totalSkippedDays,
                         'total_hc' => $totalHC,
                         'total_sj' => $totalSJ,

@@ -452,7 +452,7 @@
                     <p class="text-sm text-gray-600 mb-1 font-semibold">Total Hari</p>
                     <p class="text-3xl font-bold text-gray-900">${Math.floor(summary.total_days)}</p>
                     <p class="text-xs text-gray-500 mt-2">
-                        ${summary.total_harvest_days} hari panen, ${Math.floor(summary.total_skipped_days)} hari skip
+                        ${summary.total_harvest_days} hari panen, ${Math.floor(summary.total_skipped_days)} hari skip${summary.total_ongoing_days > 0 ? ', ' + summary.total_ongoing_days + ' hari ongoing' : ''}
                     </p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-green-600">
@@ -491,9 +491,9 @@
                 if (day.has_harvest) {
                     statusBadge = '<span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold">PANEN</span>';
                 } else {
-                    const dayOfWeek = new Date(day.tanggal).getDay();
-                    if (dayOfWeek === 0) {
-                        statusBadge = '<span class="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-bold">MINGGU</span>';
+                    const isToday = day.tanggal === new Date().toISOString().split('T')[0];
+                    if (isToday) {
+                        statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">ONGOING</span>';
                     } else {
                         statusBadge = '<span class="px-3 py-1 bg-gray-400 text-white rounded-full text-xs font-bold">SKIP</span>';
                     }
