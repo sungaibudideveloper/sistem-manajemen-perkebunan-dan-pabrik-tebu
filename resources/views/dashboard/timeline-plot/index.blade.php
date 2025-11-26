@@ -25,6 +25,8 @@
         th.sticky-v[rowspan="2"]{min-width:70px;}  /* Saldo, Realisasi, % */
         th.sticky-v[colspan="2"]{min-width:140px;}  /* Activity headers */
 
+        .total-row td:not(.sticky-h){min-width:70px;}
+
         /* ✅ Khusus blok */
         .sticky-h.blok{background:#14532d;color:white;text-align:center;}
         tbody .sticky-h.blok{background:#14532d;}
@@ -46,11 +48,17 @@
                 <a href="?crop=pc&activity={{$activityFilter}}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data PC
-             </a>
-             <a href="?crop=rc&activity={{$activityFilter}}" 
+                </a>
+                
+                <a href="?crop=rc&activity={{$activityFilter}}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data RC
-             </a>
+                </a>
+                
+                <a href="?crop=p&activity={{$activityFilter}}" 
+                class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='p'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
+                 🌾 Data Panen
+                </a>
                 
                 <button 
                 @click="activeTab = activeTab === 'map' ? 'table' : 'map'; activeTab === 'map' && $nextTick(() => initMapIfNeeded())" 
@@ -94,7 +102,7 @@
                                 @php
                                     $isGrouped = isset($activityGrouping[$activitycode]);
                                 @endphp
-                                <th class="sticky-v" colspan="2" style="text-align:center;">
+                                <th class="sticky-v" colspan="3" style="text-align:center;">
                                     <span style="{{ $isGrouped ? 'text-decoration: underline; text-decoration-color: #fbbf24; text-decoration-thickness: 2px; text-underline-offset: 3px;' : '' }}">
                                         {{ $activitycode }}
                                     </span>
@@ -102,7 +110,7 @@
                                         <span style="color:#fbbf24;font-size:12px;" title="Gabungan dari {{ implode(' + ', $activityGrouping[$activitycode]) }}"></span>
                                     @endif
                                     <br>{{ $label }}<br>
-                                    <small style="font-weight:normal;">HA / Tanggal</small>
+                                    <small style="font-weight:normal;">HA / % / Tanggal</small>
                                 </th>
                             @endforeach
                             
@@ -128,24 +136,35 @@
                             @endphp
                             
                             @foreach($activityMap as $activitycode => $label)
-                                @php 
-                                    $totalActivity = 0;
-                                    $allDates = [];
-                                    
-                                    foreach($activityData as $plot => $activities) {
-                                        if($act = $activities->get($activitycode)) {
-                                            $totalActivity += $act->total_luas;
-                                            if($act->tanggal_terbaru) {
-                                                $allDates[] = $act->tanggal_terbaru;
-                                            }
+                            @php 
+                                $totalActivity = 0;
+                                $totalPercentage = 0;
+                                $plotCount = 0;
+                                $allDates = [];
+                                
+                                foreach($activityData as $plot => $activities) {
+                                    if($act = $activities->get($activitycode)) {
+                                        $totalActivity += $act->total_luas;
+                                        $totalPercentage += ($act->avg_percentage ?? 0);
+                                        $plotCount++;
+                                        if($act->tanggal_terbaru) {
+                                            $allDates[] = $act->tanggal_terbaru;
                                         }
                                     }
-                                    
-                                    $grandTotalRealisasi += $totalActivity;
-                                    $latestDate = !empty($allDates) ? max($allDates) : null;
-                                @endphp
+                                }
                                 
+                                $grandTotalRealisasi += $totalActivity;
+                                $latestDate = !empty($allDates) ? max($allDates) : null;
+                                
+                                // Calculate average percentage for total
+                                $avgPercentage = $plotCount > 0 ? $totalPercentage / $plotCount : 0;
+                                $percentageColor = $avgPercentage >= 100 ? '#22c55e' : ($avgPercentage > 0 ? '#f97316' : '#6b7280');
+                            @endphp
+                        
                                 <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
+                                <td style="text-align:right; font-weight:bold; color: {{ $percentageColor }};">
+                                    {{ $avgPercentage > 0 ? number_format($avgPercentage, 2) . '%' : '-' }}
+                                </td>
                                 <td style="text-align:center;font-size:11px;">
                                     {{ $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M y') : '-' }}
                                 </td>
@@ -168,44 +187,63 @@
                         
                         {{-- DATA PER PLOT --}}
                         @foreach($blokPlots as $blok=>$plots)
-                            @foreach($plots as $index=>$plot)
-                                <tr>
-                                    @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
-                                    <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                    <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
-                                    
-                                    @php
-                                        $totalRealisasiPlot = 0;
+                        @foreach($plots as $index=>$plot)
+                            <tr>
+                                @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
+                                <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
+                                <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                
+                                @php
+                                    $totalRealisasiPlot = 0;
+                                @endphp
+                                
+                                @foreach($activityMap as $activitycode => $label)
+                                    @php 
+                                        $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                        $value = $activity->total_luas ?? 0;
+                                        $percentage = $activity->avg_percentage ?? 0;
+                                        $tanggal = $activity->tanggal_terbaru ?? null;
+                                        $totalRealisasiPlot += $value;
+                                        
+                                        $percentageColor = $percentage >= 100 ? '#22c55e' : ($percentage > 0 ? '#f97316' : '#6b7280');
                                     @endphp
                                     
-                                    @foreach($activityMap as $activitycode => $label)
-                                        @php 
-                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
-                                            $value = $activity->total_luas ?? 0;
-                                            $tanggal = $activity->tanggal_terbaru ?? null;
-                                            $totalRealisasiPlot += $value;
-                                        @endphp
+                                    <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
+                                    <td style="text-align:right; font-weight:600; color: {{ $percentageColor }};">
+                                        {{ $value > 0 ? number_format($percentage, 2) . '%' : '-' }}
+                                    </td>
+                                    <td style="text-align:center;font-size:11px;">
+                                        {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
+                                    </td>
+                                @endforeach
+                                
+                                {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
+                                <td style="text-align:right;">
+                                    {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
+                                </td>
+                                
+                                {{-- Persentase --}}
+                                <td style="text-align:right;">
+                                    @php
+                                        // ✅ Hitung rata-rata persentase per activity
+                                        $totalPercentage = 0;
+                                        $activityCount = 0;
                                         
-                                        <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
-                                        <td style="text-align:right;font-size:11px;">
-                                            {{ $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-' }}
-                                        </td>
-                                    @endforeach
-                                    
-                                    {{-- Realisasi Tanam (Total semua activity untuk plot ini) --}}
-                                    <td style="text-align:right;">
-                                        {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
-                                    </td>
-                                    
-                                    {{-- Persentase --}}
-                                    <td style="text-align:right;">
-                                        @php
-                                            $persen = $plot->luasarea > 0 ? ($totalRealisasiPlot / $plot->luasarea) * 100 : 0;
-                                        @endphp
-                                        {{ number_format($persen, 2) }}%
-                                    </td>
-                                </tr>
-                            @endforeach
+                                        foreach($activityMap as $activitycode => $label) {
+                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
+                                            if ($activity) {
+                                                $percentage = $activity->avg_percentage ?? 0;
+                                                $totalPercentage += $percentage;
+                                                $activityCount++;
+                                            }
+                                        }
+                                        
+                                        $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
+                                    @endphp
+                                    {{ number_format($avgPersen, 2) }}%
+                                </td>
+                            </tr>
+                        @endforeach
                         @endforeach
                     </tbody>
                 </table>
@@ -222,147 +260,150 @@
     <script>
         const plotHeaders = @json($plotHeadersForMap ?? []);
         const plotData = @json($plotData ?? []);
+        const plotActivityDetails = @json($plotActivityDetails ?? []);
         
-        let map;
-        let markers = [];
-        let polygons = [];
+        let map, markers = [], polygons = [];
         
         function initMapIfNeeded() {
             if (window.mapInitialized) return;
             
-            const centerLat = plotHeaders.length > 0 ? parseFloat(plotHeaders[0].centerlatitude) : -4.12893;
-            const centerLng = plotHeaders.length > 0 ? parseFloat(plotHeaders[0].centerlongitude) : 105.2971;
-            
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: centerLat, lng: centerLng },
-                zoom: 13,
-                mapTypeId: 'roadmap'
+                center: { lat: parseFloat(plotHeaders[0]?.centerlatitude || -4.12893), lng: parseFloat(plotHeaders[0]?.centerlongitude || 105.2971) },
+                zoom: 13
             });
             
             createMapContent();
-            
             window.mapInitialized = true;
         }
         
         function createMapContent() {
-            const blockColorMap = createBlockColorMap();
-            
-            plotHeaders.forEach(header => {
-                const blockLetter = header.plot.charAt(0);
-                const blockColor = blockColorMap[blockLetter];
+            // Markers
+            plotHeaders.forEach(h => {
+                const d = plotActivityDetails[h.plot] || {
+                    marker_color:'black', 
+                    avg_percentage:0, 
+                    activities:[], 
+                    luas_rkh:0, 
+                    total_luas_hasil:0,
+                    lifecyclestatus: '-',
+                    umur_hari: 0
+                };
+                const color = d.marker_color === 'green' ? '#22c55e' : d.marker_color === 'orange' ? '#f97316' : '#000';
                 
                 const marker = new google.maps.Marker({
-                    position: { 
-                        lat: parseFloat(header.centerlatitude), 
-                        lng: parseFloat(header.centerlongitude) 
-                    },
+                    position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
                     map: map,
-                    title: `Plot ${header.plot}`,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 20, // ✅ Jauh lebih besar (dari 12 → 20)
-                        fillColor: blockColor,
-                        fillOpacity: 0.8,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 2
-                    },
-                    label: {
-                        text: header.plot,
-                        color: '#ffffff',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        className: 'marker-label' // ✅ Untuk custom positioning
-                    }
+                    icon: {path: google.maps.SymbolPath.CIRCLE, scale: 25, fillColor: color, fillOpacity: 0.8, strokeColor: '#fff', strokeWeight: 3},
+                    label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
                 });
+
+                let umurText = '-';
+                if (d.umur_hari > 0) {
+                    umurText = `${d.umur_hari} hari`;
+                }
+
+                let acts = '';
+        if (d.activities?.length > 0) {
+            acts = `<div style="margin-top:10px;border-top:1px solid #ddd;padding-top:10px"><strong>Activities (${d.activities.length}):</strong><div style="max-height:200px;overflow-y:auto;margin-top:5px">`;
+            d.activities.forEach((a,i) => {
+                const p = parseFloat(a.percentage).toFixed(2);
+                const c = p >= 100 ? '#22c55e' : p > 0 ? '#f97316' : '#6b7280';
                 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="padding: 12px; font-family: Arial, sans-serif;">
-                            <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 13px;">Plot ${header.plot}</h3>
-                            <div style="font-size: 12px; color: #7f8c8d;">
-                                <div style="margin: 3px 0;"><strong>Block:</strong> ${blockLetter}</div>
-                                <div style="margin: 3px 0;"><strong>Latitude:</strong> ${parseFloat(header.centerlatitude).toFixed(6)}</div>
-                                <div style="margin: 3px 0;"><strong>Longitude:</strong> ${parseFloat(header.centerlongitude).toFixed(6)}</div>
+                acts += `<div style="margin:5px 0;padding:8px;background:#f9fafb;border-radius:4px;border-left:3px solid ${c}">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                        <div style="font-weight:600;color:#374151;font-size:11px">${i+1}. ${a.code} - ${a.label}</div>
+                        <div style="font-weight:700;color:${c};font-size:12px">${p}%</div>
+                    </div>
+                    <div style="color:#6b7280;font-size:10px;margin-bottom:4px">
+                        Luas: <strong>${parseFloat(a.luas_hasil).toFixed(2)} HA</strong> / ${parseFloat(d.luas_rkh).toFixed(2)} HA
+                        ${a.lkh_details && a.lkh_details.length > 0 ? ` <span style="color:#9ca3af">(${a.lkh_details.length} LKH)</span>` : ''}
+                    </div>`;
+                
+                // ✅ Detail LKH
+                if (a.lkh_details && a.lkh_details.length > 0) {
+                    acts += `<div style="margin-top:6px;padding:6px;background:#fff;border-radius:3px;border:1px solid #e5e7eb">
+                        <div style="font-size:9px;color:#6b7280;font-weight:600;margin-bottom:3px">Detail LKH:</div>`;
+                    
+                    a.lkh_details.forEach((lkh) => {
+                        acts += `<div style="font-size:9px;color:#374151;padding:2px 0;display:flex;justify-content:space-between;gap:8px">
+                            <span style="flex:1">📄 ${lkh.lkhno}</span>
+                            <span style="font-weight:600;white-space:nowrap">${parseFloat(lkh.luas_hasil).toFixed(2)} HA</span>
+                            <span style="color:#9ca3af;white-space:nowrap">${new Date(lkh.tanggal).toLocaleDateString('id-ID', {day:'2-digit',month:'short'})}</span>
+                        </div>`;
+                    });
+                    
+                    acts += `</div>`;
+                }
+                
+                acts += `<div style="background:#e5e7eb;height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
+                        <div style="background:${c};height:100%;width:${Math.min(p,100)}%"></div>
+                    </div>
+                    ${a.tanggal ? `<div style="color:#9ca3af;font-size:9px;margin-top:3px">📅 Terakhir: ${new Date(a.tanggal).toLocaleDateString('id-ID')}</div>` : ''}
+                </div>`;
+            });
+            acts += '</div></div>';
+        } else {
+            acts = '<div style="margin-top:10px;padding:8px;background:#f3f4f6;border-radius:4px;color:#6b7280;font-size:11px;text-align:center">Tidak ada data</div>';
+        }
+                
+                const info = new google.maps.InfoWindow({
+                    content: `<div style="padding:12px;min-width:280px;max-width:350px">
+                        <h3 style="margin:0 0 10px 0;color:#2c3e50;font-size:15px;font-weight:bold;border-bottom:2px solid #e5e7eb;padding-bottom:6px">📍 Plot ${h.plot}</h3>
+                        <div style="font-size:11px;color:#6b7280;background:#f9fafb;padding:8px;border-radius:4px;margin-bottom:8px">
+                            <div><strong>Luas RKH:</strong> ${parseFloat(d.luas_rkh).toFixed(2)} HA</div>
+                            <div><strong>Total Hasil:</strong> ${parseFloat(d.total_luas_hasil).toFixed(2)} HA</div>
+                            <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb">
+                                <strong>Status:</strong> 
+                                <span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:3px;font-weight:600">${d.lifecyclestatus}</span>
                             </div>
+                            <div><strong>Umur:</strong> <span style="color:#059669;font-weight:600">${umurText}</span></div>
                         </div>
-                    `
+                        <div style="background:linear-gradient(135deg,${color}22,${color}11);padding:10px;border-radius:6px;border:2px solid ${color};margin-bottom:8px;text-align:center">
+                            <div style="color:#6b7280;font-size:10px;font-weight:600;text-transform:uppercase;margin-bottom:4px">Progress</div>
+                            <div style="color:${color};font-weight:700;font-size:24px">${parseFloat(d.avg_percentage).toFixed(1)}%</div>
+                        </div>
+                        ${acts}
+                    </div>`
                 });
                 
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-                
+                marker.addListener('click', () => info.open(map, marker));
                 markers.push(marker);
             });
             
-            plotHeaders.forEach(header => {
-                const blockLetter = header.plot.charAt(0);
-                const blockColor = blockColorMap[blockLetter];
+            // Polygons
+            plotHeaders.forEach(h => {
+                const pts = plotData.filter(p => p.plot === h.plot);
+                if (pts.length < 3) return;
                 
-                const gpsPoints = plotData.filter(item => item.plot === header.plot);
+                const colors = {'A':'#2C3E50','B':'#16A085','C':'#D35400','D':'#8E44AD','E':'#27AE60','F':'#2980B9','G':'#C0392B','H':'#F39C12','I':'#34495E','J':'#7F8C8D','K':'#1ABC9C'};
+                const color = colors[h.plot.charAt(0)] || '#000';
                 
-                if (gpsPoints.length < 3) return;
-                
-                const polygonCoordinates = gpsPoints.map(item => ({
-                    lat: parseFloat(item.latitude),
-                    lng: parseFloat(item.longitude)
+                polygons.push(new google.maps.Polygon({
+                    paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
+                    strokeColor: color, strokeOpacity: 0.8, strokeWeight: 2,
+                    fillColor: color, fillOpacity: 0.12, map: map
                 }));
-                
-                const polygon = new google.maps.Polygon({
-                    paths: polygonCoordinates,
-                    strokeColor: blockColor,
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: blockColor,
-                    fillOpacity: 0.12,
-                    map: map
-                });
-                
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="padding: 12px; font-family: Arial, sans-serif;">
-                            <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 13px;">Plot ${header.plot}</h3>
-                            <div style="font-size: 12px; color: #7f8c8d;">
-                                <div style="margin: 3px 0;"><strong>Block:</strong> ${blockLetter}</div>
-                                <div style="margin: 3px 0;"><strong>GPS Points:</strong> ${gpsPoints.length}</div>
-                                <div style="margin: 3px 0;"><strong>Area Status:</strong> Mapped</div>
-                            </div>
-                        </div>
-                    `
-                });
-                
-                polygon.addListener('click', (e) => {
-                    infoWindow.setPosition(e.latLng);
-                    infoWindow.open(map);
-                });
-                
-                polygons.push(polygon);
             });
             
+            
+            // ✅ Zoom fokus ke area plot
             const bounds = new google.maps.LatLngBounds();
-            plotData.forEach(point => {
-                bounds.extend(new google.maps.LatLng(
-                    parseFloat(point.latitude), 
-                    parseFloat(point.longitude)
-                ));
+            plotHeaders.forEach(h => {
+                bounds.extend(new google.maps.LatLng(parseFloat(h.centerlatitude), parseFloat(h.centerlongitude)));
             });
-            map.fitBounds(bounds);
-        }
-        
-        function createBlockColorMap() {
-            const blocks = [...new Set(plotHeaders.map(item => item.plot.charAt(0)))].sort();
-            const colorMap = {};
-            
-            const professionalColors = [
-                '#2C3E50', '#16A085', '#D35400', '#8E44AD', '#27AE60', '#2980B9',
-                '#C0392B', '#F39C12', '#34495E', '#7F8C8D', '#1ABC9C', '#E74C3C'
-            ];
-            
-            blocks.forEach((block, index) => {
-                colorMap[block] = professionalColors[index % professionalColors.length];
-            });
-            
-            return colorMap;
+
+            if (plotHeaders.length > 0) {
+                map.fitBounds(bounds);
+                
+                // ✅ Limit zoom level agar tidak terlalu dekat/jauh
+                google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+                    const z = map.getZoom();
+                    if (z > 15) map.setZoom(15);  // Tidak terlalu dekat
+                    if (z < 14) map.setZoom(14);  // Tidak terlalu jauh (NAIKKAN dari 12 ke 14)
+                });
+            }
+
+
         }
     </script>
     

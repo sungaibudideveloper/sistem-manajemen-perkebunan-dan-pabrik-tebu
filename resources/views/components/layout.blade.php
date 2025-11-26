@@ -57,7 +57,9 @@
         .main-wrapper {
             flex: 1;
             margin-left: 0;
-            overflow-x: hidden;
+            max-width: calc(100%-4rem);
+            min-width: 0;
+            /* overflow-x: clip; */
         }
 
         /* Show body after state determined */
@@ -146,7 +148,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="main-wrapper flex flex-col">
+        <div class="main-wrapper flex flex-col min-h-screen">
 
             <!-- Header -->
             <x-header>{{ $title }}
@@ -177,7 +179,7 @@
             </x-header>
 
             <!-- Main Content -->
-            <main class="bg-gray-200 flex-1 overflow-y-auto">
+            <main class="bg-gray-200 flex-1">
                 {{ $hero ?? null }}
                 <div class="px-2 py-3 sm:px-3 lg:px-4">
                     @error('duplicateClosing')

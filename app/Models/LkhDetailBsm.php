@@ -13,7 +13,9 @@ class LkhDetailBsm extends Model
     protected $fillable = [
         'companycode',
         'lkhno',
+        'suratjalanno',
         'plot',
+        'kodetebang',
         'batchno',
         'nilaibersih',
         'nilaisegar',
@@ -53,23 +55,42 @@ class LkhDetailBsm extends Model
     }
 
     /**
-     * Calculate grade based on average score
+     * Calculate grade based on average score and kodetebang (Premium/Non-Premium)
      * 
-     * @param float $averageScore
+     * Premium: A <1200, B 1200-1700, C >1700
+     * Non-Premium: A <1000, B 1000-2000, C >2000
+     * 
+     * @param float|null $averageScore
+     * @param string|null $kodetebang
      * @return string|null
      */
-    public static function calculateGrade($averageScore)
+    public static function calculateGrade($averageScore, $kodetebang = null)
     {
         if ($averageScore === null) {
             return null;
         }
 
-        if ($averageScore >= 80) {
-            return 'A';
-        } elseif ($averageScore >= 60) {
-            return 'B';
+        // Check if Premium or Non-Premium
+        $isPremium = stripos($kodetebang ?? '', 'premium') !== false;
+        
+        if ($isPremium) {
+            // Premium thresholds
+            if ($averageScore < 1200) {
+                return 'A';
+            } elseif ($averageScore <= 1700) {
+                return 'B';
+            } else {
+                return 'C';
+            }
         } else {
-            return 'C';
+            // Non-Premium thresholds
+            if ($averageScore < 1000) {
+                return 'A';
+            } elseif ($averageScore <= 2000) {
+                return 'B';
+            } else {
+                return 'C';
+            }
         }
     }
 
@@ -108,7 +129,7 @@ class LkhDetailBsm extends Model
 
         // Auto-calculate average and grade
         $averageScore = self::calculateAverageScore($nilaibersih, $nilaisegar, $nilaimanis);
-        $grade = self::calculateGrade($averageScore);
+        $grade = self::calculateGrade($averageScore, $this->kodetebang);
 
         return $this->update([
             'nilaibersih' => $nilaibersih,
@@ -152,5 +173,13 @@ class LkhDetailBsm extends Model
     public function scopeByGrade($query, $grade)
     {
         return $query->where('grade', $grade);
+    }
+
+    /**
+     * Scope: Filter by kodetebang (Premium/Non-Premium)
+     */
+    public function scopeByKodetebang($query, $kodetebang)
+    {
+        return $query->where('kodetebang', 'LIKE', "%{$kodetebang}%");
     }
 }

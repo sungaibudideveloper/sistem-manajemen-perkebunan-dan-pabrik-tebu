@@ -11,6 +11,7 @@ use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\RencanaKerjaMingguanController;
 use App\Http\Controllers\Input\MappingBsmController;
+use App\Http\Controllers\Input\NfcController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -120,6 +121,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
             Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
 
+            // LKH Panen
+            Route::get('/lkh-panen-report/get-sj', 'getSuratJalan')->name('lkh-panen-report.get-sj');
+
             // Operator Report routes
             Route::get('/operators-for-date', 'getOperatorsForDate')->name('getOperatorsForDate');
             Route::post('/generate-operator-report', 'generateOperatorReport')->name('generateOperatorReport');
@@ -127,7 +131,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/operator-report-data', 'getOperatorReportData')->name('operator-report-data');
 
             // Panen Info route
-            Route::get('/batch/panen-info/{plot}', 'getPanenInfo')->name('getPanenInfo');
+            Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
 
             // Other utility routes
             Route::post('/update-status', 'updateStatus')->name('updateStatus');
@@ -175,6 +179,24 @@ Route::middleware('auth')->group(function () {
     Route::get('input/gudang-bbm', [GudangBbmController::class, 'index'])->name('input.gudang-bbm.index');
     Route::get('input/gudang-bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('input.gudang-bbm.show');
     Route::post('input/gudang-bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('input.gudang-bbm.confirm');
+});
+
+
+// =====================================
+// NFC CARD MANAGEMENT ROUTES
+// =====================================
+Route::middleware('auth')->group(function () {
+    Route::prefix('input/nfc')
+        ->name('input.nfc.')
+        ->controller(NfcController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/transaction-out', 'transactionOut')->name('transaction-out');
+            Route::post('/transaction-in', 'transactionIn')->name('transaction-in');
+            Route::post('/pos-in', 'posIn')->name('pos-in'); // NEW
+            Route::post('/external-in', 'externalIn')->name('external-in');
+            Route::post('/external-out', 'externalOut')->name('external-out');
+        });
 });
 
 Route::group(['middleware' => ['auth', 'permission:Mapping BSM']], function () {

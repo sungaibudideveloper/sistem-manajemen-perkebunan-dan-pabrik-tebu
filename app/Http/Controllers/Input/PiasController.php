@@ -53,6 +53,12 @@ class PiasController extends Controller
                      ->on('ph.companycode', '=', 'rkhhdr.companycode');
             })
             ->where('rkhhdr.approvalstatus', 1)
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('rkhlst')
+                      ->whereColumn('rkhlst.rkhno', 'rkhhdr.rkhno')
+                      ->where('rkhlst.activitycode', '5.2.1');
+            })
             // Filter tanggal
             ->whereDate('rkhhdr.rkhdate', '>=', $startDate)
             ->whereDate('rkhhdr.rkhdate', '<=', $endDate);
@@ -99,8 +105,14 @@ class PiasController extends Controller
 
         $data = $rkhhdr
         ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
-        ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
-        ->leftJoin('lkhdetailplot','lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+        ->leftJoin('lkhhdr', function($join) {
+            $join->on('lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+                 ->on('lkhhdr.companycode', '=', 'rkhhdr.companycode');
+        })
+        ->leftJoin('lkhdetailplot', function($join) {
+            $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                 ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+        })
         ->leftJoin('masterlist', function($join) {
             $join->on('masterlist.companycode', '=', 'rkhhdr.companycode')
                  ->on('masterlist.blok', '=', 'lkhdetailplot.blok')
@@ -179,8 +191,14 @@ class PiasController extends Controller
 
     // 3) Validasi kombinasi lkhno|blok|plot milik RKH ini
     $validKeys = DB::table('rkhhdr')
-        ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
-        ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+        ->leftJoin('lkhhdr', function($join) {
+            $join->on('lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+                 ->on('lkhhdr.companycode', '=', 'rkhhdr.companycode');
+        })
+        ->leftJoin('lkhdetailplot', function($join) {
+            $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                 ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+        })
         ->where('rkhhdr.rkhno', $rkhno)
         ->whereNotNull('lkhdetailplot.blok')
         ->whereNotNull('lkhdetailplot.plot')
@@ -192,7 +210,7 @@ class PiasController extends Controller
     $validMap = array_flip($validKeys);
 
     // Ambil companycode
-    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->value('companycode');
+    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', auth()->user()->companycode)->value('companycode');
 
     // 4) Simpan dalam transaksi
     return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC) {
@@ -316,8 +334,14 @@ class PiasController extends Controller
 //     //     ->pluck(DB::raw("CONCAT(lkhdetailplot.blok,'|',lkhdetailplot.plot)"))
 //     //     ->toArray();
 //     $validKeys = DB::table('rkhhdr')
-//     ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
-//     ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+//     ->leftJoin('lkhhdr', function($join) {
+//         $join->on('lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+//              ->on('lkhhdr.companycode', '=', 'rkhhdr.companycode');
+//     })
+//     ->leftJoin('lkhdetailplot', function($join) {
+//         $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+//              ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+//     })
 //     ->where('rkhhdr.rkhno', $rkhno)
 //     ->whereNotNull('lkhdetailplot.blok')
 //     ->whereNotNull('lkhdetailplot.plot')
@@ -418,8 +442,14 @@ class PiasController extends Controller
 
             // --- QUERY PLOT ---
             $rowsDb = DB::table('rkhhdr')
-                ->leftJoin('lkhhdr', 'lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
-                ->leftJoin('lkhdetailplot','lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                ->leftJoin('lkhhdr', function($join) {
+                    $join->on('lkhhdr.rkhno', '=', 'rkhhdr.rkhno')
+                         ->on('lkhhdr.companycode', '=', 'rkhhdr.companycode');
+                })
+                ->leftJoin('lkhdetailplot', function($join) {
+                    $join->on('lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
+                         ->on('lkhdetailplot.companycode', '=', 'lkhhdr.companycode');
+                })
                 ->leftJoin('masterlist', function($join) {
                     $join->on('masterlist.companycode', '=', 'rkhhdr.companycode')
                          ->on('masterlist.blok', '=', 'lkhdetailplot.blok')

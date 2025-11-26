@@ -68,7 +68,10 @@ class GudangController extends Controller
 
         // Query dengan filter
         $usehdr = usematerialhdr::from('usematerialhdr as a')
-        ->join('rkhhdr as b', 'a.rkhno', '=', 'b.rkhno')
+        ->join('rkhhdr as b', function($join) {
+            $join->on('a.rkhno', '=', 'b.rkhno')
+                 ->on('a.companycode', '=', 'b.companycode');
+        })
         ->join('user as c', 'b.mandorid', '=', 'c.userid')
         ->leftJoinSub(
             usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
@@ -143,7 +146,9 @@ class GudangController extends Controller
         $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
         ->leftJoin('lkhdetailplot', function($join) {
             $join->on('usemateriallst.lkhno', '=', 'lkhdetailplot.lkhno')
-                ->on('usemateriallst.plot', '=', 'lkhdetailplot.plot');})
+                ->on('usemateriallst.plot', '=', 'lkhdetailplot.plot')
+                ->on('usemateriallst.companycode', '=', 'lkhdetailplot.companycode');
+                })
         ->where('rkhno', $request->rkhno)->where('usemateriallst.companycode',session('companycode'))->orderBy('lkhno')->orderBy('plot')->get());
 
         $groupIds = $details->pluck('herbisidagroupid')->unique(); 
@@ -180,7 +185,7 @@ class GudangController extends Controller
         $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno,1)->get();
         $hfirst = $header->first();
 
-        $details = usemateriallst::where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
+        $details = usemateriallst::where('companycode',session('companycode'))->where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
         $first = $details->first();
 
         if( strtoupper($hfirst->flagstatus) == 'COMPLETED' ){

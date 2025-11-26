@@ -405,7 +405,7 @@
                 <th class="py-3 px-2 text-xs font-semibold">Aktivitas</th>
                 <th class="py-3 px-2 text-xs font-semibold">Blok</th>
                 <th class="py-3 px-2 text-xs font-semibold">Plot</th>
-                <th class="py-3 px-2 text-xs font-semibold">Info Panen</th>
+                <th class="py-3 px-2 text-xs font-semibold">Info Plot</th>
                 <th class="py-3 px-2 text-xs font-semibold">Luas<br>(ha)</th>
                 <th class="py-3 px-2 text-xs font-semibold">Material</th>
                 <th class="py-3 px-2 text-xs font-semibold">Aksi</th>
@@ -449,9 +449,15 @@
                       <input
                         type="text"
                         readonly
-                        @click="open = true"
-                        :value="selected.blok ? selected.blok : ''"
-                        class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        @click="currentActivityCode ? (open = true) : null"
+                        :value="selected.blok ? (selected.blok === 'ALL' ? 'Semua Blok' : selected.blok) : ''"
+                        :class="{
+                          'cursor-pointer bg-white hover:bg-gray-50': currentActivityCode,
+                          'cursor-not-allowed bg-gray-100': !currentActivityCode,
+                          'border-gray-200': currentActivityCode,
+                          'border-gray-300': !currentActivityCode
+                        }"
+                        class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                       <input type="hidden" :name="`rows[${index}][blok]`" x-model="selected.blok">
                       @include('input.rencanakerjaharian.modal-blok')
@@ -464,13 +470,13 @@
                       <input
                         type="text"
                         readonly
-                        @click="isBlokSelected ? (open = true) : null"
+                        @click="isBlokSelected && !isBlokActivity ? (open = true) : null"
                         :value="selected.plot ? selected.plot : ''"
                         :class="{
-                          'cursor-pointer bg-white hover:bg-gray-50': isBlokSelected,
-                          'cursor-not-allowed bg-gray-100': !isBlokSelected,
-                          'border-gray-200': isBlokSelected,
-                          'border-gray-300': !isBlokSelected
+                          'cursor-pointer bg-white hover:bg-gray-50': isBlokSelected && !isBlokActivity,
+                          'cursor-not-allowed bg-gray-100': !isBlokSelected || isBlokActivity,
+                          'border-gray-200': isBlokSelected && !isBlokActivity,
+                          'border-gray-300': !isBlokSelected || isBlokActivity
                         }"
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
@@ -479,50 +485,53 @@
                     </div>
                   </td>
 
-                  <!-- Info Panen -->
-                  <td class="px-2 py-3" x-data="panenInfoPicker(index)" x-init="init(); rowIndex = index">
-                    <div x-show="!isPanenActivity" class="text-center text-xs text-gray-400">-</div>
+                  <!-- Info Plot -->
+                  <td class="px-2 py-3" x-data="plotInfoPicker(index)" x-init="init(); rowIndex = index">
+                      <div x-show="!currentActivityCode || !currentPlot" class="text-center text-xs text-gray-400">-</div>
 
-                    <div x-show="isPanenActivity" x-cloak class="text-xs space-y-1">
-                      <div x-show="isLoading" class="text-center py-2">
-                        <svg class="animate-spin h-5 w-5 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                      <div x-show="currentActivityCode && currentPlot" x-cloak class="text-xs space-y-1">
+                          <div x-show="isLoading" class="text-center py-2">
+                              <svg class="animate-spin h-5 w-5 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                          </div>
+
+                          <div x-show="!isLoading && plotInfo.luasplot">
+                              <!-- Batch info (kalau panen) -->
+                              <div x-show="plotInfo.batchno" class="mb-1">
+                                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                        :class="{
+                                            'bg-yellow-100 text-yellow-800': plotInfo.kodestatus === 'PC',
+                                            'bg-green-100 text-green-800': plotInfo.kodestatus === 'RC1',
+                                            'bg-blue-100 text-blue-800': plotInfo.kodestatus === 'RC2',
+                                            'bg-purple-100 text-purple-800': plotInfo.kodestatus === 'RC3'
+                                        }"
+                                        x-text="plotInfo.kodestatus"></span>
+                              </div>
+
+                              <!-- Luas plot -->
+                              <div class="text-gray-700">
+                                  <span class="font-semibold">Luas Plot:</span>
+                                  <span x-text="plotInfo.luasplot + ' Ha'"></span>
+                              </div>
+
+                              <!-- Luas sisa -->
+                              <div class="text-gray-700">
+                                  <span class="font-semibold">Luas Sisa:</span>
+                                  <span x-text="plotInfo.luassisa + ' Ha'"></span>
+                              </div>
+
+                              <!-- Tanggal (panen atau activity terakhir) -->
+                              <div class="text-gray-700">
+                                  <span class="font-semibold" x-text="plotInfo.batchno ? 'Tgl Panen:' : 'Tgl Activity:'"></span>
+                                  <span x-text="plotInfo.tanggal || '-'"></span>
+                              </div>
+                          </div>
                       </div>
 
-                      <div x-show="!isLoading && panenInfo.batchno">
-                        <div class="flex items-center justify-center">
-                          <span
-                            class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                            :class="{
-                              'bg-yellow-100 text-yellow-800': panenInfo.kodestatus === 'PC',
-                              'bg-green-100 text-green-800': panenInfo.kodestatus === 'RC1',
-                              'bg-blue-100 text-blue-800': panenInfo.kodestatus === 'RC2',
-                              'bg-purple-100 text-purple-800': panenInfo.kodestatus === 'RC3'
-                            }"
-                            x-text="panenInfo.kodestatus"
-                          ></span>
-                        </div>
-
-                        <div class="text-gray-700">
-                          <span class="font-semibold">Tgl:</span>
-                          <span x-text="panenInfo.tanggalpanen || '-'"></span>
-                        </div>
-
-                        <div class="text-gray-700">
-                          <span class="font-semibold">Sisa:</span>
-                          <span x-text="panenInfo.luassisa + ' Ha'"></span>
-                        </div>
-                      </div>
-
-                      <div x-show="!isLoading && !panenInfo.batchno && isPanenActivity && currentPlot" class="text-center text-red-600 text-[10px] py-2">
-                        <span>Batch tidak tersedia</span>
-                      </div>
-                    </div>
-
-                    <input type="hidden" :name="`rows[${index}][batchno]`" x-model="panenInfo.batchno">
-                    <input type="hidden" :name="`rows[${index}][kodestatus]`" x-model="panenInfo.kodestatus">
+                      <input type="hidden" :name="`rows[${index}][batchno]`" x-model="plotInfo.batchno">
+                      <input type="hidden" :name="`rows[${index}][kodestatus]`" x-model="plotInfo.kodestatus">
                   </td>
 
                   <!-- Luas -->
@@ -532,6 +541,13 @@
                       :name="`rows[${index}][luas]`"
                       min="0"
                       step="0.01"
+                      :max="getMaxLuas(index)"
+                      :readonly="!isPlotOrBlokSelected(index)"
+                      @input="validateLuasInput($event, index)"
+                      :class="{
+                        'cursor-not-allowed bg-gray-100': !isPlotOrBlokSelected(index),
+                        'bg-white': isPlotOrBlokSelected(index)
+                      }"
                       class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                   </td>
@@ -778,7 +794,7 @@ window.currentUser = {
 };
 
 window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
-window.PANEN_INFO_URL = "{{ route('input.rencanakerjaharian.getPanenInfo', ['plot' => 'PLOT_PLACEHOLDER']) }}".replace('PLOT_PLACEHOLDER', '');
+window.PLOT_INFO_BASE_URL = "{{ url('input/kerjaharian/rencanakerjaharian/plot-info') }}";
 
 // ============================================================
 // ALPINE.JS COMPONENTS
@@ -898,20 +914,21 @@ function kendaraanInfoCard() {
 }
 
 /**
- * Panen Info Picker Component
+ * Plot Info Picker Component (Updated - untuk semua activity)
  */
-function panenInfoPicker(rowIndex) {
+function plotInfoPicker(rowIndex) {
   return {
     rowIndex: rowIndex,
     currentPlot: '',
     currentActivityCode: '',
-    isPanenActivity: false,
     isLoading: false,
-    panenInfo: {
+    plotInfo: {
+      luasplot: 0,
+      luassisa: 0,
       batchno: '',
       kodestatus: '',
-      tanggalpanen: '',
-      luassisa: 0
+      tanggal: '',
+      luassisa_batch: ''
     },
 
     init() {
@@ -927,8 +944,8 @@ function panenInfoPicker(rowIndex) {
         const newPlot = plotInput.value || '';
         if (this.currentPlot !== newPlot) {
           this.currentPlot = newPlot;
-          if (this.isPanenActivity) {
-            this.updatePanenInfo();
+          if (this.currentActivityCode && this.currentPlot) {
+            this.updatePlotInfo();
           }
         }
       });
@@ -945,68 +962,66 @@ function panenInfoPicker(rowIndex) {
         const newActivity = activityInput.value || '';
         if (this.currentActivityCode !== newActivity) {
           this.currentActivityCode = newActivity;
-          this.checkIfPanenActivity();
 
-          if (this.isPanenActivity && this.currentPlot) {
-            this.updatePanenInfo();
-          } else if (!this.isPanenActivity) {
-            this.resetPanenInfo();
+          if (this.currentActivityCode && this.currentPlot) {
+            this.updatePlotInfo();
+          } else if (!this.currentActivityCode) {
+            this.resetPlotInfo();
           }
         }
       });
 
       observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
       this.currentActivityCode = activityInput.value || '';
-      this.checkIfPanenActivity();
     },
 
-    checkIfPanenActivity() {
-      this.isPanenActivity = window.PANEN_ACTIVITIES.includes(this.currentActivityCode);
-
-      if (!this.isPanenActivity) {
-        this.resetPanenInfo();
-      }
-    },
-
-    async updatePanenInfo() {
-      if (!this.isPanenActivity || !this.currentPlot) {
-        this.resetPanenInfo();
+    async updatePlotInfo() {
+      if (!this.currentActivityCode || !this.currentPlot) {
+        this.resetPlotInfo();
         return;
       }
 
       this.isLoading = true;
 
       try {
-        const response = await fetch(window.PANEN_INFO_URL + this.currentPlot);
+        const url = `${window.PLOT_INFO_BASE_URL}/${this.currentPlot}/${this.currentActivityCode}`;
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
-          this.panenInfo = {
-            batchno: data.batchno,
-            kodestatus: data.lifecyclestatus,
-            tanggalpanen: data.tanggalpanen,
-            luassisa: parseFloat(data.luassisa).toFixed(2)
+          this.plotInfo = {
+            luasplot: parseFloat(data.luasplot).toFixed(2),
+            luassisa: parseFloat(data.luassisa).toFixed(2),
+            batchno: data.batchinfo?.batchno || '',
+            kodestatus: data.batchinfo?.lifecyclestatus || '',
+            tanggal: data.tanggal || '',
+            luassisa_batch: data.batchinfo?.luassisa_batch || ''
           };
+          
+          // Auto-fill luas sisa
+          updateLuasFromPlotInfo(this.plotInfo.luassisa, this.rowIndex);
         } else {
-          this.resetPanenInfo();
-          showToast(data.message || 'Gagal memuat info panen', 'warning', 3000);
+          this.resetPlotInfo();
+          showToast(data.message || 'Gagal memuat info plot', 'warning', 3000);
         }
       } catch (error) {
-        console.error('Error fetching panen info:', error);
-        this.resetPanenInfo();
-        showToast('Error memuat info panen', 'error', 3000);
+        console.error('Error fetching plot info:', error);
+        this.resetPlotInfo();
+        showToast('Error memuat info plot', 'error', 3000);
       } finally {
         this.isLoading = false;
       }
     },
 
-    resetPanenInfo() {
+    resetPlotInfo() {
       this.isLoading = false;
-      this.panenInfo = {
+      this.plotInfo = {
+        luasplot: 0,
+        luassisa: 0,
         batchno: '',
         kodestatus: '',
         tanggalpanen: '',
-        luassisa: 0
+        luassisa_batch: ''
       };
     }
   };
@@ -1180,8 +1195,19 @@ function initializeFormSubmit() {
 }
 
 function submitForm(form) {
+
+
+
   showLoadingState();
   const formData = new FormData(form);
+
+    console.log('=== FORM DATA DEBUG ===');
+  for (let [key, value] of formData.entries()) {
+    if (key.includes('rows')) {
+      console.log(key, '=', value);
+    }
+  }
+  console.log('======================');
 
   fetch(form.action, {
     method: 'POST',
@@ -1266,10 +1292,27 @@ function validateFormWithWorkerCard() {
       hasCompleteRow = true;
       const rowNum = index + 1;
 
-      if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
-      if (!activity) errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
-      if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
+      // Check if this is a blok activity
+      const isBlokActivity = Alpine.store('activityPerRow').getActivity(index)?.isblokactivity === 1;
 
+      if (!activity) {
+        errors.push(`Baris ${rowNum}: Aktivitas harus dipilih`);
+      }
+
+      // Conditional validation based on activity type
+      if (!isBlokActivity) {
+        // Normal activity - plot & luas WAJIB
+        if (!plot) errors.push(`Baris ${rowNum}: Plot harus dipilih`);
+        if (!luas) errors.push(`Baris ${rowNum}: Luas area harus diisi`);
+      } else {
+        // Blok activity - plot HARUS NULL, luas OPTIONAL
+        if (plot) {
+          errors.push(`Baris ${rowNum}: Blok activity tidak boleh memiliki plot spesifik`);
+        }
+        // Luas optional untuk blok activity (bisa kosong)
+      }
+
+      // Validate jenistenagakerja mapping
       if (activity) {
         const activityData = window.activitiesData.find(act => act.activitycode === activity);
         if (!activityData || activityData.jenistenagakerja === null) {
@@ -1279,6 +1322,7 @@ function validateFormWithWorkerCard() {
     }
   });
 
+  // Material validation (unchanged)
   rows.forEach((row, index) => {
     const blok = row.querySelector('input[name$="[blok]"]').value;
     const activity = row.querySelector('input[name$="[nama]"]').value;
@@ -1289,7 +1333,6 @@ function validateFormWithWorkerCard() {
         const materialGroupInput = row.querySelector('input[name$="[material_group_id]"]');
         const materialValue = materialGroupInput?.value || '';
         
-        // Cek langsung dari Alpine component jika DOM value kosong
         if (!materialValue) {
           const materialPicker = row.querySelector('[x-data*="materialPicker"]');
           if (materialPicker && materialPicker._x_dataStack && materialPicker._x_dataStack[0]) {
@@ -1305,7 +1348,7 @@ function validateFormWithWorkerCard() {
     }
   });
 
-  // Validate workers
+  // Validate workers (unchanged)
   const workerCardElement = document.querySelector('[x-data*="workerInfoCard"]');
   if (workerCardElement && workerCardElement._x_dataStack && workerCardElement._x_dataStack[0]) {
     const workers = workerCardElement._x_dataStack[0].workers;
@@ -1319,7 +1362,7 @@ function validateFormWithWorkerCard() {
     });
   }
 
-  // Validate kendaraan
+  // Validate kendaraan (unchanged)
   const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
   if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
     const kendaraan = kendaraanCardElement._x_dataStack[0].kendaraan;
@@ -1548,26 +1591,14 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
 }
 
 // ============================================================
-// PLOT AUTO-UPDATE
+// PLOT AUTO-UPDATE (Updated - dari AJAX)
 // ============================================================
-window.addEventListener('plot-changed', function(e) {
-  updateLuasFromPlot(e.detail.plotCode, e.detail.rowIndex);
-});
-
-function updateLuasFromPlot(plotCode, rowIndex) {
-  let plotData = window.plotsData?.find(p => p.plot === plotCode) ||
-                 window.masterlistData?.find(p => p.plot === plotCode);
-
-  if (plotData) {
-    const luasValue = plotData.luasarea || plotData.luas_area || plotData.luas || plotData.area;
-    if (luasValue && luasValue > 0) {
-      const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
-      if (luasInput) {
-        luasInput.value = luasValue;
-        luasInput.setAttribute('max', luasValue);
-        showToast(`Luas otomatis diupdate: ${luasValue} Ha`, 'success', 2000);
-      }
-    }
+function updateLuasFromPlotInfo(luasSisa, rowIndex) {
+  const luasInput = document.querySelector(`input[name="rows[${rowIndex}][luas]"]`);
+  if (luasInput && luasSisa > 0) {
+    luasInput.value = luasSisa;
+    luasInput.setAttribute('max', luasSisa);
+    showToast(`Luas sisa: ${luasSisa} Ha`, 'success', 2000);
   }
 }
 
@@ -1630,7 +1661,6 @@ function materialPicker(rowIndex) {
     },
 
     init() {
-      // Watch for activity changes
       this.$watch('rowIndex', (newIndex) => {
         const activityInput = document.querySelector(`input[name="rows[${newIndex}][nama]"]`);
         if (activityInput) {
@@ -1648,6 +1678,62 @@ function materialPicker(rowIndex) {
       });
     }
   }
+}
+
+
+/**
+ * Get max luas for specific row from plotInfo
+ */
+function getMaxLuas(rowIndex) {
+    const plotInfoElement = document.querySelector(`[x-data*="plotInfoPicker"][x-init*="rowIndex = ${rowIndex}"]`);
+    if (plotInfoElement && plotInfoElement._x_dataStack && plotInfoElement._x_dataStack[0]) {
+        const luasSisa = plotInfoElement._x_dataStack[0].plotInfo.luassisa;
+        return luasSisa || 999; // Default 999 kalau belum ada data
+    }
+    return 999;
+}
+
+/**
+ * Validate luas input tidak melebihi luas sisa
+ */
+function validateLuasInput(event, rowIndex) {
+    const input = event.target;
+    const value = parseFloat(input.value) || 0;
+    const maxLuas = parseFloat(input.getAttribute('max')) || 999;
+    
+    if (value > maxLuas) {
+        input.value = maxLuas;
+        input.classList.add('border-red-500', 'bg-red-50');
+        showToast(`Luas tidak boleh melebihi ${maxLuas} Ha (luas sisa)`, 'warning', 3000);
+        
+        // Remove error styling after 2 seconds
+        setTimeout(() => {
+            input.classList.remove('border-red-500', 'bg-red-50');
+            input.classList.add('border-gray-200');
+        }, 2000);
+    } else {
+        input.classList.remove('border-red-500', 'bg-red-50');
+        input.classList.add('border-gray-200');
+    }
+}
+
+/**
+ * Check if plot or blok (ALL) is selected untuk enable luas input
+ */
+function isPlotOrBlokSelected(rowIndex) {
+  // Check if plot selected
+  const plotInput = document.querySelector(`input[name="rows[${rowIndex}][plot]"]`);
+  if (plotInput && plotInput.value) {
+    return true;
+  }
+  
+  // Check if blok = "ALL" (blok activity)
+  const blokInput = document.querySelector(`input[name="rows[${rowIndex}][blok]"]`);
+  if (blokInput && blokInput.value === 'ALL') {
+    return true;
+  }
+  
+  return false;
 }
 
 // ============================================================

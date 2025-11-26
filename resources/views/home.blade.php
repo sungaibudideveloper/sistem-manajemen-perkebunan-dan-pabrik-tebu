@@ -1,4 +1,4 @@
-<!-- DASHBOARD HOME PAGE -->
+<!-- HOME PAGE -->
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -64,13 +64,14 @@
                                     Approval
                                 </a>
                                 
-                                <a href="{{ route('report.agronomi.index') }}" 
-                                   class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
+                                <button type="button"
+                                @click="$dispatch('open-reports-modal')"
+                                class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
                                     Reports
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -349,4 +350,127 @@
     </script>
     <!-- Live Chat Component -->
 <x-live-chat />
+
+
+<!-- Reports Modal -->
+<div x-data="{ reportsModalOpen: false }" 
+     @open-reports-modal.window="reportsModalOpen = true"
+     @keydown.escape.window="reportsModalOpen = false">
+    
+    <div x-show="reportsModalOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+         x-cloak>
+        
+        <div @click.away="reportsModalOpen = false"
+             x-show="reportsModalOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-90"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-90"
+             class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+            
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">Reports</h3>
+                    <button @click="reportsModalOpen = false" class="text-white hover:bg-white/20 rounded-lg p-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                @if(in_array('Report Surat Jalan Timbangan', $userPermissions))
+                <a href="{{ route('report.report-surat-jalan-timbangan.index') }}" 
+                   class="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 hover:border-emerald-400 transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 group-hover:text-emerald-700">Surat Jalan & Timbangan</h4>
+                        </div>
+                        <svg class="w-5 h-5 text-emerald-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </a>
+                @endif
+
+                @if(in_array('Report Manajemen Lahan', $userPermissions))
+                <a href="{{ route('report.report-manajemen-lahan.index') }}" 
+                   class="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 hover:border-blue-400 transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 group-hover:text-blue-700">Manajemen Lahan</h4>
+                        </div>
+                        <svg class="w-5 h-5 text-blue-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </a>
+                @endif
+
+                @if(in_array('Trash Report', $userPermissions))
+                <a href="{{ route('report.trash-report.index') }}" 
+                   class="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 hover:border-amber-400 transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 group-hover:text-amber-700">Biaya Panen & Trash</h4>
+                        </div>
+                        <svg class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </a>
+                @endif
+
+                @if(in_array('Report Agronomi', $userPermissions))
+                <a href="{{ route('report.agronomi.index') }}" 
+                   class="p-4 bg-green-50 hover:bg-green-100 rounded-xl border border-green-200 hover:border-green-400 transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 group-hover:text-green-700">Agronomi</h4>
+                        </div>
+                        <svg class="w-5 h-5 text-green-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </a>
+                @endif
+
+            </div>
+        </div>
+    </div>
+</div>
+
 </x-layout>

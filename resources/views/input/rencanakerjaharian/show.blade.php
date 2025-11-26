@@ -272,7 +272,7 @@
           <col style="width: 250px">
           <col style="width: 80px">
           <col style="width: 80px">
-          <col style="width: 100px">
+          <col style="width: 120px">
           <col style="width: 80px">
           <col style="width: 120px">
         </colgroup>
@@ -283,7 +283,7 @@
             <th class="px-3 py-3 text-xs font-bold uppercase text-left">Aktivitas</th>
             <th class="px-3 py-3 text-xs font-bold uppercase">Blok</th>
             <th class="px-3 py-3 text-xs font-bold uppercase">Plot</th>
-            <th class="px-3 py-3 text-xs font-bold uppercase">Info Panen</th>
+            <th class="px-3 py-3 text-xs font-bold uppercase">Info Plot</th>
             <th class="px-3 py-3 text-xs font-bold uppercase">Luas (ha)</th>
             <th class="px-3 py-3 text-xs font-bold uppercase">Material</th>
           </tr>
@@ -291,6 +291,12 @@
 
         <tbody class="divide-y divide-gray-200">
           @forelse ($rkhDetails as $index => $detail)
+            @php
+              // Calculate luas sisa from total_sudah_dikerjakan
+              $luasPlot = $detail->luasarea ?? 0;
+              $totalSudahDikerjakan = $detail->total_sudah_dikerjakan ?? 0;
+              $luasSisa = $luasPlot - $totalSudahDikerjakan;
+            @endphp
             <tr class="hover:bg-gray-50 transition-colors">
               <td class="px-3 py-3 text-sm text-center font-bold text-gray-700">{{ $index + 1 }}</td>
 
@@ -303,21 +309,47 @@
 
               <td class="px-3 py-3 text-sm text-center font-bold text-gray-900">{{ $detail->plot ?? '-' }}</td>
 
-              <td class="px-3 py-3 text-xs text-center">
-                @if($detail->batchno && $detail->batch_lifecycle)
+              {{-- ✅ NEW: Info Plot (untuk semua activity) --}}
+              <td class="px-3 py-3 text-xs">
+                @if($detail->batch_number && $detail->batch_lifecycle)
+                  {{-- Panen Activity: Show batch info --}}
                   <div class="space-y-1">
-                    <span
-                      class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border
                       {{ $detail->batch_lifecycle === 'PC' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : '' }}
                       {{ $detail->batch_lifecycle === 'RC1' ? 'bg-green-100 text-green-800 border-green-300' : '' }}
                       {{ $detail->batch_lifecycle === 'RC2' ? 'bg-blue-100 text-blue-800 border-blue-300' : '' }}
                       {{ $detail->batch_lifecycle === 'RC3' ? 'bg-purple-100 text-purple-800 border-purple-300' : '' }}">
                       {{ $detail->batch_lifecycle }}
                     </span>
-                    <div class="text-[10px] text-gray-600 font-semibold">{{ $detail->batchno }}</div>
+                    <div class="text-[10px] text-gray-600">
+                      <span class="font-semibold">Batch:</span> {{ $detail->batch_number }}
+                    </div>
+                    @if($detail->batcharea)
+                      <div class="text-[10px] text-gray-600">
+                        <span class="font-semibold">Area Batch:</span> {{ number_format($detail->batcharea, 2) }} Ha
+                      </div>
+                    @endif
+                    @if($detail->tanggalpanen)
+                      <div class="text-[10px] text-gray-600">
+                        <span class="font-semibold">Tgl Panen:</span> {{ \Carbon\Carbon::parse($detail->tanggalpanen)->format('d/m/Y') }}
+                      </div>
+                    @endif
                   </div>
                 @else
-                  <span class="text-gray-400">-</span>
+                  {{-- Non-Panen Activity: Show luas info --}}
+                  <div class="space-y-1">
+                    <div class="text-[10px] text-gray-700">
+                      <span class="font-semibold">Luas Plot:</span> {{ number_format($luasPlot, 2) }} Ha
+                    </div>
+                    <div class="text-[10px] text-gray-700">
+                      <span class="font-semibold">Luas Sisa:</span> {{ number_format($luasSisa, 2) }} Ha
+                    </div>
+                    @if($totalSudahDikerjakan > 0)
+                      <div class="text-[10px] text-gray-500">
+                        <span class="font-semibold">Sudah:</span> {{ number_format($totalSudahDikerjakan, 2) }} Ha
+                      </div>
+                    @endif
+                  </div>
                 @endif
               </td>
 
@@ -412,14 +444,188 @@
     </button>
   </div>
 
-  <!-- Material Modal (tetap sama) -->
-  <div x-data="materialShowModal()" x-cloak>
-    <!-- Modal content sama seperti sebelumnya -->
+  <!-- Material Modal -->
+  <div x-data="{
+    showMaterialModal: false,
+    currentMaterial: {
+      activitycode: '',
+      activityname: '',
+      blok: '',
+      plot: '',
+      luasarea: 0,
+      herbisidagroupid: null,
+      herbisidagroupname: ''
+    },
+    materialItems: [],
+
+    init() {
+      window.addEventListener('open-material-modal', (e) => {
+        this.currentMaterial = {
+          activitycode: e.detail.activitycode || '',
+          activityname: e.detail.activityname || '',
+          blok: e.detail.blok || '',
+          plot: e.detail.plot || '',
+          luasarea: parseFloat(e.detail.luasarea) || 0,
+          herbisidagroupid: e.detail.herbisidagroupid || null,
+          herbisidagroupname: e.detail.herbisidagroupname || ''
+        };
+        this.loadMaterialItems();
+        this.showMaterialModal = true;
+      });
+    },
+
+    loadMaterialItems() {
+      if (!this.currentMaterial.herbisidagroupid || !window.herbisidaData) {
+        this.materialItems = [];
+        return;
+      }
+
+      this.materialItems = window.herbisidaData
+        .filter(item => 
+          item.herbisidagroupid == this.currentMaterial.herbisidagroupid &&
+          item.activitycode === this.currentMaterial.activitycode
+        )
+        .map(item => ({
+          itemcode: item.itemcode || '',
+          itemname: item.itemname || 'Unknown',
+          dosageperha: parseFloat(item.dosageperha) || 0,
+          measure: item.measure || '-'
+        }));
+    },
+
+    getTotalQty() {
+      if (this.materialItems.length === 0) return '-';
+      
+      const total = this.materialItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.dosageperha) * parseFloat(this.currentMaterial.luasarea));
+      }, 0);
+      
+      return total.toFixed(2);
+    }
+  }" x-cloak>
+    
+    <!-- Modal Overlay -->
+    <div
+      x-show="showMaterialModal"
+      x-cloak
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+      style="display: none;"
+      @click.self="showMaterialModal = false"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+    >
+      <!-- Modal Content -->
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col"
+          x-transition:enter="transition ease-out duration-300"
+          x-transition:enter-start="opacity-0 transform scale-95"
+          x-transition:enter-end="opacity-100 transform scale-100"
+          x-transition:leave="transition ease-in duration-200"
+          x-transition:leave-start="opacity-100 transform scale-100"
+          x-transition:leave-end="opacity-0 transform scale-95">
+        
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Detail Material</h2>
+            <button @click="showMaterialModal = false" type="button" class="text-gray-400 hover:text-gray-600 rounded-full p-2 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {{-- Content --}}
+        <div class="flex-1 overflow-y-auto p-6">
+          {{-- Activity Info --}}
+          <div class="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-semibold text-gray-700">Aktivitas:</span>
+                <span class="ml-2 text-gray-900" x-text="currentMaterial.activitycode + ' - ' + currentMaterial.activityname"></span>
+              </div>
+              <div>
+                <span class="font-semibold text-gray-700">Blok-Plot:</span>
+                <span class="ml-2 text-gray-900" x-text="currentMaterial.blok + '-' + currentMaterial.plot"></span>
+              </div>
+              <div>
+                <span class="font-semibold text-gray-700">Luas Area:</span>
+                <span class="ml-2 text-gray-900" x-text="currentMaterial.luasarea + ' Ha'"></span>
+              </div>
+              <div>
+                <span class="font-semibold text-gray-700">Grup Material:</span>
+                <span class="ml-2 text-green-800 font-semibold" x-text="currentMaterial.herbisidagroupname"></span>
+              </div>
+            </div>
+          </div>
+
+          {{-- Material Items Table --}}
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-800 text-white">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Kode</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Nama Material</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">Dosis/Ha</th>
+                  <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">Satuan</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">Total Qty</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                <template x-for="item in materialItems" :key="item.itemcode">
+                  <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-sm font-mono text-gray-900" x-text="item.itemcode"></td>
+                    <td class="px-4 py-3 text-sm text-gray-900" x-text="item.itemname"></td>
+                    <td class="px-4 py-3 text-sm text-right text-gray-700" x-text="item.dosageperha.toFixed(2)"></td>
+                    <td class="px-4 py-3 text-sm text-center text-gray-700" x-text="item.measure"></td>
+                    <td class="px-4 py-3 text-sm text-right font-semibold text-green-700" 
+                        x-text="(parseFloat(item.dosageperha) * parseFloat(currentMaterial.luasarea)).toFixed(2)"></td>
+                  </tr>
+                </template>
+              </tbody>
+              <tfoot class="bg-gray-100 border-t-2 border-gray-300">
+                <tr>
+                  <td colspan="4" class="px-4 py-3 text-sm font-bold text-gray-700 text-right">
+                    Total Material untuk <span x-text="currentMaterial.luasarea"></span> Ha:
+                  </td>
+                  <td class="px-4 py-3 text-sm font-bold text-green-700 text-right" x-text="getTotalQty()"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {{-- Empty State --}}
+          <template x-if="materialItems.length === 0">
+            <div class="text-center py-8 text-gray-400">
+              <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+              </svg>
+              <p class="text-sm font-medium">Tidak ada material untuk grup ini</p>
+            </div>
+          </template>
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-end">
+          <button @click="showMaterialModal = false" type="button" 
+                  class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
     window.herbisidaData = @json($herbisidagroups ?? []);
-    // Material modal functions sama seperti sebelumnya
+    
+    function openMaterialModal(data) {
+      window.dispatchEvent(new CustomEvent('open-material-modal', { detail: data }));
+    }
   </script>
 
 </x-layout>

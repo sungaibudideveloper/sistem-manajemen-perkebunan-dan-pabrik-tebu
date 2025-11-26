@@ -386,8 +386,7 @@
             </div>
         </div>
 
-        <!-- Modal Report -->
-        <!-- Modal Report -->
+        <!-- Modal Report - Updated Version with Monthly Option -->
         <div x-show="showReportModal" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto"
             x-transition:enter="ease-out duration-300"
@@ -418,31 +417,11 @@
                                 <div class="w-full">
                                     <!-- Header -->
                                     <div class="flex items-center mb-4">
-
                                         <h3 class="ml-3 text-lg leading-6 font-medium text-gray-900">Generate Report Trash</h3>
                                     </div>
 
                                     <!-- Form Fields -->
                                     <div class="space-y-4">
-                                        <!-- Date Range -->
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                                    Tanggal Mulai <span class="text-red-500">*</span>
-                                                </label>
-                                                <input type="date" name="start_date" x-model="reportForm.start_date"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
-                                                    required>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                                    Tanggal Selesai <span class="text-red-500">*</span>
-                                                </label>
-                                                <input type="date" name="end_date" x-model="reportForm.end_date"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
-                                                    required>
-                                            </div>
-                                        </div>
 
                                         <!-- Report Type -->
                                         <div>
@@ -455,38 +434,98 @@
                                                 <option value="">Pilih Tipe Report</option>
                                                 <option value="harian">Laporan Harian</option>
                                                 <option value="mingguan">Laporan Mingguan</option>
+                                                <option value="bulanan">Laporan Bulanan</option>
                                             </select>
                                         </div>
 
-                                        <div>
+                                        <!-- Date Range - Show for Harian & Mingguan -->
+                                        <div x-show="reportForm.report_type === 'harian' || reportForm.report_type === 'mingguan'"
+                                            x-transition
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Tanggal Mulai <span class="text-red-500">*</span>
+                                                </label>
+                                                <input type="date" name="start_date" x-model="reportForm.start_date"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="reportForm.report_type === 'harian' || reportForm.report_type === 'mingguan'">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Tanggal Selesai <span class="text-red-500">*</span>
+                                                </label>
+                                                <input type="date" name="end_date" x-model="reportForm.end_date"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="reportForm.report_type === 'harian' || reportForm.report_type === 'mingguan'">
+                                            </div>
+                                        </div>
+
+                                        <!-- Month & Year - Show for Bulanan -->
+                                        <div x-show="reportForm.report_type === 'bulanan'"
+                                            x-transition
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Bulan <span class="text-red-500">*</span>
+                                                </label>
+                                                <select name="month" x-model="reportForm.month"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="reportForm.report_type === 'bulanan'">
+                                                    <option value="">Pilih Bulan</option>
+                                                    <template x-for="month in getMonthOptions()" :key="month.value">
+                                                        <option :value="month.value" x-text="month.label"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Tahun <span class="text-red-500">*</span>
+                                                </label>
+                                                <select name="year" x-model="reportForm.year"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="reportForm.report_type === 'bulanan'">
+                                                    <option value="">Pilih Tahun</option>
+                                                    <template x-for="year in getYearOptions()" :key="year">
+                                                        <option :value="year" x-text="year"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Company Selection - Only show for Mingguan -->
+                                        <div x-show="reportForm.report_type === 'mingguan'" x-transition>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                                 Company <span class="text-red-500">*</span>
                                             </label>
                                             <select name="company" x-model="reportForm.company"
-                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                :required="reportForm.report_type === 'mingguan'">
                                                 <option value="">Pilih Company</option>
-
-                                                <!-- Untuk Harian: Hanya All -->
-                                                <template x-if="reportForm.report_type === 'harian'">
-                                                    <option value="all">Semua Company</option>
-                                                </template>
-
-                                                <!-- Untuk Mingguan: TBL dan BNIL -->
-                                                <template x-if="reportForm.report_type === 'mingguan'">
-                                                    <div>
-                                                        <option value="TBL">TBL</option>
-                                                        <option value="BNIL">BNIL</option>
-                                                    </div>
-                                                </template>
+                                                <option value="TBL">TBL</option>
+                                                <option value="BNIL">BNIL</option>
                                             </select>
 
-                                            <!-- Info text berdasarkan tipe -->
-                                            <div x-show="reportForm.report_type === 'harian'" class="mt-1 text-xs text-gray-500">
-                                                Laporan harian menampilkan semua company
-                                            </div>
-                                            <div x-show="reportForm.report_type === 'mingguan'" class="mt-1 text-xs text-gray-500">
+                                            <div class="mt-1 text-xs text-gray-500">
                                                 Laporan mingguan berdasarkan kelompok company
                                             </div>
+                                        </div>
+
+                                        <!-- Hidden input for harian and bulanan -->
+                                        <input x-show="reportForm.report_type === 'harian' || reportForm.report_type === 'bulanan'"
+                                            type="hidden" name="company" value="all">
+
+                                        <!-- Info text untuk harian dan bulanan -->
+                                        <div x-show="reportForm.report_type === 'harian'" class="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Laporan harian akan menampilkan data dari semua company
+                                        </div>
+                                        <div x-show="reportForm.report_type === 'bulanan'" class="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Laporan bulanan akan menampilkan data dari semua company
                                         </div>
                                     </div>
                                 </div>
@@ -523,7 +562,7 @@
         function trashManagement() {
             return {
                 showModal: false,
-                showReportModal: false, // Tambah ini
+                showReportModal: false,
                 mode: 'create',
                 modalTitle: '',
                 formAction: '',
@@ -547,16 +586,18 @@
                     berat_kotor: ''
                 },
 
-                // Tambah reportForm
+                // Update reportForm dengan field untuk bulanan
                 reportForm: {
                     start_date: '',
                     end_date: '',
+                    month: '', // Field untuk bulan
+                    year: '', // Field untuk tahun
                     report_type: 'harian',
                     company: '{{ session("companycode") }}',
                     format: 'pdf'
                 },
 
-                // Method init untuk set default dates
+                // Method init untuk set default dates dan month/year
                 init() {
                     const today = new Date();
                     const yesterday = new Date(today);
@@ -564,6 +605,10 @@
 
                     this.reportForm.end_date = today.toISOString().split('T')[0];
                     this.reportForm.start_date = yesterday.toISOString().split('T')[0];
+
+                    // Set default month dan year ke bulan/tahun sekarang
+                    this.reportForm.month = String(today.getMonth() + 1).padStart(2, '0');
+                    this.reportForm.year = String(today.getFullYear());
                 },
 
                 openModal(mode, data = null) {
@@ -612,8 +657,8 @@
                     // Reset company selection ketika report type berubah
                     this.reportForm.company = '';
 
-                    // Jika harian, auto set ke 'all'
-                    if (this.reportForm.report_type === 'harian') {
+                    // Jika harian atau bulanan, auto set ke 'all'
+                    if (this.reportForm.report_type === 'harian' || this.reportForm.report_type === 'bulanan') {
                         this.reportForm.company = 'all';
                     }
                     // Untuk mingguan, biarkan kosong supaya user harus pilih company spesifik
@@ -723,10 +768,75 @@
                     this.reportForm = {
                         start_date: yesterday.toISOString().split('T')[0],
                         end_date: today.toISOString().split('T')[0],
+                        month: String(today.getMonth() + 1).padStart(2, '0'),
+                        year: String(today.getFullYear()),
                         report_type: 'harian',
                         company: '{{ session("companycode") }}',
                         format: 'pdf'
                     };
+                },
+
+                // Helper method untuk generate list tahun
+                getYearOptions() {
+                    const currentYear = new Date().getFullYear();
+                    const years = [];
+                    for (let i = currentYear; i >= currentYear - 10; i--) {
+                        years.push(i);
+                    }
+                    return years;
+                },
+
+                // Helper method untuk generate list bulan
+                getMonthOptions() {
+                    return [{
+                            value: '01',
+                            label: 'Januari'
+                        },
+                        {
+                            value: '02',
+                            label: 'Februari'
+                        },
+                        {
+                            value: '03',
+                            label: 'Maret'
+                        },
+                        {
+                            value: '04',
+                            label: 'April'
+                        },
+                        {
+                            value: '05',
+                            label: 'Mei'
+                        },
+                        {
+                            value: '06',
+                            label: 'Juni'
+                        },
+                        {
+                            value: '07',
+                            label: 'Juli'
+                        },
+                        {
+                            value: '08',
+                            label: 'Agustus'
+                        },
+                        {
+                            value: '09',
+                            label: 'September'
+                        },
+                        {
+                            value: '10',
+                            label: 'Oktober'
+                        },
+                        {
+                            value: '11',
+                            label: 'November'
+                        },
+                        {
+                            value: '12',
+                            label: 'Desember'
+                        }
+                    ];
                 }
             }
         }

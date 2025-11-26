@@ -98,7 +98,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-gray-500">
+                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">
                                 <div class="flex flex-col items-center gap-2">
                                     <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
@@ -177,7 +177,7 @@
                                 <td class="px-4 py-3 text-center text-gray-400 italic text-xs" colspan="4">Menunggu input hasil</td>
                             @endif
                             
-                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan data real --}}
+                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan hyperlink SJ --}}
                             <td class="px-4 py-3">
                                 @php
                                     $plotData = $subkontraktorDetail->where('plot', $item->plot);
@@ -204,7 +204,13 @@
                                                 <span class="font-semibold text-gray-900">
                                                     {{ $sk->subkontraktor_nama ?? $sk->subkontraktor_id }}
                                                 </span>
-                                                <span class="text-gray-500 ml-1">({{ $sk->jumlah_sj }} SJ)</span>
+                                                <button 
+                                                    onclick="showSJModal('{{ $item->plot }}', '{{ $sk->subkontraktor_id }}')"
+                                                    class="text-blue-600 hover:text-blue-800 underline ml-1 no-print cursor-pointer"
+                                                >
+                                                    ({{ $sk->jumlah_sj }} SJ)
+                                                </button>
+                                                <span class="text-gray-500 ml-1 print-only">({{ $sk->jumlah_sj }} SJ)</span>
                                             </div>
                                         </div>
                                         @endforeach
@@ -267,7 +273,7 @@
                             <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
                             <td class="px-4 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
                             
-                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan data real untuk Petak Baru --}}
+                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan hyperlink SJ untuk Petak Baru --}}
                             <td class="px-4 py-3">
                                 @php
                                     $plotData = $subkontraktorDetail->where('plot', $item->plot);
@@ -278,7 +284,13 @@
                                         @foreach($plotData as $sk)
                                             <div class="mb-1">
                                                 <span class="font-semibold text-gray-900">{{ $sk->subkontraktor_nama ?? $sk->subkontraktor_id }}</span>
-                                                <span class="text-gray-500">({{ $sk->jumlah_sj }} SJ)</span>
+                                                <button 
+                                                    onclick="showSJModal('{{ $item->plot }}', '{{ $sk->subkontraktor_id }}')"
+                                                    class="text-blue-600 hover:text-blue-800 underline ml-1 no-print cursor-pointer"
+                                                >
+                                                    ({{ $sk->jumlah_sj }} SJ)
+                                                </button>
+                                                <span class="text-gray-500 ml-1 print-only">({{ $sk->jumlah_sj }} SJ)</span>
                                             </div>
                                         @endforeach
                                     </div>
@@ -483,10 +495,95 @@
         </div>
     </div>
 
+    {{-- ✅ MODAL SJ --}}
+    <div id="sjModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden items-center justify-center no-print">
+        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white" id="modalTitle">Daftar Surat Jalan</h3>
+                <button 
+                    onclick="closeSJModal()"
+                    class="text-white hover:text-gray-200 transition-colors"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <div id="modalLoading" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-sm text-gray-600">Memuat data...</p>
+                </div>
+                
+                <div id="modalContent" class="hidden">
+                    <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="text-sm">
+                                <span class="font-semibold text-gray-700">Plot:</span> <span id="modalPlot" class="font-mono text-gray-900"></span>
+                                <span class="mx-2 text-gray-400">•</span>
+                                <span class="font-semibold text-gray-700">Subkontraktor:</span> <span id="modalSubkontraktor" class="text-gray-900"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="min-w-full divide-y divide-gray-300 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">No</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Nomor SJ</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Tanggal</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sjTableBody" class="divide-y divide-gray-200 bg-white">
+                            <!-- Data will be inserted here via JavaScript -->
+                        </tbody>
+                    </table>
+
+                    <div id="noDataMessage" class="hidden text-center py-8 text-gray-500">
+                        <svg class="w-16 h-16 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p class="text-sm">Tidak ada surat jalan ditemukan</p>
+                    </div>
+                </div>
+
+                <div id="modalError" class="hidden text-center py-8">
+                    <svg class="w-16 h-16 mx-auto text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm text-red-600">Gagal memuat data</p>
+                    <p class="text-xs text-gray-500 mt-1" id="errorMessage"></p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-200">
+                <button 
+                    onclick="closeSJModal()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         @media print {
             .no-print {
                 display: none !important;
+            }
+            
+            .print-only {
+                display: inline !important;
             }
             
             body {
@@ -500,6 +597,10 @@
             .action-buttons {
                 display: none;
             }
+        }
+
+        .print-only {
+            display: none;
         }
     </style>
 
@@ -528,5 +629,107 @@
                 });
             }, 1000);
         }
+
+        async function showSJModal(plot, subkontraktorId) {
+            const modal = document.getElementById('sjModal');
+            const loading = document.getElementById('modalLoading');
+            const content = document.getElementById('modalContent');
+            const error = document.getElementById('modalError');
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Reset states
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+            error.classList.add('hidden');
+            
+            // Set plot and subkontraktor info
+            document.getElementById('modalPlot').textContent = plot;
+            
+            try {
+                const response = await fetch(`{{ route('input.rencanakerjaharian.lkh-panen-report.get-sj') }}?plot=${plot}&subkontraktor_id=${subkontraktorId}&lkhno={{ $lkhData->lkhno }}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update subkontraktor name
+                    document.getElementById('modalSubkontraktor').textContent = data.subkontraktor_nama || subkontraktorId;
+                    
+                    // Populate table
+                    const tbody = document.getElementById('sjTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (data.surat_jalan.length > 0) {
+                        data.surat_jalan.forEach((sj, index) => {
+                            const row = `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-gray-700">${index + 1}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="font-mono font-semibold text-blue-600">${sj.suratjalanno}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">
+                                        ${new Date(sj.tanggalcetakpossecurity).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${sj.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                            ${sj.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a 
+                                            href="{{ route('report.report-surat-jalan-timbangan.index') }}/${sj.suratjalanno}" 
+                                            target="_blank"
+                                            class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                        >
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                            Lihat Detail
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                        
+                        document.getElementById('noDataMessage').classList.add('hidden');
+                    } else {
+                        document.getElementById('noDataMessage').classList.remove('hidden');
+                    }
+                    
+                    loading.classList.add('hidden');
+                    content.classList.remove('hidden');
+                } else {
+                    throw new Error(data.message || 'Gagal memuat data');
+                }
+            } catch (err) {
+                console.error('Error loading SJ data:', err);
+                document.getElementById('errorMessage').textContent = err.message;
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+            }
+        }
+
+        function closeSJModal() {
+            const modal = document.getElementById('sjModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('sjModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSJModal();
+            }
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSJModal();
+            }
+        });
     </script>
 </x-layout>

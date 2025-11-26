@@ -469,10 +469,28 @@ function activityPicker(rowIndex) {
         activitycode: activity.activitycode,
         activityname: activity.activityname,
         usingvehicle: activity.usingvehicle,
-        jenistenagakerja: activity.jenistenagakerja
+        jenistenagakerja: activity.jenistenagakerja,
+        isblokactivity: activity.isblokactivity || 0  // ✅ TAMBAH INI
       };
       
       Alpine.store('activityPerRow').setActivity(this.rowIndex, this.selected);
+      
+      // Auto disable plot & set null kalau blok activity
+      if (this.selected.isblokactivity === 1) {
+        const plotPicker = document.querySelector(`[x-data*="plotPicker"][x-init*="rowIndex = ${this.rowIndex}"]`);
+        if (plotPicker && plotPicker._x_dataStack && plotPicker._x_dataStack[0]) {
+          plotPicker._x_dataStack[0].selected.plot = '';
+          plotPicker._x_dataStack[0].isBlokActivity = true;
+        }
+        
+        // Set hidden input plot = null
+        const plotInput = document.querySelector(`input[name="rows[${this.rowIndex}][plot]"]`);
+        if (plotInput) {
+          plotInput.value = '';
+          plotInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      
       this.updateJenisField();
       this.closeModal();
     },
