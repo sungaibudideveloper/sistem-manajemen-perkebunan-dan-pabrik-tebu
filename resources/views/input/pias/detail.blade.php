@@ -325,6 +325,12 @@
     const sumNeedTJIntConst = needTJIntArr.reduce((a,b)=>a+b,0);
     const sumNeedTCIntConst = needTCIntArr.reduce((a,b)=>a+b,0);
 
+    // ✅ INIT: Tampilkan total kebutuhan dan stok saat page load
+    if (totalTJEl) totalTJEl.textContent = sumNeedTJIntConst.toLocaleString('id-ID');
+    if (totalTCEl) totalTCEl.textContent = sumNeedTCIntConst.toLocaleString('id-ID');
+    if (stokTJEl) stokTJEl.textContent = fmt0(stokTJ0);
+    if (stokTCEl) stokTCEl.textContent = fmt0(stokTC0);
+
     // ================= CRC32 (match PHP) =================
     const CRC_TABLE = (() => {
       const t = new Uint32Array(256);
@@ -520,41 +526,61 @@ scheduleFirstRender();
       const mq = window.matchMedia('print');
       mq.addEventListener?.('change', e => { if (e.matches && hasBoth()) render(); });
     }
+
+    // ===== FUNGSI RECALC (PINDAHKAN KE DALAM SCOPE) =====
+    function recalcTotalsFromInputs(){
+      const stokTJ = parseFloat(inputTJ.value)||0;
+      const stokTC = parseFloat(inputTC.value)||0;
+      const sumTJ  = sumInputs('.tj-result');
+      const sumTC  = sumInputs('.tc-result');
+
+      if (sumTJCell)  sumTJCell.textContent  = fmt0(sumTJ);
+      if (sumTCCell)  sumTCCell.textContent  = fmt0(sumTC);
+      
+      // Update stok
+      if (stokTJEl) stokTJEl.textContent = fmt0(stokTJ);
+      if (stokTCEl) stokTCEl.textContent = fmt0(stokTC);
+      
+      // Update sisa
+      sisaTJEl.textContent = fmt0(Math.floor(stokTJ) - sumTJ);
+      sisaTCEl.textContent = fmt0(Math.floor(stokTC) - sumTC);
+
+      // Update total kebutuhan
+      if (totalTJEl) totalTJEl.textContent = sumNeedTJIntConst.toLocaleString('id-ID');
+      if (totalTCEl) totalTCEl.textContent = sumNeedTCIntConst.toLocaleString('id-ID');
+
+      const okTJ = sumTJ >= sumNeedTJIntConst;
+      const okTC = sumTC >= sumNeedTCIntConst;
+      statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
+      statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
+      statusTJ.className = `text-center text-sm font-medium rounded-md py-1 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+      statusTC.className = `text-center text-sm font-medium rounded-md py-1 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
+    }
+
+    // Helper function
+    function sumInputs(sel){ 
+      return [...document.querySelectorAll(sel)].reduce((a,el)=> a + (parseFloat(el.value)||0), 0); 
+    }
+
+    // ✅ Real-time update saat user mengedit TJ/TC di plot
+    plotTable.addEventListener('input', (e)=>{
+      if (e.target.matches('.tj-result, .tc-result')) recalcTotalsFromInputs();
+    });
+
+    plotTable.addEventListener('change', (e)=>{
+      if (e.target.matches('.tj-result, .tc-result')) recalcTotalsFromInputs();
+    });
+
+    // Event listener untuk input stok TJ/TC
+    inputTJ.addEventListener('change', recalcTotalsFromInputs);
+    inputTC.addEventListener('change', recalcTotalsFromInputs);
+    inputTJ.addEventListener('input', recalcTotalsFromInputs);
+    inputTC.addEventListener('input', recalcTotalsFromInputs);
+
+    // Initial calculation
+    setTimeout(recalcTotalsFromInputs, 250);
+
   });
-
-  // tambahan untuk update
-  function sumInputs(sel){ return [...document.querySelectorAll(sel)]
-  .reduce((a,el)=> a + (parseFloat(el.value)||0), 0); }
-
-function recalcTotalsFromInputs(){
-  const stokTJ = parseFloat(inputTJ.value)||0;
-  const stokTC = parseFloat(inputTC.value)||0;
-  const sumTJ  = sumInputs('.tj-result');
-  const sumTC  = sumInputs('.tc-result');
-
-  if (sumTJCell)  sumTJCell.textContent  = fmt0(sumTJ);
-  if (sumTCCell)  sumTCCell.textContent  = fmt0(sumTC);
-  sisaTJEl.textContent = fmt0(Math.floor(stokTJ) - sumTJ);
-  sisaTCEl.textContent = fmt0(Math.floor(stokTC) - sumTC);
-
-  const okTJ = sumTJ >= sumNeedTJIntConst;   // sudah dihitung sebelumnya
-  const okTC = sumTC >= sumNeedTCIntConst;
-  statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
-  statusTC.textContent = okTC ? 'TC CUKUP' : 'TC KURANG';
-  statusTJ.className = `text-center text-sm font-medium rounded-md py-1 ${okTJ ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-  statusTC.className = `text-center text-sm font-medium rounded-md py-1 ${okTC ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`;
-}
-
-
-plotTable.addEventListener('change', (e)=>{
-  if (e.target.matches('.tj-result, .tc-result')) recalcTotalsFromInputs();
-});
-
-
-inputTJ.addEventListener('change', recalcTotalsFromInputs);
-inputTC.addEventListener('change', recalcTotalsFromInputs);
-
-setTimeout(recalcTotalsFromInputs, 250);
 
 
 </script>

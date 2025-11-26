@@ -210,7 +210,7 @@ class PiasController extends Controller
     $validMap = array_flip($validKeys);
 
     // Ambil companycode
-    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', session())->value('companycode');
+    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', auth()->user()->companycode)->value('companycode');
 
     // 4) Simpan dalam transaksi
     return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC) {

@@ -42,8 +42,28 @@
       </div>
     </div>
 
-    {{-- Search Bar --}}
-    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+    {{-- ✅ NEW: Checkbox "All Blok" untuk blok activity --}}
+    <div x-show="isBlokActivity" class="px-6 py-4 bg-blue-50 border-b border-blue-200">
+      <label class="flex items-center space-x-3 cursor-pointer group">
+        <input 
+          type="checkbox" 
+          x-model="useAllBlok"
+          @change="handleAllBlokToggle()"
+          class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition-colors"
+        >
+        <div class="flex-1">
+          <span class="text-sm font-semibold text-blue-900 group-hover:text-blue-700 transition-colors">
+            Gunakan Semua Blok
+          </span>
+          <p class="text-xs text-blue-700 mt-0.5">
+            Aktivitas ini berlaku untuk seluruh area blok
+          </p>
+        </div>
+      </label>
+    </div>
+
+    {{-- Search Bar (hide kalau useAllBlok) --}}
+    <div x-show="!useAllBlok" class="px-6 py-4 bg-gray-50 border-b border-gray-200">
       <div class="relative">
         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
           <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +80,8 @@
       </div>
     </div>
 
-    {{-- Daftar Blok --}}
-    <div class="flex-1 overflow-hidden">
+    {{-- Daftar Blok (hide kalau useAllBlok) --}}
+    <div x-show="!useAllBlok" class="flex-1 overflow-hidden">
       <div class="overflow-y-auto" style="max-height: 400px;">
         <table class="w-full">
           <thead class="bg-gray-100 sticky top-0">
@@ -89,13 +109,31 @@
       </div>
     </div>
 
-    {{-- Footer --}}
-        <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500">
-      <!-- Clear button -->
-      
+    {{-- ✅ NEW: Confirmation ketika useAllBlok --}}
+    <div x-show="useAllBlok" class="flex-1 flex items-center justify-center py-12">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Semua Blok Dipilih</h3>
+        <p class="text-sm text-gray-600 mb-4">Aktivitas ini akan berlaku untuk seluruh area</p>
+        <button
+          type="button"
+          @click="confirmAllBlok()"
+          class="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Konfirmasi
+        </button>
+      </div>
+    </div>
 
+    {{-- Footer --}}
+    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500">
       <div class="flex space-x-4">
-        <span x-text="`${filteredBloks.length} blok tersedia`"></span>
+        <span x-show="!useAllBlok" x-text="`${filteredBloks.length} blok tersedia`"></span>
+        <span x-show="useAllBlok" class="text-blue-600 font-medium">Mode: Semua Blok</span>
       </div>
       <button
         type="button"
@@ -108,14 +146,17 @@
   </div>
 </div>
 
+@once
 @push('scripts')
 <script>
-// ===== HANYA FUNCTION COMPONENT - TIDAK ADA DUPLIKASI =====
 function blokPicker(rowIndex) {
   return {
     open: false,
     searchQuery: '',
-    bloks: window.bloksData || [], // Ambil dari global yang sudah di-set di create.blade.php
+    useAllBlok: false,
+    isBlokActivity: false,
+    currentActivityCode: '',
+    bloks: window.bloksData || [],
     selected: { blok: '', id: '' },
     rowIndex: rowIndex,
 
@@ -129,10 +170,8 @@ function blokPicker(rowIndex) {
 
     selectBlok(item) {
       this.selected = item;
-      // Simpan blok yang dipilih untuk baris ini menggunakan store global
       Alpine.store('blokPerRow').setBlok(this.rowIndex, item.blok);
       
-      // Reset plot selection untuk baris ini
       const plotPicker = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
       if (plotPicker && plotPicker._x_dataStack) {
         const plotComponent = plotPicker._x_dataStack[0];
@@ -144,23 +183,77 @@ function blokPicker(rowIndex) {
       this.open = false;
     },
 
+    handleAllBlokToggle() {
+      if (this.useAllBlok) {
+        // User checked "All Blok" - akan dikonfirmasi nanti
+      } else {
+        // User unchecked - reset
+        this.selected = { blok: '', id: '' };
+        Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
+      }
+    },
+
+    confirmAllBlok() {
+      // Set blok = "ALL"
+      this.selected = { blok: 'ALL', id: 'ALL' };
+      Alpine.store('blokPerRow').setBlok(this.rowIndex, 'ALL');
+      
+      // Reset plot
+      const plotPicker = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
+      if (plotPicker && plotPicker._x_dataStack) {
+        const plotComponent = plotPicker._x_dataStack[0];
+        if (plotComponent.selected) {
+          plotComponent.selected = { plot: '' };
+        }
+      }
+      
+      this.open = false;
+      showToast('Semua blok dipilih untuk aktivitas ini', 'success', 2000);
+    },
+
     init() {
-      // Restore nilai yang tersimpan jika ada
       const savedBlok = Alpine.store('blokPerRow').getBlok(this.rowIndex);
       if (savedBlok) {
-        const foundBlok = this.bloks.find(b => b.blok === savedBlok);
-        if (foundBlok) {
-          this.selected = foundBlok;
+        if (savedBlok === 'ALL') {
+          this.useAllBlok = true;
+          this.selected = { blok: 'ALL', id: 'ALL' };
+        } else {
+          const foundBlok = this.bloks.find(b => b.blok === savedBlok);
+          if (foundBlok) {
+            this.selected = foundBlok;
+          }
         }
+      }
+
+      // Watch activity changes untuk enable/disable
+      this.$watch(() => {
+        const activityStore = Alpine.store('activityPerRow');
+        const activity = activityStore.getActivity(this.rowIndex);
+        return activity?.isblokactivity;
+      }, (isBlok) => {
+        this.isBlokActivity = isBlok === 1;
+        if (!this.isBlokActivity && this.useAllBlok) {
+          // Activity changed to non-blok activity, reset
+          this.useAllBlok = false;
+          this.clear();
+        }
+      });
+
+      const activityInput = document.querySelector(`input[name="rows[${this.rowIndex}][nama]"]`);
+      if (activityInput) {
+        const observer = new MutationObserver(() => {
+          this.currentActivityCode = activityInput.value || '';
+        });
+        observer.observe(activityInput, { attributes: true, attributeFilter: ['value'] });
+        this.currentActivityCode = activityInput.value || '';
       }
     },
 
     clear() {
-      // Clear this component's selection
       this.selected = { blok: '', id: '' };
-      // Clear the global store so plotPicker knows there's no blok
+      this.useAllBlok = false;
       Alpine.store('blokPerRow').setBlok(this.rowIndex, '');
-      // Also clear any plot selection within the same row
+      
       const plotEl = this.$el.closest('tr').querySelector('[x-data*="plotPicker"]');
       if (plotEl && plotEl._x_dataStack) {
         plotEl._x_dataStack[0].selected = { plot: '' };
@@ -172,4 +265,4 @@ function blokPicker(rowIndex) {
 }
 </script>
 @endpush
-
+@endonce

@@ -132,6 +132,7 @@ function plotPicker(rowIndex) {
     open: false,
     searchQuery: '',
     showOnPanenOnly: false,
+    isBlokActivity: false,
     masterlist: window.masterlistData || [],
     selected: { plot: '' },
     rowIndex: rowIndex,
@@ -184,6 +185,18 @@ function plotPicker(rowIndex) {
         if (newBlok !== oldBlok) {
           this.selected = { plot: '' };
           this.showOnPanenOnly = false;
+        }
+      });
+      
+      // Watch activity changes
+      this.$watch(() => {
+        const activityStore = Alpine.store('activityPerRow');
+        const activity = activityStore.getActivity(this.rowIndex);
+        return activity?.isblokactivity;
+      }, (isBlok) => {
+        this.isBlokActivity = isBlok === 1;
+        if (this.isBlokActivity) {
+          this.selected = { plot: '' };
         }
       });
     }
