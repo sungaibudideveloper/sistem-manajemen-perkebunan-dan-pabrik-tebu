@@ -223,7 +223,7 @@
                 <!-- Tonase per Tanggal -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hasil Tonase</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hasil Tonase (Netto)</h3>
                         <div class="flex gap-2">
                             <button @click="setTonasePeriod('daily')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Harian</button>
                             <button @click="setTonasePeriod('monthly')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Bulanan</button>
@@ -236,7 +236,7 @@
             <!-- Charts Row 2: Hourly (if single day) -->
             <div x-show="data.isSingleDay" class="mb-5">
                 <div class="bg-white rounded-xl shadow-md p-5">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Trend Netto Per Jam (Akumulasi)</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Trend Hasil Kumulatif Tonase Per Jam - Grafik Harian</h3>
                     <canvas id="hourlyChart" height="90"></canvas>
                 </div>
             </div>
@@ -657,25 +657,32 @@
                     data: {
                         labels: this.data.hourlyTrend.map(d => d.hour),
                         datasets: [{
-                            label: 'Netto Kumulatif (kg)',
-                            data: this.data.hourlyTrend.map(d => d.netto),
+                            label: 'Hasil Tonase Kumulatif (ton)',
+                            data: this.data.hourlyTrend.map(d => d.netto / 1000),
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
-                            tension: 0.4,
-                            borderWidth: 2
+                            tension: 0,
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false }
+                            legend: { 
+                                display: false
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: { color: '#f3f4f6' }
+                                grid: { color: '#f3f4f6' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('id-ID') + ' ton';
+                                    }
+                                }
                             },
                             x: {
                                 grid: { display: false },
@@ -753,14 +760,21 @@
                 const chartData = this.sjPeriod === 'monthly' ? this.data.sjMonthly : this.data.sjDaily;
 
                 this.charts.sjPerTanggal = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: chartData.map(d => d.label),
                         datasets: [{
                             label: 'Jumlah SJ',
                             data: chartData.map(d => d.value),
+                            borderColor: '#3b82f6',
                             backgroundColor: '#3b82f6',
-                            borderRadius: 6
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#070088ff',
+                            pointBorderWidth: 1,
+                            pointRadius: 5,
+                            tension: 0,
+                            borderWidth: 4,
+                            fill: false
                         }]
                     },
                     options: {
@@ -795,26 +809,45 @@
                 const chartData = this.tonasePeriod === 'monthly' ? this.data.tonaseMonthly : this.data.tonaseDaily;
 
                 this.charts.tonasePerTanggal = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: chartData.map(d => d.label),
                         datasets: [{
-                            label: 'Tonase (kg)',
-                            data: chartData.map(d => d.value),
+                            label: 'Tonase (ton)',
+                            data: chartData.map(d => d.value / 1000),
+                            borderColor: '#10b981',
                             backgroundColor: '#10b981',
-                            borderRadius: 6
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#0a6b34ff',
+                            pointBorderWidth: 1,
+                            pointRadius: 5,
+                            tension: 0,
+                            borderWidth: 4,
+                            fill: false
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false }
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ton';
+                                    }
+                                }
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: { color: '#f3f4f6' }
+                                grid: { color: '#f3f4f6' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('id-ID') + ' ton';
+                                    }
+                                }
                             },
                             x: {
                                 grid: { display: false },
