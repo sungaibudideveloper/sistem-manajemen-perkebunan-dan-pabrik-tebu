@@ -154,7 +154,6 @@ class PanenTrackPlotReportController extends Controller
             $suratJalanData = DB::table('suratjalanpos as sj')
                 ->where('sj.companycode', $companycode)
                 ->where('sj.plot', $plot)
-                ->where('sj.kodetebang', $batchno)
                 ->whereNotNull('sj.tanggalcetakpossecurity')
                 ->select([
                     DB::raw('DATE(sj.tanggalcetakpossecurity) as tanggal'),

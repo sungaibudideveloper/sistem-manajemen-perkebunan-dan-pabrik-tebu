@@ -499,7 +499,12 @@
                 }
 
                 const sjList = day.list_sj.length > 0 
-                    ? `<div class="flex flex-wrap gap-1.5">${day.list_sj.map(sj => `<a href="{{ route('report.report-surat-jalan-timbangan.index') }}/${sj}" target="_blank" class="px-2.5 py-1 bg-gray-800 hover:bg-black text-white rounded text-xs font-mono font-semibold transition-colors shadow-sm">${sj}</a>`).join('')}</div>`
+                    ? `<div class="space-y-1">${day.list_sj.map(sj => `
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-gray-800 rounded-full flex-shrink-0"></span>
+                            <a href="{{ route('report.report-surat-jalan-timbangan.index') }}/${sj}" target="_blank" class="text-gray-800 hover:text-black font-mono text-xs font-semibold hover:underline">${sj}</a>
+                        </div>
+                    `).join('')}</div>`
                     : '<span class="text-gray-400 italic text-xs">-</span>';
 
                 row.innerHTML = `
@@ -530,8 +535,8 @@
                     <td class="px-4 py-3 text-right text-green-700 bg-green-50 font-bold">${parseFloat(summary.total_hc).toFixed(2)}</td>
                     <td class="px-4 py-3"></td>
                     <td class="px-4 py-3 text-right text-orange-700 bg-orange-50 font-bold">${parseFloat(summary.remaining_area).toFixed(2)}</td>
-                    <td class="px-4 py-3 text-right text-gray-700 font-bold">${parseFloat(summary.total_field_balance_rit || 0).toFixed(0)}</td>
-                    <td class="px-4 py-3 text-right text-gray-700 font-bold">${parseFloat(summary.total_field_balance_ton || 0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center text-gray-500">-</td>
+                    <td class="px-4 py-3 text-center text-gray-500">-</td>
                     <td class="px-4 py-3 text-center text-gray-900 font-bold">${summary.total_sj}</td>
                     <td class="px-4 py-3"></td>
                 </tr>
