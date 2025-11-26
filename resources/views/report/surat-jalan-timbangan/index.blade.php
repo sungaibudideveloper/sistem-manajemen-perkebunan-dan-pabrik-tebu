@@ -42,11 +42,11 @@
                     </div>
                 </div>
 
-                <!-- Total Netto -->
+                <!-- Total Tonase (Netto) -->
                 <div class="bg-white rounded-xl shadow-lg p-5 border-l-4 border-green-500 transform hover:scale-105 transition-transform hover:shadow-xl">
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Netto</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Tonase (Netto)</p>
                             <p class="text-4xl font-bold text-gray-900" x-text="formatTon(data.summary?.total_netto || 0)"></p>
                         </div>
                         <div class="bg-green-100 rounded-lg px-3 py-1.5">
@@ -207,7 +207,7 @@
             </div>
 
             <!-- Charts Row 1: SJ & Tonase per Tanggal -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+            <div x-show="!data.isSingleDay" class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <!-- SJ per Tanggal -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <div class="flex justify-between items-center mb-4">
