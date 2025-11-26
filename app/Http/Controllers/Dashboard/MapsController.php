@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Dashboard;
 
 use Carbon\Carbon;
@@ -10,6 +11,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
+use proj4php\Proj4php;
+use proj4php\Proj;
+use proj4php\Point;
 
 class MapsController extends Controller
 {
@@ -18,118 +22,138 @@ class MapsController extends Controller
         View::share([
             'navbar' => 'Dashboard',
         ]);
-
     }
+
+    public function convertUtmToGps($easting, $northing, $zone = '48M')
+    {
+        $proj4 = new Proj4php();
+
+        // UTM Zone 48S untuk Indonesia (sesuaikan zone-nya)
+        $proj4->addDef('EPSG:32748', '+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs');
+        $proj4->addDef('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+
+        $utmProj = new Proj('EPSG:32748', $proj4);
+        $wgsProj = new Proj('EPSG:4326', $proj4);
+
+        $pointSrc = new Point($easting, $northing, $utmProj);
+        $pointDest = $proj4->transform($utmProj, $wgsProj, $pointSrc);
+
+        return [
+            'latitude' => $pointDest->y,
+            'longitude' => $pointDest->x
+        ];
+    }
+
     public function index()
     {
-      $title = "Dashboard Agronomi";
-      $nav = "Agronomi";
-      $header = DB::table('testgpshdr')->where('companycode', session('companycode'))->orderBy('plot')->get();
-      //old
-      //$list1 = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
-      //new
-      $list = DB::table('testgpslst as a')
-      ->leftJoin('plot as b', function($join) {
-          $join->on('a.plot', '=', 'b.plot')
-               ->on('a.companycode', '=', 'b.companycode');
-      })
-      ->leftJoin('masterlist as m', function($join) {
-          $join->on('b.plot', '=', 'm.plot')
-               ->on('b.companycode', '=', 'm.companycode');
-      })
-      ->leftJoin('batch as c', function($join) {
-          $join->on('m.activebatchno', '=', 'c.batchno')
-               ->on('m.companycode', '=', 'c.companycode')
-               ->where('c.isactive', '=', 1);
-      })
-      ->where('a.companycode', session('companycode'))
-      ->whereIn('a.plot', Arr::pluck($header, 'plot'))
-      ->select(
-          'a.plot', 
-          'a.latitude', 
-          'a.longitude', 
-          'c.batchno', 
-          'c.batchdate', 
-          'c.batcharea', 
-          'c.lifecyclestatus', 
-          'c.kodevarietas', 
-          'c.isactive', 
-          'b.luasarea', 
-          'b.jaraktanam as plot_jaraktanam', 
-          'b.status',
-          DB::raw('DATEDIFF(CURDATE(), c.batchdate) as umur_hari')
-      )
-      ->get();
-
-      // $plotKodeStatus = collect($list)
-      // ->whereNotNull('kodestatus')
-      // ->where('kodestatus', '!=', '')
-      // ->groupBy('plot')
-      // ->map(function($items) {
-      //     return $items->first()->kodestatus;
-      // });
-      
-      //  dd($list, $header);
-      return view('dashboard\maps\mapsfilter')->with([
-        'title' => $title,
-        'nav'   => $nav,
-        'header' => $header,
-        // 'plotKodeStatus' => $plotKodeStatus,
-        'list' => $list
-      ]);
-    }
-
-    public function indexapi(Request $request) 
-    {
-        $usematerialhdr = new usematerialhdr;
         $title = "Dashboard Agronomi";
         $nav = "Agronomi";
-        
-        $rkhno = $request->rkhno ?? 'RKH21050234';
-        $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
-        $detailsPlots = Arr::pluck($details, 'plot');
-        
+        $header = DB::table('testgpshdr')->where('companycode', session('companycode'))->orderBy('plot')->get();
+        //old
+        //$list1 = DB::table('testgpslst')->where('companycode', session('companycode'))->whereIn('plot', Arr::pluck($header, 'plot'))->get();
+        //new
         $list = DB::table('testgpslst as a')
-            ->leftJoin('plot as b', function($join) {
+            ->leftJoin('plot as b', function ($join) {
                 $join->on('a.plot', '=', 'b.plot')
-                     ->on('a.companycode', '=', 'b.companycode');
+                    ->on('a.companycode', '=', 'b.companycode');
             })
-            ->leftJoin('masterlist as m', function($join) {
+            ->leftJoin('masterlist as m', function ($join) {
                 $join->on('b.plot', '=', 'm.plot')
-                     ->on('b.companycode', '=', 'm.companycode');
+                    ->on('b.companycode', '=', 'm.companycode');
             })
-            ->leftJoin('batch as c', function($join) {
+            ->leftJoin('batch as c', function ($join) {
                 $join->on('m.activebatchno', '=', 'c.batchno')
-                     ->on('m.companycode', '=', 'c.companycode')
-                     ->where('c.isactive', '=', 1);
-            })
-            ->leftJoin('testgpshdr as d', function($join) {
-                $join->on('a.plot', '=', 'd.plot')
-                     ->on('a.companycode', '=', 'd.companycode');
+                    ->on('m.companycode', '=', 'c.companycode')
+                    ->where('c.isactive', '=', 1);
             })
             ->where('a.companycode', session('companycode'))
-            ->whereIn('a.plot', $detailsPlots)
+            ->whereIn('a.plot', Arr::pluck($header, 'plot'))
             ->select(
-                'a.companycode', 
-                'a.plot', 
-                'a.latitude', 
-                'a.longitude', 
-                'd.centerlatitude', 
-                'd.centerlongitude', 
-                'c.batchno', 
-                'c.batchdate', 
-                'c.batcharea', 
-                'c.lifecyclestatus', 
-                'c.kodevarietas', 
-                'c.isactive', 
-                'b.luasarea', 
-                'b.jaraktanam as plot_jaraktanam', 
+                'a.plot',
+                'a.latitude',
+                'a.longitude',
+                'c.batchno',
+                'c.batchdate',
+                'c.batcharea',
+                'c.lifecyclestatus',
+                'c.kodevarietas',
+                'c.isactive',
+                'b.luasarea',
+                'b.jaraktanam as plot_jaraktanam',
                 'b.status',
                 DB::raw('DATEDIFF(CURDATE(), c.batchdate) as umur_hari')
             )
             ->get();
-        
-        $header = $list->map(function($item) {
+
+        // $plotKodeStatus = collect($list)
+        // ->whereNotNull('kodestatus')
+        // ->where('kodestatus', '!=', '')
+        // ->groupBy('plot')
+        // ->map(function($items) {
+        //     return $items->first()->kodestatus;
+        // });
+
+        //  dd($list, $header);
+        return view('dashboard\maps\mapsfilter')->with([
+            'title' => $title,
+            'nav'   => $nav,
+            'header' => $header,
+            // 'plotKodeStatus' => $plotKodeStatus,
+            'list' => $list
+        ]);
+    }
+
+    public function indexapi(Request $request)
+    {
+        $usematerialhdr = new usematerialhdr;
+        $title = "Dashboard Agronomi";
+        $nav = "Agronomi";
+
+        $rkhno = $request->rkhno ?? 'RKH21050234';
+        $details = $usematerialhdr->selectuse(session('companycode'), $rkhno, 1)->get();
+        $detailsPlots = Arr::pluck($details, 'plot');
+
+        $list = DB::table('testgpslst as a')
+            ->leftJoin('plot as b', function ($join) {
+                $join->on('a.plot', '=', 'b.plot')
+                    ->on('a.companycode', '=', 'b.companycode');
+            })
+            ->leftJoin('masterlist as m', function ($join) {
+                $join->on('b.plot', '=', 'm.plot')
+                    ->on('b.companycode', '=', 'm.companycode');
+            })
+            ->leftJoin('batch as c', function ($join) {
+                $join->on('m.activebatchno', '=', 'c.batchno')
+                    ->on('m.companycode', '=', 'c.companycode')
+                    ->where('c.isactive', '=', 1);
+            })
+            ->leftJoin('testgpshdr as d', function ($join) {
+                $join->on('a.plot', '=', 'd.plot')
+                    ->on('a.companycode', '=', 'd.companycode');
+            })
+            ->where('a.companycode', session('companycode'))
+            ->whereIn('a.plot', $detailsPlots)
+            ->select(
+                'a.companycode',
+                'a.plot',
+                'a.latitude',
+                'a.longitude',
+                'd.centerlatitude',
+                'd.centerlongitude',
+                'c.batchno',
+                'c.batchdate',
+                'c.batcharea',
+                'c.lifecyclestatus',
+                'c.kodevarietas',
+                'c.isactive',
+                'b.luasarea',
+                'b.jaraktanam as plot_jaraktanam',
+                'b.status',
+                DB::raw('DATEDIFF(CURDATE(), c.batchdate) as umur_hari')
+            )
+            ->get();
+
+        $header = $list->map(function ($item) {
             return (object)[
                 'companycode' => $item->companycode,
                 'plot' => $item->plot,
@@ -137,7 +161,7 @@ class MapsController extends Controller
                 'centerlongitude' => $item->centerlongitude
             ];
         })->unique('plot')->values();
-        
+
         $data = [
             'title' => $title,
             'nav' => $nav,
@@ -145,26 +169,25 @@ class MapsController extends Controller
             'list' => $list,
             'rkhno' => $rkhno
         ];
-        
+
         // Always return the HTML view (whether accessed directly or via API)
         return view('dashboard.maps.index', $data);
     }
 
-    public function callmapsapi(Request $request) 
+    public function callmapsapi(Request $request)
     {
         $rkhno = $request->rkhno ?? 'RKH21050234';
-        
+
         try {
             // Generate the URL with the rkhno parameter
             $mapUrl = env('MAPS_API_URL', 'http://localhost/tebu/public/dashboard/mapsapi') . '?rkhno=' . $rkhno;
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Map URL generated successfully',
                 'url' => $mapUrl,
                 'rkhno' => $rkhno
             ], 200, [], JSON_UNESCAPED_SLASHES);
-            
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -173,55 +196,79 @@ class MapsController extends Controller
             ], 500);
         }
     }
-    
+
 
     public function upload(Request $request)
     {
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
 
-      $gpxFile = simplexml_load_file($request->file('gpxFile')->getRealPath());
-      $namespaces = $gpxFile->getNamespaces(true);
-      $gpxFile->registerXPathNamespace('ogr', $namespaces['ogr']);
+        try {
+            $gpxFile = simplexml_load_file($request->file('gpxFile')->getRealPath());
+            $namespaces = $gpxFile->getNamespaces(true);
+            $gpxFile->registerXPathNamespace('ogr', $namespaces['ogr']);
 
-      foreach ($gpxFile->rte as $rte) {
-          $extensions = $rte->extensions;
+            foreach ($gpxFile->rte as $rte) {
+                $extensions = $rte->extensions;
+                $divisi = (string)$extensions->children($namespaces['ogr'])->DIVISI;
+                $plot_baru = (string)$extensions->children($namespaces['ogr'])->PLOT_BARU;
 
-          // Ambil divisi dan plot
-          $divisi = (string)$extensions->children($namespaces['ogr'])->DIVISI;
-          $plot_baru = (string)$extensions->children($namespaces['ogr'])->PLOT_BARU;
+                $batchData = [];
+                $latitudes = [];
+                $longitudes = [];
 
-          $latitudes = [];
-          $longitudes = [];
+                foreach ($rte->rtept as $rtept) {
+                    $lat = (float)$rtept['lat'];
+                    $lon = (float)$rtept['lon'];
 
-          foreach ($rte->rtept as $rtept) {
-              $lat = (float)$rtept['lat'];
-              $lon = (float)$rtept['lon'];
+                    // Convert UTM to GPS if needed
+                    if ($this->isUtmCoordinate($lat, $lon)) {
+                        $converted = $this->convertUtmToGps($lat, $lon);
+                        $lat = $converted['latitude'];
+                        $lon = $converted['longitude'];
+                    }
 
-              $latitudes[] = $lat;
-              $longitudes[] = $lon;
+                    $latitudes[] = $lat;
+                    $longitudes[] = $lon;
 
-              // Insert detail
-              DB::table('testgpslst')->insert([
-                  'companycode' => session('companycode'),
-                  'plot' => $plot_baru,
-                  'latitude' => $lat,
-                  'longitude' => $lon
-              ]);
-          }
+                    $batchData[] = [
+                        'companycode' => session('companycode'),
+                        'plot' => $plot_baru,
+                        'latitude' => $lat,
+                        'longitude' => $lon
+                    ];
+                }
 
-          // Hitung centroid
-          $center_latitude = array_sum($latitudes) / count($latitudes);
-          $center_longitude = array_sum($longitudes) / count($longitudes);
+                // Batch insert
+                DB::table('testgpslst')->insert($batchData);
 
-          // Insert header
-          DB::table('testgpshdr')->insert([
-              'companycode' => session('companycode'),
-              'plot' => $plot_baru,
-              'centerlatitude' => $center_latitude,
-              'centerlongitude' => $center_longitude
-          ]);
-      }
+                // Calculate center coordinates (udah dalam GPS format)
+                $centerLat = array_sum($latitudes) / count($latitudes);
+                $centerLon = array_sum($longitudes) / count($longitudes);
 
-      return redirect()->back()->with('success1', 'Data Imported Successfully');
+                // PENTING: Cek lagi kalau center coordinates juga UTM
+                if ($this->isUtmCoordinate($centerLat, $centerLon)) {
+                    $convertedCenter = $this->convertUtmToGps($centerLat, $centerLon);
+                    $centerLat = $convertedCenter['latitude'];
+                    $centerLon = $convertedCenter['longitude'];
+                }
+
+                DB::table('testgpshdr')->insert([
+                    'companycode' => session('companycode'),
+                    'plot' => $plot_baru,
+                    'centerlatitude' => $centerLat,
+                    'centerlongitude' => $centerLon
+                ]);
+            }
+
+            return redirect()->back()->with('success1', 'Data Imported Successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Upload failed: ' . $e->getMessage());
+        }
     }
 
+    private function isUtmCoordinate($lat, $lon)
+    {
+        return abs($lat) > 90 || abs($lon) > 180;
+    }
 }

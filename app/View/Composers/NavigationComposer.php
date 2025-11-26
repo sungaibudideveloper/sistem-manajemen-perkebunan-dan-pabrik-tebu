@@ -219,6 +219,7 @@ class NavigationComposer
             'gudang-bbm' => 'Menu Gudang',
             'kendaraan-workshop' => 'Kendaraan',
             'pias' => 'Menu Pias',
+            'mapping-bsm' => 'Mapping BSM',
 
             // Dashboard - non-standard permissions
             'agronomi-dashboard' => 'Dashboard Agronomi',
