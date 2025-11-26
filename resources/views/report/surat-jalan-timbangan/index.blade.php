@@ -476,11 +476,11 @@
                             <template x-for="(item, index) in data.details" :key="`${item.companycode}-${item.suratjalanno}`">
                                 <tr :class="item.status === 'Sudah Timbang' ? 'bg-green-50 hover:bg-green-100' : 'bg-yellow-50 hover:bg-yellow-100'" class="transition-colors">
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="index + 1"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center font-semibold" x-text="item.companycode"></td>
                                     <td class="border border-gray-300 px-2 py-2">
                                         <a :href="`{{ route('report.report-surat-jalan-timbangan.index') }}/${item.suratjalanno}`" 
                                            target="_blank"
-                                           class="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                                           class="font-semibold text-blue-600 hover:text-blue-800 underline"
                                            x-text="item.suratjalanno"></a>
                                     </td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDate(item.tanggalcetakpossecurity)"></td>
@@ -491,9 +491,7 @@
                                         <span class="px-2 py-1 rounded text-xs font-semibold" :class="getKategoriColor(item.kategori)" x-text="item.kategori || '-'"></span>
                                     </td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.varietas || '-'"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.kodetebang === 'Premium' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-semibold" x-text="item.kodetebang || '-'"></span>
-                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.kodetebang || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center">
                                         <span x-show="item.langsir === 1" class="text-green-600">✓</span>
                                         <span x-show="item.langsir === 0" class="text-gray-400">-</span>
@@ -502,9 +500,7 @@
                                         <span x-show="item.tebusulit === 1" class="text-red-600">✓</span>
                                         <span x-show="item.tebusulit === 0" class="text-gray-400">-</span>
                                     </td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.kendaraankontraktor === 0 ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'" class="px-2 py-1 rounded text-xs font-semibold" x-text="item.kendaraankontraktor === 0 ? 'WL' : 'Umum'"></span>
-                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.kendaraankontraktor === 0 ? 'WL' : 'Umum'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center font-medium" x-text="item.nomorpolisi || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2" x-text="item.namasupir || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-xs" x-text="item.nama_kontraktor_lengkap || '-'"></td>
