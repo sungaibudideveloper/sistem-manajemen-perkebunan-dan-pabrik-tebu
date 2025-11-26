@@ -10,6 +10,7 @@ use App\Http\Controllers\Input\GudangBbmController;
 use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\RencanaKerjaMingguanController;
+use App\Http\Controllers\Input\MappingBsmController;
 
 // =====================================
 // AGRONOMI ROUTES
@@ -174,4 +175,9 @@ Route::middleware('auth')->group(function () {
     Route::get('input/gudang-bbm', [GudangBbmController::class, 'index'])->name('input.gudang-bbm.index');
     Route::get('input/gudang-bbm/{ordernumber}', [GudangBbmController::class, 'show'])->name('input.gudang-bbm.show');
     Route::post('input/gudang-bbm/{ordernumber}/confirm', [GudangBbmController::class, 'markConfirmed'])->name('input.gudang-bbm.confirm');
+});
+
+Route::group(['middleware' => ['auth', 'permission:Mapping BSM']], function () {
+    Route::match(['GET', 'POST'], 'input/mapping-bsm', [MappingBsmController::class, 'index'])->name('input.mapping-bsm.index');
+    // Route::post('report/panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('report.panen-tebu-report.proses');
 });
