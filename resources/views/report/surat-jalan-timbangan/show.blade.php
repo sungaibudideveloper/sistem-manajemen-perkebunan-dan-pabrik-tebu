@@ -35,10 +35,10 @@
                 </div>
             </div>
 
-            <!-- Timeline and Duration Cards Side by Side -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <!-- Timeline Visualization Card (50% width) -->
-                <div class="bg-white rounded-xl shadow-md p-6">
+            <!-- Timeline, Duration, and Timbangan Cards (3:3:2 ratio) -->
+            <div class="grid grid-cols-1 md:grid-cols-8 gap-5 mb-5">
+                <!-- Timeline Card (3/8 width) -->
+                <div class="md:col-span-3 bg-white rounded-xl shadow-md p-6">
                     <h2 class="text-lg font-bold text-gray-800 mb-6">Timeline Perjalanan</h2>
                     <div class="relative">
                         <!-- Timeline Line -->
@@ -114,50 +114,88 @@
                     </div>
                 </div>
 
-                <!-- Duration Summary Card (50% width) -->
-                <div class="bg-white rounded-xl shadow-md p-6">
+                <!-- Duration Card (3/8 width) -->
+                <div class="md:col-span-3 bg-white rounded-xl shadow-md p-6">
                     <h2 class="text-lg font-bold text-gray-800 mb-6">Ringkasan Durasi</h2>
-                    <div class="space-y-3">
+                    <div class="space-y-4">
                         <!-- Total Durasi Perjalanan -->
-                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-4 text-white">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="text-xs opacity-90">Total Durasi Perjalanan</div>
-                                <svg class="w-5 h-5 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="pb-4 border-b border-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-sm text-gray-600 font-medium">Total Durasi Perjalanan</div>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <div class="text-2xl font-bold" x-text="formatDuration(data.total_durasi)"></div>
-                            <div class="text-xs opacity-75 mt-0.5">Dari angkut sampai selesai timbang</div>
+                            <div class="text-3xl font-bold text-gray-900" x-text="formatDuration(data.total_durasi)"></div>
+                            <div class="text-xs text-gray-500 mt-1">Dari angkut sampai selesai timbang</div>
                         </div>
 
                         <!-- Durasi POS - Timbangan -->
-                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow p-4 text-white">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="text-xs opacity-90">Durasi POS - Timbangan</div>
-                                <svg class="w-5 h-5 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="pb-4 border-b border-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-sm text-gray-600 font-medium">Durasi POS - Timbangan</div>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                                 </svg>
                             </div>
-                            <div class="text-2xl font-bold" x-text="formatDuration(data.durasi_pos_timbangan)"></div>
-                            <div class="text-xs opacity-75 mt-0.5">Waktu tempuh ke timbangan</div>
+                            <div class="text-3xl font-bold text-gray-900" x-text="formatDuration(data.durasi_pos_timbangan)"></div>
+                            <div class="text-xs text-gray-500 mt-1">Waktu tempuh ke timbangan</div>
                         </div>
 
                         <!-- Durasi Deload -->
-                        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow p-4 text-white">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="text-xs opacity-90">Durasi Deload</div>
-                                <svg class="w-5 h-5 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-sm text-gray-600 font-medium">Durasi Deload</div>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <div class="text-2xl font-bold" x-text="formatDuration(data.durasi_deload)"></div>
-                            <div class="text-xs opacity-75 mt-0.5">Waktu bongkar di timbangan</div>
+                            <div class="text-3xl font-bold text-gray-900" x-text="formatDuration(data.durasi_deload)"></div>
+                            <div class="text-xs text-gray-500 mt-1">Waktu bongkar di timbangan</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Hasil Timbangan Card (2/8 width) -->
+                <div class="md:col-span-2 bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                        </svg>
+                        Hasil Timbangan
+                    </h3>
+                    
+                    <div x-show="data.bruto || data.netto">
+                        <div class="space-y-3 text-sm">
+                            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-3 text-white shadow-md">
+                                <div class="text-xs opacity-90 mb-1">Bruto</div>
+                                <div class="text-xl font-bold" x-text="formatTon(data.bruto) + ' ton'"></div>
+                                <div class="text-xs opacity-75 mt-1" x-text="formatNumber(data.bruto) + ' kg'"></div>
+                            </div>
+                            <div x-show="data.bruto && data.netto" class="bg-gradient-to-br from-gray-600 to-gray-700 rounded-lg p-3 text-white shadow-md">
+                                <div class="text-xs opacity-90 mb-1">Berat Mobil</div>
+                                <div class="text-xl font-bold" x-text="formatTon(data.bruto - data.netto) + ' ton'"></div>
+                                <div class="text-xs opacity-75 mt-1" x-text="formatNumber(data.bruto - data.netto) + ' kg'"></div>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-3 text-white shadow-md">
+                                <div class="text-xs opacity-90 mb-1">Netto</div>
+                                <div class="text-2xl font-bold" x-text="formatTon(data.netto) + ' ton'"></div>
+                                <div class="text-xs opacity-75 mt-1" x-text="formatNumber(data.netto) + ' kg'"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div x-show="!data.bruto && !data.netto" class="text-center py-6 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                        </svg>
+                        <p class="text-xs font-medium">Belum Masuk Timbangan</p>
+                        <p class="text-xs text-gray-400 mt-1">Menunggu proses timbang</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Information Cards -->
+            <!-- Information Cards and BSM - 3 columns -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
                 <!-- Card 1: Informasi Umum -->
                 <div class="bg-white rounded-xl shadow-md p-5">
@@ -241,28 +279,83 @@
                     </div>
                 </div>
 
-                <!-- Card 3: Hasil Timbangan -->
+                <!-- Card 3: BSM Card -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Hasil Timbangan
+                        Cek BSM
                     </h3>
-                    <div class="space-y-3 text-sm">
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                            <div class="text-gray-600 text-xs mb-1">Bruto</div>
-                            <div class="text-2xl font-bold text-blue-700" x-text="formatNumber(data.bruto) + ' kg'"></div>
+                    
+                    <div x-show="bsmData" style="display: none;">
+                        <!-- Grade (Paling Atas) -->
+                        <div class="text-center mb-6 pb-6 border-b-2 border-gray-200">
+                            <div class="text-xs text-gray-500 uppercase font-semibold mb-2">Grade Kualitas</div>
+                            <div class="inline-block">
+                                <div class="text-8xl font-black mb-2" 
+                                     :class="{
+                                         'text-green-600': bsmData?.grade === 'A',
+                                         'text-yellow-500': bsmData?.grade === 'B',
+                                         'text-red-500': bsmData?.grade === 'C',
+                                         'text-gray-400': !bsmData?.grade
+                                     }"
+                                     x-text="bsmData?.grade || '-'"></div>
+                                <div class="text-sm font-semibold"
+                                     :class="{
+                                         'text-green-600': bsmData?.grade === 'A',
+                                         'text-yellow-600': bsmData?.grade === 'B',
+                                         'text-red-600': bsmData?.grade === 'C',
+                                         'text-gray-500': !bsmData?.grade
+                                     }">
+                                    <span x-show="bsmData?.grade === 'A'">Excellent Quality</span>
+                                    <span x-show="bsmData?.grade === 'B'">Good Quality</span>
+                                    <span x-show="bsmData?.grade === 'C'">Fair Quality</span>
+                                    <span x-show="!bsmData?.grade">No Grade</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                            <div class="text-gray-600 text-xs mb-1">Netto</div>
-                            <div class="text-2xl font-bold text-green-700" x-text="formatNumber(data.netto) + ' kg'"></div>
-                            <div class="text-xs text-green-600 mt-1" x-text="formatTon(data.netto) + ' ton'"></div>
+                        
+                        <!-- Average Score -->
+                        <div class="text-center mb-6 pb-4 border-b border-gray-200">
+                            <div class="text-xs text-gray-500 uppercase font-semibold mb-1">Rata-rata BSM</div>
+                            <div class="text-4xl font-bold text-purple-600" x-text="bsmData?.averagescore || '-'"></div>
                         </div>
-                        <div x-show="data.bruto && data.netto" class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                            <div class="text-gray-600 text-xs mb-1">Tara (Selisih)</div>
-                            <div class="text-xl font-bold text-gray-700" x-text="formatNumber(data.bruto - data.netto) + ' kg'"></div>
+                        
+                        <!-- Detail Nilai BSM -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Bersih (B):</span>
+                                <span class="text-base font-semibold text-blue-600" x-text="bsmData?.nilaibersih || '-'"></span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Segar (S):</span>
+                                <span class="text-base font-semibold text-green-600" x-text="bsmData?.nilaisegar || '-'"></span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Manis (M):</span>
+                                <span class="text-base font-semibold text-yellow-600" x-text="bsmData?.nilaimanis || '-'"></span>
+                            </div>
                         </div>
+                        
+                        <!-- Keterangan -->
+                        <div x-show="bsmData?.keterangan" class="mt-4 pt-4 border-t border-gray-200">
+                            <div class="text-xs font-semibold text-gray-700 mb-1">Keterangan:</div>
+                            <div class="text-xs text-gray-600" x-text="bsmData?.keterangan"></div>
+                        </div>
+                        
+                        <!-- Timestamp -->
+                        <div class="mt-3 text-xs text-gray-400 text-center" x-show="bsmData?.createdat">
+                            <span x-text="formatDateTime(bsmData?.createdat)"></span>
+                        </div>
+                    </div>
+                    
+                    <div x-show="!bsmData" class="text-center py-6 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <p class="text-xs font-medium">Belum ada BSM</p>
+                        <p class="text-xs text-gray-400 mt-1">Menunggu cek kualitas</p>
                     </div>
                 </div>
             </div>
@@ -275,6 +368,7 @@
         return {
             loading: true,
             data: {},
+            bsmData: null,
 
             async loadData() {
                 this.loading = true;
@@ -284,6 +378,8 @@
                     
                     if (result.success) {
                         this.data = result.data;
+                        this.bsmData = result.bsm;
+                        console.log('BSM Data:', this.bsmData);
                     } else {
                         alert('Error: ' + result.message);
                     }
@@ -358,17 +454,6 @@
                     'RC3': 'bg-rose-100 text-rose-800'
                 };
                 return colors[kategori] || 'bg-gray-100 text-gray-800';
-            },
-
-            getEfficiencyRating() {
-                if (!this.data.durasi_deload) return '-';
-                
-                const deload = this.data.durasi_deload;
-                if (deload < 15) return 'A+ Excellent';
-                if (deload < 30) return 'A Good';
-                if (deload < 45) return 'B Average';
-                if (deload < 60) return 'C Below';
-                return 'D Poor';
             }
         }
     }
