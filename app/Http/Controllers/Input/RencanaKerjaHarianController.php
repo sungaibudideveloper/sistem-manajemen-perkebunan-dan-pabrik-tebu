@@ -19,21 +19,16 @@ use App\Models\ActivityGroup;
 use App\Models\Blok;
 use App\Models\Masterlist;
 use App\Models\Herbisidadosage;
-use App\Models\Herbisidagroup;
 use App\Models\AbsenHdr;
-use App\Models\AbsenLst;
-use App\Models\Lkhhdr;
 use App\Models\LkhDetailPlot;
 use App\Models\LkhDetailWorker;
 use App\Models\LkhDetailMaterial;
-use App\Models\LkhDetailBsm;
 use App\Models\Kendaraan;
 use App\Models\TenagaKerja;
 
 // Services
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
-use App\Services\WageCalculationService;
 use App\Services\GenerateNewBatchService;
 
 /**
