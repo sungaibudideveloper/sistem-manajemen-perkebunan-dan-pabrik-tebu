@@ -10,6 +10,7 @@ use App\Http\Controllers\Report\PanenTebuController;
 use App\Http\Controllers\Report\MasterLahanReportController;
 use App\Http\Controllers\Report\RekapUpahMingguanController;
 use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
+use App\Http\Controllers\Report\PanenTrackPlotReportController;
 
 
 Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function () {
@@ -63,4 +64,14 @@ Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], funct
     Route::get('report/rekap-upah-mingguan/show/{lkhno}', [RekapUpahMingguanController::class, 'show'])->name('report.rekap-upah-mingguan.show');
     Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('report.rekap-upah-mingguan.preview');
     Route::get('report/rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('report.rekap-upah-mingguan.export-excel');
+});
+
+// Report Tracking Panen per Plot
+Route::group(['middleware' => ['auth', 'permission:Panen Track Plot']], function () {
+    Route::get('report/panen-track-plot', [PanenTrackPlotReportController::class, 'index'])
+        ->name('report.panen-track-plot.index');
+    Route::get('report/panen-track-plot/batches', [PanenTrackPlotReportController::class, 'getBatches'])
+        ->name('report.panen-track-plot.batches');
+    Route::get('report/panen-track-plot/data', [PanenTrackPlotReportController::class, 'getData'])
+        ->name('report.panen-track-plot.data');
 });
