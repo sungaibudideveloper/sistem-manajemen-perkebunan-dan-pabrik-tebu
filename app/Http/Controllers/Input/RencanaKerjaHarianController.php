@@ -482,19 +482,6 @@ class RencanaKerjaHarianController extends Controller
         }
     }
 
-    /**
-     * Get worker data for specific RKH
-     * NEW METHOD - Worker retrieval
-     */
-    private function getRkhWorkers($companycode, $rkhno)
-    {
-        return DB::table('rkhlstworker')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->get()
-            ->keyBy('activitycode'); // Key by activity for easy lookup
-    }
-
     // =====================================
     // SECTION 2: RKH APPROVAL MANAGEMENT
     // =====================================
@@ -3186,33 +3173,6 @@ public function loadAbsenByDate(Request $request)
             ->first();
     }
 
-    /**
-     * Get batch info for specific plot (for panen activities)
-     * NEW METHOD: Get active batch and lifecycle status
-     * 
-     * @param string $companycode
-     * @param string $plot
-     * @return object|null
-     */
-    private function getBatchInfoForPlot($companycode, $plot)
-    {
-        return DB::table('masterlist')
-            ->join('batch', function($join) use ($companycode) {
-                $join->on('masterlist.activebatchno', '=', 'batch.batchno')
-                    ->where('batch.companycode', '=', $companycode); // ✅ FIXED
-            })
-            ->where('masterlist.companycode', $companycode)
-            ->where('masterlist.plot', $plot)
-            ->where('masterlist.isactive', 1)
-            ->where('batch.isactive', 1)
-            ->select([
-                'batch.batchno',
-                'batch.lifecyclestatus',
-                'batch.batcharea',
-                'batch.tanggalpanen'
-            ])
-            ->first();
-    }
     /**
      * Generate unique RKH number with database lock
      */
