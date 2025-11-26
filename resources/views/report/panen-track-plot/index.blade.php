@@ -406,17 +406,17 @@
 
         function renderBatchInfo(batchInfo) {
             const statusColors = {
-                'PC': 'bg-green-100 text-green-800 border-green-300',
-                'RC1': 'bg-blue-100 text-blue-800 border-blue-300',
-                'RC2': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                'RC3': 'bg-purple-100 text-purple-800 border-purple-300'
+                'PC': 'text-green-600',
+                'RC1': 'text-blue-600',
+                'RC2': 'text-yellow-600',
+                'RC3': 'text-purple-600'
             };
             
             const section = document.getElementById('batchInfoSection');
             section.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Informasi Batch</h2>
-                    <span class="px-4 py-2 rounded-lg text-base font-bold border-2 ${statusColors[batchInfo.kodestatus] || 'bg-gray-100 text-gray-800 border-gray-300'}">
+                    <span class="text-2xl font-bold ${statusColors[batchInfo.kodestatus] || 'text-gray-600'}">
                         ${batchInfo.kodestatus}
                     </span>
                 </div>
@@ -503,7 +503,7 @@
                     ? `<div class="space-y-1">${day.list_sj.map(sj => `
                         <div class="flex items-center gap-2">
                             <span class="w-1.5 h-1.5 bg-gray-800 rounded-full flex-shrink-0"></span>
-                            <a href="{{ route('report.report-surat-jalan-timbangan.index') }}/${sj}" target="_blank" class="text-gray-800 hover:text-black font-mono text-xs font-semibold hover:underline">${sj}</a>
+                            <a href="{{ route('report.report-surat-jalan-timbangan.index') }}/${sj}" target="_blank" class="text-gray-800 font-mono text-xs font-semibold underline">${sj}</a>
                         </div>
                     `).join('')}</div>`
                     : '<span class="text-gray-400 italic text-xs">-</span>';
