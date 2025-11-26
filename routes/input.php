@@ -10,6 +10,7 @@ use App\Http\Controllers\Input\GudangBbmController;
 use App\Http\Controllers\Input\KendaraanController;
 use App\Http\Controllers\Input\RencanaKerjaHarianController;
 use App\Http\Controllers\Input\RencanaKerjaMingguanController;
+use App\Http\Controllers\Input\MappingBsmController;
 use App\Http\Controllers\Input\NfcController;
 
 // =====================================
@@ -196,4 +197,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/external-in', 'externalIn')->name('external-in');
             Route::post('/external-out', 'externalOut')->name('external-out');
         });
+});
+
+Route::group(['middleware' => ['auth', 'permission:Mapping BSM']], function () {
+    Route::match(['GET', 'POST'], 'input/mapping-bsm', [MappingBsmController::class, 'index'])->name('input.mapping-bsm.index');
+    // Route::post('report/panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('report.panen-tebu-report.proses');
 });
