@@ -12,9 +12,9 @@ use App\Http\Middleware\CheckPermission;
 class NavigationComposer
 {
     /**
-     * Cache duration in seconds (1 hour)
+     * Cache duration in seconds (1 day)
      */
-    const CACHE_TTL = 3600;
+    const CACHE_TTL = 86400;
 
     /**
      * Request-level cache untuk permission array (in-memory)
