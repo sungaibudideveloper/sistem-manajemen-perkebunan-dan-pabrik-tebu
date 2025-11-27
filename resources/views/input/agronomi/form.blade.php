@@ -18,64 +18,58 @@
         @method($method)
         <div class="mx-4 p-6 bg-white rounded-md shadow-md">
 
-            <div class="text-center text-xl pb-2 mb-6 -mt-2 border-b font-medium border-gray-300">Header</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{-- <div class="text-center text-xl pb-2 mb-6 -mt-2 border-b font-medium border-gray-300">Header</div> --}}
+            <div class="flex items-center gap-2 mb-4">
                 <div>
-                    <label class="block text-sm">Nomor Sample</label>
+                    <label class="block text-sm mb-1">Nomor Sample</label>
                     <input type="text" name="nosample" class="border rounded-md border-gray-300 p-2 w-full"
                         autocomplete="off" maxlength="4" value="{{ old('nosample', $header->nosample ?? '') }}"
                         required>
                 </div>
                 <div>
-                    <label class="block text-sm">Plot Sample</label>
-                    <input type="number" name="idblokplot" id="idblokplot"
-                        class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off" maxlength="5"
-                        value="{{ old('idblokplot', $header->idblokplot ?? '') }}">
-                </div>
-
-                <div>
-                    <label class="block text-sm">Kode Company</label>
-                    <input id="companycode" type="text" name="companycode" maxlength="6"
-                        class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('companycode', $header->companycode ?? '') }}" required>
-                </div>
-                <div>
-                    <label class="block text-sm">Blok</label>
-                    <input id="blok" type="text" name="blok" maxlength="2"
-                        class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
-                        value="{{ old('blok', $header->blok ?? '') }}" required>
-                </div>
-                <div>
-                    <label class="block text-sm">Plot</label>
+                    <label class="block text-sm mb-1">Plot</label>
                     <input id="plot" type="text" name="plot" maxlength="10"
                         class="border rounded-md border-gray-300 p-2 w-full" autocomplete="off"
                         value="{{ old('plot', $header->plot ?? '') }}" required>
                 </div>
-
+            </div>
+            <div class="flex items-center gap-2 mb-2">
                 <div>
-                    <label class="block text-sm">Varietas</label>
-                    <input type="text" name="varietas" class="border rounded-md border-gray-300 p-2 w-full"
-                        autocomplete="off" maxlength="10" value="{{ old('varietas', $header->varietas ?? '') }}"
-                        required>
+                    <label class="block text-sm mb-1">Blok</label>
+                    <input id="blok" type="text" name="blok" maxlength="2" placeholder="(Otomatis)"
+                        class="border rounded-md border-gray-300 p-2 w-[12ch]" autocomplete="off"
+                        value="{{ old('blok', $header->blok ?? '') }}" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Company</label>
+                    <input id="companycode" type="text" name="companycode" maxlength="6"
+                        class="border rounded-md border-gray-300 p-2 w-[15ch]" autocomplete="off"
+                        value="{{ old('companycode', $header->companycode ?? session('companycode')) }}" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Varietas</label>
+                    <input type="text" name="varietas" id="varietas" placeholder="(Otomatis)"
+                        class="border rounded-md border-gray-300 p-2 w-[20ch]" autocomplete="off" maxlength="10"
+                        value="{{ old('varietas', $header->varietas ?? '') }}" required>
                 </div>
 
                 <div>
-                    <label class="block text-sm">Kategori</label>
-                    <input type="text" name="kat" class="border rounded-md border-gray-300 p-2 w-full"
-                        autocomplete="off" maxlength="3" value="{{ old('kat', $header->kat ?? '') }}" required>
+                    <label class="block text-sm mb-1">Kategori</label>
+                    <input type="text" name="kat" id="kat" placeholder="(Otomatis)"
+                        class="border rounded-md border-gray-300 p-2 w-[14ch]" autocomplete="off" maxlength="3"
+                        value="{{ old('kat', $header->kat ?? '') }}" required>
                 </div>
-
                 <div>
-                    <label class="block text-sm">Tanggal Tanam</label>
-                    <input type="date" name="tanggaltanam" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tanggaltanam', $header->tanggaltanam ?? '') }}"
+                    <label class="block text-sm mb-1">Tanggal Tanam</label>
+                    <input type="date" name="tanggaltanam" id="tanggaltanam" placeholder="dd/mm/yyyy"
+                        pattern="\d{2}/\d{2}/\d{4}" value="{{ old('tanggaltanam', $header->tanggaltanam ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
                 <div>
-                    <label class="block text-sm">Tanggal Pengamatan</label>
+                    <label class="block text-sm mb-1">Tanggal Pengamatan</label>
                     <input type="date" name="tanggalpengamatan" placeholder="dd/mm/yyyy" pattern="\d{2}/\d{2}/\d{4}"
-                        value="{{ old('tanggalpengamatan', $header->tanggalpengamatan ?? '') }}"
+                        value="{{ old('tanggalpengamatan', $header->tanggalpengamatan ?? now()->toDateString()) }}"
                         class="border rounded-md border-gray-300 p-2 w-full placeholder-gray-400 text-gray-400 focus:text-black valid:text-black"
                         required>
                 </div>
@@ -83,7 +77,8 @@
         </div>
 
         <div class="mx-4 p-6 bg-white rounded-md shadow-md mt-4">
-            <div class="text-center text-xl pb-2 mb-6 -mt-2 border-b font-medium border-gray-300">List (ni)</div>
+            <div class="text-center text-xl pb-2 mb-6 -mt-2 border-b font-medium border-gray-300">Detail Pengamatan (ni)
+            </div>
             <div class="table-container">
                 <table class="table table-bordered" id="listTable">
                     <thead>
@@ -383,62 +378,60 @@
 
     <script>
         $(document).ready(function() {
-            $('#idblokplot').change(function() {
-                var idblokplot = $(this).val();
-                if (idblokplot) {
+
+            // === SCRIPT: GET BLOK & GET VARIETAS ===
+            $('#plot').change(function() {
+                const plot = $(this).val();
+
+                if (plot) {
+                    // === AJAX 1: GET BLOK ===
                     $.ajax({
-                        url: "{{ route('input.agronomi.getFieldByMapping') }}",
+                        url: "{{ route('input.agronomi.getBlok') }}",
                         type: "POST",
                         data: {
                             _token: $('meta[name="csrf-token"]').attr('content'),
-                            idblokplot: idblokplot
+                            plot: plot
                         },
                         success: function(response) {
-                            $('#companycode').val(response.companycode);
+                            // $('#idblokplot').val(response.idblokplot);
                             $('#blok').val(response.blok);
-                            $('#plot').val(response.plot);
                         },
                         error: function() {
-                            alert('Data tidak ditemukan');
+                            alert('Data Mapping tidak ditemukan');
+                            // $('#idblokplot').val('');
+                            $('#blok').val('');
                         }
                     });
+
+                    // === AJAX 2: GET VARIETAS, KAT, TANGGAL TANAM ===
+                    $.ajax({
+                        url: "{{ route('input.agronomi.getVar') }}",
+                        type: "POST",
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content'),
+                            plot: plot
+                        },
+                        success: function(response) {
+                            $('#varietas').val(response.varietas);
+                            $('#kat').val(response.kat);
+                            $('#tanggaltanam').val(response.tanggaltanam);
+                        },
+                        error: function() {
+                            alert('Varietas, Kategori, dan Tanggal Tanam tidak ditemukan');
+                            $('#varietas').val('');
+                            $('#kat').val('');
+                            $('#tanggaltanam').val('');
+                        }
+                    });
+
                 } else {
-                    $('#companycode, #blok, #plot').val('');
+                    // Jika plot kosong, kosongkan semua field terkait
+                    $('#blok, #varietas, #kat, #tanggaltanam').val('');
                 }
             });
+
         });
     </script>
-    @if (!$isEdit)
-        <script>
-            document.querySelectorAll('input[name="nosample"], input[name="idblokplot"]').forEach((element) => {
-                element.addEventListener('change', () => {
-                    const noSample = document.querySelector('input[name="nosample"]').value;
-                    const kdPlotSample = document.querySelector('input[name="idblokplot"]').value;
-
-                    if (noSample && kdPlotSample) {
-                        fetch(
-                                `{{ route('input.agronomi.check-data') }}?nosample=${noSample}&idblokplot=${kdPlotSample}`
-                            )
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    document.querySelector('input[name="kat"]').value = data.kat;
-                                    document.querySelector('input[name="varietas"]').value = data.varietas;
-                                    document.querySelector('input[name="tanggaltanam"]').value = data
-                                        .tanggaltanam;
-                                } else {
-                                    alert("Data tidak ditemukan, silakan isi secara manual.");
-                                    document.querySelector('input[name="kat"]').value = '';
-                                    document.querySelector('input[name="varietas"]').value = '';
-                                    document.querySelector('input[name="tanggaltanam"]').value = '';
-                                }
-                            })
-                            .catch(err => console.error("Terjadi kesalahan:", err));
-                    }
-                });
-            });
-        </script>
-    @endif
 
     <script>
         document.querySelectorAll('.auto-clear-zero').forEach(input => {
@@ -450,6 +443,10 @@
             });
         });
     </script>
-
+    <script>
+        document.getElementById('plot').addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+        });
+    </script>
 
 </x-layout>
