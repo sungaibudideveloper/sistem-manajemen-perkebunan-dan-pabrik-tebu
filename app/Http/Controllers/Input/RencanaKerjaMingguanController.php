@@ -154,7 +154,7 @@ class RencanaKerjaMingguanController extends Controller
     public function getPlot($blok)
     {
         $comp = session('companycode');
-        $plots = DB::table('plot')
+        $plots = DB::table('masterlist')
             ->where('companycode', $comp)
             // ->where('tgl2', '=', null)
             ->where('plot', 'like', $blok . '%')
@@ -183,7 +183,7 @@ class RencanaKerjaMingguanController extends Controller
                 'luasarea' => $luas->luassisa,
             ]);
         }
-        if ($luas && $luas->luassisa == 0) {
+        if ((!$luas) || $luas && $luas->luassisa == 0) {
             return response()->json([
                 'luasarea' => $luasActual ? $luasActual->batcharea : 0,
             ]);
