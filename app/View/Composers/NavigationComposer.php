@@ -24,7 +24,8 @@ class NavigationComposer
 
     /**
      * Bind data to the view
-     * Caches all navigation data per user to minimize database queries
+     * 
+     * ✅ IMPROVED: Added try-catch untuk handle cache corruption
      *
      * @param View $view
      * @return void
@@ -34,28 +35,59 @@ class NavigationComposer
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Generate unique cache key per user, jabatan, and company
-            $cacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_" . session('companycode');
+            // Generate unique cache key with APP_KEY version to prevent encryption errors
+            $appKeyHash = substr(md5(config('app.key')), 0, 8);
+            $cacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_" . session('companycode') . "_{$appKeyHash}";
 
-            // Cache all navigation data to prevent repeated queries
-            $navigationData = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
-                return [
+            try {
+                // Cache all navigation data to prevent repeated queries
+                $navigationData = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+                    return [
+                        'navigationMenus' => $this->getNavigationMenus(),
+                        'allSubmenus' => $this->getAllSubmenus(),
+                        'userPermissions' => $this->getUserPermissions(),
+                        'companyName' => $this->getCompanyName(),
+                        'user' => $this->getCurrentUserName(),
+                        'userCompanies' => $this->getUserCompanies(),
+                        'company' => $this->getUserCompanies(),
+                        'period' => $this->getMonitoringPeriod()
+                    ];
+                });
+
+                // ✅ STORE permission array in request-level memory cache
+                $requestCacheKey = $user->userid . '_' . $user->idjabatan;
+                self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
+
+                $view->with($navigationData);
+
+            } catch (\Exception $e) {
+                // ✅ Handle cache corruption atau encryption errors
+                \Log::warning('Navigation cache error, rebuilding...', [
+                    'error' => $e->getMessage(),
+                    'user' => $user->userid
+                ]);
+
+                // Clear corrupted cache
+                Cache::forget($cacheKey);
+
+                // Rebuild tanpa cache
+                $navigationData = [
                     'navigationMenus' => $this->getNavigationMenus(),
                     'allSubmenus' => $this->getAllSubmenus(),
-                    'userPermissions' => $this->getUserPermissions(), // ✅ Load once, store in cache
+                    'userPermissions' => $this->getUserPermissions(),
                     'companyName' => $this->getCompanyName(),
                     'user' => $this->getCurrentUserName(),
                     'userCompanies' => $this->getUserCompanies(),
                     'company' => $this->getUserCompanies(),
                     'period' => $this->getMonitoringPeriod()
                 ];
-            });
 
-            // ✅ STORE permission array in request-level memory cache
-            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-            self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
+                // Store in request cache
+                $requestCacheKey = $user->userid . '_' . $user->idjabatan;
+                self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
 
-            $view->with($navigationData);
+                $view->with($navigationData);
+            }
         }
     }
 
@@ -97,6 +129,8 @@ class NavigationComposer
     /**
      * Get user permissions with additional caching layer
      * Returns array of granted permission names
+     * 
+     * ✅ IMPROVED: Added APP_KEY hash to cache key + error handling
      *
      * @return array
      */
@@ -109,9 +143,9 @@ class NavigationComposer
 
             $user = Auth::user();
 
-            // Additional cache layer for permission array
-            // This prevents repeated calls to CheckPermission::getUserEffectivePermissions()
-            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+            // Additional cache layer for permission array with APP_KEY version
+            $appKeyHash = substr(md5(config('app.key')), 0, 8);
+            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
 
             return Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
                 $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
@@ -135,6 +169,8 @@ class NavigationComposer
     /**
      * Check if user has specific permission
      * Uses REQUEST-LEVEL in-memory cache to prevent repeated cache queries
+     * 
+     * ✅ IMPROVED: Added error handling + APP_KEY versioning
      *
      * @param string $permissionName
      * @return bool
@@ -155,7 +191,8 @@ class NavigationComposer
             }
 
             // ✅ PRIORITY 2: Load from Laravel cache (1 DB query)
-            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+            $appKeyHash = substr(md5(config('app.key')), 0, 8);
+            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
 
             $grantedPermissions = Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
                 $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
@@ -204,8 +241,8 @@ class NavigationComposer
             'dashboard' => 'Dashboard',
             'process' => 'Process',
             'usermanagement' => 'Kelola User',
-            
         ];
+        
         // Submenu-level permission overrides
         // Only for cases that don't follow the convention
         $submenuPermissionOverrides = [
@@ -244,9 +281,6 @@ class NavigationComposer
             'menu' => 'Menu',
             'submenu' => 'Submenu',
             'subsubmenu' => 'Subsubmenu',
-
-            // Pabrik - non-standard permissions
-           
         ];
 
         // Logic: Convention over configuration
@@ -384,35 +418,96 @@ class NavigationComposer
     /**
      * Clear navigation and permission caches for a user
      * Should be called when user permissions, jabatan, or company access changes
+     * 
+     * ✅ IMPROVED: Clear all possible cache keys with wildcard pattern
      *
      * @param \App\Models\User $user
      * @return void
      */
     public static function clearNavigationCache($user)
     {
-        $companies = DB::table('usercompany')
-            ->where('userid', $user->userid)
-            ->where('isactive', 1)
-            ->pluck('companycode');
+        try {
+            $companies = DB::table('usercompany')
+                ->where('userid', $user->userid)
+                ->where('isactive', 1)
+                ->pluck('companycode');
 
-        // Clear navigation cache for all companies user has access to
-        foreach ($companies as $companycode) {
-            $navCacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}";
-            Cache::forget($navCacheKey);
+            // Get current APP_KEY hash
+            $appKeyHash = substr(md5(config('app.key')), 0, 8);
+
+            // Clear navigation cache for all companies user has access to
+            foreach ($companies as $companycode) {
+                $navCacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}_{$appKeyHash}";
+                Cache::forget($navCacheKey);
+            }
+
+            // Clear permission array cache
+            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
+            Cache::forget($permCacheKey);
+
+            // ✅ Clear request-level cache
+            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
+            unset(self::$requestPermissionCache[$requestCacheKey]);
+
+            // ✅ Also clear old caches (without APP_KEY hash) for cleanup
+            foreach ($companies as $companycode) {
+                $oldNavKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}";
+                Cache::forget($oldNavKey);
+            }
+            $oldPermKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
+            Cache::forget($oldPermKey);
+
+            \Log::info('Navigation and permission cache cleared', [
+                'userid' => $user->userid,
+                'jabatan' => $user->idjabatan,
+                'companies_count' => $companies->count(),
+                'app_key_hash' => $appKeyHash
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error clearing navigation cache: ' . $e->getMessage(), [
+                'userid' => $user->userid ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
         }
+    }
 
-        // Clear permission array cache
-        $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
-        Cache::forget($permCacheKey);
+    /**
+     * Clear ALL navigation caches (for maintenance/deployment)
+     * Use this after deployment or APP_KEY regeneration
+     * 
+     * @return void
+     */
+    public static function clearAllNavigationCaches()
+    {
+        try {
+            // If using Redis, clear by pattern
+            if (config('cache.default') === 'redis') {
+                $redis = Cache::getRedis();
+                
+                // Clear all nav_data_* keys
+                $navKeys = $redis->keys('*nav_data_*');
+                foreach ($navKeys as $key) {
+                    Cache::forget(str_replace(config('cache.prefix') . ':', '', $key));
+                }
+                
+                // Clear all user_perms_array_* keys
+                $permKeys = $redis->keys('*user_perms_array_*');
+                foreach ($permKeys as $key) {
+                    Cache::forget(str_replace(config('cache.prefix') . ':', '', $key));
+                }
+                
+                \Log::info('All navigation caches cleared via Redis pattern');
+            } else {
+                // Fallback: just clear all cache
+                Cache::flush();
+                \Log::info('All caches cleared (including navigation)');
+            }
 
-        // ✅ Clear request-level cache
-        $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-        unset(self::$requestPermissionCache[$requestCacheKey]);
+            // Clear request-level cache
+            self::$requestPermissionCache = [];
 
-        \Log::info('Navigation and permission array cache cleared', [
-            'userid' => $user->userid,
-            'jabatan' => $user->idjabatan,
-            'companies_count' => $companies->count()
-        ]);
+        } catch (\Exception $e) {
+            \Log::error('Error clearing all navigation caches: ' . $e->getMessage());
+        }
     }
 }
