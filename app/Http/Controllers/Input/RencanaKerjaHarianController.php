@@ -69,13 +69,52 @@ class RencanaKerjaHarianController extends Controller
         $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
         $rkhData = $query->paginate($perPage);
 
-        // NEW: Add progress status untuk setiap RKH
-        $rkhData->getCollection()->transform(function ($rkh) use ($companycode) {
-            $rkh->lkh_progress_status = $this->getRkhProgressStatus($rkh->rkhno, $companycode);
+        $lkhProgress = DB::table('lkhhdr')
+            ->whereIn('rkhno', $rkhData->pluck('rkhno'))
+            ->where('companycode', $companycode)
+            ->select('rkhno', 'status')
+            ->get()
+            ->groupBy('rkhno')
+            ->map(function($lkhs) {
+                if ($lkhs->isEmpty()) {
+                    return [
+                        'status' => 'no_lkh',
+                        'progress' => 'No LKH Created',
+                        'can_complete' => false,
+                        'color' => 'gray'
+                    ];
+                }
+                
+                $totalLkh = $lkhs->count();
+                $completedLkh = $lkhs->where('status', 'APPROVED')->count();
+                
+                if ($completedLkh === $totalLkh) {
+                    return [
+                        'status' => 'complete',
+                        'progress' => 'All Complete',
+                        'can_complete' => true,
+                        'color' => 'green'
+                    ];
+                } else {
+                    return [
+                        'status' => 'in_progress',
+                        'progress' => "LKH In Progress ({$completedLkh}/{$totalLkh})",
+                        'can_complete' => false,
+                        'color' => 'yellow'
+                    ];
+                }
+            });
+
+        $rkhData->getCollection()->transform(function ($rkh) use ($lkhProgress) {
+            $rkh->lkh_progress_status = $lkhProgress[$rkh->rkhno] ?? [
+                'status' => 'no_lkh',
+                'progress' => 'No LKH Created',
+                'can_complete' => false,
+                'color' => 'gray'
+            ];
             return $rkh;
         });
 
-        // Get attendance data for modal
         $absenData = $this->getAttendanceData($companycode, $filterDate);
 
         return view('input.rencanakerjaharian.index', [
@@ -570,7 +609,6 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Get LKH data for specific RKH
-     * FIXED: Updated to use new table structure
      */
     public function getLKHData($rkhno)
     {
@@ -579,7 +617,35 @@ class RencanaKerjaHarianController extends Controller
             
             $lkhList = $this->buildLkhDataQuery($companycode, $rkhno)->get();
 
-            $formattedData = $this->formatLkhData($lkhList, $companycode);
+            // Batch load ALL related data BEFORE formatting
+            $lkhNos = $lkhList->pluck('lkhno');
+            
+            // Load plots data (1 query)
+            $plotsByLkh = DB::table('lkhdetailplot')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', 'blok', 'plot', 'luasrkh')
+                ->get()
+                ->groupBy('lkhno');
+            
+            // Load workers count (1 query)
+            $workersByLkh = DB::table('lkhdetailworker')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', DB::raw('COUNT(*) as count'))
+                ->groupBy('lkhno')
+                ->pluck('count', 'lkhno');
+            
+            // Load materials count (1 query)
+            $materialsByLkh = DB::table('lkhdetailmaterial')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', DB::raw('COUNT(*) as count'))
+                ->groupBy('lkhno')
+                ->pluck('count', 'lkhno');
+
+            // Pass pre-loaded data to formatLkhData
+            $formattedData = $this->formatLkhData($lkhList, $companycode, $plotsByLkh, $workersByLkh, $materialsByLkh);
             $generateInfo = $this->getLkhGenerateInfo($companycode, $rkhno, $lkhList);
 
             return response()->json([
@@ -1270,43 +1336,35 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Format LKH data for response
+     * No more N+1, use pre-loaded data
      */
-    private function formatLkhData($lkhList, $companycode)
+    private function formatLkhData($lkhList, $companycode, $plotsByLkh, $workersByLkh, $materialsByLkh)
     {
-        return $lkhList->map(function($lkh) use ($companycode) {
+        return $lkhList->map(function($lkh) use ($companycode, $plotsByLkh, $workersByLkh, $materialsByLkh) {
             $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
             
-            // FIXED: Logic yang lebih sederhana dan benar
-            $canEdit = !$lkh->issubmit;  // Bisa edit kalau belum di-submit
-            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';  // Bisa submit kalau belum di-submit dan status DRAFT
+            // FIXED: Gak query lagi, pakai data yang sudah di-load
+            $canEdit = !$lkh->issubmit;
+            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';
 
-            // FIXED: Get plots for this LKH from lkhdetailplot table - HANYA PLOT
-            $plots = LkhDetailPlot::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->select('blok', 'plot', 'luasrkh')
-                ->get()
-                ->map(function($item) {
-                    return $item->plot; // HANYA plot saja, format: B002
-                })
+            // Get plots from pre-loaded data (NO QUERY!)
+            $plots = ($plotsByLkh[$lkh->lkhno] ?? collect())
+                ->pluck('plot')
                 ->unique()
                 ->join(', ');
 
-            // FIXED: Get workers count from lkhdetailworker table
-            $workersAssigned = LkhDetailWorker::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->count();
+            // Get workers count from pre-loaded data (NO QUERY!)
+            $workersAssigned = $workersByLkh[$lkh->lkhno] ?? 0;
 
-            // FIXED: Get material count from lkhdetailmaterial table
-            $materialCount = LkhDetailMaterial::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->count();
+            // Get material count from pre-loaded data (NO QUERY!)
+            $materialCount = $materialsByLkh[$lkh->lkhno] ?? 0;
 
             return [
                 'lkhno' => $lkh->lkhno,
                 'activitycode' => $lkh->activitycode,
                 'activityname' => $lkh->activityname ?? 'Unknown Activity',
                 'plots' => $plots ?: 'No plots assigned',
-                'jenistenagakerja' => $lkh->jenistenagakerja, // Add this for jenis detection
+                'jenistenagakerja' => $lkh->jenistenagakerja,
                 'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
                 'status' => $lkh->status ?? 'EMPTY',
                 'approval_status' => $approvalStatus,
@@ -1320,7 +1378,7 @@ class RencanaKerjaHarianController extends Controller
                 'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
                 'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
                 'can_edit' => $canEdit,
-                'can_submit' => $canSubmit,  // FIXED: Logic yang benar
+                'can_submit' => $canSubmit,
                 'view_url' => route('input.rencanakerjaharian.showLKH', $lkh->lkhno),
                 'edit_url' => route('input.rencanakerjaharian.editLKH', $lkh->lkhno)
             ];
