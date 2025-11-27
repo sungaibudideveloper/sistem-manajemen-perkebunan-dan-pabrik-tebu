@@ -66,7 +66,7 @@ class PostController extends Controller
         if (!empty($search)) {
             $posts->where(function ($query) use ($search) {
                 $query->where('nosample', 'like', '%' . $search . '%')
-                    ->orWhere('idblokplot', 'like', '%' . $search . '%')
+                    // ->orWhere('idblokplot', 'like', '%' . $search . '%')
                     ->orWhere('varietas', 'like', '%' . $search . '%')
                     ->orWhere('kat', 'like', '%' . $search . '%');
             });

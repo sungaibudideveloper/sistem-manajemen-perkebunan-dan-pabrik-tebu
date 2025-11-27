@@ -66,7 +66,7 @@ class UnpostController extends Controller
         if (!empty($search)) {
             $unposts->where(function ($query) use ($search) {
                 $query->where('nosample', 'like', '%' . $search . '%')
-                    ->orWhere('idblokplot', 'like', '%' . $search . '%')
+                    // ->orWhere('idblokplot', 'like', '%' . $search . '%')
                     ->orWhere('varietas', 'like', '%' . $search . '%')
                     ->orWhere('kat', 'like', '%' . $search . '%');
             });
