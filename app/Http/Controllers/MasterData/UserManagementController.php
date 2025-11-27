@@ -331,6 +331,10 @@ class UserManagementController extends Controller
                 'isactive' => $request->has('isactive') ? 1 : 0
             ]);
 
+            // CLEAR navigation menu cache (karena ada permission baru)
+            Cache::forget('navigationMenus');
+            Cache::forget('allSubmenus');
+
             return redirect()->route('usermanagement.permissions-masterdata.index')
                 ->with('success', 'Permission berhasil ditambahkan');
         } catch (\Exception $e) {
@@ -357,12 +361,24 @@ class UserManagementController extends Controller
                     ->with('error', 'Permission tidak ditemukan');
             }
 
+            // Simpan nama lama untuk tracking
+            $oldName = $permission->permissionname;
+
             $permission->update([
                 'permissionname' => $request->permissionname,
                 'category' => $request->category,
                 'description' => $request->description,
                 'isactive' => $request->has('isactive') ? 1 : 0
             ]);
+
+            // CLEAR CACHE jika permission name berubah
+            if ($oldName !== $request->permissionname) {
+                $this->clearCacheForPermission($oldName);
+            }
+            
+            // Clear menu cache juga (kalau ada menu yang link ke permission ini)
+            Cache::forget('navigationMenus');
+            Cache::forget('allSubmenus');
 
             return redirect()->route('usermanagement.permissions-masterdata.index')
                 ->with('success', 'Permission berhasil diperbarui');
@@ -392,8 +408,15 @@ class UserManagementController extends Controller
                     ->with('error', 'Permission sedang digunakan dan tidak bisa dihapus');
             }
 
+            // CLEAR CACHE sebelum soft delete
+            $this->clearCacheForPermission($permission->permissionname);
+
             // Soft delete by setting isactive = 0
             $permission->update(['isactive' => 0]);
+            
+            // Clear menu cache
+            Cache::forget('navigationMenus');
+            Cache::forget('allSubmenus');
 
             return redirect()->route('usermanagement.permissions-masterdata.index')
                 ->with('success', 'Permission berhasil dinonaktifkan');
@@ -535,6 +558,8 @@ class UserManagementController extends Controller
                 'updatedat' => now()
             ]);
 
+            $this->clearCacheForJabatan($idjabatan);
+
             return redirect()->route('usermanagement.jabatan.index')
                 ->with('success', 'Jabatan berhasil diperbarui');
         } catch (\Exception $e) {
@@ -568,6 +593,9 @@ class UserManagementController extends Controller
                     'message' => 'Jabatan sedang digunakan oleh ' . $userCount . ' user dan tidak bisa dihapus'
                 ], 422);
             }
+
+            // ✅ CLEAR CACHE SEBELUM delete (untuk cleanup)
+            $this->clearCacheForJabatan($idjabatan);
 
             // Check if jabatan has any permissions
             $permissionCount = JabatanPermission::where('idjabatan', $idjabatan)
@@ -669,6 +697,12 @@ class UserManagementController extends Controller
                     'grantedby' => Auth::user()->userid,
                     'createdat' => now()
                 ]);
+            }
+
+            // CLEAR CACHE setelah company access berubah
+            $user = User::find($request->userid);
+            if ($user) {
+                $this->clearUserAndCompanyCache($user, 'Company access added');
             }
 
             DB::commit();
@@ -1527,5 +1561,62 @@ class UserManagementController extends Controller
         ]);
 
         return $users->count();
+    }
+
+    /**
+     * Clear cache untuk semua user yang terpengaruh oleh permission tertentu
+     * Dipakai saat permission name berubah atau dihapus
+     *
+     * @param string $permissionName
+     * @return int - Jumlah user yang di-clear cache-nya
+     */
+    private function clearCacheForPermission($permissionName)
+    {
+        try {
+            // Get permission ID
+            $permission = Permission::where('permissionname', $permissionName)->first();
+            
+            if (!$permission) {
+                Log::warning('Permission not found for cache clear', ['permission' => $permissionName]);
+                return 0;
+            }
+
+            // Find all jabatan yang pakai permission ini
+            $jabatanIds = JabatanPermission::where('permissionid', $permission->permissionid)
+                ->where('isactive', 1)
+                ->pluck('idjabatan')
+                ->unique();
+
+            // Clear cache untuk semua user dalam jabatan tersebut
+            $affectedCount = 0;
+            foreach ($jabatanIds as $idjabatan) {
+                $affectedCount += $this->clearCacheForJabatan($idjabatan);
+            }
+
+            // Also clear untuk user dengan permission override
+            $userIds = UserPermission::where('permission', $permissionName)
+                ->where('isactive', 1)
+                ->pluck('userid')
+                ->unique()
+                ->toArray();
+
+            if (!empty($userIds)) {
+                $affectedCount += $this->clearCacheForUsers($userIds);
+            }
+
+            Log::info('Bulk cache clear for permission', [
+                'permission' => $permissionName,
+                'affected_jabatan' => $jabatanIds->count(),
+                'affected_users' => $affectedCount
+            ]);
+
+            return $affectedCount;
+        } catch (\Exception $e) {
+            Log::error('Error clearing cache for permission', [
+                'permission' => $permissionName,
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
     }
 }
