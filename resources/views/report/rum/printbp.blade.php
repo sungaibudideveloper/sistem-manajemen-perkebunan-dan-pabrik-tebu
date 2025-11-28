@@ -2,6 +2,7 @@
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
+    <x-slot:navnav>{{ $title }}</x-slot:navnav>
 
     <style>
         @media print {
