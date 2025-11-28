@@ -351,6 +351,7 @@ class RekapUpahMingguanController extends Controller
         $tk = $tenagakerjarum === 'Harian' ? 1 : 2;
         $query = DB::table('lkhhdr')->whereBetween('lkhdate', [$startDate, $endDate])
             ->where('jenistenagakerja', $tk)
+            ->where('status', '=', 'APPROVED')
             ->where('companycode', session('companycode'));
         $totalAmount = $query->sum('totalupahall');
 
