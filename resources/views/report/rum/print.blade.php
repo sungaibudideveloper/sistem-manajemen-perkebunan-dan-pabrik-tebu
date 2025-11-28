@@ -32,7 +32,7 @@
         <div
             class="no-print bg-gradient-to-r from-green-600 to-emerald-500 text-white p-4 flex justify-between items-center">
             <h1 class="text-xl font-bold">Preview Rekap Upah Mingguan</h1>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
                 <button id="print-btn"
                     class="bg-white text-green-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition flex items-center gap-2">
                     <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -96,10 +96,12 @@
                             @if (session('tenagakerjarum') == 'Harian')
                                 <th class="border border-gray-300 px-2 py-2" style="width: 12%;">Tenaga Kerja</th>
                             @endif
-                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Plot</th>
-                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Luas (Ha)</th>
-                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Status Tanam</th>
-                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Hasil (Ha)</th>
+                            @if (session('tenagakerjarum') != 'Harian')
+                                <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Plot</th>
+                                <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Luas (Ha)</th>
+                                <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Status Tanam</th>
+                                <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Hasil (Ha)</th>
+                            @endif
                             <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Cost/Unit</th>
                             <th class="border border-gray-300 px-2 py-2" style="width: 17%;">Biaya (Rp)</th>
                         </tr>
@@ -147,13 +149,15 @@
                                             <td class="border border-gray-300 px-2 py-2">{{ $item->namatenagakerja }}
                                             </td>
                                         @endif
-                                        <td class="border border-gray-300 px-2 py-2">{{ $item->plot }}</td>
-                                        <td class="border border-gray-300 px-2 py-2 text-right">
-                                            {{ number_format($item->luasan, 2) }}</td>
-                                        <td class="border border-gray-300 px-2 py-2">
-                                            {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
-                                        <td class="border border-gray-300 px-2 py-2 text-right">
-                                            {{ number_format($item->hasil, 2) }}</td>
+                                        @if (session('tenagakerjarum') != 'Harian')
+                                            <td class="border border-gray-300 px-2 py-2">{{ $item->plot }}</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-right">
+                                                {{ number_format($item->luasan, 2) }}</td>
+                                            <td class="border border-gray-300 px-2 py-2">
+                                                {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-right">
+                                                {{ number_format($item->hasil, 2) }}</td>
+                                        @endif
                                         <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->upah }}
                                         </td>
                                         <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->total }}
@@ -182,7 +186,7 @@
                                 <!-- Row Subtotal untuk setiap kegiatan -->
                                 <tr class="bg-yellow-50 font-bold">
                                     <td class="border border-gray-300 px-2 py-2 text-center"
-                                        colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
+                                        colspan="{{ session('tenagakerjarum') == 'Harian' ? '4' : '7' }}">
                                         Subtotal {{ $activityName }}
                                     </td>
                                     <td class="border border-gray-300 px-2 py-2 text-right">
@@ -198,7 +202,7 @@
                             <!-- Row Total Keseluruhan -->
                             <tr class="bg-green-100 font-bold text-base">
                                 <td class="border border-gray-300 px-2 py-2 text-center"
-                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
+                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '4' : '7' }}">
                                     TOTAL KESELURUHAN
                                 </td>
                                 <td class="border border-gray-300 px-2 py-2 text-right">
@@ -207,7 +211,7 @@
                             </tr>
                         @else
                             <tr>
-                                <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '8' }}"
+                                <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '5' : '8' }}"
                                     class="border border-gray-300 px-2 py-2 text-center">
                                     Tidak ada data
                                 </td>
