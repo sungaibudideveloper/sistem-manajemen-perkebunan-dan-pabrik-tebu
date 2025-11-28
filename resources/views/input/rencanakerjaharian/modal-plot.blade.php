@@ -153,12 +153,10 @@ function plotPicker(rowIndex) {
       
       let filtered = this.masterlist.filter(item => item.blok === blok);
       
-      // Filter by panen status
       if (this.showOnPanenOnly) {
         filtered = filtered.filter(item => item.is_on_panen == 1);
       }
       
-      // Search query
       if (q) {
         filtered = filtered.filter(item => item.plot.toUpperCase().includes(q));
       }
@@ -169,6 +167,25 @@ function plotPicker(rowIndex) {
     selectPlot(item) {
       if (!this.isBlokSelected) return;
       
+      // ✅ FIX: Check duplicate SEBELUM select
+      const currentActivity = Alpine.store('activityPerRow').getActivity(this.rowIndex);
+      const currentBlok = this.selectedBlok;
+      
+      if (currentActivity && currentActivity.activitycode) {
+        const isDuplicate = Alpine.store('uniqueCombinations').isDuplicate(
+          this.rowIndex, 
+          currentBlok, 
+          item.plot, 
+          currentActivity.activitycode
+        );
+        
+        if (isDuplicate) {
+          showToast('Kombinasi Blok + Plot + Activity sudah digunakan di baris lain. Silakan pilih plot lain.', 'error', 4000);
+          return; // ❌ BATALKAN selection
+        }
+      }
+      
+      // ✅ Kalau tidak duplikat, baru select
       this.selected = item;
       this.open = false;
       
@@ -188,7 +205,6 @@ function plotPicker(rowIndex) {
         }
       });
       
-      // Watch activity changes
       this.$watch(() => {
         const activityStore = Alpine.store('activityPerRow');
         const activity = activityStore.getActivity(this.rowIndex);
