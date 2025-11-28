@@ -312,7 +312,7 @@
                                 </template>
                                 <template x-if="!data.vehiclePerformance || data.vehiclePerformance.length === 0">
                                     <tr>
-                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                        <td colspan="6" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
                                     </tr>
                                 </template>
                             </tbody>
