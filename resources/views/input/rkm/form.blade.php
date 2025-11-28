@@ -62,13 +62,15 @@
             <div class="flex gap-2">
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700">Tanggal Mulai</label>
-                    <input type="date" name="startdate" value="{{ old('startdate', $header->startdate ?? '') }}"
+                    <input type="date" name="startdate" id="startdate"
+                        value="{{ old('startdate', $header->startdate ?? '') }}"
                         class="border rounded-md border-gray-300 p-2 w-full text-sm" required>
                 </div>
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700">Tanggal Selesai</label>
-                    <input type="date" name="enddate" value="{{ old('enddate', $header->enddate ?? '') }}"
-                        class="border rounded-md border-gray-300 p-2 w-full text-sm" required>
+                    <input type="date" name="enddate" id="enddate"
+                        value="{{ old('enddate', $header->enddate ?? '') }}"
+                        class="border rounded-md border-gray-300 p-2 w-full text-sm" readonly>
                 </div>
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700">Aktivitas</label>
@@ -305,6 +307,20 @@
                 });
             } else {
                 luasInput.val('');
+            }
+        });
+    </script>
+    <script>
+        document.getElementById('startdate').addEventListener('change', function() {
+            const startDate = new Date(this.value);
+            if (!isNaN(startDate)) {
+                // Tambahkan 7 hari
+                const endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 7);
+
+                // Format ke YYYY-MM-DD agar cocok dengan input[type="date"]
+                const formatted = endDate.toISOString().split('T')[0];
+                document.getElementById('enddate').value = formatted;
             }
         });
     </script>
