@@ -49,7 +49,7 @@ class RekapUpahMingguanController extends Controller
             ->join('activity', 'activity.activitycode', '=', 'lkhhdr.activitycode')
             ->leftJoin('lkhdetailplot', 'lkhdetailplot.lkhno', '=', 'lkhhdr.lkhno')
             ->where('lkhhdr.companycode', '=', session('companycode'))
-            // ->where('lkhhdr.status', '=', 'APPROVED')
+            ->where('lkhhdr.status', '=', 'APPROVED')
             ->where('activity.active', '=', 1)
             ->where('lkhhdr.jenistenagakerja', '=', $tk)
             ->when($startDate, function ($query) use ($startDate) {
@@ -325,7 +325,7 @@ class RekapUpahMingguanController extends Controller
                 $query->whereDate('a.lkhdate', '<=', $endDate);
             })
             ->where('a.companycode', '=', $companycode)
-            // ->where('a.status', '=', 'APPROVED')
+            ->where('a.status', '=', 'APPROVED')
             ->where('a.jenistenagakerja', '=', $tk)
             ->where('c.active', '=', 1)
             ->orderByDesc('a.activitycode')
