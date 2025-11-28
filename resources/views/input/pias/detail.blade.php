@@ -527,11 +527,11 @@ function scheduleFirstRender(){
 scheduleFirstRender();
 
     // Cetak: render sebelum print
-    window.onbeforeprint = function(){ if (hasBoth()) render(); };
-    if (window.matchMedia) {
-      const mq = window.matchMedia('print');
-      mq.addEventListener?.('change', e => { if (e.matches && hasBoth()) render(); });
-    }
+    // window.onbeforeprint = function(){ if (hasBoth()) render(); };
+    // if (window.matchMedia) {
+    //   const mq = window.matchMedia('print');
+    //   mq.addEventListener?.('change', e => { if (e.matches && hasBoth()) render(); });
+    // }
 
     // ===== FUNGSI RECALC (PINDAHKAN KE DALAM SCOPE) =====
     function recalcTotalsFromInputs(){
