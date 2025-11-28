@@ -10,6 +10,7 @@ use App\Http\Controllers\Report\PanenTebuController;
 use App\Http\Controllers\Report\MasterLahanReportController;
 use App\Http\Controllers\Report\RekapUpahMingguanController;
 use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
+use App\Http\Controllers\Report\PanenTrackPlotReportController;
 
 
 Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function () {
@@ -57,6 +58,23 @@ Route::group(['middleware' => ['auth', 'permission:Report Surat Jalan Timbangan'
     Route::get('report/surat-jalan-timbangan/{suratjalanno}/detail', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'getDetail'])->name('report.report-surat-jalan-timbangan.detail');
 });
 
+// Report Surat Jalan (tanpa timbangan)
+Route::group(['middleware' => ['auth', 'permission:Report Surat Jalan']], function () {
+    Route::get('report/surat-jalan', [App\Http\Controllers\Report\SuratJalanReportController::class, 'index'])->name('report.report-surat-jalan.index');
+    Route::get('report/surat-jalan/data', [App\Http\Controllers\Report\SuratJalanReportController::class, 'getData'])->name('report.report-surat-jalan.data');
+});
+
+// Report Tracking Panen per Plot
+Route::group(['middleware' => ['auth', 'permission:Panen Track Plot']], function () {
+    Route::get('report/panen-track-plot', [PanenTrackPlotReportController::class, 'index'])
+        ->name('report.panen-track-plot.index');
+    Route::get('report/panen-track-plot/batches', [PanenTrackPlotReportController::class, 'getBatches'])
+        ->name('report.panen-track-plot.batches');
+    Route::get('report/panen-track-plot/data', [PanenTrackPlotReportController::class, 'getData'])
+        ->name('report.panen-track-plot.data');
+});
+
+// Report Rekap Upah Mingguan
 Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], function () {
     Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan', [RekapUpahMingguanController::class, 'index'])->name('report.rekap-upah-mingguan.index');
     Route::get('report/rekap-upah-mingguan/excel', [RekapUpahMingguanController::class, 'excelRUM'])->name('report.rekap-upah-mingguan.exportExcel');
@@ -64,3 +82,4 @@ Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], funct
     Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('report.rekap-upah-mingguan.preview');
     Route::get('report/rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('report.rekap-upah-mingguan.export-excel');
 });
+

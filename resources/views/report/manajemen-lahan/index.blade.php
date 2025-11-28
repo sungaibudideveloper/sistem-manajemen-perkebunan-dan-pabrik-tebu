@@ -37,6 +37,7 @@
                     <div class="flex items-baseline gap-2">
                         <span class="text-2xl font-bold text-emerald-600" x-text="parseFloat(data.summary?.pc_area || 0).toFixed(2)"></span>
                         <span class="text-sm text-gray-500">Ha</span>
+                        <span class="text-sm text-gray-500 ml-1" x-text="`(${((parseFloat(data.summary?.pc_area || 0) / parseFloat(data.summary?.total_area || 1)) * 100).toFixed(1)}%)`"></span>
                     </div>
                 </div>
 
@@ -54,6 +55,7 @@
                     <div class="flex items-baseline gap-2">
                         <span class="text-2xl font-bold text-blue-600" x-text="parseFloat(data.summary?.rc1_area || 0).toFixed(2)"></span>
                         <span class="text-sm text-gray-500">Ha</span>
+                        <span class="text-sm text-gray-500 ml-1" x-text="`(${((parseFloat(data.summary?.rc1_area || 0) / parseFloat(data.summary?.total_area || 1)) * 100).toFixed(1)}%)`"></span>
                     </div>
                 </div>
 
@@ -71,6 +73,7 @@
                     <div class="flex items-baseline gap-2">
                         <span class="text-2xl font-bold text-amber-600" x-text="parseFloat(data.summary?.rc2_area || 0).toFixed(2)"></span>
                         <span class="text-sm text-gray-500">Ha</span>
+                        <span class="text-sm text-gray-500 ml-1" x-text="`(${((parseFloat(data.summary?.rc2_area || 0) / parseFloat(data.summary?.total_area || 1)) * 100).toFixed(1)}%)`"></span>
                     </div>
                 </div>
 
@@ -88,6 +91,7 @@
                     <div class="flex items-baseline gap-2">
                         <span class="text-2xl font-bold text-rose-600" x-text="parseFloat(data.summary?.rc3_area || 0).toFixed(2)"></span>
                         <span class="text-sm text-gray-500">Ha</span>
+                        <span class="text-sm text-gray-500 ml-1" x-text="`(${((parseFloat(data.summary?.rc3_area || 0) / parseFloat(data.summary?.total_area || 1)) * 100).toFixed(1)}%)`"></span>
                     </div>
                 </div>
             </div>

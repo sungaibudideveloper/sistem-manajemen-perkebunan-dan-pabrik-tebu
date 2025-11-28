@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
 use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
@@ -33,7 +30,7 @@ class AgronomiController extends Controller
             'companycode' => 'required',
             'blok' => 'required',
             'plot' => 'required',
-            'idblokplot' => 'required|exists:mapping,idblokplot',
+            // 'idblokplot' => 'required|exists:mapping,idblokplot',
             'varietas' => 'required',
             'kat' => 'required',
             'tanggaltanam' => 'required',
@@ -89,8 +86,7 @@ class AgronomiController extends Controller
 
         if (!empty($search)) {
             $agronomi->where(function ($query) use ($search) {
-                $query->where('agrohdr.idblokplot', 'like', '%' . $search . '%')
-                    ->orWhere('agrohdr.nosample', 'like', '%' . $search . '%')
+                $query->where('agrohdr.nosample', 'like', '%' . $search . '%')
                     ->orWhere('agrohdr.varietas', 'like', '%' . $search . '%')
                     ->orWhere('agrohdr.plot', 'like', '%' . $search . '%')
                     ->orWhere('agrohdr.kat', 'like', '%' . $search . '%');
@@ -131,57 +127,53 @@ class AgronomiController extends Controller
     public function create()
     {
         $title = "Create Data";
-        $mapping = DB::table('mapping')
-            ->where('companycode', '=', session('companycode'))
-            ->orderByRaw("CAST(idblokplot AS UNSIGNED)")
-            ->get();
+        // $mapping = DB::table('mapping')
+        //     ->where('companycode', '=', session('companycode'))
+        //     ->orderByRaw("CAST(idblokplot AS UNSIGNED)")
+        //     ->get();
         $method = 'POST';
         $url = route('input.agronomi.handle');
         $buttonSubmit = 'Create';
-        return view('input.agronomi.form', compact('buttonSubmit', 'mapping', 'title', 'method', 'url'));
+        return view('input.agronomi.form', compact('buttonSubmit', 'title', 'method', 'url'));
     }
 
-    public function getFieldByMapping(Request $request)
+    public function getBlokbyField(Request $request)
     {
-        $idblokplot = $request->input('idblokplot');
-        $mapping = DB::table('mapping')->where('idblokplot', $idblokplot)
-            ->where('companycode', session('companycode'))->first();
+        // $idblokplot = $request->input('idblokplot');
+        $plot = $request->input('plot');
+        $blok = DB::table('masterlist')->where('plot', $plot)
+            ->where('companycode', session('companycode'))
+            ->where('isactive', 1)
+            ->first();
 
-        if ($mapping) {
+        if ($blok) {
             return response()->json([
-                'companycode' => $mapping->companycode,
-                'blok' => $mapping->blok,
-                'plot' => $mapping->plot,
+                // 'idblokplot' => $blok->idblokplot,
+                'blok' => $blok->blok,
             ]);
         }
 
         return response()->json(['message' => 'Data not found'], 404);
     }
 
-    public function checkData(Request $request)
+    public function getVarietasandKategori(Request $request)
     {
-        $noSample = $request->get('nosample');
-        $kdPlotSample = $request->get('idblokplot');
-
-        $data = DB::table('agrohdr')
-            ->where('nosample', $noSample)
-            ->where('idblokplot', $kdPlotSample)
+        // $idblokplot = $request->input('idblokplot');
+        $plot = $request->input('plot');
+        $batch = DB::table('batch')->where('plot', $plot)
             ->where('companycode', session('companycode'))
+            ->where('isactive', 1)
             ->first();
 
-        if ($data) {
+        if ($batch) {
             return response()->json([
-                'success' => true,
-                'kat' => $data->kat,
-                'varietas' => $data->varietas,
-                'tanggaltanam' => $data->tanggaltanam,
+                'varietas' => $batch->kodevarietas,
+                'kat' => $batch->lifecyclestatus,
+                'tanggaltanam' => $batch->tanggalulangtahun,
             ]);
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Data not found',
-        ]);
+        return response()->json(['message' => 'Data not found'], 404);
     }
 
     public function store(Request $request)
@@ -213,7 +205,7 @@ class AgronomiController extends Controller
                 'companycode' => $validated['companycode'],
                 'blok' => $validated['blok'],
                 'plot' => $validated['plot'],
-                'idblokplot' => $validated['idblokplot'],
+                // 'idblokplot' => $validated['idblokplot'],
                 'varietas' => $validated['varietas'],
                 'kat' => $validated['kat'],
                 'tanggaltanam' => $validated['tanggaltanam'],
@@ -398,7 +390,7 @@ class AgronomiController extends Controller
                     'companycode' => $validated['companycode'],
                     'blok' => $validated['blok'],
                     'plot' => $validated['plot'],
-                    'idblokplot' => $validated['idblokplot'],
+                    // 'idblokplot' => $validated['idblokplot'],
                     'varietas' => $validated['varietas'],
                     'kat' => $validated['kat'],
                     'tanggaltanam' => $validated['tanggaltanam'],

@@ -185,8 +185,8 @@
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                     Sample
                                 </th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
-                                    Sample</th>
+                                {{-- <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
+                                    Sample</th> --}}
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
                                     Varietas
                                 </th>
@@ -213,8 +213,8 @@
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->nosample }}</td>
                                     </td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->idblokplot }}</td>
+                                    {{-- <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                        {{ $item->idblokplot }}</td> --}}
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->varietas }}</td>
                                     {{-- @if (session('posting') === 'Agronomi') --}}

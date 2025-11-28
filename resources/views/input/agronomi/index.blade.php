@@ -7,7 +7,7 @@
         <div class="flex lg:justify-between items-end mx-4 gap-2 flex-wrap justify-center">
             @if (hasPermission('Create Agronomi'))
                 <a href="{{ route('input.agronomi.create') }}"
-                    class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
+                    class="bg-blue-600 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-700 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                         width="24" height="24" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -117,8 +117,6 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                 Sample
                             </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
-                                Sample</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Varietas
                             </th>
@@ -141,8 +139,6 @@
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->nosample }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->idblokplot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->plot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">

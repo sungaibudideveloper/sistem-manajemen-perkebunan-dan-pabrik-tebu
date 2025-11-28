@@ -10,6 +10,7 @@ use App\Models\LkhDetailPlot;
 use App\Services\WageCalculationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 /**
@@ -42,30 +43,42 @@ class LkhGeneratorService
      * @param string $rkhno
      * @return array
      */
-    public function generateLkhFromRkh($rkhno)
+    public function generateLkhFromRkh($rkhno, $companycode = null)
     {
         try {
             DB::beginTransaction();
 
-            // 1. Validate RKH exists and fully approved
-            $rkh = Rkhhdr::where('rkhno', $rkhno)->first();
+            $companycode = $companycode ?? session('companycode');
+
+            if (!$companycode) {
+                throw new \Exception("Company code tidak ditemukan");
+            }
+
+            // 1. Validate RKH exists and fully approved (WITH COMPANYCODE)
+            $rkh = Rkhhdr::where('rkhno', $rkhno)
+                ->where('companycode', $companycode)
+                ->first();
+                
             if (!$rkh) {
-                throw new \Exception("RKH {$rkhno} not found");
+                throw new \Exception("RKH {$rkhno} not found for company {$companycode}");
             }
 
             if (!$this->isRkhFullyApproved($rkh)) {
                 throw new \Exception("RKH {$rkhno} belum fully approved");
             }
 
-            // 2. Check if LKH already generated
-            $existingLkh = Lkhhdr::where('rkhno', $rkhno)->exists();
+            // 2. ✅ Check if LKH already generated (COMPOUND KEY CHECK)
+            $existingLkh = Lkhhdr::where('rkhno', $rkhno)
+                ->where('companycode', $companycode)
+                ->exists();
+            
             if ($existingLkh) {
-                throw new \Exception("LKH untuk RKH {$rkhno} sudah pernah di-generate");
+                throw new \Exception("LKH untuk RKH {$rkhno} (company: {$companycode}) sudah pernah di-generate");
             }
 
-            // 3. Get RKH activities
+            // 3. Get RKH activities (WITH COMPANYCODE)
             $rkhActivities = Rkhlst::where('rkhno', $rkhno)
-                ->where('companycode', $rkh->companycode)
+                ->where('companycode', $companycode)
                 ->get();
 
             if ($rkhActivities->isEmpty()) {
@@ -218,12 +231,12 @@ class LkhGeneratorService
             'mandorid' => $rkh->mandorid,
             'lkhdate' => $rkh->rkhdate,
             'jenistenagakerja' => $jenistenagakerja,
-            'totalworkers' => 0,
-            'totalluasactual' => 0.00,
-            'totalhasil' => 0.00,
-            'totalsisa' => $totalLuas,
-            'totalupahall' => 0.00,
-            'status' => 'DRAFT', 
+            'totalworkers' => null,
+            'totalluasactual' => null,
+            'totalhasil' => null,
+            'totalsisa' => null,
+            'totalupahall' => null,
+            'status' => 'EMPTY', 
             'issubmit' => 0,
             'keterangan' => null,
             'inputby' => auth()->user()->userid ?? 'SYSTEM',
@@ -254,6 +267,10 @@ class LkhGeneratorService
     {
         $plotDetails = [];
         $isPanenActivity = in_array($activitycode, self::PANEN_ACTIVITIES);
+        $isBsmActivity = ($activitycode === self::BSM_ACTIVITY);
+        
+        $activity = DB::table('activity')->where('activitycode', $activitycode)->first();
+        $isBlokActivity = $activity ? ($activity->isblokactivity == 1) : false;
         
         foreach ($activities as $activity) {
             $luasArea = (float) $activity->luasarea;
@@ -262,16 +279,33 @@ class LkhGeneratorService
                 'companycode' => $companycode,
                 'lkhno' => $lkhno,
                 'blok' => $activity->blok,
-                'plot' => $activity->plot,
-                'luasrkh' => $luasArea,
+                'plot' => $isBlokActivity ? null : $activity->plot,
+                'luasrkh' => $isBlokActivity ? null : $luasArea,
                 'luashasil' => null,
                 'luassisa' => null,
-                'batchno' => $activity->batchno ?? null,
+                'batchno' => $isBlokActivity ? null : ($activity->batchno ?? null),
                 'createdat' => now()
             ];
             
             LkhDetailPlot::create($plotDetail);
             $plotDetails[] = $plotDetail;
+            
+            // Logging
+            if ($isBlokActivity) {
+                Log::info("Blok activity LKH detail created", [
+                    'lkhno' => $lkhno,
+                    'blok' => $activity->blok,
+                    'plot' => 'NULL (blok activity)',
+                    'luasrkh' => 'NULL (blok activity)'
+                ]);
+            } else {
+                Log::info("Plot activity LKH detail created", [
+                    'lkhno' => $lkhno,
+                    'blok' => $activity->blok,
+                    'plot' => $activity->plot,
+                    'luasrkh' => $luasArea
+                ]);
+            }
         }
         
         return $plotDetails;

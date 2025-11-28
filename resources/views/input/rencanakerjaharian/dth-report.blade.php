@@ -545,6 +545,7 @@
             const grouped = {};
             
             data.forEach(item => {
+                console.log('Plot value:', item.plot, 'Type:', typeof item.plot);
                 const key = `${item.mandor_nama}|${item.activityname}`;
                 
                 if (!grouped[key]) {
@@ -558,11 +559,13 @@
                         jumlahperempuan: item.jumlahperempuan
                     };
                 }
-                
-                // Collect unique plots and bloks
-                if (!grouped[key].plots.includes(item.plot)) {
-                    grouped[key].plots.push(item.plot);
+
+                if (item.plot?.trim()) {
+                    if (!grouped[key].plots.includes(item.plot)) {
+                        grouped[key].plots.push(item.plot);
+                    }
                 }
+
                 if (!grouped[key].bloks.includes(item.blok)) {
                     grouped[key].bloks.push(item.blok);
                 }
@@ -583,8 +586,8 @@
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
                     <td>${item.bloks.join(', ')}</td>
-                    <td>${item.plots.join(', ')}</td>
-                    <td>${item.totalLuas.toFixed(1)}</td>
+                    <td>${item.plots.length > 0 ? item.plots.join(', ') : '-'}</td>
+                    <td>${item.totalLuas > 0 ? item.totalLuas.toFixed(1) : '-'}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
@@ -593,7 +596,7 @@
 
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += item.totalLuas;
+                totalLuas += item.totalLuas > 0 ? item.totalLuas : 0;
             });
 
             // Update totals
@@ -636,9 +639,12 @@
                     };
                 }
                 
-                if (!grouped[key].plots.includes(item.plot)) {
-                    grouped[key].plots.push(item.plot);
+                if (item.plot?.trim()) {
+                    if (!grouped[key].plots.includes(item.plot)) {
+                        grouped[key].plots.push(item.plot);
+                    }
                 }
+
                 if (!grouped[key].bloks.includes(item.blok)) {
                     grouped[key].bloks.push(item.blok);
                 }
@@ -658,8 +664,8 @@
                     <td style="text-align: left;">${item.mandor_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
                     <td>${item.bloks.join(', ')}</td>
-                    <td>${item.plots.join(', ')}</td>
-                    <td>${item.totalLuas.toFixed(1)}</td>
+                    <td>${item.plots.length > 0 ? item.plots.join(', ') : '-'}</td>
+                    <td>${item.totalLuas > 0 ? item.totalLuas.toFixed(1) : '-'}</td>
                     <td>${item.jumlahlaki}</td>
                     <td>${item.jumlahperempuan}</td>
                     <td>${total}</td>
@@ -668,7 +674,7 @@
 
                 totalL += item.jumlahlaki;
                 totalP += item.jumlahperempuan;
-                totalLuas += item.totalLuas;
+                totalLuas += item.totalLuas > 0 ? item.totalLuas : 0;
             });
 
             document.getElementById('sum-luas-borongan').textContent = totalLuas.toFixed(1);
@@ -700,9 +706,9 @@
                     <td style="text-align: left;">${item.operator_nama || '-'}</td>
                     <td style="text-align: left;">${item.helper_nama || '-'}</td>
                     <td style="text-align: left;">${item.activityname || '-'}</td>
-                    <td>${item.blok}</td>
-                    <td>${item.plot}</td>
-                    <td>${parseFloat(item.luasarea).toFixed(1)}</td>
+                    <td>${item.blok || '-'}</td>
+                    <td>${item.plot?.trim() || '-'}</td>
+                    <td>${item.luasarea > 0 ? parseFloat(item.luasarea).toFixed(1) : '-'}</td>
                     <td>${item.nokendaraan || '-'}</td>
                     <td style="text-align: left;">${item.jenis || '-'}</td>
                 `;

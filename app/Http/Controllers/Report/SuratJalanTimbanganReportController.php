@@ -705,12 +705,28 @@ class SuratJalanTimbanganReportController extends Controller
                 }
             }
 
+             // Get BSM data
+            $bsmData = DB::table('lkhdetailbsm')
+                ->where('suratjalanno', $suratjalanno)
+                ->select(
+                    'nilaibersih',
+                    'nilaisegar',
+                    'nilaimanis',
+                    'averagescore',
+                    'grade',
+                    'keterangan',
+                    'createdat'
+                )
+                ->first();
+
             return response()->json([
                 'success' => true,
-                'data' => $detail
+                'data' => $detail,
+                'bsm' => $bsmData
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Error getDetail: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()

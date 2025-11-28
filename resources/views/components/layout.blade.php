@@ -57,7 +57,9 @@
         .main-wrapper {
             flex: 1;
             margin-left: 0;
-            overflow-x: clip;
+            max-width: calc(100%-4rem);
+            min-width: 0;
+            /* overflow-x: clip; */
         }
 
         /* Show body after state determined */

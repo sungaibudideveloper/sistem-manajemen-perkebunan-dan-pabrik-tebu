@@ -9,7 +9,7 @@
         justify-content: justify;
         place-items: center;
         align-items: flex-start;
-        min-height: 10vh;
+        /* min-height: 10vh; */
         padding: 0px;
         overflow-x: auto;
         box-sizing: border-box;

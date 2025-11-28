@@ -8,7 +8,7 @@
 
             @if (hasPermission('Create HPT'))
                 <a href="{{ route('input.hpt.create') }}"
-                    class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
+                    class="bg-blue-600 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-700 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                         width="24" height="24" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -120,8 +120,6 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No.
                                 Sample
                             </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot
-                                Sample</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Varietas
                             </th>
@@ -144,8 +142,6 @@
                                     {{ $item->no }}.</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->nosample }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->idblokplot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->plot }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -415,15 +411,15 @@
                                 <td class="py-2 px-4 border-b border-gray-300">${item.compName}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.blokName}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plotName}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.luas_area}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.luasarea}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.tanggaltanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${umurTanam}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.varietas}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.kat}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.tanggalpengamatan}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${month}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.no_urut}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.jm_batang}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.nourut}</td>
+                                <td class="py-2 px-4 border-b border-gray-300">${item.jumlahbatang}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.ppt}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.ppt_aktif}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.pbt}</td>

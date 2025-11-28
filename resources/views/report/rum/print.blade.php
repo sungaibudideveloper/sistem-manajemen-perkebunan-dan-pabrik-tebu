@@ -4,7 +4,30 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     <x-slot:navnav>{{ $title }}</x-slot:navnav>
 
-    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+    <style>
+        @media print {
+
+            html,
+            body {
+                height: auto !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #fff !important;
+            }
+
+            .layout-container,
+            .main-wrapper,
+            main {
+                display: block !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+            }
+        }
+    </style>
+
+    <div class="max-w-full mx-auto bg-white rounded-lg shadow-md overflow-hidden">
         <!-- Header dengan tombol print saja -->
         <div
             class="no-print bg-gradient-to-r from-green-600 to-emerald-500 text-white p-4 flex justify-between items-center">
@@ -27,11 +50,11 @@
         <!-- Container untuk konten yang akan dicetak -->
         <div id="print-container" class="print-container p-8 bg-white">
             <!-- Header Report -->
-            <div class="text-center mb-8">
-                <h1 class="text-2xl font-bold mb-2">Rekap Upah Mingguan</h1>
-                <h2 class="text-xl">Tenaga Kerja {{ session('tenagakerjarum') == 'Harian' ? 'Harian' : 'Borongan' }}
+            <div class="text-center mb-6">
+                <h1 class="text-xl font-bold mb-2">Rekap Upah Mingguan</h1>
+                <h2 class="text-lg">Tenaga Kerja {{ session('tenagakerjarum') == 'Harian' ? 'Harian' : 'Borongan' }}
                 </h2>
-                <h2 class="text-xl">Divisi {{ session('companycode') }}</h2>
+                <h2 class="text-lg">Divisi {{ session('companycode') }}</h2>
                 @php
                     // Backup current locale
                     $currentLocale = \Carbon\Carbon::getLocale();
@@ -43,7 +66,7 @@
                     $end = \Carbon\Carbon::parse($endDate);
                 @endphp
 
-                <h3 class="text-lg">Periode:
+                <h3 class="text-base">Periode:
                     @if ($start->format('m Y') === $end->format('m Y'))
                         {{ $start->translatedFormat('d') }} s.d {{ $end->translatedFormat('d F Y') }}
                     @else
@@ -63,130 +86,136 @@
                 </span>
             </div>
 
-            <!-- Tabel Data -->
-            <table class="w-full border-collapse border border-gray-300 mb-6">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border border-gray-300 px-4 py-2">No.</th>
-                        <th class="border border-gray-300 px-4 py-2 w-[20ch]">Kegiatan</th>
-                        @if (session('tenagakerjarum') == 'Harian')
-                            <th class="border border-gray-300 px-4 py-2">Tenaga Kerja</th>
-                        @endif
-                        <th class="border border-gray-300 px-4 py-2">Plot</th>
-                        <th class="border border-gray-300 px-4 py-2">Luas (Ha)</th>
-                        <th class="border border-gray-300 px-4 py-2">Status Tanam</th>
-                        <th class="border border-gray-300 px-4 py-2">Hasil (Ha)</th>
-                        <th class="border border-gray-300 px-4 py-2">Cost/Unit</th>
-                        <th class="border border-gray-300 px-4 py-2 w-[30ch]">Biaya (Rp)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php
-                        // Group data by activityname
-                        $groupedData = [];
-                        $totalKeseluruhan = 0;
+            <!-- Tabel Data dengan wrapper untuk scroll horizontal di screen -->
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-gray-300 mb-4" style="min-width: 100%;">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-2 py-2" style="width: 4%;">No.</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 16%;">Kegiatan</th>
+                            @if (session('tenagakerjarum') == 'Harian')
+                                <th class="border border-gray-300 px-2 py-2" style="width: 12%;">Tenaga Kerja</th>
+                            @endif
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Plot</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Luas (Ha)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Status Tanam</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Hasil (Ha)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Cost/Unit</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 17%;">Biaya (Rp)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            // Group data by activityname
+                            $groupedData = [];
+                            $totalKeseluruhan = 0;
 
-                        if (isset($data) && count($data) > 0) {
-                            foreach ($data as $item) {
-                                $activityName = $item->activityname;
-                                if (!isset($groupedData[$activityName])) {
-                                    $groupedData[$activityName] = [];
-                                }
-                                $groupedData[$activityName][] = $item;
-                            }
-                        }
-
-                        $rowNumber = 1;
-                    @endphp
-
-                    @if (count($groupedData) > 0)
-                        @foreach ($groupedData as $activityName => $items)
-                            @php
-                                $subtotal = 0;
-                                $itemCount = count($items);
-                            @endphp
-
-                            @foreach ($items as $index => $item)
-                                <tr>
-                                    <td class="border border-gray-300 px-4 py-2 text-center">{{ $rowNumber++ }}.</td>
-
-                                    <!-- Merge kolom kegiatan dengan rowspan -->
-                                    @if ($index === 0)
-                                        <td class="border border-gray-300 px-4 py-2 font-semibold bg-gray-50"
-                                            rowspan="{{ $itemCount }}">
-                                            {{ $item->activityname }}
-                                        </td>
-                                    @endif
-
-                                    @if (session('tenagakerjarum') == 'Harian')
-                                        <td class="border border-gray-300 px-4 py-2">{{ $item->namatenagakerja }}</td>
-                                    @endif
-                                    <td class="border border-gray-300 px-4 py-2">{{ $item->plot }}</td>
-                                    <td class="border border-gray-300 px-4 py-2 text-right">
-                                        {{ number_format($item->luasan, 2) }}</td>
-                                    <td class="border border-gray-300 px-4 py-2">
-                                        {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
-                                    <td class="border border-gray-300 px-4 py-2 text-right">
-                                        {{ number_format($item->hasil, 2) }}</td>
-                                    <td class="border border-gray-300 px-4 py-2 text-right">{{ $item->upah }}</td>
-                                    <td class="border border-gray-300 px-4 py-2 text-right">{{ $item->total }}</td>
-                                </tr>
-                                @php
-                                    // Konversi nilai total ke numeric
-                                    // Hapus semua karakter kecuali angka, koma, dan titik
-                                    $cleanTotal = preg_replace('/[^\d,.]/', '', $item->total);
-
-                                    // Jika format Indonesia (1.000.000,00), ubah ke format standar
-                                    if (strpos($cleanTotal, ',') !== false && strpos($cleanTotal, '.') !== false) {
-                                        // Format: 1.000.000,00 -> hapus titik, ganti koma dengan titik
-                                        $cleanTotal = str_replace('.', '', $cleanTotal);
-                                        $cleanTotal = str_replace(',', '.', $cleanTotal);
-                                    } elseif (strpos($cleanTotal, ',') !== false) {
-                                        // Format: 1000000,00 -> ganti koma dengan titik
-                                        $cleanTotal = str_replace(',', '.', $cleanTotal);
+                            if (isset($data) && count($data) > 0) {
+                                foreach ($data as $item) {
+                                    $activityName = $item->activityname;
+                                    if (!isset($groupedData[$activityName])) {
+                                        $groupedData[$activityName] = [];
                                     }
+                                    $groupedData[$activityName][] = $item;
+                                }
+                            }
 
-                                    $totalValue = floatval($cleanTotal);
-                                    $subtotal += $totalValue;
+                            $rowNumber = 1;
+                        @endphp
+
+                        @if (count($groupedData) > 0)
+                            @foreach ($groupedData as $activityName => $items)
+                                @php
+                                    $subtotal = 0;
+                                    $itemCount = count($items);
+                                @endphp
+
+                                @foreach ($items as $index => $item)
+                                    <tr>
+                                        <td class="border border-gray-300 px-2 py-2 text-center">{{ $rowNumber++ }}.
+                                        </td>
+
+                                        <!-- Merge kolom kegiatan dengan rowspan -->
+                                        @if ($index === 0)
+                                            <td class="border border-gray-300 px-2 py-2 font-semibold bg-gray-50"
+                                                rowspan="{{ $itemCount }}">
+                                                {{ $item->activityname }}
+                                            </td>
+                                        @endif
+
+                                        @if (session('tenagakerjarum') == 'Harian')
+                                            <td class="border border-gray-300 px-2 py-2">{{ $item->namatenagakerja }}
+                                            </td>
+                                        @endif
+                                        <td class="border border-gray-300 px-2 py-2">{{ $item->plot }}</td>
+                                        <td class="border border-gray-300 px-2 py-2 text-right">
+                                            {{ number_format($item->luasan, 2) }}</td>
+                                        <td class="border border-gray-300 px-2 py-2">
+                                            {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
+                                        <td class="border border-gray-300 px-2 py-2 text-right">
+                                            {{ number_format($item->hasil, 2) }}</td>
+                                        <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->upah }}
+                                        </td>
+                                        <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->total }}
+                                        </td>
+                                    </tr>
+                                    @php
+                                        // Konversi nilai total ke numeric
+                                        // Hapus semua karakter kecuali angka, koma, dan titik
+                                        $cleanTotal = preg_replace('/[^\d,.]/', '', $item->total);
+
+                                        // Jika format Indonesia (1.000.000,00), ubah ke format standar
+                                        if (strpos($cleanTotal, ',') !== false && strpos($cleanTotal, '.') !== false) {
+                                            // Format: 1.000.000,00 -> hapus titik, ganti koma dengan titik
+                                            $cleanTotal = str_replace('.', '', $cleanTotal);
+                                            $cleanTotal = str_replace(',', '.', $cleanTotal);
+                                        } elseif (strpos($cleanTotal, ',') !== false) {
+                                            // Format: 1000000,00 -> ganti koma dengan titik
+                                            $cleanTotal = str_replace(',', '.', $cleanTotal);
+                                        }
+
+                                        $totalValue = floatval($cleanTotal);
+                                        $subtotal += $totalValue;
+                                    @endphp
+                                @endforeach
+
+                                <!-- Row Subtotal untuk setiap kegiatan -->
+                                <tr class="bg-yellow-50 font-bold">
+                                    <td class="border border-gray-300 px-2 py-2 text-center"
+                                        colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
+                                        Subtotal {{ $activityName }}
+                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-right">
+                                        Rp {{ number_format($subtotal, 2, ',', '.') }}
+                                    </td>
+                                </tr>
+
+                                @php
+                                    $totalKeseluruhan += $subtotal;
                                 @endphp
                             @endforeach
 
-                            <!-- Row Subtotal untuk setiap kegiatan -->
-                            <tr class="bg-yellow-50 font-bold">
-                                <td class="border border-gray-300 px-4 py-2 text-center"
+                            <!-- Row Total Keseluruhan -->
+                            <tr class="bg-green-100 font-bold text-base">
+                                <td class="border border-gray-300 px-2 py-2 text-center"
                                     colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
-                                    Subtotal {{ $activityName }}
+                                    TOTAL KESELURUHAN
                                 </td>
-                                <td class="border border-gray-300 px-4 py-2 text-right">
-                                    Rp {{ number_format($subtotal, 2, ',', '.') }}
+                                <td class="border border-gray-300 px-2 py-2 text-right">
+                                    Rp {{ number_format($totalKeseluruhan, 2, ',', '.') }}
                                 </td>
                             </tr>
-
-                            @php
-                                $totalKeseluruhan += $subtotal;
-                            @endphp
-                        @endforeach
-
-                        <!-- Row Total Keseluruhan -->
-                        <tr class="bg-green-100 font-bold text-base">
-                            <td class="border border-gray-300 px-4 py-2 text-center"
-                                colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '7' }}">
-                                TOTAL KESELURUHAN
-                            </td>
-                            <td class="border border-gray-300 px-4 py-2 text-right">
-                                Rp {{ number_format($totalKeseluruhan, 2, ',', '.') }}
-                            </td>
-                        </tr>
-                    @else
-                        <tr>
-                            <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '8' }}"
-                                class="border border-gray-300 px-4 py-2 text-center">
-                                Tidak ada data
-                            </td>
-                        </tr>
-                    @endif
-                </tbody>
-            </table>
+                        @else
+                            <tr>
+                                <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '8' }}"
+                                    class="border border-gray-300 px-2 py-2 text-center">
+                                    Tidak ada data
+                                </td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Footer dengan tanggal cetak -->
             <div class="text-right text-sm text-gray-500">
@@ -204,33 +233,4 @@
         });
     </script>
 
-    {{-- <style>
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-            }
-
-            .print-container {
-                max-width: 80rem !important;
-                width: 100%;
-                margin: 0 auto;
-            }
-
-            /* Hide non-printable elements */
-            .no-print {
-                display: none !important;
-            }
-
-            /* Ensure table fits properly */
-            table {
-                page-break-inside: auto;
-            }
-
-            tr {
-                page-break-inside: avoid;
-                page-break-after: auto;
-            }
-        }
-    </style> --}}
 </x-layout>

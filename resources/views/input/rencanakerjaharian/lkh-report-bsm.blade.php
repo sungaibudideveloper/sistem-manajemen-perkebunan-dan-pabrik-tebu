@@ -63,7 +63,7 @@
                     @endphp
                     <div class="space-y-1">
                         <div class="flex justify-between gap-8">
-                            <span class="text-gray-700">Total Plot:</span>
+                            <span class="text-gray-700">Total SJ:</span>
                             <span class="font-bold text-gray-900">{{ $totalPlots }}</span>
                         </div>
                         <div class="flex justify-between gap-8">
@@ -93,7 +93,7 @@
             </div>
         </div>
 
-        {{-- Statistics - Fix label only --}}
+        {{-- Statistics - FIXED numeric conversion --}}
         @php
             $completedData = $lkhBsmDetails->where('status', 'COMPLETED');
             $premiumData = $completedData->where('kodetebang_label', 'Premium');
@@ -102,9 +102,42 @@
             $gradeA = $completedData->where('grade', 'A')->count();
             $gradeB = $completedData->where('grade', 'B')->count();
             $gradeC = $completedData->where('grade', 'C')->count();
-            $avgScore = $completedData->whereNotNull('averagescore')->avg(function($item) {
-                return (float)str_replace(',', '', $item->averagescore);
-            });
+            
+            // Convert averagescore string to float before calculating average
+            $avgScore = $completedData
+                ->filter(function($item) { 
+                    return !is_null($item->averagescore) && $item->averagescore !== ''; 
+                })
+                ->map(function($item) {
+                    return (float)str_replace(',', '', $item->averagescore);
+                })
+                ->avg();
+            
+            $avgScore = $avgScore ?: 0;
+            
+            // Calculate premium average
+            $premiumAvg = $premiumData
+                ->filter(function($item) { 
+                    return !is_null($item->averagescore) && $item->averagescore !== ''; 
+                })
+                ->map(function($item) {
+                    return (float)str_replace(',', '', $item->averagescore);
+                })
+                ->avg();
+            
+            $premiumAvg = $premiumAvg ?: 0;
+            
+            // Calculate non-premium average
+            $nonPremiumAvg = $nonPremiumData
+                ->filter(function($item) { 
+                    return !is_null($item->averagescore) && $item->averagescore !== ''; 
+                })
+                ->map(function($item) {
+                    return (float)str_replace(',', '', $item->averagescore);
+                })
+                ->avg();
+            
+            $nonPremiumAvg = $nonPremiumAvg ?: 0;
         @endphp
 
         @if($completedData->count() > 0)
@@ -146,7 +179,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span>Avg Score:</span>
-                            <strong>{{ number_format($premiumData->avg('averagescore'), 2) }}</strong>
+                            <strong>{{ number_format($premiumAvg, 2) }}</strong>
                         </div>
                         <div class="flex justify-between text-xs text-gray-600">
                             <span>A (&lt;1200) | B (1200-1700) | C (&gt;1700)</span>
@@ -162,7 +195,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span>Avg Score:</span>
-                            <strong>{{ number_format($nonPremiumData->avg('averagescore'), 2) }}</strong>
+                            <strong>{{ number_format($nonPremiumAvg, 2) }}</strong>
                         </div>
                         <div class="flex justify-between text-xs text-gray-600">
                             <span>A (&lt;1000) | B (1000-2000) | C (&gt;2000)</span>
@@ -173,110 +206,122 @@
         </div>
         @endif
 
-        {{-- Section 1: Detail Hasil Cek BSM --}}
+        {{-- Section 1: Detail Hasil Cek BSM - Grouped by Plot --}}
         <div class="mb-6">
             <h3 class="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide border-b border-gray-400 pb-1">
                 Detail Hasil Cek BSM Per Surat Jalan
             </h3>
             
-            <table class="w-full border-collapse border border-gray-400 text-xs">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">No</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Surat Jalan</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Plot</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Kodetebang</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Batch</th>
-                        <th colspan="3" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900 bg-gray-300">Nilai BSM</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Average</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Grade</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Status</th>
-                        <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900">Keterangan</th>
-                    </tr>
-                    <tr class="bg-gray-300">
-                        <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900">Bersih</th>
-                        <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900">Segar</th>
-                        <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900">Manis</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($lkhBsmDetails as $index => $detail)
-                    <tr class="{{ $detail->status == 'COMPLETED' ? 'bg-gray-50' : '' }}">
-                        <td class="border border-gray-400 px-2 py-2 text-center">{{ $index + 1 }}</td>
-                        <td class="border border-gray-400 px-2 py-2 font-mono text-xs">{{ $detail->suratjalanno }}</td>
-                        <td class="border border-gray-400 px-2 py-2 font-semibold">{{ $detail->plot_display }}</td>
-                        <td class="border border-gray-400 px-2 py-2 text-center">
-                            <span class="text-xs {{ $detail->kodetebang_label == 'Premium' ? 'font-bold text-blue-700' : 'text-gray-700' }}">
-                                {{ $detail->kodetebang_label }}
-                            </span>
-                        </td>
-                        <td class="border border-gray-400 px-2 py-2 text-center font-mono">{{ $detail->batchno }}</td>
-                        
-                        {{-- Nilai BSM --}}
-                        <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
-                            @if($detail->nilaibersih)
-                                <strong>{{ $detail->nilaibersih }}</strong>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
-                            @if($detail->nilaisegar)
-                                <strong>{{ $detail->nilaisegar }}</strong>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
-                            @if($detail->nilaimanis)
-                                <strong>{{ $detail->nilaimanis }}</strong>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        
-                        {{-- Average --}}
-                        <td class="border border-gray-400 px-2 py-2 text-center">
-                            @if($detail->averagescore)
-                                <strong class="text-base">{{ $detail->averagescore }}</strong>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        
-                        {{-- Grade --}}
-                        <td class="border border-gray-400 px-2 py-2 text-center">
-                            @if($detail->grade == 'A')
-                                <span class="font-bold text-green-700">A</span>
-                            @elseif($detail->grade == 'B')
-                                <span class="font-bold text-yellow-700">B</span>
-                            @elseif($detail->grade == 'C')
-                                <span class="font-bold text-red-700">C</span>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        
-                        {{-- Status --}}
-                        <td class="border border-gray-400 px-2 py-2 text-center">
-                            @if($detail->status == 'COMPLETED')
-                                <span class="font-medium text-green-700">✓ COMPLETED</span>
-                            @else
-                                <span class="font-medium text-orange-700">PENDING</span>
-                            @endif
-                        </td>
-                        
-                        <td class="border border-gray-400 px-2 py-2 text-gray-700">{{ $detail->keterangan }}</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="12" class="border border-gray-400 px-2 py-4 text-center text-gray-500">
-                            Tidak ada data BSM. Android akan insert data per Surat Jalan.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+            @php
+                $groupedByPlot = $lkhBsmDetails->groupBy('plot');
+            @endphp
+            
+            @foreach($groupedByPlot as $plot => $details)
+                {{-- Plot Header --}}
+                <div class="mt-4 mb-2 bg-gray-200 px-3 py-2 font-bold text-gray-900">
+                    Plot: {{ $details->first()->plot_display }}
+                    <span class="text-sm font-normal text-gray-600 ml-3">
+                        ({{ $details->count() }} Surat Jalan)
+                    </span>
+                </div>
+                
+                <table class="w-full border-collapse border border-gray-400 text-xs mb-6" style="table-layout: fixed;">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 4%;">No</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 18%;">Surat Jalan</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 10%;">Kodetebang</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 12%;">Batch</th>
+                            <th colspan="3" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900 bg-gray-300" style="width: 24%;">Nilai BSM</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 8%;">Average</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 6%;">Grade</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 10%;">Status</th>
+                            <th rowspan="2" class="border border-gray-400 px-2 py-2 font-semibold text-gray-900" style="width: 8%;">Keterangan</th>
+                        </tr>
+                        <tr class="bg-gray-300">
+                            <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900" style="width: 8%;">Bersih</th>
+                            <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900" style="width: 8%;">Segar</th>
+                            <th class="border border-gray-400 px-2 py-1 font-semibold text-gray-900" style="width: 8%;">Manis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($details as $index => $detail)
+                        <tr class="{{ $detail->status == 'COMPLETED' ? 'bg-gray-50' : '' }}">
+                            <td class="border border-gray-400 px-2 py-2 text-center">{{ $index + 1 }}</td>
+                            <td class="border border-gray-400 px-2 py-2 font-mono text-xs">{{ $detail->suratjalanno }}</td>
+                            <td class="border border-gray-400 px-2 py-2 text-center">
+                                <span class="text-xs {{ $detail->kodetebang_label == 'Premium' ? 'font-bold text-blue-700' : 'text-gray-700' }}">
+                                    {{ $detail->kodetebang_label }}
+                                </span>
+                            </td>
+                            <td class="border border-gray-400 px-2 py-2 text-center font-mono">{{ $detail->batchno }}</td>
+                            
+                            {{-- Nilai BSM --}}
+                            <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
+                                @if($detail->nilaibersih)
+                                    <strong>{{ $detail->nilaibersih }}</strong>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
+                                @if($detail->nilaisegar)
+                                    <strong>{{ $detail->nilaisegar }}</strong>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            <td class="border border-gray-400 px-2 py-2 text-center bg-gray-50">
+                                @if($detail->nilaimanis)
+                                    <strong>{{ $detail->nilaimanis }}</strong>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            
+                            {{-- Average --}}
+                            <td class="border border-gray-400 px-2 py-2 text-center">
+                                @if($detail->averagescore)
+                                    <strong class="text-base">{{ $detail->averagescore }}</strong>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            
+                            {{-- Grade --}}
+                            <td class="border border-gray-400 px-2 py-2 text-center">
+                                @if($detail->grade == 'A')
+                                    <span class="font-bold text-green-700">A</span>
+                                @elseif($detail->grade == 'B')
+                                    <span class="font-bold text-yellow-700">B</span>
+                                @elseif($detail->grade == 'C')
+                                    <span class="font-bold text-red-700">C</span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            
+                            {{-- Status --}}
+                            <td class="border border-gray-400 px-2 py-2 text-center">
+                                @if($detail->status == 'COMPLETED')
+                                    <span class="font-medium text-green-700">✓ COMPLETED</span>
+                                @else
+                                    <span class="font-medium text-orange-700">PENDING</span>
+                                @endif
+                            </td>
+                            
+                            <td class="border border-gray-400 px-2 py-2 text-gray-700">{{ $detail->keterangan }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endforeach
+            
+            @if($lkhBsmDetails->isEmpty())
+            <div class="border border-gray-400 px-4 py-8 text-center text-gray-500">
+                Tidak ada data BSM. Android akan insert data per Surat Jalan.
+            </div>
+            @endif
         </div>
 
         {{-- Section 2: Detail Pekerja Harian --}}
