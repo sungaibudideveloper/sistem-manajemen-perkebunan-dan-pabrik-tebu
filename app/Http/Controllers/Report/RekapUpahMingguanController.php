@@ -66,6 +66,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.jenistenagakerja',
                 'lkhhdr.totalupahall',
                 'lkhhdr.lkhdate',
+                'lkhhdr.totalworkers',
                 'activity.activityname'
             );
 
