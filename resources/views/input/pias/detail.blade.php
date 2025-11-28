@@ -14,7 +14,13 @@
       font:600 16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     }
     .toast-error{ background:#ffe4e6; border-color:#fda4af; } /* soft red */
-    @media print { .toast-center{ display:none !important; }   .print-only { display:block;}    }
+    @media print { .toast-center{ display:none !important; }   .print-only { display:block;}    
+      input[type="number"] { 
+        border: none !important; 
+        background: transparent !important;
+        padding: 0 !important;
+      }
+    }
     @media screen { .print-only { display:none; } }
   </style>
 @endonce
