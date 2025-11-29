@@ -262,58 +262,6 @@ class Batch extends Model
         return max(0, $this->batcharea - $this->getTotalPanen());
     }
 
-    /**
-     * Check if panen completed (>= 95% tolerance)
-     */
-    public function isPanenCompleted(): bool
-    {
-        return $this->getTotalPanen() >= ($this->batcharea * 0.95);
-    }
-
-    /**
-     * Get panen status
-     */
-    public function getPanenStatus(): string
-    {
-        if (is_null($this->tanggalpanen)) {
-            return 'BELUM_PANEN';
-        }
-        
-        if ($this->isPanenCompleted()) {
-            return 'PANEN_SELESAI';
-        }
-        
-        return 'ON_PANEN';
-    }
-
-    /**
-     * Get lifecycle history (chain of batches)
-     */
-    public function getLifecycleHistory()
-    {
-        $history = collect([$this]);
-        
-        // Get previous batches
-        $current = $this;
-        while ($current->previousbatchno) {
-            $current = self::find($current->previousbatchno);
-            if ($current) {
-                $history->prepend($current);
-            } else {
-                break;
-            }
-        }
-        
-        // Get next batches
-        $current = $this;
-        while ($nextBatch = $current->nextBatch) {
-            $history->push($nextBatch);
-            $current = $nextBatch;
-        }
-        
-        return $history;
-    }
-
     // =====================================
     // LEGACY METHOD (keep for compatibility)
     // =====================================
