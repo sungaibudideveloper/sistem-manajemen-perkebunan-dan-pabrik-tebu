@@ -282,12 +282,18 @@ class GenerateNewBatchService
                 ->lockForUpdate()
                 ->first();
             
-            if (!$currentBatch || !$currentBatch->isactive) {
+            if (!$currentBatch) {
                 DB::rollBack();
-                return ['success' => false, 'message' => 'Batch already closed or not found'];
+                return ['success' => false, 'message' => 'Batch not found'];
             }
             
-            // Close current batch
+            // ✅ CHECK: Batch sudah closed sebelumnya?
+            if (!$currentBatch->isactive) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'Batch already transitioned'];
+            }
+            
+            // ✅ NEW: Close current batch SETELAH dipastikan completed
             $currentBatch->update([
                 'isactive' => 0,
                 'closedat' => now()
@@ -320,10 +326,8 @@ class GenerateNewBatchService
             
             // ✅ LOGIC 1: tanggalulangtahun (HANYA NULL kalau RC3→PC)
             if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
-                // RC3→PC: Empty PC (belum tanam)
                 $batchData['tanggalulangtahun'] = null;
             } else {
-                // PC→RC1, RC1→RC2, RC2→RC3: ALWAYS set = batchdate
                 $batchData['tanggalulangtahun'] = now()->format('Y-m-d');
             }
             
