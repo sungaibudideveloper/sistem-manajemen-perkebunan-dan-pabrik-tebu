@@ -247,6 +247,7 @@ class GenerateNewBatchService
     
     /**
      * Check if panen completed (approved LKH only)
+     * Add companycode filter to prevent cross-company calculation
      */
     private function isPanenCompleted($batchno, $companycode)
     {
@@ -256,14 +257,24 @@ class GenerateNewBatchService
         
         if (!$batch) return false;
         
+        // ✅ FIX: Add companycode filter!
         $totalPanen = DB::table('lkhdetailplot as ldp')
             ->join('lkhhdr as lh', function($join) {
                 $join->on('ldp.lkhno', '=', 'lh.lkhno')
                     ->on('ldp.companycode', '=', 'lh.companycode');
             })
+            ->where('ldp.companycode', $companycode)  // ✅✅✅ ADD THIS!
             ->where('ldp.batchno', $batchno)
             ->where('lh.approvalstatus', '1')
             ->sum('ldp.luashasil') ?? 0;
+        
+        Log::info("Check panen completion", [
+            'batchno' => $batchno,
+            'companycode' => $companycode,
+            'batcharea' => $batch->batcharea,
+            'total_panen' => $totalPanen,
+            'is_completed' => $totalPanen >= ($batch->batcharea * self::TOLERANCE)
+        ]);
         
         return $totalPanen >= ($batch->batcharea * self::TOLERANCE);
     }
@@ -282,30 +293,21 @@ class GenerateNewBatchService
                 ->lockForUpdate()
                 ->first();
             
-            if (!$currentBatch) {
+            if (!$currentBatch || !$currentBatch->isactive) {
                 DB::rollBack();
-                return ['success' => false, 'message' => 'Batch not found'];
+                return ['success' => false, 'message' => 'Batch already closed or not found'];
             }
             
-            // ✅ CHECK: Batch sudah closed sebelumnya?
-            if (!$currentBatch->isactive) {
-                DB::rollBack();
-                return ['success' => false, 'message' => 'Batch already transitioned'];
-            }
-            
-            // ✅ NEW: Close current batch SETELAH dipastikan completed
+            // ✅ STEP 1: Close batch lama (LOGIS & AMAN)
             $currentBatch->update([
                 'isactive' => 0,
                 'closedat' => now()
             ]);
             
-            // Determine next lifecycle
+            // ✅ STEP 2: Generate new batch
             $nextLifecycle = $this->getNextLifecycle($currentBatch->lifecyclestatus);
-            
-            // Generate new batch
             $newBatchNo = $this->generateBatchNo($companycode, now());
             
-            // Prepare batch data
             $batchData = [
                 'batchno' => $newBatchNo,
                 'companycode' => $companycode,
@@ -324,24 +326,18 @@ class GenerateNewBatchService
                 'createdat' => now()
             ];
             
-            // ✅ LOGIC 1: tanggalulangtahun (HANYA NULL kalau RC3→PC)
             if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
                 $batchData['tanggalulangtahun'] = null;
+                $batchData['plantinglkhno'] = null;
             } else {
                 $batchData['tanggalulangtahun'] = now()->format('Y-m-d');
+                $batchData['plantinglkhno'] = $currentBatch->plantinglkhno ?? null;
             }
             
-            // ✅ LOGIC 2: plantinglkhno (INDEPENDENT, copy kalau ada)
-            $batchData['plantinglkhno'] = $currentBatch->plantinglkhno ?? null;
-            
-            // ✅ SPECIAL: RC3→PC set plantinglkhno = NULL (paksa)
-            if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
-                $batchData['plantinglkhno'] = null;
-            }
-            
+            // ✅ STEP 3: Create new batch
             $newBatch = Batch::create($batchData);
             
-            // Update masterlist
+            // ✅ STEP 4: Update masterlist
             DB::table('masterlist')
                 ->where('companycode', $companycode)
                 ->where('plot', $currentBatch->plot)
@@ -353,9 +349,7 @@ class GenerateNewBatchService
                 'old_batch' => $currentBatchNo,
                 'old_lifecycle' => $currentBatch->lifecyclestatus,
                 'new_batch' => $newBatchNo,
-                'new_lifecycle' => $nextLifecycle,
-                'tanggalulangtahun' => $batchData['tanggalulangtahun'],
-                'plantinglkhno' => $batchData['plantinglkhno']
+                'new_lifecycle' => $nextLifecycle
             ]);
             
             return [
@@ -368,7 +362,7 @@ class GenerateNewBatchService
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Failed to create next batch from panen: " . $e->getMessage());
+            Log::error("Failed to create next batch: " . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
