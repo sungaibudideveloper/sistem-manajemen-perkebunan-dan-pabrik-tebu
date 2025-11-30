@@ -72,8 +72,8 @@
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Hari Ke</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Tanggal</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">HC (Ha)</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Sisa (Ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">HC (ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Sisa (ha)</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Rit</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Ton</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Jumlah SJ</th>
@@ -346,7 +346,7 @@
                                 ${batch.is_active === 1 ? '<span class="px-2 py-1 bg-gray-900 text-white rounded-full text-xs font-bold">ACTIVE</span>' : ''}
                             </div>
                             <div class="text-sm text-gray-600">
-                                Mulai: ${formatDate(batch.tanggalpanen)} | Luas: ${parseFloat(batch.batcharea).toFixed(2)} Ha
+                                Mulai: ${formatDate(batch.tanggalpanen)} | Luas: ${parseFloat(batch.batcharea).toFixed(2)} ha
                             </div>
                             ${batch.kodevarietas ? `<div class="text-xs text-gray-500 mt-1">Varietas: ${batch.kodevarietas}</div>` : ''}
                         </div>
@@ -447,7 +447,7 @@
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="text-gray-600 text-sm mb-1">Luas Batch</p>
-                        <p class="text-2xl font-bold text-gray-900">${parseFloat(batchInfo.batcharea).toFixed(2)} Ha</p>
+                        <p class="text-2xl font-bold text-gray-900">${parseFloat(batchInfo.batcharea).toFixed(2)} ha</p>
                     </div>
                 </div>
             `;
@@ -467,9 +467,9 @@
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-green-600">
                     <p class="text-sm text-gray-600 mb-1 font-semibold">Total Area yang Sudah Dipanen</p>
-                    <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_hc).toFixed(2)} Ha</p>
+                    <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_hc).toFixed(2)} ha</p>
                     <p class="text-xs text-gray-500 mt-2">
-                        dari ${batchArea.toFixed(2)} Ha | Rata-rata: ${parseFloat(summary.avg_hc_per_day).toFixed(2)} Ha/hari
+                        dari ${batchArea.toFixed(2)} ha | Rata-rata: ${parseFloat(summary.avg_hc_per_day).toFixed(2)} ha/hari
                     </p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
@@ -488,7 +488,7 @@
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
                     <p class="text-sm text-gray-600 mb-1 font-semibold">Current YPH</p>
-                    <p class="text-3xl font-bold text-gray-900">${currentYPH.toFixed(2)}</p>
+                    <p class="text-3xl font-bold text-gray-900">${currentYPH.toFixed(2)} ton/ha</p>
                     <p class="text-xs text-gray-500 mt-2">
                         Yield Per Hectare
                     </p>
