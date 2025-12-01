@@ -97,10 +97,10 @@
 
           <!-- Mandor -->
           <div x-data="mandorPicker()" x-init="
-            @if(old('mandor_id'))
+            @if(old('mandor_id') || request('mandor_id'))
                 selected = {
-                    userid: '{{ old('mandor_id') }}',
-                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
+                    userid: '{{ old('mandor_id', request('mandor_id')) }}',
+                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id', request('mandor_id')))->name ?? '' }}'
                 }
             @else
                 checkIfUserIsMandor()
@@ -108,24 +108,15 @@
           ">
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
-              type="text"
-              name="mandor"
-              id="mandor"
-              readonly
-              placeholder="Pilih Mandor"
-              @click="!isMandorUser && (open = true)"
-              :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
-              :class="{
-                'cursor-not-allowed bg-gray-100 border-gray-300': isMandorUser,
-                'cursor-pointer bg-white hover:bg-gray-50': !isMandorUser
-              }"
-              class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-3 py-2 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                name="mandor"
+                id="mandor"
+                readonly
+                placeholder="Mandor telah dipilih"
+                :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
+                class="w-full text-sm font-medium border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
             >
             <input type="hidden" name="mandor_id" x-model="selected.userid">
-
-            <template x-if="!isMandorUser">
-              @include('input.rencanakerjaharian.modal-mandor')
-            </template>
           </div>
 
           <!-- Tanggal -->
