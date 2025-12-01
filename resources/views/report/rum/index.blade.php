@@ -112,6 +112,15 @@
                             </svg>
                             Preview Report
                         </button>
+                        <button type="button" onclick="printBp()"
+                            class="bg-gradient-to-r from-red-600 to-rose-500 hover:bg-gradient-to-r hover:from-red-700 hover:to-rose-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
+                            <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linejoin="round" stroke-width="2"
+                                    d="M16.444 18H19a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.556M17 11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v6h10ZM7 15h10v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4Z" />
+                            </svg>
+                            Print BP
+                        </button>
                         <button type="button" onclick="exportToExcel()"
                             class="bg-gradient-to-r from-green-600 to-emerald-600 hover:bg-gradient-to-r hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
                             <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -135,7 +144,9 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">LKH No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kegiatan</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
+                            @if (session('tenagakerjarum' != 'Harian'))
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
+                            @endif
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tanggal
                                 Kegiatan
                             </th>
@@ -162,8 +173,10 @@
                                         {{ $item->lkhno }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->activityname }}</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->plots }}</td>
+                                    @if (session('tenagakerjarum') != 'Harian')
+                                        <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                            {{ $item->plots }}</td>
+                                    @endif
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->lkhdate }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -245,13 +258,15 @@
                         <tr>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kegiatan</th>
-                            @if (session('tenagakerjarum') == 1)
+                            @if (session('tenagakerjarum') == 'Harian')
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Tenaga Kerja</th>
                             @endif
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luasan (Ha)</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Status Tanam</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Hasil (Ha)</th>
+                            @if (session('tenagakerjarum') != 'Harian')
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luasan (Ha)</th>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Status Tanam</th>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Hasil (Ha)</th>
+                            @endif
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Cost/Unit</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Biaya (Rp)</th>
                         </tr>
@@ -345,13 +360,15 @@
                             <tr class="text-center">
                                 <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.activityname || ''}</td>
-                                @if (session('tenagakerjarum') == 1)
+                                @if (session('tenagakerjarum') == 'Harian')
                                     <td class="py-2 px-4 border-b border-gray-300">${item.namatenagakerja}</td>
                                 @endif
+                                @if (session('tenagakerjarum') != 'Harian')
                                 <td class="py-2 px-4 border-b border-gray-300">${item.plot || ''}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.luasrkh || ''}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}/${item.lifecyclestatus}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.luashasil || ''}</td>
+                                @endif
                                 <td class="py-2 px-4 border-b border-gray-300">${item.upah || '-'}</td>
                                 <td class="py-2 px-4 border-b border-gray-300">${item.total || '-'}</td>
                             </tr>
@@ -428,6 +445,27 @@
 
             const baseUrl = "{{ route('report.rekap-upah-mingguan.preview') }}";
             const url = `${baseUrl}?start_date=${startDate}&end_date=${endDate}`;
+
+            window.open(url, '_blank');
+        }
+
+        function printBp() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            const tenagaKerja = document.getElementById('tenagakerjarum').value;
+
+            if (!tenagaKerja) {
+                alert('Harap pilih tenaga kerja terlebih dahulu');
+                return;
+            }
+
+            if (!startDate || !endDate) {
+                alert('Harap pilih range tanggal terlebih dahulu');
+                return;
+            }
+
+            const baseUrl = "{{ route('report.rekap-upah-mingguan.print-bp') }}";
+            const url = `${baseUrl}?start_date=${startDate}&end_date=${endDate}&tenagakerja=${tenagaKerja}`;
 
             window.open(url, '_blank');
         }

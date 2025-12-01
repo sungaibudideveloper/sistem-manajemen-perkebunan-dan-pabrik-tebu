@@ -81,5 +81,6 @@ Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], funct
     Route::get('report/rekap-upah-mingguan/show/{lkhno}', [RekapUpahMingguanController::class, 'show'])->name('report.rekap-upah-mingguan.show');
     Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('report.rekap-upah-mingguan.preview');
     Route::get('report/rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('report.rekap-upah-mingguan.export-excel');
+    Route::get('report/rekap-upah-mingguan/print-bp', [RekapUpahMingguanController::class, 'printBp'])->name('report.rekap-upah-mingguan.print-bp');
 });
 

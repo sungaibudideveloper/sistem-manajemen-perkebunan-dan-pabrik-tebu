@@ -55,7 +55,7 @@
             </div>
 
             <!-- Summary Section -->
-            <div id="summarySection" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div id="summarySection" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <!-- Will be populated by JavaScript -->
             </div>
 
@@ -72,13 +72,13 @@
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Hari Ke</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Tanggal</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">HC (Ha)</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Kumulatif (Ha)</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Sisa (Ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">HC (ha)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Sisa (ha)</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Rit</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">FB Ton</th>
                                 <th class="px-4 py-3 text-center font-semibold text-gray-700">Jumlah SJ</th>
                                 <th class="px-4 py-3 text-right font-semibold text-gray-700">Netto (ton)</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">YPH</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Surat Jalan</th>
                             </tr>
                         </thead>
@@ -200,6 +200,7 @@
         let selectedPlot = null;
         let selectedBatchno = null;
         let activeBatchno = null;
+        let batchArea = 0; // Store batch area globally
 
         // Plot Search
         document.getElementById('plotSearch')?.addEventListener('input', function(e) {
@@ -278,6 +279,7 @@
                         const activeBatch = data.batches.find(b => b.is_active === 1);
                         if (activeBatch) {
                             selectedBatchno = activeBatch.batchno;
+                            batchArea = parseFloat(activeBatch.batcharea);
                             document.getElementById('batchButtonText').textContent = `${activeBatch.batchno} (Active)`;
                             
                             const loadButton = document.getElementById('loadButton');
@@ -344,7 +346,7 @@
                                 ${batch.is_active === 1 ? '<span class="px-2 py-1 bg-gray-900 text-white rounded-full text-xs font-bold">ACTIVE</span>' : ''}
                             </div>
                             <div class="text-sm text-gray-600">
-                                Mulai: ${formatDate(batch.tanggalpanen)} | Luas: ${parseFloat(batch.batcharea).toFixed(2)} Ha
+                                Mulai: ${formatDate(batch.tanggalpanen)} | Luas: ${parseFloat(batch.batcharea).toFixed(2)} ha
                             </div>
                             ${batch.kodevarietas ? `<div class="text-xs text-gray-500 mt-1">Varietas: ${batch.kodevarietas}</div>` : ''}
                         </div>
@@ -360,6 +362,7 @@
 
         function selectBatch(batchno, batchData) {
             selectedBatchno = batchno;
+            batchArea = parseFloat(batchData.batcharea);
             const isActive = batchData.is_active === 1;
             document.getElementById('batchButtonText').textContent = isActive ? `${batchno} (Active)` : batchno;
             
@@ -384,6 +387,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // Store batch area if not already set
+                        if (!batchArea && data.data.batch_info.batcharea) {
+                            batchArea = parseFloat(data.data.batch_info.batcharea);
+                        }
+                        
                         renderBatchInfo(data.data.batch_info);
                         renderSummary(data.data.summary);
                         renderTimeline(data.data.timeline, data.data.summary);
@@ -439,13 +447,15 @@
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="text-gray-600 text-sm mb-1">Luas Batch</p>
-                        <p class="text-2xl font-bold text-gray-900">${parseFloat(batchInfo.batcharea).toFixed(2)} Ha</p>
+                        <p class="text-2xl font-bold text-gray-900">${parseFloat(batchInfo.batcharea).toFixed(2)} ha</p>
                     </div>
                 </div>
             `;
         }
 
         function renderSummary(summary) {
+            const currentYPH = summary.total_hc > 0 ? (summary.total_netto_ton / summary.total_hc) : 0;
+            
             const section = document.getElementById('summarySection');
             section.innerHTML = `
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
@@ -457,9 +467,9 @@
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-green-600">
                     <p class="text-sm text-gray-600 mb-1 font-semibold">Total Area yang Sudah Dipanen</p>
-                    <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_hc).toFixed(2)} Ha</p>
+                    <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_hc).toFixed(2)} ha</p>
                     <p class="text-xs text-gray-500 mt-2">
-                        Rata-rata: ${parseFloat(summary.avg_hc_per_day).toFixed(2)} Ha/hari
+                        dari ${batchArea.toFixed(2)} ha | Rata-rata: ${parseFloat(summary.avg_hc_per_day).toFixed(2)} ha/hari
                     </p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
@@ -474,6 +484,13 @@
                     <p class="text-3xl font-bold text-green-600">${parseFloat(summary.total_netto_ton || 0).toFixed(2)} ton</p>
                     <p class="text-xs text-gray-500 mt-2">
                         Total surat jalan: ${summary.total_sj}
+                    </p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
+                    <p class="text-sm text-gray-600 mb-1 font-semibold">Current YPH</p>
+                    <p class="text-3xl font-bold text-gray-900">${currentYPH.toFixed(2)} ton/ha</p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Yield Per Hectare
                     </p>
                 </div>
             `;
@@ -499,6 +516,11 @@
                     }
                 }
 
+                // Calculate YPH for this day
+                const dayYPH = (day.has_harvest && day.hc > 0 && day.netto_ton) 
+                    ? (parseFloat(day.netto_ton) / parseFloat(day.hc)).toFixed(2)
+                    : '-';
+
                 const sjList = day.list_sj.length > 0 
                     ? `<div class="space-y-1">${day.list_sj.map(sj => `
                         <div class="flex items-center gap-2">
@@ -516,7 +538,6 @@
                     </td>
                     <td class="px-4 py-3 text-center">${statusBadge}</td>
                     <td class="px-4 py-3 text-right font-bold ${day.has_harvest ? 'text-gray-900' : 'text-gray-400'}">${day.has_harvest ? parseFloat(day.hc).toFixed(2) : '-'}</td>
-                    <td class="px-4 py-3 text-right font-bold text-gray-900">${parseFloat(day.cumulative_hc).toFixed(2)}</td>
                     <td class="px-4 py-3 text-right font-bold text-gray-900">${parseFloat(day.remaining_area).toFixed(2)}</td>
                     <td class="px-4 py-3 text-right text-gray-700">${day.field_balance_rit ? parseFloat(day.field_balance_rit).toFixed(0) : '-'}</td>
                     <td class="px-4 py-3 text-right text-gray-700">${day.field_balance_ton ? parseFloat(day.field_balance_ton).toFixed(2) : '-'}</td>
@@ -526,23 +547,29 @@
                     <td class="px-4 py-3 text-right font-semibold text-green-700">
                         ${day.netto_ton ? parseFloat(day.netto_ton).toFixed(2) : '-'}
                     </td>
+                    <td class="px-4 py-3 text-right font-bold text-blue-700">
+                        ${dayYPH}
+                    </td>
                     <td class="px-4 py-3 text-xs">${sjList}</td>
                 `;
                 
                 tbody.appendChild(row);
             });
 
+            // Calculate average YPH for footer
+            const avgYPH = summary.total_hc > 0 ? (summary.total_netto_ton / summary.total_hc) : 0;
+
             const tfoot = document.getElementById('timelineTableFooter');
             tfoot.innerHTML = `
                 <tr>
                     <td colspan="3" class="px-4 py-3 text-right text-gray-900 uppercase font-bold">Total:</td>
                     <td class="px-4 py-3 text-right text-gray-900 font-bold">${parseFloat(summary.total_hc).toFixed(2)}</td>
-                    <td class="px-4 py-3"></td>
                     <td class="px-4 py-3 text-right text-gray-900 font-bold">${parseFloat(summary.remaining_area).toFixed(2)}</td>
                     <td class="px-4 py-3 text-center text-gray-500">-</td>
                     <td class="px-4 py-3 text-center text-gray-500">-</td>
                     <td class="px-4 py-3 text-center text-gray-900 font-bold">${summary.total_sj}</td>
                     <td class="px-4 py-3 text-right text-green-700 font-bold">${parseFloat(summary.total_netto_ton || 0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right text-blue-700 font-bold">${avgYPH.toFixed(2)}</td>
                     <td class="px-4 py-3"></td>
                 </tr>
             `;

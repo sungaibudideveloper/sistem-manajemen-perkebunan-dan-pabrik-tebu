@@ -241,21 +241,57 @@
                 </div>
             </div>
 
-            <!-- Charts Row 3: Status, Vehicle, Durasi (3 kolom) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-                <!-- Status Breakdown -->
-                <div class="bg-white rounded-xl shadow-md p-5">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Status Timbangan</h3>
-                    <canvas id="statusChart" height="200"></canvas>
+            <!-- Charts Row 3: Rit, Vehicle, Durasi (3 kolom) -->
+            <div class="grid grid-cols-1 md:grid-cols-11 gap-5 mb-5">
+                <!-- RIT PER KONTRAKTOR -->
+                <div class="bg-white rounded-xl shadow-md p-5 min-h-[500px] md:col-span-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Jumlah Rit per Kontraktor</h3>
+                    <div class="max-h-80">
+                        <table class="min-w-full text-base">
+                            <thead class="sticky top-0 bg-gray-100 z-10">
+                                <tr>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-left">Kontraktor</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Total<br>Rit</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Sudah<br>Timbang</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Pending</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-right">Total<br>Netto<br>(ton)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, index) in data.ritPerKontraktor" :key="item.kontraktor">
+                                    <tr class="hover:bg-blue-50">
+                                        <td class="border border-gray-300 px-2 py-1.5 font-semibold text-xs" x-text="item.kontraktor"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="item.total_rit"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.sudah_timbang"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.pending"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
+                                    </tr>
+                                </template>
+                                <tr class="bg-gray-100 font-bold border-t-2 border-gray-400">
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right">TOTAL</td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center text-blue-700" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.total_rit, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.sudah_timbang, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.pending, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right text-green-700" x-text="formatTon(data.ritPerKontraktor?.reduce((sum, item) => sum + (item.total_netto || 0), 0) || 0)"></td>
+                                </tr>
+                                <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Vehicle Performance List (Scrollable) -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Performance Kendaraan</h3>
-                    <div class="overflow-y-auto max-h-80">
+                    <div class="overflow-y-auto max-h-96">
                         <table class="min-w-full text-xs">
                             <thead class="sticky top-0 bg-gray-100 z-10">
                                 <tr>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">No</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-left">No Polisi</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-center">Trip</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-right">Total Netto</th>
@@ -266,6 +302,7 @@
                             <tbody>
                                 <template x-for="(vehicle, index) in data.vehiclePerformance" :key="vehicle.nopol">
                                     <tr class="hover:bg-blue-50">
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="index + 1"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 font-semibold" x-text="vehicle.nopol"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="vehicle.trip_count"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 text-right" x-text="formatNumber(vehicle.total_netto)"></td>
@@ -275,7 +312,7 @@
                                 </template>
                                 <template x-if="!data.vehiclePerformance || data.vehiclePerformance.length === 0">
                                     <tr>
-                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                        <td colspan="6" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -284,7 +321,7 @@
                 </div>
 
                 <!-- Durasi Perjalanan Chart -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Distribusi Durasi Perjalanan</h3>
                     <p class="text-xs text-gray-500 mb-3">Waktu dari Cetak POS ke Timbangan</p>
                     <canvas id="durasiChart" height="200"></canvas>
@@ -366,57 +403,21 @@
                 </div>
             </div>
 
-            <!-- Charts Row 5: Rit, Kontraktor & Subkontraktor (ratio 1:2:2) -->
+            <!-- Charts Row 5: Status, Kontraktor & Subkontraktor -->
             <div class="grid grid-cols-1 md:grid-cols-8 gap-5 mb-5">
-                <!-- Rit per Kontraktor (1 kolom - Table) -->
+                <!-- STATUS TIMBANGAN -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-2">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Jumlah Rit per Kontraktor</h3>
-                    <div class="overflow-y-auto max-h-80">
-                        <table class="min-w-full text-xs">
-                            <thead class="sticky top-0 bg-gray-100 z-10">
-                                <tr>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-left">Kontraktor</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Total<br>Rit</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Sudah<br>Timbang</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Pending</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-right">Total<br>Netto<br>(ton)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, index) in data.ritPerKontraktor" :key="item.kontraktor">
-                                    <tr class="hover:bg-blue-50">
-                                        <td class="border border-gray-300 px-2 py-1.5 font-semibold text-xs" x-text="item.kontraktor"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="item.total_rit"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.sudah_timbang"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.pending"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
-                                    </tr>
-                                </template>
-                                <!-- TOTAL ROW -->
-                                <tr class="bg-gray-100 font-bold border-t-2 border-gray-400">
-                                    <td class="border border-gray-300 px-2 py-1.5 text-right">TOTAL</td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center text-blue-700" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.total_rit, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.sudah_timbang, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.pending, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-right text-green-700" x-text="formatTon(data.ritPerKontraktor?.reduce((sum, item) => sum + (item.total_netto || 0), 0) || 0)"></td>
-                                </tr>
-                                <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
-                                    <tr>
-                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Status Timbangan</h3>
+                    <canvas id="statusChart" height="200"></canvas>
                 </div>
 
-                <!-- Kontraktor by Tonase (2 kolom - Chart) -->
+                <!-- Kontraktor by Tonase (posisi 3, ukuran 2 kolom) -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Kontraktor by Tonase</h3>
                     <canvas id="kontraktorChart" height="220"></canvas>
                 </div>
 
-                <!-- Subkontraktor by Tonase (2 kolom - Chart) -->
+                <!-- Subkontraktor by Tonase (posisi 4, ukuran 2 kolom) -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Sub Kontraktor by Tonase</h3>
                     <canvas id="subkontraktorChart" height="220"></canvas>
@@ -522,7 +523,7 @@
                             </template>
                             <template x-if="!data.details || data.details.length === 0">
                                 <tr>
-                                    <td colspan="25" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
+                                    <td colspan="26" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
                                 </tr>
                             </template>
                         </tbody>

@@ -168,7 +168,7 @@
                             </td>
                             
                             {{-- ✅ HC, BC, FB hanya tampil jika sudah ada input dari Android --}}
-                            @if($item->hc > 0)
+                            @if(!is_null($item->hc))
                                 <td class="px-4 py-3 text-right font-semibold text-green-700 bg-green-50">{{ number_format($item->hc, 2) }}</td>
                                 <td class="px-4 py-3 text-right text-gray-700 bg-gray-50">{{ number_format($item->bc, 2) }}</td>
                                 <td class="px-4 py-3 text-right text-blue-700 bg-blue-50">{{ $item->fieldbalancerit ? number_format($item->fieldbalancerit, 2) : '-' }}</td>
