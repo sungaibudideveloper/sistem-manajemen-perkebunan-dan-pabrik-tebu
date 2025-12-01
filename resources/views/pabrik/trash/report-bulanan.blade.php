@@ -747,154 +747,133 @@
     </div>
 
     <style>
-        /* Uniform table styling for perfect alignment */
+        /* Normal display styling */
         .uniform-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
-            font-size: 0.75rem;
+            font-size: 12px;
+            background-color: white;
         }
 
-        .uniform-header {
-            height: 40px;
-            padding: 4px 6px;
-            border: 2px solid #9CA3AF;
-            background-color: #F9FAFB;
-            font-weight: 600;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #6B7280;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
+        .uniform-header,
         .uniform-header-sub {
-            height: 32px;
-            padding: 2px 4px;
-            border: 2px solid #9CA3AF;
-            background-color: #F9FAFB;
-            font-weight: 600;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 8px 6px;
             text-align: center;
+            font-weight: 600;
+            font-size: 11px;
+            line-height: 1.3;
             vertical-align: middle;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #6B7280;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .uniform-cell {
-            height: 32px;
-            padding: 4px 6px;
-            border: 2px solid #D1D5DB;
-            background-color: white;
+            border: 1px solid #e5e7eb;
+            padding: 6px 8px;
+            font-size: 11px;
+            line-height: 1.4;
             vertical-align: middle;
-            font-size: 0.75rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .uniform-cell-group {
-            height: 32px;
-            padding: 4px 6px;
-            border: 2px solid #D1D5DB;
-            background-color: #F3F4F6;
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            font-size: 11px;
+            line-height: 1.4;
             vertical-align: middle;
-            font-size: 0.75rem;
-            font-weight: 600;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            background-color: #f9fafb;
         }
 
+        /* Column widths for better readability */
+        .col-asal {
+            min-width: 120px;
+        }
+
+        .col-tonase {
+            min-width: 80px;
+        }
+
+        .col-percentage {
+            min-width: 70px;
+        }
+
+        .col-total {
+            min-width: 90px;
+        }
+
+        .col-kg {
+            min-width: 85px;
+        }
+
+        /* Hover effects */
+        .uniform-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .uniform-table tbody tr.bg-gray-100:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Responsive design */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Print styles */
         @media print {
-
-            /* Force landscape orientation */
-            @page {
-                size: A4 landscape;
-                margin: 10mm;
-            }
-
             body {
                 margin: 0;
                 padding: 0;
                 font-size: 8px;
-                width: 100%;
-                transform-origin: top left;
             }
 
             .no-print {
                 display: none !important;
             }
 
-            /* Keep grid layout tapi adjust untuk landscape */
             .grid.grid-cols-2 {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 10px !important;
+                display: block !important;
             }
 
-            /* Table styling untuk landscape print */
+            .grid.grid-cols-2>div {
+                width: 100% !important;
+                margin-bottom: 15px !important;
+            }
+
             .uniform-table {
                 font-size: 7px !important;
                 width: 100%;
             }
 
             .uniform-header,
-            .uniform-header-sub {
-                padding: 2px 3px !important;
-                border: 1px solid #333 !important;
-                font-size: 6px !important;
-                line-height: 1.1 !important;
-                height: auto !important;
-            }
-
+            .uniform-header-sub,
             .uniform-cell,
             .uniform-cell-group {
-                padding: 2px 3px !important;
+                padding: 1px 2px !important;
                 border: 1px solid #333 !important;
                 font-size: 6px !important;
-                line-height: 1.1 !important;
-                height: auto !important;
-            }
-
-            /* Header lebih compact */
-            .text-center.mb-6 p {
-                margin: 2px 0 !important;
-                font-size: 7px !important;
+                line-height: 1.2 !important;
             }
 
             .text-xl {
-                font-size: 12px !important;
+                font-size: 14px !important;
             }
 
             .text-lg {
-                font-size: 10px !important;
+                font-size: 12px !important;
             }
 
-            /* Margins lebih kecil */
             .px-4 {
-                padding-left: 5px !important;
-                padding-right: 5px !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
             }
 
             .py-4 {
-                padding-top: 5px !important;
-                padding-bottom: 5px !important;
-            }
-
-            .mb-8 {
-                margin-bottom: 10px !important;
-            }
-
-            /* Bottom section buat di page 2 */
-            .mt-8 {
-                page-break-before: always;
+                padding-top: 8px !important;
+                padding-bottom: 8px !important;
             }
         }
     </style>
