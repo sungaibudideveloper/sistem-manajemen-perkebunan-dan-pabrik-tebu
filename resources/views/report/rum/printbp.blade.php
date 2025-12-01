@@ -46,6 +46,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             font-family: 'Courier New', monospace;
             font-size: 10pt;
+            font-weight: 700;
             position: relative;
         }
     </style>
