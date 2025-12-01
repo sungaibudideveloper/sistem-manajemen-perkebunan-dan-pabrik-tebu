@@ -492,7 +492,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Company Selection - Only show for Mingguan -->
+                                        <!-- Company Selection - Updated untuk lebih spesifik -->
                                         <div x-show="reportForm.report_type === 'mingguan'" x-transition>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                                 Company <span class="text-red-500">*</span>
@@ -500,19 +500,32 @@
                                             <select name="company" x-model="reportForm.company"
                                                 class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
                                                 :required="reportForm.report_type === 'mingguan'">
-                                                <option value="">Pilih Company</option>
-                                                <option value="TBL">TBL</option>
-                                                <option value="BNIL">BNIL</option>
+                                                <!-- Group Options -->
+                                                <optgroup label="Group Company">
+                                                    <option value="TBL">TBL</option>
+                                                    <option value="BNIL">BNIL</option>
+                                                    <option value="SIL">SILVA</option>
+                                                </optgroup>
+
+                                                <!-- Individual Company Options -->
+                                                <!-- <optgroup label="Company Spesifik">
+                                                    <option value="TBL1">TBL1 saja</option>
+                                                    <option value="TBL2">TBL2 saja</option>
+                                                    <option value="TBL3">TBL3 saja</option>
+                                                    <option value="BNL1">BNL1 saja</option>
+                                                    <option value="BNL2">BNL2 saja</option>
+                                                    <option value="BNL3">BNL3 saja</option>
+                                                    <option value="BNL4">BNL4 saja</option>
+                                                    <option value="SIL1">SIL1 saja</option>
+                                                    <option value="SIL2">SIL2 saja</option>
+                                                    <option value="SIL3">SIL3 saja</option>
+                                                </optgroup> -->
                                             </select>
 
                                             <div class="mt-1 text-xs text-gray-500">
-                                                Laporan mingguan berdasarkan kelompok company
+                                                Pilih group untuk laporan gabungan atau company spesifik untuk laporan individual
                                             </div>
                                         </div>
-
-                                        <!-- Hidden input for harian and bulanan -->
-                                        <input x-show="reportForm.report_type === 'harian' || reportForm.report_type === 'bulanan'"
-                                            type="hidden" name="company" value="all">
 
                                         <!-- Info text untuk harian dan bulanan -->
                                         <div x-show="reportForm.report_type === 'harian'" class="text-xs text-gray-500 bg-blue-50 p-2 rounded">

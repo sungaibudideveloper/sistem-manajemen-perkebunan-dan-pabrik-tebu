@@ -283,6 +283,7 @@
             }, 2000);
         });
 
+        
         function validateForm() {
             const reportType = $('#report_type').val();
             const company = $('#company').val();

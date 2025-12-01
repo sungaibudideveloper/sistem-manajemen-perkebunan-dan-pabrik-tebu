@@ -119,6 +119,7 @@ class TenagaKerjaController extends Controller
             'jenis' => 'required|exists:jenistenagakerja,idjenistenagakerja',
         ]);
 
+
         $companycode = session('companycode');
         
         // Generate the next ID
@@ -128,13 +129,11 @@ class TenagaKerjaController extends Controller
         $exists = TenagaKerja::where('companycode', $companycode)
             ->where('tenagakerjaid', $nextId)
             ->exists();
-
         if ($exists) {
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['id' => 'Gagal mendapatkan ID unik']);
         }
-
         TenagaKerja::create([
             'tenagakerjaid' => $nextId,
             'mandoruserid' => $request->mandor,

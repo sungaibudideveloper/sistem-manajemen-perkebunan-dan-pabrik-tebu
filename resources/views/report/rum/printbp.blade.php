@@ -9,6 +9,7 @@
             @page {
                 size: 21.59cm 15.24cm;
                 margin: 0;
+                orientation: portrait;
             }
 
             html,
@@ -29,7 +30,7 @@
                 width: 21.59cm !important;
                 height: 15.24cm !important;
                 margin: 0 !important;
-                padding: 1.5cm 2cm !important;
+                padding: 0.8cm 2cm 1.5cm 2cm !important;
                 border: none !important;
                 box-shadow: none !important;
                 page-break-after: avoid !important;
@@ -40,11 +41,12 @@
             width: 21.59cm;
             height: 15.24cm;
             /* margin: 20px auto; */
-            padding: 1.5cm 2cm;
+            padding: 0.5cm 2cm;
             background: white;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             font-family: 'Courier New', monospace;
-            font-size: 11pt;
+            font-size: 10pt;
+            font-weight: 700;
             position: relative;
         }
     </style>
@@ -73,12 +75,12 @@
         <!-- Print Container -->
         <div class="print-container">
             <!-- Company Code - Top Left -->
-            <div class="mb-8" style="letter-spacing: 0.4em;">
+            <div class="-ml-[4px] mb-12" style="letter-spacing: 0.9em;">
                 <strong>{{ session('companycode') }}</strong>
             </div>
 
             <!-- Main Content -->
-            <div class="space-y-1 ml-[100px]">
+            <div class="space-y-1 ml-[110px]">
                 <div>PEMBAYARAN UPAH TENAGA KERJA {{ Str::upper($tenagakerjarum) }}</div>
                 <div class="flex justify-between">
                     @php
@@ -104,23 +106,25 @@
                         // Restore original locale
                         \Carbon\Carbon::setLocale($currentLocale);
                     @endphp
-                    <span>Rp.{{ number_format($totalAmount, 2, '.', ',') }}</span>
+                    <div class="mr-11">
+                        <span>Rp.{{ number_format($totalAmount, 2, '.', ',') }}</span>
+                    </div>
                 </div>
                 <div>Rincian Terlampir</div>
             </div>
 
             <!-- Amount Box -->
-            <div class="text-right mt-6 mb-12">
+            <div class="text-right mt-12 mb-6 mr-11">
                 <span>Rp.{{ number_format($totalAmount, 2, '.', ',') }}</span>
             </div>
 
             <!-- Amount in Words -->
-            <div class="mb-16 ml-[100px]">
+            <div class="mb-16 ml-[110px] mr-11">
                 #{{ $amountInWords }}#
             </div>
 
             <!-- Date - Bottom Right -->
-            <div class="text-right absolute bottom-16 right-20">
+            <div class="text-right absolute bottom-[108px] right-20 mr-11">
                 {{ \Carbon\Carbon::now()->format('d-M-Y') }}
             </div>
         </div>

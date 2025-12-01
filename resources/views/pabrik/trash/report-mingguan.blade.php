@@ -34,13 +34,13 @@
                 'TBL1' => 'KEBUN TBL',
                 'TBL2' => 'KEBUN TBL',
                 'TBL3' => 'KEBUN TBL',
-                'BNIL1' => 'KEBUN BNIL',
-                'BNIL2' => 'KEBUN BNIL',
-                'BNIL3' => 'KEBUN BNIL',
-                'BNIL4' => 'KEBUN BNIL',
-                'SILVA1' => 'KEBUN SILVA',
-                'SILVA2' => 'KEBUN SILVA',
-                'SILVA3' => 'KEBUN SILVA'
+                'BNL1' => 'KEBUN BNIL',
+                'BNL2' => 'KEBUN BNIL',
+                'BNL3' => 'KEBUN BNIL',
+                'BNL4' => 'KEBUN BNIL',
+                'SIL1' => 'KEBUN SILVA',
+                'SIL2' => 'KEBUN SILVA',
+                'SIL3' => 'KEBUN SILVA'
             ];
 
             $kebunName = 'KEBUN UNKNOWN';
@@ -86,9 +86,18 @@
                 @foreach($companies as $companyCode => $items)
                 <div class="mb-6">
                     <h4 class="text-lg font-bold text-gray-700 mb-2 bg-gray-100 p-3 rounded">
-                        Company: {{ $companyCode }}
+                       @if ($companyCode == 'BNL1') BNIL1
+                          @elseif ($companyCode == 'BNL2') BNIL2
+                            @elseif ($companyCode == 'BNL3') BNIL3
+                                @elseif ($companyCode == 'BNL4') BNIL4
+                                @elseif ($companyCode == 'TBL1') TBL1
+                                @elseif ($companyCode == 'TBL2') TBL2
+                                @elseif ($companyCode == 'TBL3') TBL3
+                                @elseif( $companyCode == 'SIL1') SILVA1
+                                @elseif( $companyCode == 'SIL2') SILVA2
+                                @elseif( $companyCode == 'SIL3') SILVA3
+                                @endif 
                     </h4>
-
                     <div class="overflow-x-auto rounded-md border-2 border-gray-400">
                         <table class="min-w-full bg-white text-xs border-collapse">
                             <thead class="bg-gray-50">
