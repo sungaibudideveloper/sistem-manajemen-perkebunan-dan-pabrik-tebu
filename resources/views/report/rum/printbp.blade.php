@@ -9,6 +9,7 @@
             @page {
                 size: 21.59cm 15.24cm;
                 margin: 0;
+                orientation: portrait;
             }
 
             html,
