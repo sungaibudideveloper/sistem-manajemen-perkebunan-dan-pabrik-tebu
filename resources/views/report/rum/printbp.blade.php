@@ -119,7 +119,7 @@
             </div>
 
             <!-- Amount in Words -->
-            <div class="mb-16 ml-[110px]">
+            <div class="mb-16 ml-[110px] mr-11">
                 #{{ $amountInWords }}#
             </div>
 
