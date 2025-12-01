@@ -47,22 +47,22 @@
 
         {{-- TOP TABLES: Main Data + KG Breakdown --}}
         <div class="px-4 overflow-x-auto">
-            <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="grid grid-cols-2 gap-2 mb-8">
                 {{-- TOP LEFT: Main Table --}}
                 <div class="min-w-0">
                     <div class="rounded-md border-2 border-gray-400">
                         <table class="uniform-table">
                             <thead>
                                 <tr>
-                                    <th rowspan="2" class="uniform-header w-20">Asal Tebu</th>
-                                    <th rowspan="2" class="uniform-header w-16">Tonase</th>
-                                    <th rowspan="2" class="uniform-header w-14">Pucuk (%)</th>
-                                    <th rowspan="2" class="uniform-header w-16">Daun Gulma (%)</th>
-                                    <th rowspan="2" class="uniform-header w-14">Sogolan (%)</th>
-                                    <th rowspan="2" class="uniform-header w-14">Siwilan (%)</th>
-                                    <th rowspan="2" class="uniform-header w-16">Tebu Mati (%)</th>
-                                    <th rowspan="2" class="uniform-header w-16">Tanah dll (%)</th>
-                                    <th rowspan="2" class="uniform-header w-16">Total Trash</th>
+                                    <th rowspan="2" class="uniform-header w-18">Asal Tebu</th>
+                                    <th rowspan="2" class="uniform-header w-14">Tonase</th>
+                                    <th rowspan="2" class="uniform-header w-12">Pucuk (%)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Daun Gulma (%)</th>
+                                    <th rowspan="2" class="uniform-header w-12">Sogolan (%)</th>
+                                    <th rowspan="2" class="uniform-header w-12">Siwilan (%)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Tebu Mati (%)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Tanah dll (%)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Total Trash</th>
                                     <th colspan="2" class="uniform-header-sub">Trash Persentase</th>
                                     <th colspan="2" class="uniform-header-sub">KG Trash</th>
                                 </tr>
@@ -81,10 +81,10 @@
                                 $prefix = '';
                                 if (strpos($companyCode, 'TBL') === 0) {
                                 $prefix = 'TBL';
-                                } elseif (strpos($companyCode, 'BNIL') === 0) {
-                                $prefix = 'BNIL';
-                                } elseif (strpos($companyCode, 'SILVA') === 0) {
-                                $prefix = 'SILVA';
+                                } elseif (strpos($companyCode, 'BNL') === 0) {
+                                $prefix = 'BNL';
+                                } elseif (strpos($companyCode, 'SIL') === 0) {
+                                $prefix = 'SIL';
                                 } else {
                                 $prefix = $companyCode;
                                 }
@@ -287,25 +287,28 @@
                     <div class="rounded-md border-2 border-gray-400">
                         <table class="uniform-table">
                             <thead>
-
                                 <tr>
-                                    <th colspan="6">&nbsp;<br></th>
+                                    <th rowspan="2" class="uniform-header w-16">Pucuk<br>(KG)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Daun<br>(KG)</th>
+                                    <th rowspan="2" class="uniform-header w-12">Sogolan<br>(KG)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Siwilan<br>(KG)</th>
+                                    <th rowspan="2" class="uniform-header w-16">Tebu Mati<br>(KG)</th>
+                                    <th rowspan="2" class="uniform-header w-14">Tanah dll<br>(KG)</th>
                                 </tr>
                                 <tr>
-                                    <th rowspan="3" class="uniform-header w-20">Pucuk</th>
-                                    <th rowspan="3" class="uniform-header w-16">Daun</th>
-                                    <th rowspan="3" class="uniform-header w-14">Sogolan</th>
-                                    <th rowspan="3" class="uniform-header w-16">Siwilan</th>
-                                    <th rowspan="3" class="uniform-header w-20">Tebu Mati</th>
-                                    <th rowspan="3" class="uniform-header w-16">Tanah dll</th>
+                                    {{-- Row kedua header kosong untuk alignment --}}
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $previousGroupName2 = null; @endphp
+                                @php
+                                $previousGroupName2 = null;
+                                // Hitung KG untuk setiap group dan company
+                                $kgBreakdownData = [];
+                                @endphp
 
                                 @foreach($companyGroups as $groupName => $companies)
-                                {{-- Add spacing row between groups --}}
-                                @if($previousGroupName2 !== null && $previousGroupName2 !== $groupName)
+                                {{-- Spacing row --}}
+                                @if($previousGroupName2 !== null)
                                 <tr class="bg-white" style="height: 4px;">
                                     <td colspan="6" class="px-2 py-0 border-0">&nbsp;</td>
                                 </tr>
@@ -313,8 +316,6 @@
 
                                 @php
                                 $previousGroupName2 = $groupName;
-
-                                // TOTAL per GROUP COMPANY (SUM KG)
                                 $groupKgPucuk = 0;
                                 $groupKgDaun = 0;
                                 $groupKgSogolan = 0;
@@ -323,67 +324,55 @@
                                 $groupKgTanah = 0;
                                 @endphp
 
-                                {{-- Individual company rows --}}
                                 @foreach($companies as $companyCode => $items)
                                 @php
-                                // Group by jenis within this company
                                 $companyByJenis = [];
                                 foreach($items as $item) {
-                                $jenis = $item['jenis'];
-                                if (!isset($companyByJenis[$jenis])) {
-                                $companyByJenis[$jenis] = [];
+                                if (!isset($companyByJenis[$item['jenis']])) {
+                                $companyByJenis[$item['jenis']] = [];
                                 }
-                                $companyByJenis[$jenis][] = $item;
+                                $companyByJenis[$item['jenis']][] = $item;
                                 }
 
-                                // Sort jenis: manual first, then mesin
                                 $sortedJenis = [];
-                                if (isset($companyByJenis['manual'])) {
-                                $sortedJenis['manual'] = $companyByJenis['manual'];
-                                }
-                                if (isset($companyByJenis['mesin'])) {
-                                $sortedJenis['mesin'] = $companyByJenis['mesin'];
-                                }
+                                if (isset($companyByJenis['manual'])) $sortedJenis['manual'] = $companyByJenis['manual'];
+                                if (isset($companyByJenis['mesin'])) $sortedJenis['mesin'] = $companyByJenis['mesin'];
                                 @endphp
 
                                 @foreach($sortedJenis as $jenis => $jenisItems)
                                 @php
-                                // Calculate averages for trash percentages and SUM for tonase
-                                $totalPucuk = 0;
-                                $totalDaun = 0;
-                                $totalSogolan = 0;
-                                $totalSiwilan = 0;
-                                $totalTebumati = 0;
-                                $totalTanah = 0;
-                                $sumTonase = 0;
                                 $count = count($jenisItems);
+                                $sumTonase = 0;
+                                $sumPucuk = $sumDaun = $sumSogolan = $sumSiwilan = $sumTebumati = $sumTanah = 0;
 
                                 foreach($jenisItems as $item) {
-                                $totalPucuk += $item['pucuk'];
-                                $totalDaun += $item['daungulma'];
-                                $totalSogolan += $item['sogolan'];
-                                $totalSiwilan += $item['siwilan'];
-                                $totalTebumati += $item['tebumati'];
-                                $totalTanah += $item['tanahetc'];
-                                $sumTonase += $item['tonase_netto'];
+                                $sumTonase += floatval($item['tonase_netto'] ?? 0);
+                                $sumPucuk += floatval($item['pucuk'] ?? 0);
+                                $sumDaun += floatval($item['daungulma'] ?? 0);
+                                $sumSogolan += floatval($item['sogolan'] ?? 0);
+                                $sumSiwilan += floatval($item['siwilan'] ?? 0);
+                                $sumTebumati += floatval($item['tebumati'] ?? 0);
+                                $sumTanah += floatval($item['tanahetc'] ?? 0);
                                 }
 
-                                $avgPucuk = $count > 0 ? $totalPucuk / $count : 0;
-                                $avgDaun = $count > 0 ? $totalDaun / $count : 0;
-                                $avgSogolan = $count > 0 ? $totalSogolan / $count : 0;
-                                $avgSiwilan = $count > 0 ? $totalSiwilan / $count : 0;
-                                $avgTebumati = $count > 0 ? $totalTebumati / $count : 0;
-                                $avgTanah = $count > 0 ? $totalTanah / $count : 0;
+                                if ($count > 0) {
+                                $avgPucuk = $sumPucuk / $count;
+                                $avgDaun = $sumDaun / $count;
+                                $avgSogolan = $sumSogolan / $count;
+                                $avgSiwilan = $sumSiwilan / $count;
+                                $avgTebumati = $sumTebumati / $count;
+                                $avgTanah = $sumTanah / $count;
+                                } else {
+                                $avgPucuk = $avgDaun = $avgSogolan = $avgSiwilan = $avgTebumati = $avgTanah = 0;
+                                }
 
-                                // Calculate KG Trash dari tabel utama - sama seperti di tabel utama
-                                $kgPucuk = ($avgPucuk / 100) * $sumTonase;
-                                $kgDaun = ($avgDaun / 100) * $sumTonase;
-                                $kgSogolan = ($avgSogolan / 100) * $sumTonase;
-                                $kgSiwilan = ($avgSiwilan / 100) * $sumTonase;
-                                $kgTebumati = ($avgTebumati / 100) * $sumTonase;
-                                $kgTanah = ($avgTanah / 100) * $sumTonase;
+                                $kgPucuk = ($sumTonase * $avgPucuk) / 100;
+                                $kgDaun = ($sumTonase * $avgDaun) / 100;
+                                $kgSogolan = ($sumTonase * $avgSogolan) / 100;
+                                $kgSiwilan = ($sumTonase * $avgSiwilan) / 100;
+                                $kgTebumati = ($sumTonase * $avgTebumati) / 100;
+                                $kgTanah = ($sumTonase * $avgTanah) / 100;
 
-                                // SUM ke level GROUP
                                 $groupKgPucuk += $kgPucuk;
                                 $groupKgDaun += $kgDaun;
                                 $groupKgSogolan += $kgSogolan;
@@ -424,6 +413,22 @@
                                         <strong>{{ number_format($groupKgTanah, 0, ',', '.') }}</strong>
                                     </td>
                                 </tr>
+
+                                @php
+                                // Store untuk bottom table
+                                if (!isset($kgBreakdownData[$groupName])) {
+                                $kgBreakdownData[$groupName] = [
+                                'pucuk' => 0, 'daun' => 0, 'sogolan' => 0,
+                                'siwilan' => 0, 'tebumati' => 0, 'tanah' => 0
+                                ];
+                                }
+                                $kgBreakdownData[$groupName]['pucuk'] += $groupKgPucuk;
+                                $kgBreakdownData[$groupName]['daun'] += $groupKgDaun;
+                                $kgBreakdownData[$groupName]['sogolan'] += $groupKgSogolan;
+                                $kgBreakdownData[$groupName]['siwilan'] += $groupKgSiwilan;
+                                $kgBreakdownData[$groupName]['tebumati'] += $groupKgTebumati;
+                                $kgBreakdownData[$groupName]['tanah'] += $groupKgTanah;
+                                @endphp
                                 @endforeach
                             </tbody>
                         </table>
@@ -437,26 +442,26 @@
             <div class="mt-8 mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">REKAPITULASI PER GROUP COMPANY</h3>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-2">
                     {{-- BOTTOM LEFT: Summary Table --}}
                     <div class="min-w-0">
                         <div class="rounded-md border-2 border-gray-400">
                             <table class="uniform-table">
                                 <thead>
                                     <tr>
-                                        <th class="uniform-header w-24">Keterangan</th>
-                                        <th class="uniform-header w-16">Total Tonase</th>
-                                        <th class="uniform-header w-14">Pucuk (%)</th>
-                                        <th class="uniform-header w-16">Daun (%)</th>
-                                        <th class="uniform-header w-14">Sogolan (%)</th>
-                                        <th class="uniform-header w-14">Siwilan (%)</th>
-                                        <th class="uniform-header w-16">Tebu Mati (%)</th>
-                                        <th class="uniform-header w-16">Tanah dll (%)</th>
-                                        <th class="uniform-header w-16">Total Trash (%)</th>
-                                        <th class="uniform-header w-16">Trash Bruto (%)</th>
-                                        <th class="uniform-header w-16">Trash Netto (%)</th>
-                                        <th class="uniform-header w-18">KG Trash Bruto</th>
-                                        <th class="uniform-header w-18">KG Trash Netto</th>
+                                        <th class="uniform-header w-20">Keterangan</th>
+                                        <th class="uniform-header w-14">Total Tonase</th>
+                                        <th class="uniform-header w-12">Pucuk (%)</th>
+                                        <th class="uniform-header w-14">Daun (%)</th>
+                                        <th class="uniform-header w-12">Sogolan (%)</th>
+                                        <th class="uniform-header w-12">Siwilan (%)</th>
+                                        <th class="uniform-header w-14">Tebu Mati (%)</th>
+                                        <th class="uniform-header w-14">Tanah dll (%)</th>
+                                        <th class="uniform-header w-14">Total Trash (%)</th>
+                                        <th class="uniform-header w-14">Trash Bruto (%)</th>
+                                        <th class="uniform-header w-14">Trash Netto (%)</th>
+                                        <th class="uniform-header w-16">KG Trash Bruto</th>
+                                        <th class="uniform-header w-16">KG Trash Netto</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -632,13 +637,13 @@
                                     {{-- Per Ton Average Row --}}
                                     <tr class="bg-white">
                                         <td colspan="2" class="uniform-cell text-center font-bold">RATA PERTON</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataPucukPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataDaunPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataSogolanPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataSiwilanPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataTebumatiPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($rataTanahPerTon, 2, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($totalTrashPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataPucukPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataDaunPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataSogolanPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataSiwilanPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataTebumatiPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($rataTanahPerTon, 2, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($totalTrashPerTon, 2, ',', '.') }}</td>
                                         <td colspan="4" class="uniform-cell text-right"></td>
                                     </tr>
                                 </tbody>
@@ -646,36 +651,91 @@
                         </div>
                     </div>
 
-                    {{-- BOTTOM RIGHT: Total KG Table --}}
+                    {{-- BOTTOM RIGHT: TOTAL KG Table --}}
                     <div class="min-w-0">
                         <div class="rounded-md border-2 border-gray-400">
                             <table class="uniform-table">
                                 <thead>
                                     <tr>
-                                        <th class="uniform-header w-20">Pucuk</th>
-                                        <th class="uniform-header w-16">Daun</th>
-                                        <th class="uniform-header w-14">Sogolan</th>
-                                        <th class="uniform-header w-16">Siwilan</th>
-                                        <th class="uniform-header w-20">Tebu Mati</th>
-                                        <th class="uniform-header w-16">Tanah dll</th>
+                                        <th class="uniform-header w-16">TOTAL<br>Pucuk (KG)</th>
+                                        <th class="uniform-header w-14">TOTAL<br>Daun (KG)</th>
+                                        <th class="uniform-header w-12">TOTAL<br>Sogolan (KG)</th>
+                                        <th class="uniform-header w-14">TOTAL<br>Siwilan (KG)</th>
+                                        <th class="uniform-header w-16">TOTAL<br>Tebu Mati (KG)</th>
+                                        <th class="uniform-header w-14">TOTAL<br>Tanah dll (KG)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php
+                                    // Calculate final totals dari semua breakdown
+                                    $finalTotalPucuk = 0;
+                                    $finalTotalDaun = 0;
+                                    $finalTotalSogolan = 0;
+                                    $finalTotalSiwilan = 0;
+                                    $finalTotalTebumati = 0;
+                                    $finalTotalTanah = 0;
+
+                                    // Hitung ulang total dari semua group companies
+                                    foreach($companyGroups as $groupName => $companies) {
+                                    foreach($companies as $companyCode => $items) {
+                                    $companyByJenis = [];
+                                    foreach($items as $item) {
+                                    if (!isset($companyByJenis[$item['jenis']])) {
+                                    $companyByJenis[$item['jenis']] = [];
+                                    }
+                                    $companyByJenis[$item['jenis']][] = $item;
+                                    }
+
+                                    foreach(['manual', 'mesin'] as $jenis) {
+                                    if (!isset($companyByJenis[$jenis])) continue;
+
+                                    $jenisItems = $companyByJenis[$jenis];
+                                    $count = count($jenisItems);
+                                    $sumTonase = 0;
+                                    $sumPucuk = $sumDaun = $sumSogolan = $sumSiwilan = $sumTebumati = $sumTanah = 0;
+
+                                    foreach($jenisItems as $item) {
+                                    $sumTonase += floatval($item['tonase_netto'] ?? 0);
+                                    $sumPucuk += floatval($item['pucuk'] ?? 0);
+                                    $sumDaun += floatval($item['daungulma'] ?? 0);
+                                    $sumSogolan += floatval($item['sogolan'] ?? 0);
+                                    $sumSiwilan += floatval($item['siwilan'] ?? 0);
+                                    $sumTebumati += floatval($item['tebumati'] ?? 0);
+                                    $sumTanah += floatval($item['tanahetc'] ?? 0);
+                                    }
+
+                                    if ($count > 0) {
+                                    $avgPucuk = $sumPucuk / $count;
+                                    $avgDaun = $sumDaun / $count;
+                                    $avgSogolan = $sumSogolan / $count;
+                                    $avgSiwilan = $sumSiwilan / $count;
+                                    $avgTebumati = $sumTebumati / $count;
+                                    $avgTanah = $sumTanah / $count;
+
+                                    $finalTotalPucuk += ($sumTonase * $avgPucuk) / 100;
+                                    $finalTotalDaun += ($sumTonase * $avgDaun) / 100;
+                                    $finalTotalSogolan += ($sumTonase * $avgSogolan) / 100;
+                                    $finalTotalSiwilan += ($sumTonase * $avgSiwilan) / 100;
+                                    $finalTotalTebumati += ($sumTonase * $avgTebumati) / 100;
+                                    $finalTotalTanah += ($sumTonase * $avgTanah) / 100;
+                                    }
+                                    }
+                                    }
+                                    }
+                                    @endphp
+
+                                    {{-- Row TOTAL NASIONAL --}}
                                     <tr class="bg-yellow-100 font-semibold">
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgPucukAll, 0, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgDaunAll, 0, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgSogolanAll, 0, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgSiwilanAll, 0, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgTebumatiAll, 0, ',', '.') }}</td>
-                                        <td class="uniform-cell text-right">{{ number_format($grandKgTanahAll, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalPucuk, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalDaun, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalSogolan, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalSiwilan, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalTebumati, 0, ',', '.') }}</td>
+                                        <td class="uniform-cell text-right font-bold">{{ number_format($finalTotalTanah, 0, ',', '.') }}</td>
                                     </tr>
+                                    {{-- Empty row untuk sejajar dengan RATA PERTON --}}
                                     <tr class="bg-white">
-                                        <td class="uniform-cell"></td>
-                                        <td class="uniform-cell"></td>
-                                        <td class="uniform-cell"></td>
-                                        <td class="uniform-cell"></td>
-                                        <td class="uniform-cell"></td>
-                                        <td class="uniform-cell"></td>
+                                        <td class="uniform-cell text-center" colspan="6">&nbsp;</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -753,26 +813,88 @@
         }
 
         @media print {
+
+            /* Force landscape orientation */
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
             body {
                 margin: 0;
                 padding: 0;
-                font-size: 10px;
+                font-size: 8px;
+                width: 100%;
+                transform-origin: top left;
             }
 
             .no-print {
                 display: none !important;
             }
 
+            /* Keep grid layout tapi adjust untuk landscape */
+            .grid.grid-cols-2 {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px !important;
+            }
+
+            /* Table styling untuk landscape print */
             .uniform-table {
-                font-size: 9px;
+                font-size: 7px !important;
+                width: 100%;
             }
 
             .uniform-header,
-            .uniform-header-sub,
+            .uniform-header-sub {
+                padding: 2px 3px !important;
+                border: 1px solid #333 !important;
+                font-size: 6px !important;
+                line-height: 1.1 !important;
+                height: auto !important;
+            }
+
             .uniform-cell,
             .uniform-cell-group {
-                padding: 3px !important;
-                border: 2px solid #333 !important;
+                padding: 2px 3px !important;
+                border: 1px solid #333 !important;
+                font-size: 6px !important;
+                line-height: 1.1 !important;
+                height: auto !important;
+            }
+
+            /* Header lebih compact */
+            .text-center.mb-6 p {
+                margin: 2px 0 !important;
+                font-size: 7px !important;
+            }
+
+            .text-xl {
+                font-size: 12px !important;
+            }
+
+            .text-lg {
+                font-size: 10px !important;
+            }
+
+            /* Margins lebih kecil */
+            .px-4 {
+                padding-left: 5px !important;
+                padding-right: 5px !important;
+            }
+
+            .py-4 {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
+            }
+
+            .mb-8 {
+                margin-bottom: 10px !important;
+            }
+
+            /* Bottom section buat di page 2 */
+            .mt-8 {
+                page-break-before: always;
             }
         }
     </style>
