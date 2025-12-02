@@ -290,6 +290,12 @@
         });
     }
 
+    window.currentUser = {
+        userid: '{{ Auth::user()->userid ?? '' }}',
+        name: '{{ Auth::user()->name ?? '' }}',
+        idjabatan: {{ Auth::user()->idjabatan ?? 'null' }}
+    }
+
     function mainData() {
         return {
             // Modal states
@@ -302,6 +308,7 @@
             showRkhApprovalInfoModal: false,
             showLkhApprovalModal: false,
             showLkhApprovalInfoModal: false,
+            showOutstandingModal: false,
 
             // Loading states
             isRkhApprovalLoading: false,
@@ -322,6 +329,14 @@
             createDate: new Date().toISOString().split('T')[0],
             dthDate: '{{ request('filter_date', date('Y-m-d')) }}',
             rekapLkhDate: '{{ request('filter_date', date('Y-m-d')) }}',
+            // Outstanding RKH details
+            outstandingDetails: {
+                rkhno: '',
+                rkhdate: '',
+                status: '',
+                mandor_name: '',
+                mandor_id: ''
+            },
             
             // ✅ NEW: Operator Report Properties
             selectedReportType: '',
@@ -360,6 +375,13 @@
 
             // ✅ NEW: Initialize watchers
             init() {
+                // Listen for outstanding error event
+                window.addEventListener('show-outstanding-error', (event) => {
+                    this.outstandingDetails = event.detail;
+                    this.showOutstandingModal = true;
+                });
+
+                // Watch for report type changes
                 this.$watch('selectedReportType', (newValue) => {
                     if (newValue === 'operator' && this.rekapLkhDate) {
                         this.loadOperatorsForDate();

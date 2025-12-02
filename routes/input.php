@@ -136,6 +136,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
 
             // Other utility routes
+            Route::post('/check-outstanding', 'checkOutstandingRKH')->name('checkOutstanding');
             Route::post('/update-status', 'updateStatus')->name('updateStatus');
             Route::get('/load-absen-by-date', 'loadAbsenByDate')->name('loadAbsenByDate');
             Route::post('/generate-dth', 'generateDTH')->name('generateDTH');

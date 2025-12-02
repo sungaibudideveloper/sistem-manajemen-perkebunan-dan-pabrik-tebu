@@ -129,6 +129,7 @@ class RencanaKerjaHarianController extends Controller
             'allDate' => $allDate,
             'rkhData' => $rkhData,
             'absentenagakerja' => $absenData,
+            'mandors' => User::getMandorByCompany($companycode),
         ]);
     }
 
@@ -138,10 +139,11 @@ class RencanaKerjaHarianController extends Controller
     public function create(Request $request)
     {
         $selectedDate = $request->input('date');
+        $mandorId = $request->input('mandor_id');
         
-        if (!$selectedDate) {
+        if (!$selectedDate || !$mandorId) {
             return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', 'Silakan pilih tanggal terlebih dahulu');
+                ->with('error', 'Silakan pilih tanggal dan mandor terlebih dahulu');
         }
 
         // Validate date range
@@ -150,13 +152,35 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
         }
 
-        $targetDate = Carbon::parse($selectedDate);
+        // ✅ BACKEND VALIDATION: Double-check for outstanding RKH
         $companycode = Session::get('companycode');
+        $outstandingRKH = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('mandorid', $mandorId)
+            ->where(function($query) {
+                $query->where('status', '!=', 'Completed')
+                      ->orWhereNull('status');
+            })
+            ->orderBy('rkhdate', 'desc')
+            ->first();
+
+        if ($outstandingRKH) {
+            $mandor = DB::table('user')->where('userid', $mandorId)->first();
+            return redirect()->route('input.rencanakerjaharian.index')
+                ->with('error', sprintf(
+                    'Mandor %s masih memiliki RKH outstanding (No: %s, Tanggal: %s). Selesaikan terlebih dahulu.',
+                    $mandor->name ?? $mandorId,
+                    $outstandingRKH->rkhno,
+                    Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y')
+                ));
+        }
+
+        $targetDate = Carbon::parse($selectedDate);
 
         // Generate preview RKH number
         $previewRkhNo = $this->generatePreviewRkhNo($targetDate, $companycode);
 
-        // Load form data (includes operators/kendaraan)
+        // Load form data
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
         return view('input.rencanakerjaharian.create', array_merge([
@@ -165,6 +189,7 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhno' => $previewRkhNo,
             'selectedDate' => $targetDate->format('Y-m-d'),
+            'selectedMandorId' => $mandorId, // ✅ NEW: Pass mandor_id
             'oldInput' => old(),
         ], $formData));
     }
@@ -5153,5 +5178,70 @@ public function loadAbsenByDate(Request $request)
         }
         
         return $errors;
+    }
+
+    /**
+     * Check if mandor has outstanding RKH (status != Completed)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkOutstandingRKH(Request $request)
+    {
+        $request->validate([
+            'mandor_id' => 'required|string',
+            'date' => 'required|date'
+        ]);
+
+        try {
+            $companycode = Session::get('companycode');
+            $mandorId = $request->mandor_id;
+
+            // Check for ANY outstanding RKH (not filtered by date)
+            $outstandingRKH = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('mandorid', $mandorId)
+                ->where(function($query) {
+                    $query->where('status', '!=', 'Completed')
+                          ->orWhereNull('status');
+                })
+                ->orderBy('rkhdate', 'desc')
+                ->select(['rkhno', 'rkhdate', 'status'])
+                ->first();
+
+            if ($outstandingRKH) {
+                // Get mandor name
+                $mandor = DB::table('user')
+                    ->where('userid', $mandorId)
+                    ->first();
+
+                return response()->json([
+                    'success' => false,
+                    'hasOutstanding' => true,
+                    'message' => 'Mandor masih memiliki RKH yang belum diselesaikan',
+                    'details' => [
+                        'rkhno' => $outstandingRKH->rkhno,
+                        'rkhdate' => Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y'),
+                        'status' => $outstandingRKH->status,
+                        'mandor_name' => $mandor->name ?? 'Unknown',
+                        'mandor_id' => $mandorId
+                    ]
+                ]);
+            }
+
+            // No outstanding RKH found
+            return response()->json([
+                'success' => true,
+                'hasOutstanding' => false,
+                'message' => 'Mandor tidak memiliki RKH outstanding'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error checking outstanding RKH: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
