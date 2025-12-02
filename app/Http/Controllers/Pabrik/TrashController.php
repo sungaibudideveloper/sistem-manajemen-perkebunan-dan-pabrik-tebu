@@ -428,7 +428,7 @@ class TrashController extends Controller
             }
 
             if ($data->isEmpty()) {
-                return redirect()->back()->with('warning', 'Tidak ada data ditemukan.');
+                return redirect()->back()->with('error', 'Tidak ada data ditemukan.');
             }
 
             // Convert to array dengan safe type conversion
@@ -590,20 +590,30 @@ class TrashController extends Controller
     public function reportPreview(Request $request)
     {
         try {
-            // Validasi input (sama dengan generateReport)
-            $request->validate([
-                'start_date' => 'required|date',
-                'end_date' => 'required|date|after_or_equal:start_date',
-                'report_type' => 'required|in:harian,mingguan',
-                'company' => 'required'
-            ]);
-
-            $startDate = $request->start_date;
-            $endDate = $request->end_date;
             $reportType = $request->report_type;
             $company = $request->company;
 
-            // Query data (sama dengan generateReport)
+            // Auto set company ke 'all' untuk harian dan bulanan
+            if ($reportType === 'harian' || $reportType === 'bulanan') {
+                $company = 'all';
+            }
+
+            // Handle date range - perbaikan untuk bulanan
+            if ($reportType === 'bulanan') {
+                $month = (int) $request->month;
+                $year = (int) $request->year;
+
+                // Buat start dan end date dengan format yang benar
+                $startDate = sprintf('%04d-%02d-01', $year, $month);
+                $endDate = date('Y-m-t', strtotime($startDate)); // Last day of month
+            } else {
+                $startDate = $request->start_date;
+                $endDate = $request->end_date;
+                $month = null;
+                $year = null;
+            }
+
+            // Query dengan error handling yang lebih baik
             $query = DB::table('trash as t')
                 ->select([
                     't.suratjalanno',
@@ -623,26 +633,55 @@ class TrashController extends Controller
                     'sj.varietas',
                     'sj.kategori',
                     'sj.nomorpolisi',
+                    'sj.tanggalangkut',
                     'k.namakontraktor',
-                    'sk.namasubkontraktor'
+                    'sk.namasubkontraktor',
+                    'tp.netto as tonase_netto'
                 ])
                 ->leftJoin('suratjalanpos as sj', 't.suratjalanno', '=', 'sj.suratjalanno')
                 ->leftJoin('kontraktor as k', 'sj.namakontraktor', '=', 'k.id')
                 ->leftJoin('subkontraktor as sk', 'sj.namasubkontraktor', '=', 'sk.id')
-                ->whereBetween(DB::raw('DATE(t.createddate)'), [$startDate, $endDate]);
+                ->leftJoin('timbanganpayload as tp', 'sj.suratjalanno', '=', 'tp.suratjalanno');
 
-            // Apply company filter
+            // Filter tanggal - konsisten menggunakan tanggalangkut
+            $query->whereBetween(DB::raw('DATE(sj.tanggalangkut)'), [$startDate, $endDate]);
+
+            // Tambah filter untuk memastikan tanggalangkut tidak null
+            $query->whereNotNull('sj.tanggalangkut');
+
+            // Apply company filter - KOMBINASI LOGIC TERBAIK
             if ($company !== 'all' && !empty($company)) {
                 if (is_array($company)) {
                     $query->whereIn('t.companycode', $company);
                 } else {
-                    $query->where('t.companycode', 'LIKE', $company . '%');
+                    if ($reportType === 'mingguan') {
+                        // MINGGUAN: Mapping company untuk mingguan (LOGIC TERBARU)
+                        if ($company === 'BNIL') {
+                            $query->where('t.companycode', 'LIKE', 'BNL%');
+                        } elseif ($company === 'SILVA') {
+                            $query->where('t.companycode', 'LIKE', 'SIL%');
+                        } else {
+                            $query->where('t.companycode', 'LIKE', $company . '%');
+                        }
+                    } else {
+                        // HARIAN/BULANAN: Exact match (LOGIC LAMA YANG SUDAH BENAR)
+                        $query->where('t.companycode', $company);
+                    }
                 }
             }
 
-            $data = $query->orderBy('t.createddate')->get()->toArray();
+            // Execute query
+            if ($reportType === 'harian') {
+                $data = $query->orderBy('sj.tanggalangkut')->orderBy('t.companycode', 'asc')->get();
+            } else {
+                $data = $query->orderBy('sj.tanggalangkut')->get();
+            }
 
-            // Convert to simple data (sama dengan generateReport)
+            if ($data->isEmpty()) {
+                return response('<div class="text-center py-8"><p class="text-gray-500">Tidak ada data untuk ditampilkan</p></div>', 200);
+            }
+
+            // Convert to array dengan safe type conversion
             $simpleData = [];
             foreach ($data as $item) {
                 $simpleData[] = [
@@ -650,15 +689,17 @@ class TrashController extends Controller
                     'companycode' => $item->companycode ?? '',
                     'jenis' => $item->jenis ?? '',
                     'createddate' => $item->createddate ?? '',
-                    'pucuk' => floatval($item->pucuk ?? 0),
-                    'daungulma' => floatval($item->daungulma ?? 0),
-                    'sogolan' => floatval($item->sogolan ?? 0),
-                    'siwilan' => floatval($item->siwilan ?? 0),
-                    'tebumati' => floatval($item->tebumati ?? 0),
-                    'tanahetc' => floatval($item->tanahetc ?? 0),
-                    'total' => floatval($item->total ?? 0),
-                    'toleransi' => floatval($item->toleransi ?? 0),
-                    'nettotrash' => floatval($item->nettotrash ?? 0),
+                    'tanggalangkut' => $item->tanggalangkut ?? '',
+                    'pucuk' => is_numeric($item->pucuk) ? (float)$item->pucuk : 0,
+                    'daungulma' => is_numeric($item->daungulma) ? (float)$item->daungulma : 0,
+                    'sogolan' => is_numeric($item->sogolan) ? (float)$item->sogolan : 0,
+                    'siwilan' => is_numeric($item->siwilan) ? (float)$item->siwilan : 0,
+                    'tebumati' => is_numeric($item->tebumati) ? (float)$item->tebumati : 0,
+                    'tanahetc' => is_numeric($item->tanahetc) ? (float)$item->tanahetc : 0,
+                    'total' => is_numeric($item->total) ? (float)$item->total : 0,
+                    'toleransi' => is_numeric($item->toleransi) ? (float)$item->toleransi : 0,
+                    'nettotrash' => is_numeric($item->nettotrash) ? (float)$item->nettotrash : 0,
+                    'tonase_netto' => is_numeric($item->tonase_netto) ? (float)$item->tonase_netto : 0,
                     // Data dari JOIN
                     'plot' => $item->plot ?? '',
                     'varietas' => $item->varietas ?? '',
@@ -669,53 +710,99 @@ class TrashController extends Controller
                 ];
             }
 
-            // Grouping logic (sama dengan generateReport)
+            // Grouping logic yang diperbaiki untuk handle "all" company (LOGIC LAMA YANG SUDAH BAGUS)
             $dataGrouped = [];
-            $isAllCompanies = ($company === 'all') || (is_array($company) && in_array('all', $company)) || (is_array($company) && count($company) > 1);
+            $isAllCompanies = ($company === 'all') ||
+                (is_array($company) && in_array('all', $company)) ||
+                (is_array($company) && count($company) > 1);
 
-            if ($reportType === 'harian' && $isAllCompanies) {
-                foreach ($simpleData as $item) {
-                    $date = date('Y-m-d', strtotime($item['createddate']));
-                    if (!isset($dataGrouped[$date])) {
-                        $dataGrouped[$date] = [];
+            switch ($reportType) {
+                case 'bulanan':
+                    if ($isAllCompanies) {
+                        // BULANAN ALL COMPANIES: Group by company code
+                        foreach ($simpleData as $item) {
+                            $companyCode = $item['companycode'];
+                            if (!isset($dataGrouped[$companyCode])) {
+                                $dataGrouped[$companyCode] = [];
+                            }
+                            $dataGrouped[$companyCode][] = $item;
+                        }
+                    } else {
+                        // BULANAN SINGLE COMPANY: Group by date
+                        foreach ($simpleData as $item) {
+                            $date = date('Y-m-d', strtotime($item['tanggalangkut']));
+                            if (!isset($dataGrouped[$date])) {
+                                $dataGrouped[$date] = [];
+                            }
+                            $dataGrouped[$date][] = $item;
+                        }
                     }
-                    $dataGrouped[$date][] = $item;
-                }
-            } else {
-                foreach ($simpleData as $item) {
-                    $jenis = $item['jenis'];
-                    $companyCode = $item['companycode'];
+                    break;
 
-                    if (!isset($dataGrouped[$jenis])) {
-                        $dataGrouped[$jenis] = [];
+                case 'harian':
+                    // HARIAN: Always group by date, regardless of company selection
+                    foreach ($simpleData as $item) {
+                        $date = date('Y-m-d', strtotime($item['tanggalangkut']));
+                        if (!isset($dataGrouped[$date])) {
+                            $dataGrouped[$date] = [];
+                        }
+                        $dataGrouped[$date][] = $item;
                     }
-                    if (!isset($dataGrouped[$jenis][$companyCode])) {
-                        $dataGrouped[$jenis][$companyCode] = [];
+                    break;
+
+                case 'mingguan':
+                    // MINGGUAN: Group by jenis then company
+                    foreach ($simpleData as $item) {
+                        $jenis = $item['jenis'];
+                        $companyCode = $item['companycode'];
+
+                        if (!isset($dataGrouped[$jenis])) {
+                            $dataGrouped[$jenis] = [];
+                        }
+                        if (!isset($dataGrouped[$jenis][$companyCode])) {
+                            $dataGrouped[$jenis][$companyCode] = [];
+                        }
+                        $dataGrouped[$jenis][$companyCode][] = $item;
                     }
-                    $dataGrouped[$jenis][$companyCode][] = $item;
-                }
+
+                    // Sort company codes dalam setiap jenis (ascending)
+                    foreach ($dataGrouped as $jenis => $companies) {
+                        ksort($dataGrouped[$jenis]);
+                    }
+                    break;
             }
 
-            // Get actual companies
+            // Get actual companies yang lebih robust (LOGIC LAMA YANG SUDAH BAGUS)
             $actualCompanies = [];
-            if ($reportType === 'harian' && $isAllCompanies) {
+
+            if ($reportType === 'bulanan' && $isAllCompanies) {
+                // For bulanan all companies, companies are top-level keys
+                $actualCompanies = array_keys($dataGrouped);
+            } elseif ($reportType === 'harian' || ($reportType === 'bulanan' && !$isAllCompanies)) {
+                // For harian or bulanan single company, collect companies from each date
                 foreach ($dataGrouped as $dateItems) {
-                    foreach ($dateItems as $item) {
-                        if (!in_array($item['companycode'], $actualCompanies)) {
-                            $actualCompanies[] = $item['companycode'];
+                    if (is_array($dateItems)) {
+                        foreach ($dateItems as $item) {
+                            if (isset($item['companycode']) && !in_array($item['companycode'], $actualCompanies)) {
+                                $actualCompanies[] = $item['companycode'];
+                            }
                         }
                     }
                 }
             } else {
+                // For mingguan, collect companies from nested structure
                 foreach ($dataGrouped as $jenisData) {
-                    foreach ($jenisData as $companyCode => $items) {
-                        if (!in_array($companyCode, $actualCompanies)) {
-                            $actualCompanies[] = $companyCode;
+                    if (is_array($jenisData)) {
+                        foreach ($jenisData as $companyCode => $items) {
+                            if (!in_array($companyCode, $actualCompanies)) {
+                                $actualCompanies[] = $companyCode;
+                            }
                         }
                     }
                 }
             }
 
+            // Sort companies
             sort($actualCompanies);
 
             // Return view untuk preview (tanpa print button dan signature)
@@ -723,10 +810,14 @@ class TrashController extends Controller
                 'dataGrouped' => $dataGrouped,
                 'startDate' => $startDate,
                 'endDate' => $endDate,
+                'month' => $month,
+                'year' => $year,
                 'reportType' => $reportType,
                 'company' => $company,
                 'user' => Auth::user()->userid,
-                'actualCompanies' => $actualCompanies
+                'actualCompanies' => $actualCompanies,
+                'isAllCompanies' => $isAllCompanies,
+                'totalRecords' => count($simpleData)
             ])->render();
         } catch (\Exception $e) {
             return response('<div class="text-center py-12"><div class="text-red-600 text-lg">Terjadi kesalahan: ' . $e->getMessage() . '</div></div>', 500);
