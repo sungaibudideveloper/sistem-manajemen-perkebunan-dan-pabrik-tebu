@@ -67,9 +67,9 @@ class SplitMergePlotController extends Controller
         $activeBatches = $this->getActiveBatchesForSelection($companycode);
         
         return view('master.split-merge-plot.index', [
-            'title' => 'Split & Merge Plot',
+            'title' => 'Rekonstruksi Plot',
             'navbar' => 'Master Data',
-            'nav' => 'Split & Merge Plot',
+            'nav' => 'Rekonstruksi Plot',
             'transactions' => $transactions,
             'activeBatches' => $activeBatches,
             'perPage' => $perPage,
