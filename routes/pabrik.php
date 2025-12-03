@@ -32,4 +32,6 @@ Route::group(['middleware' => ['auth', 'permission:Trash']], function () {
           ->name('pabrik.trash.report');
 
      Route::any('/pabrik/trash/report/preview', [TrashController::class, 'reportPreview'])->name('pabrik.trash.report.preview');
+
+     Route::get('/pabrik/trash/surat-jalan/search-by-date', [TrashController::class, 'searchSuratJalanByDate'])->name('pabrik.trash.surat-jalan.search-by-date');
 });

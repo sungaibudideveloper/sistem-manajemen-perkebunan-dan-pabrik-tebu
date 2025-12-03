@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Trash;
+use App\Models\Company;
+
 
 class TrashController extends Controller
 {
@@ -93,6 +95,81 @@ class TrashController extends Controller
             ], 500);
         }
     }
+
+    // Tambahkan method ini ke TrashController.php setelah method checkSuratJalan()
+    public function searchSuratJalanByDate(Request $request)
+    {
+        try {
+            $company = $request->get('company');
+            $date = date('Y-m-d', strtotime($request->get('date')));
+
+            if (empty($company) || empty($date)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Company dan tanggal harus diisi',
+                    'data' => []
+                ]);
+            }
+
+            // DEBUG: Cek dulu ada berapa surat jalan TANPA filter trash
+            $totalSuratJalan = DB::table('suratjalanpos')
+                ->where('companycode', $company)
+                ->whereDate('tanggalangkut', $date)
+                ->count();
+
+            // DEBUG: Cek berapa yang sudah ada di trash
+            $sudahAdaTrash = DB::table('suratjalanpos as sj')
+                ->join('trash as t', function ($join) {
+                    $join->on('t.suratjalanno', '=', 'sj.suratjalanno')
+                        ->on('t.companycode', '=', 'sj.companycode');
+                })
+                ->where('sj.companycode', $company)
+                ->whereDate('sj.tanggalangkut', $date)
+                ->count();
+
+            // Query utama
+            $suratJalanList = DB::table('suratjalanpos')
+                ->select([
+                    'suratjalanno',
+                    'companycode',
+                    'plot',
+                    'varietas',
+                    'kategori',
+                    'tanggalangkut',
+                    'nomorpolisi'
+                ])
+                ->where('companycode', $company)
+                ->whereDate('tanggalangkut', $date)
+                ->whereNotExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('trash')
+                        ->whereColumn('trash.suratjalanno', 'suratjalanpos.suratjalanno')
+                        ->whereColumn('trash.companycode', 'suratjalanpos.companycode');
+                })
+                ->orderBy('suratjalanno')
+                ->get();
+
+            if ($suratJalanList->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Total SJ: {$totalSuratJalan}, Sudah ada trash: {$sudahAdaTrash}. Tidak ada surat jalan yang tersedia.",
+                    'data' => []
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Surat jalan ditemukan',
+                'data' => $suratJalanList->toArray()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }   
 
     public function store(Request $request)
     {
