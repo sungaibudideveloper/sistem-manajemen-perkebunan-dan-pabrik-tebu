@@ -78,6 +78,14 @@
                               class="ml-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-600"
                               x-text="lkhCount"></span>
                     </button>
+                    <button @click="activeTab = 'other'" 
+                            :class="activeTab === 'other' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500'"
+                            class="flex-1 py-3 text-sm font-medium border-b-2 transition-colors">
+                        Approval Lainnya
+                        <span x-show="otherCount > 0" 
+                              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-600"
+                              x-text="otherCount"></span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -115,74 +123,21 @@
                 <p class="text-gray-500 font-medium">Tidak ada RKH yang perlu diapprove</p>
             </div>
             @else
-            <!-- Bulk Actions Bar -->
-            <div class="bg-white rounded-lg shadow-sm border p-3 mb-3 flex items-center justify-between">
-                <label class="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" 
-                           @change="toggleSelectAllRkh($event.target.checked)"
-                           :disabled="isProcessing"
-                           class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="text-sm font-medium text-gray-700">
-                        Select All (<span x-text="selectedRKHs.length"></span>/<span x-text="rkhCount"></span>)
-                    </span>
-                </label>
-                
-                <div class="flex space-x-2">
-                    <button @click="bulkApproveRkh()" 
-                            :disabled="selectedRKHs.length === 0 || isProcessing"
-                            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-700 text-white flex items-center">
-                        <!-- Loading Spinner -->
-                        <svg x-show="isProcessing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <!-- Success Icon -->
-                        <svg x-show="!isProcessing" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span x-text="isProcessing ? 'Processing...' : 'Approve'"></span>
-                    </button>
-                    <button @click="bulkDeclineRkh()" 
-                            :disabled="selectedRKHs.length === 0 || isProcessing"
-                            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 text-white flex items-center">
-                        <!-- Loading Spinner -->
-                        <svg x-show="isProcessing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <!-- Decline Icon -->
-                        <svg x-show="!isProcessing" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span x-text="isProcessing ? 'Processing...' : 'Decline'"></span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- RKH Cards -->
+            <!-- RKH Cards (same as before) -->
             <div class="space-y-3">
                 @foreach($pendingRKH as $rkh)
                 <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
-                    <!-- Card Header -->
                     <div class="bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-2.5 border-b">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3 flex-1">
-                                <input type="checkbox" 
-                                    value="{{ $rkh->rkhno }}"
-                                    @change="toggleRkhSelection('{{ $rkh->rkhno }}')"
-                                    :checked="selectedRKHs.includes('{{ $rkh->rkhno }}')"
-                                    class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                                <div class="flex-1">
-                                    {{-- ✅ FIXED: target="_blank" --}}
-                                    <a href="{{ route('input.rencanakerjaharian.show', $rkh->rkhno) }}" 
-                                    target="_blank"
-                                    class="text-base font-bold text-emerald-700 hover:text-emerald-800">
-                                        {{ $rkh->rkhno }}
-                                    </a>
-                                    <p class="text-xs text-gray-600">
-                                        {{ \Carbon\Carbon::parse($rkh->rkhdate)->format('d M Y') }}
-                                    </p>
-                                </div>
+                            <div class="flex-1">
+                                <a href="{{ route('input.rencanakerjaharian.show', $rkh->rkhno) }}" 
+                                   target="_blank"
+                                   class="text-base font-bold text-emerald-700 hover:text-emerald-800">
+                                    {{ $rkh->rkhno }}
+                                </a>
+                                <p class="text-xs text-gray-600">
+                                    {{ \Carbon\Carbon::parse($rkh->rkhdate)->format('d M Y') }}
+                                </p>
                             </div>
                             <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                 Level {{ $rkh->approval_level }}
@@ -190,26 +145,17 @@
                         </div>
                     </div>
 
-                    <!-- Card Body -->
                     <div class="px-4 py-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between text-sm">
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                <span class="text-gray-600 mr-1">Mandor:</span>
-                                <span class="font-medium text-gray-900">{{ $rkh->mandor_nama ?? '-' }}</span>
-                            </div>
-                            
-                            <div class="text-xs text-gray-600 flex items-center space-x-3">
-                                <span>Kendaraan: <span class="font-medium">{{ $rkh->has_kendaraan ? 'Ya' : 'Tidak' }}</span></span>
-                                <span>Material: <span class="font-medium">{{ $rkh->has_material ? 'Ya' : 'Tidak' }}</span></span>
-                            </div>
+                        <div class="flex items-center text-sm">
+                            <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            <span class="text-gray-600 mr-1">Mandor:</span>
+                            <span class="font-medium text-gray-900">{{ $rkh->mandor_nama ?? '-' }}</span>
                         </div>
                         
-                        {{-- Activity list --}}
                         <div class="flex items-start text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-gray-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
                             <div class="flex-1">
@@ -230,7 +176,6 @@
                         </div>
                     </div>
 
-                    <!-- Card Actions -->
                     <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
                         <form action="{{ route('input.approval.processRKH') }}" method="POST" class="flex-1">
                             @csrf
@@ -240,9 +185,6 @@
                             <button type="submit" 
                                     onclick="return confirm('Approve RKH {{ $rkh->rkhno }}?')"
                                     class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors">
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
                                 Approve
                             </button>
                         </form>
@@ -254,9 +196,6 @@
                             <button type="submit" 
                                     onclick="return confirm('Decline RKH {{ $rkh->rkhno }}?')"
                                     class="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
                                 Decline
                             </button>
                         </form>
@@ -277,74 +216,21 @@
                 <p class="text-gray-500 font-medium">Tidak ada LKH yang perlu diapprove</p>
             </div>
             @else
-            <!-- Bulk Actions Bar -->
-            <div class="bg-white rounded-lg shadow-sm border p-3 mb-3 flex items-center justify-between">
-                <label class="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" 
-                           @change="toggleSelectAllLkh($event.target.checked)"
-                           :disabled="isProcessing"
-                           class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="text-sm font-medium text-gray-700">
-                        Select All (<span x-text="selectedLKHs.length"></span>/<span x-text="lkhCount"></span>)
-                    </span>
-                </label>
-                
-                <div class="flex space-x-2">
-                    <button @click="bulkApproveLkh()" 
-                            :disabled="selectedLKHs.length === 0 || isProcessing"
-                            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-700 text-white flex items-center">
-                        <!-- Loading Spinner -->
-                        <svg x-show="isProcessing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <!-- Success Icon -->
-                        <svg x-show="!isProcessing" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span x-text="isProcessing ? 'Processing...' : 'Approve'"></span>
-                    </button>
-                    <button @click="bulkDeclineLkh()" 
-                            :disabled="selectedLKHs.length === 0 || isProcessing"
-                            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 text-white flex items-center">
-                        <!-- Loading Spinner -->
-                        <svg x-show="isProcessing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <!-- Decline Icon -->
-                        <svg x-show="!isProcessing" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span x-text="isProcessing ? 'Processing...' : 'Decline'"></span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- LKH Cards -->
+            <!-- LKH Cards (same as before) -->
             <div class="space-y-3">
                 @foreach($pendingLKH as $lkh)
                 <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
-                    <!-- Card Header -->
                     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2.5 border-b">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3 flex-1">
-                                <input type="checkbox" 
-                                    value="{{ $lkh->lkhno }}"
-                                    @change="toggleLkhSelection('{{ $lkh->lkhno }}')"
-                                    :checked="selectedLKHs.includes('{{ $lkh->lkhno }}')"
-                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <div class="flex-1">
-                                    {{-- ✅ FIXED: target="_blank" --}}
-                                    <a href="{{ route('input.rencanakerjaharian.showLKH', $lkh->lkhno) }}" 
-                                    target="_blank"
-                                    class="text-base font-bold text-blue-700 hover:text-blue-800">
-                                        {{ $lkh->lkhno }}
-                                    </a>
-                                    <p class="text-xs text-gray-600">
-                                        {{ \Carbon\Carbon::parse($lkh->lkhdate)->format('d M Y') }}
-                                    </p>
-                                </div>
+                            <div class="flex-1">
+                                <a href="{{ route('input.rencanakerjaharian.showLKH', $lkh->lkhno) }}" 
+                                   target="_blank"
+                                   class="text-base font-bold text-blue-700 hover:text-blue-800">
+                                    {{ $lkh->lkhno }}
+                                </a>
+                                <p class="text-xs text-gray-600">
+                                    {{ \Carbon\Carbon::parse($lkh->lkhdate)->format('d M Y') }}
+                                </p>
                             </div>
                             <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                 Level {{ $lkh->approval_level }}
@@ -352,37 +238,21 @@
                         </div>
                     </div>
 
-                    <!-- Card Body -->
                     <div class="px-4 py-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between text-sm">
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                <span class="text-gray-600 mr-1">Mandor:</span>
-                                <span class="font-medium text-gray-900">{{ $lkh->mandor_nama ?? '-' }}</span>
-                            </div>
-                            
-                            <div class="text-xs text-gray-600 flex items-center space-x-3">
-                                <span>Kendaraan: <span class="font-medium">{{ $lkh->has_kendaraan ? 'Ya' : 'Tidak' }}</span></span>
-                                <span>Material: <span class="font-medium">{{ $lkh->has_material ? 'Ya' : 'Tidak' }}</span></span>
-                            </div>
-                        </div>
-                        
                         <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            <span class="text-gray-600 mr-1">Mandor:</span>
+                            <span class="font-medium text-gray-900">{{ $lkh->mandor_nama ?? '-' }}</span>
+                        </div>
+
+                        <div class="flex items-center text-sm">
+                            <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                             </svg>
                             <span class="text-gray-600 mr-1">Activity:</span>
                             <span class="font-medium text-gray-900 text-xs">{{ $lkh->activityname ?? '-' }}</span>
-                        </div>
-
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                            <span class="text-gray-600 mr-1">RKH:</span>
-                            <span class="font-medium text-gray-900">{{ $lkh->rkhno }}</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 pt-1">
@@ -397,7 +267,6 @@
                         </div>
                     </div>
 
-                    <!-- Card Actions -->
                     <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
                         <form action="{{ route('input.approval.processLKH') }}" method="POST" class="flex-1">
                             @csrf
@@ -407,9 +276,6 @@
                             <button type="submit" 
                                     onclick="return confirm('Approve LKH {{ $lkh->lkhno }}?')"
                                     class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors">
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
                                 Approve
                             </button>
                         </form>
@@ -420,6 +286,142 @@
                             <input type="hidden" name="level" value="{{ $lkh->approval_level }}">
                             <button type="submit" 
                                     onclick="return confirm('Decline LKH {{ $lkh->lkhno }}?')"
+                                    class="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                                Decline
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+
+        <!-- Other Approval Tab (NEW) -->
+        <div x-show="activeTab === 'other'" class="max-w-4xl mx-auto px-4 mt-4">
+            @if($pendingOther->isEmpty())
+            <div class="bg-white rounded-lg shadow-sm border p-8 text-center">
+                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-gray-500 font-medium">Tidak ada approval lainnya yang perlu diproses</p>
+            </div>
+            @else
+            <!-- Other Approval Cards -->
+            <div class="space-y-3">
+                @foreach($pendingOther as $approval)
+                <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+                    <!-- Card Header -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2.5 border-b">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="text-base font-bold text-purple-700">
+                                    {{ $approval->transactionnumber }}
+                                </div>
+                                <p class="text-xs text-gray-600">
+                                    {{ $approval->formatted_date ?? '-' }} • {{ $approval->category }}
+                                </p>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Level {{ $approval->approval_level }}
+                                </span>
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $approval->transactiontype === 'SPLIT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+                                    {{ $approval->transactiontype }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="px-4 py-2.5 space-y-2">
+                        <!-- Source Plots/Batches -->
+                        <div class="text-sm">
+                            <span class="text-gray-600 font-medium">{{ $approval->transactiontype === 'SPLIT' ? 'Plot Asal:' : 'Plot yang di-Merge:' }}</span>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                @if(isset($approval->sourceplots_array))
+                                    @foreach($approval->sourceplots_array as $plot)
+                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                                            {{ $plot }}
+                                            {{-- Gunakan real_batch_areas dari batch aktif --}}
+                                            @if(isset($approval->real_batch_areas[$plot]))
+                                                <span class="text-gray-500">({{ number_format($approval->real_batch_areas[$plot], 2) }} Ha)</span>
+                                            @elseif(isset($approval->areamap_array[$plot]))
+                                                <span class="text-gray-500">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
+                                            @endif
+                                        </span>
+                                    @endforeach
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Arrow Icon - Ke Bawah -->
+                        <div class="flex justify-left">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                        </div>
+
+                        <!-- Result Plots/Batches -->
+                        <div class="text-sm">
+                            <span class="text-gray-600 font-medium">Plot Hasil:</span>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                @if(isset($approval->resultplots_array))
+                                    @foreach($approval->resultplots_array as $plot)
+                                        <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                                            {{ $plot }}
+                                            @if(isset($approval->areamap_array[$plot]))
+                                                <span class="text-purple-600">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
+                                            @endif
+                                        </span>
+                                    @endforeach
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Dominant Plot & Reason -->
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t">
+                            <div class="text-sm">
+                                <span class="text-gray-600">Dominant Plot:</span>
+                                <span class="ml-1 font-semibold text-gray-900">{{ $approval->dominantplot }}</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="text-gray-600">Input By:</span>
+                                <span class="ml-1 font-medium text-gray-900">{{ $approval->inputby_name ?? $approval->inputby }}</span>
+                            </div>
+                        </div>
+
+                        @if($approval->splitmergedreason)
+                        <div class="text-sm pt-1">
+                            <span class="text-gray-600">Alasan:</span>
+                            <p class="mt-0.5 text-xs text-gray-700 italic">{{ $approval->splitmergedreason }}</p>
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- Card Actions -->
+                    <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
+                        <form action="{{ route('input.approval.processOther') }}" method="POST" class="flex-1">
+                            @csrf
+                            <input type="hidden" name="approvalno" value="{{ $approval->approvalno }}">
+                            <input type="hidden" name="action" value="approve">
+                            <input type="hidden" name="level" value="{{ $approval->approval_level }}">
+                            <button type="submit" 
+                                    onclick="return confirm('Approve {{ $approval->category }} {{ $approval->transactionnumber }}?')"
+                                    class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Approve
+                            </button>
+                        </form>
+                        <form action="{{ route('input.approval.processOther') }}" method="POST" class="flex-1">
+                            @csrf
+                            <input type="hidden" name="approvalno" value="{{ $approval->approvalno }}">
+                            <input type="hidden" name="action" value="decline">
+                            <input type="hidden" name="level" value="{{ $approval->approval_level }}">
+                            <button type="submit" 
+                                    onclick="return confirm('Decline {{ $approval->category }} {{ $approval->transactionnumber }}?')"
                                     class="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
                                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -441,6 +443,7 @@
                 activeTab: 'rkh',
                 rkhCount: {{ $pendingRKH->count() }},
                 lkhCount: {{ $pendingLKH->count() }},
+                otherCount: {{ $pendingOther->count() }},
                 selectedRKHs: [],
                 selectedLKHs: [],
                 allDateChecked: {{ $allDate ? 'true' : 'false' }},
