@@ -235,7 +235,7 @@ class GudangController extends Controller
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
         ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-            'connection' => '172.17.1.39',
+            'connection' => 'TESTING',
             'company' => $companyinv->companyinventory,
             'factory' => $hfirst->factoryinv,
             'isi' => $isi,  
