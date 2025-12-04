@@ -243,12 +243,7 @@ Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorCo
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])->name('masterdata.mandor.destroy');
 
 // Tenaga kerja management
-Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
-Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
-Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
-Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
-
-Route::middleware(['auth', 'permission:Tenaga Kerja'])->group(function () {
+Route::middleware(['auth', 'permission:Tenagakerja'])->group(function () {
     Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
     Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
     Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');

@@ -249,7 +249,6 @@ class NavigationComposer
             // Master Data - non-standard permissions
             'master-list' => 'MasterList',
             'herbisida-dosage' => 'Dosis Herbisida',
-            'tenagakerja' => 'Tenaga Kerja',
 
             // Input Data - non-standard permissions
             'rencanakerjaharian' => 'Rencana Kerja Harian',
