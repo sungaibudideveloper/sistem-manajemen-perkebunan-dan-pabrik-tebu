@@ -202,7 +202,7 @@ Route::middleware('auth')->group(function () {
         });
 });
 
-Route::group(['middleware' => ['auth', 'permission:Mapping BSM']], function () {
+Route::group(['middleware' => ['auth', 'permission:Mapping Bsm']], function () {
     Route::match(['GET', 'POST'], 'input/mapping-bsm', [MappingBsmController::class, 'index'])->name('input.mapping-bsm.index');
     Route::get('input/mapping-bsm/get-bsm-detail', [MappingBsmController::class, 'getBsmDetail'])->name('input.mapping-bsm.get-bsm-detail');
 });
