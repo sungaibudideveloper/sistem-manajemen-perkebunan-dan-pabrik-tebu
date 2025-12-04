@@ -4706,6 +4706,34 @@ public function loadAbsenByDate(Request $request)
                     'totalsudahpanen' => number_format($totalSudahPanen, 2),
                     'luassisa_batch'  => number_format($batchSisa, 2),
                 ];
+
+                $lastZpkDate = DB::table('lkhdetailplot as ldp')
+                    ->join('lkhhdr as lh', function($join) {
+                        $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                            ->on('ldp.companycode', '=', 'lh.companycode');
+                    })
+                    ->where('ldp.companycode', $companycode)
+                    ->where('ldp.plot', $plot)
+                    ->where('lh.activitycode', '4.2.2')
+                    ->where('lh.approvalstatus', '1')
+                    ->orderBy('lh.lkhdate', 'desc')
+                    ->value('lh.lkhdate');
+
+                if ($lastZpkDate) {
+                    $zpkDate = Carbon::parse($lastZpkDate);
+                    $today = Carbon::now();
+                    $daysGap = (int) $zpkDate->diffInDays($today);
+                    
+                    $batchInfo['zpk_date'] = $zpkDate->format('d/m/Y');
+                    $batchInfo['zpk_days_gap'] = $daysGap;
+                    if ($daysGap >= 25 && $daysGap <= 35) {
+                        $batchInfo['zpk_status'] = 'ideal';
+                    } elseif ($daysGap < 25) {
+                        $batchInfo['zpk_status'] = 'too_early';
+                    } else {
+                        $batchInfo['zpk_status'] = 'too_late';
+                    }
+                }
             }
 
             // 5. Tanggal terakhir activity (untuk non panen, tetap seperti sebelumnya)

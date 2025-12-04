@@ -518,6 +518,19 @@
                                   <span class="font-semibold" x-text="plotInfo.batchno ? 'Tgl Panen:' : 'Tgl Activity:'"></span>
                                   <span x-text="plotInfo.tanggal || '-'"></span>
                               </div>
+
+                              <!-- Tanggal ZPK (kalau ada) -->
+                              <div x-show="plotInfo.zpk_date" class="text-gray-700">
+                                  <span class="font-semibold">ZPK:</span>
+                                  <span x-text="plotInfo.zpk_date"></span>
+                                  <span class="text-xs ml-1" 
+                                        :class="{
+                                            'text-green-600': plotInfo.zpk_status === 'ideal',
+                                            'text-red-600': plotInfo.zpk_status === 'too_early',
+                                            'text-red-600': plotInfo.zpk_status === 'too_late'
+                                        }"
+                                        x-text="`(${plotInfo.zpk_days_gap}d)`"></span>
+                              </div>
                           </div>
                       </div>
 
@@ -984,7 +997,10 @@ function plotInfoPicker(rowIndex) {
       batchno: '',
       kodestatus: '',
       tanggal: '',
-      luassisa_batch: ''
+      luassisa_batch: '',
+      zpk_date: '',
+      zpk_days_gap: 0,
+      zpk_status: ''
     },
 
     init() {
@@ -1051,7 +1067,10 @@ function plotInfoPicker(rowIndex) {
             batchno: data.batchinfo?.batchno || '',
             kodestatus: data.batchinfo?.lifecyclestatus || '',
             tanggal: data.tanggal || '',
-            luassisa_batch: data.batchinfo?.luassisa_batch || ''
+            luassisa_batch: data.batchinfo?.luassisa_batch || '',
+            zpk_date: data.batchinfo?.zpk_date || '',
+            zpk_days_gap: data.batchinfo?.zpk_days_gap || 0,
+            zpk_status: data.batchinfo?.zpk_status || ''
           };
           
           // Auto-fill luas sisa
