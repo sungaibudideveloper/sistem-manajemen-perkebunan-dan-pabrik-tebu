@@ -498,9 +498,7 @@ class GudangController extends Controller
                             'itemprice'  => $itemprice,
                             'costcenter' => $request->costcenter,
                             'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,  
-                            'endstock'   => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
-                            'updatedat'   => date("Y-m-d H:i"),
-                            'updatedby'   => Auth::user()->userid
+                            'endstock'   => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0  
                         ]);
 
                     // Cek hasil di database
@@ -517,7 +515,8 @@ class GudangController extends Controller
                 }
                  
                 // Update header status
-                usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
+                usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED','updatedat'   => date("Y-m-d H:i:s"),
+                            'updatedby'   => Auth::user()->userid]);
                 
                 DB::commit();
                 Cache::forget($lockKey);
