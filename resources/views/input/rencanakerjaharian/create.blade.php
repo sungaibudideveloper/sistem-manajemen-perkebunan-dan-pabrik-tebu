@@ -835,10 +835,10 @@ function rowManager() {
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
-window.operatorsData = @json($operatorsData ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
+window.vehiclesData = @json($vehiclesData ?? []);
 window.helpersData = @json($helpersData ?? []);
 
 window.currentUser = {
@@ -856,6 +856,7 @@ window.PLOT_INFO_BASE_URL = "{{ url('input/kerjaharian/rencanakerjaharian/plot-i
 
 /**
  * Kendaraan Info Card Component
+ * Now stores: nokendaraan (primary), operator_id, helper_id
  */
 function kendaraanInfoCard() {
   return {
@@ -903,15 +904,16 @@ function kendaraanInfoCard() {
       }));
     },
 
-    addKendaraan(activityCode, operatorData, helperData = null) {
-      // Check for duplicate kendaraan in the same activity
+    // ✅ UPDATED: vehicleData now contains nokendaraan + operator info
+    addKendaraan(activityCode, vehicleData, helperData = null) {
+      // Check for duplicate VEHICLE (not operator)
       if (this.kendaraan[activityCode]) {
         const isDuplicate = Object.values(this.kendaraan[activityCode]).some(
-          item => item.nokendaraan === operatorData.nokendaraan
+          item => item.nokendaraan === vehicleData.nokendaraan
         );
         
         if (isDuplicate) {
-          showToast(`Kendaraan ${operatorData.nokendaraan} sudah ditambahkan untuk aktivitas ini`, 'warning', 3000);
+          showToast(`Kendaraan ${vehicleData.nokendaraan} sudah ditambahkan untuk aktivitas ini`, 'warning', 3000);
           return false;
         }
       }
@@ -923,9 +925,9 @@ function kendaraanInfoCard() {
       const urutan = Object.keys(this.kendaraan[activityCode]).length + 1;
 
       this.kendaraan[activityCode][urutan] = {
-        nokendaraan: operatorData.nokendaraan,
-        operatorid: operatorData.tenagakerjaid,
-        operatorName: operatorData.nama,
+        nokendaraan: vehicleData.nokendaraan,
+        operatorid: vehicleData.operator_id || null,
+        operatorName: vehicleData.operator_name || 'No Operator',
         helperid: helperData ? helperData.tenagakerjaid : null,
         helperName: helperData ? helperData.nama : null
       };
