@@ -69,18 +69,12 @@ class KendaraanController extends Controller
             ]);
 
         // Get available operators (jenis 3 = Operator, active only, belum ada kendaraan)
-        $availableOperators = DB::table('tenagakerja as tk')
-            ->leftJoin('kendaraan as k', function($join) use ($companycode) {
-                $join->on('tk.tenagakerjaid', '=', 'k.idtenagakerja')
-                     ->where('k.companycode', '=', $companycode)
-                     ->where('k.isactive', '=', 1);
-            })
-            ->where('tk.companycode', $companycode)
-            ->where('tk.jenistenagakerja', 3) // Operator only
-            ->where('tk.isactive', 1)
-            ->whereNull('k.idtenagakerja') // Belum punya kendaraan aktif
-            ->select('tk.tenagakerjaid', 'tk.nama', 'tk.nik')
-            ->orderBy('tk.nama')
+        $availableOperators = DB::table('tenagakerja')
+            ->where('companycode', $companycode)
+            ->where('jenistenagakerja', 3) // Operator only
+            ->where('isactive', 1)
+            ->select('tenagakerjaid', 'nama', 'nik')
+            ->orderBy('nama')
             ->get();
 
         // Get all active operators for edit (including yang sudah punya kendaraan)
@@ -117,21 +111,6 @@ class KendaraanController extends Controller
 
         $companycode = session('companycode');
 
-        // Check if operator already has a vehicle
-        if ($request->operator) {
-            $existingVehicle = Kendaraan::where('companycode', $companycode)
-                ->where('idtenagakerja', $request->operator)
-                ->where('isactive', 1)
-                ->exists();
-
-            if ($existingVehicle) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Operator sudah memiliki kendaraan aktif!'
-                ], 422);
-            }
-        }
-
         Kendaraan::create([
             'companycode' => $companycode,
             'nokendaraan' => strtoupper($request->nokendaraan),
@@ -165,22 +144,6 @@ class KendaraanController extends Controller
             'hourmeter' => 'nullable|numeric|min:0|max:999999.99',
             'isactive' => 'nullable|boolean'
         ]);
-
-        // Check if operator already has another vehicle (exclude current vehicle)
-        if ($request->operator && $request->operator != $kendaraan->idtenagakerja) {
-            $existingVehicle = Kendaraan::where('companycode', $companycode)
-                ->where('idtenagakerja', $request->operator)
-                ->where('nokendaraan', '!=', $nokendaraan)
-                ->where('isactive', 1)
-                ->exists();
-
-            if ($existingVehicle) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Operator sudah memiliki kendaraan aktif lainnya!'
-                ], 422);
-            }
-        }
 
         $kendaraan->update([
             'nokendaraan' => strtoupper($request->nokendaraan),
