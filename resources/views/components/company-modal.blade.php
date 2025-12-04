@@ -39,7 +39,7 @@
         
         <form action="{{ route('setSession') }}" 
             method="POST" 
-            @submit="Alpine.store('loading').start(); handleSubmit()"> <!-- Trigger global loading on submit -->
+            @submit="Alpine.store('loading').start(); handleSubmit()">
             @csrf
             <div class="px-6 py-6">
                 <label class="block text-sm font-medium text-slate-700 mb-3">Choose Company</label>
@@ -50,7 +50,7 @@
                     <option value="" disabled class="text-slate-400">--Select Company--</option>
                     @foreach ($companies as $comp)
                         <option value="{{ $comp }}" class="text-slate-900">
-                            {{ $comp }}
+                            {{ formatCompanyCode($comp) }}
                         </option>
                     @endforeach
                 </select>
@@ -80,6 +80,11 @@ function companyModalData() {
         showModal: false,
         selectedCompany: '{{ session("companycode") }}',
         
+        // Computed property for formatted company code
+        get formattedCompany() {
+            return this.formatCode(this.selectedCompany);
+        },
+        
         openModal() {
             this.showModal = true;
             this.selectedCompany = '{{ session("companycode") }}';
@@ -92,13 +97,36 @@ function companyModalData() {
         },
         
         handleSubmit() {
-            // Optional: Add loading state or validation here
-            console.log('Switching to company:', this.selectedCompany);
+            console.log('Switching to company:', this.selectedCompany, '(formatted:', this.formattedCompany + ')');
+        },
+        
+        // Format company code to Roman numerals (client-side)
+        formatCode(code) {
+            if (!code) return '';
+            
+            const match = code.match(/^([A-Z]+)(\d+)$/);
+            if (match) {
+                const prefix = match[1];
+                const number = parseInt(match[2]);
+                
+                const romans = {
+                    1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V',
+                    6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X',
+                    11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV',
+                    16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'
+                };
+                
+                if (romans[number]) {
+                    return prefix + ' ' + romans[number];
+                }
+            }
+            
+            return code; // Return original if no match
         }
     }
 }
 
-// Make it available globally if needed
+// Make it available globally
 window.companyModalData = companyModalData;
 </script>
 
