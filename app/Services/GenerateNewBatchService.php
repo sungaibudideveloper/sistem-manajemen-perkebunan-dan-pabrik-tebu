@@ -10,17 +10,19 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * GenerateNewBatchService - FIXED VERSION
+ * GenerateNewBatchService - REVISED VERSION
  * 
  * Auto-generate new batch based on LKH approval:
- * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (empty)
- * 2. Planting completed (2.2.7) → UPDATE existing PC batch (set tanggalulangtahun & plantinglkhno)
- * 3. Set tanggalpanen on first panen LKH approval
+ * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (ALL with tanggalulangtahun=NULL)
+ * 2. Planting completed (2.2.7) → UPDATE PC batch (set tanggalulangtahun & plantinglkhno)
+ * 3. Trash Muchler completed (3.2.1) → UPDATE RC1/RC2/RC3 batch (set tanggalulangtahun)
+ * 4. Set tanggalpanen on first panen LKH approval
  */
 class GenerateNewBatchService
 {
     const PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
     const PLANTING_ACTIVITY = '2.2.7';
+    const TRASH_MUCHLER_ACTIVITY = '3.2.1';
     const TOLERANCE = 1.0;
     
     /**
@@ -38,7 +40,7 @@ class GenerateNewBatchService
                 return ['success' => false, 'message' => 'LKH not found'];
             }
             
-            // Route 1: Panen activities
+            // Route 1: Panen activities - transition batch lifecycle
             if (in_array($lkh->activitycode, self::PANEN_ACTIVITIES)) {
                 // Set tanggalpanen first (before transition check)
                 $this->setTanggalPanen($lkhno, $companycode, $lkh);
@@ -47,9 +49,14 @@ class GenerateNewBatchService
                 return $this->generateFromPanen($lkhno, $companycode);
             }
             
-            // Route 2: Planting activity - UPDATE existing PC batch (NOT create new)
+            // Route 2: Planting activity - UPDATE existing PC batch
             if ($lkh->activitycode === self::PLANTING_ACTIVITY) {
                 return $this->updatePCBatchFromPlanting($lkhno, $companycode, $lkh);
+            }
+            
+            // Route 3: Trash Muchler activity - UPDATE existing RC batch
+            if ($lkh->activitycode === self::TRASH_MUCHLER_ACTIVITY) {
+                return $this->updateRCBatchFromTrashMuchler($lkhno, $companycode, $lkh);
             }
             
             // Not a batch-generating activity
@@ -131,7 +138,8 @@ class GenerateNewBatchService
     }
     
     /**
-     * Generate next batch from panen completion (PC→RC1, RC1→RC2, RC2→RC3, RC3→PC empty)
+     * Generate next batch from panen completion (PC→RC1, RC1→RC2, RC2→RC3, RC3→PC)
+     * ALL new batches created with tanggalulangtahun=NULL
      */
     private function generateFromPanen($lkhno, $companycode)
     {
@@ -173,8 +181,8 @@ class GenerateNewBatchService
     }
     
     /**
-     * UPDATE existing PC batch from planting activity (NOT create new batch)
-     * NEW LOGIC: Just update tanggalulangtahun & plantinglkhno
+     * UPDATE existing PC batch from planting activity
+     * Set tanggalulangtahun & plantinglkhno
      */
     private function updatePCBatchFromPlanting($lkhno, $companycode, $lkh)
     {
@@ -246,8 +254,79 @@ class GenerateNewBatchService
     }
     
     /**
+     * NEW METHOD: UPDATE existing RC batch from trash muchler activity
+     * Set tanggalulangtahun when trash muchler completed
+     */
+    private function updateRCBatchFromTrashMuchler($lkhno, $companycode, $lkh)
+    {
+        try {
+            // Get all batches from this trash muchler LKH
+            $batchNumbers = LkhDetailPlot::where('companycode', $companycode)
+                ->where('lkhno', $lkhno)
+                ->whereNotNull('batchno')
+                ->pluck('batchno')
+                ->unique();
+            
+            if ($batchNumbers->isEmpty()) {
+                return ['success' => false, 'message' => 'No batch found in trash muchler LKH'];
+            }
+            
+            $updatedBatches = [];
+            
+            foreach ($batchNumbers as $batchno) {
+                // Check if trash muchler completed for this batch
+                if ($this->isTrashMuchlerCompleted($batchno, $companycode)) {
+                    $batch = Batch::where('batchno', $batchno)
+                        ->where('companycode', $companycode)
+                        ->whereIn('lifecyclestatus', ['RC1', 'RC2', 'RC3'])
+                        ->where('isactive', 1)
+                        ->whereNull('tanggalulangtahun')
+                        ->first();
+                    
+                    if ($batch) {
+                        $batch->update([
+                            'tanggalulangtahun' => $lkh->lkhdate,
+                            'lastactivity' => self::TRASH_MUCHLER_ACTIVITY,
+                            'updateby' => Auth::user()->userid ?? 'SYSTEM',
+                            'updatedat' => now()
+                        ]);
+                        
+                        $updatedBatches[] = [
+                            'batchno' => $batchno,
+                            'plot' => $batch->plot,
+                            'lifecycle' => $batch->lifecyclestatus,
+                            'tanggalulangtahun' => $lkh->lkhdate
+                        ];
+                        
+                        Log::info("RC batch updated with trash muchler completion", [
+                            'batchno' => $batchno,
+                            'lifecycle' => $batch->lifecyclestatus,
+                            'plot' => $batch->plot,
+                            'lkhno' => $lkhno,
+                            'tanggalulangtahun' => $lkh->lkhdate
+                        ]);
+                    }
+                }
+            }
+            
+            if (empty($updatedBatches)) {
+                return ['success' => true, 'message' => 'Trash muchler not yet completed or no eligible batch'];
+            }
+            
+            return [
+                'success' => true,
+                'message' => count($updatedBatches) . ' RC batch(es) updated with trash muchler completion',
+                'batches' => $updatedBatches
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Failed to update RC batch from trash muchler: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
      * Check if panen completed (approved LKH only)
-     * Add companycode filter to prevent cross-company calculation
      */
     private function isPanenCompleted($batchno, $companycode)
     {
@@ -257,15 +336,15 @@ class GenerateNewBatchService
         
         if (!$batch) return false;
         
-        // ✅ FIX: Add companycode filter!
         $totalPanen = DB::table('lkhdetailplot as ldp')
             ->join('lkhhdr as lh', function($join) {
                 $join->on('ldp.lkhno', '=', 'lh.lkhno')
                     ->on('ldp.companycode', '=', 'lh.companycode');
             })
-            ->where('ldp.companycode', $companycode)  // ✅✅✅ ADD THIS!
+            ->where('ldp.companycode', $companycode)
             ->where('ldp.batchno', $batchno)
             ->where('lh.approvalstatus', '1')
+            ->whereIn('lh.activitycode', self::PANEN_ACTIVITIES)
             ->sum('ldp.luashasil') ?? 0;
         
         Log::info("Check panen completion", [
@@ -273,15 +352,48 @@ class GenerateNewBatchService
             'companycode' => $companycode,
             'batcharea' => $batch->batcharea,
             'total_panen' => $totalPanen,
-            'is_completed' => $totalPanen >= ($batch->batcharea * self::TOLERANCE)
+            'is_completed' => $totalPanen >= ($batch->batcharea - self::TOLERANCE)
         ]);
         
-        return $totalPanen >= ($batch->batcharea * self::TOLERANCE);
+        return $totalPanen >= ($batch->batcharea - self::TOLERANCE);
+    }
+    
+    /**
+     * Check if trash muchler completed (approved LKH only)
+     */
+    private function isTrashMuchlerCompleted($batchno, $companycode)
+    {
+        $batch = Batch::where('batchno', $batchno)
+            ->where('companycode', $companycode)
+            ->first();
+        
+        if (!$batch) return false;
+        
+        $totalTrashMuchler = DB::table('lkhdetailplot as ldp')
+            ->join('lkhhdr as lh', function($join) {
+                $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                    ->on('ldp.companycode', '=', 'lh.companycode');
+            })
+            ->where('ldp.companycode', $companycode)
+            ->where('ldp.batchno', $batchno)
+            ->where('lh.approvalstatus', '1')
+            ->where('lh.activitycode', self::TRASH_MUCHLER_ACTIVITY)
+            ->sum('ldp.luashasil') ?? 0;
+        
+        Log::info("Check trash muchler completion", [
+            'batchno' => $batchno,
+            'companycode' => $companycode,
+            'batcharea' => $batch->batcharea,
+            'total_trash_muchler' => $totalTrashMuchler,
+            'is_completed' => $totalTrashMuchler >= ($batch->batcharea - self::TOLERANCE)
+        ]);
+        
+        return $totalTrashMuchler >= ($batch->batcharea - self::TOLERANCE);
     }
     
     /**
      * Create next batch from panen
-     * PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (empty, tanggalulangtahun=NULL)
+     * ALL lifecycles: tanggalulangtahun = NULL
      */
     private function createNextBatchFromPanen($currentBatchNo, $companycode)
     {
@@ -298,16 +410,17 @@ class GenerateNewBatchService
                 return ['success' => false, 'message' => 'Batch already closed or not found'];
             }
             
-            // ✅ STEP 1: Close batch lama (LOGIS & AMAN)
+            // STEP 1: Close old batch
             $currentBatch->update([
                 'isactive' => 0,
                 'closedat' => now()
             ]);
             
-            // ✅ STEP 2: Generate new batch
+            // STEP 2: Generate new batch
             $nextLifecycle = $this->getNextLifecycle($currentBatch->lifecyclestatus);
             $newBatchNo = $this->generateBatchNo($companycode, now());
             
+            // STEP 3: Create new batch - ALL with tanggalulangtahun = NULL
             $batchData = [
                 'batchno' => $newBatchNo,
                 'companycode' => $companycode,
@@ -317,6 +430,8 @@ class GenerateNewBatchService
                 'lifecyclestatus' => $nextLifecycle,
                 'previousbatchno' => $currentBatchNo,
                 'tanggalpanen' => null,
+                'tanggalulangtahun' => null, // ALL cycles start with NULL
+                'plantinglkhno' => null, // Will be filled by planting LKH (for PC only)
                 'kontraktorid' => $currentBatch->kontraktorid,
                 'kodevarietas' => $currentBatch->kodevarietas,
                 'pkp' => $currentBatch->pkp,
@@ -326,18 +441,9 @@ class GenerateNewBatchService
                 'createdat' => now()
             ];
             
-            if ($currentBatch->lifecyclestatus === 'RC3' && $nextLifecycle === 'PC') {
-                $batchData['tanggalulangtahun'] = null;
-                $batchData['plantinglkhno'] = null;
-            } else {
-                $batchData['tanggalulangtahun'] = now()->format('Y-m-d');
-                $batchData['plantinglkhno'] = $currentBatch->plantinglkhno ?? null;
-            }
-            
-            // ✅ STEP 3: Create new batch
             $newBatch = Batch::create($batchData);
             
-            // ✅ STEP 4: Update masterlist
+            // STEP 4: Update masterlist
             DB::table('masterlist')
                 ->where('companycode', $companycode)
                 ->where('plot', $currentBatch->plot)
@@ -349,7 +455,8 @@ class GenerateNewBatchService
                 'old_batch' => $currentBatchNo,
                 'old_lifecycle' => $currentBatch->lifecyclestatus,
                 'new_batch' => $newBatchNo,
-                'new_lifecycle' => $nextLifecycle
+                'new_lifecycle' => $nextLifecycle,
+                'tanggalulangtahun' => 'NULL (will be filled later)'
             ]);
             
             return [
@@ -368,7 +475,7 @@ class GenerateNewBatchService
     }
     
     /**
-     * Get next lifecycle (PC→RC1→RC2→RC3→PC empty)
+     * Get next lifecycle (PC→RC1→RC2→RC3→PC)
      */
     private function getNextLifecycle($current)
     {
@@ -376,7 +483,7 @@ class GenerateNewBatchService
             'PC' => 'RC1',
             'RC1' => 'RC2',
             'RC2' => 'RC3',
-            'RC3' => 'PC', // Empty PC (tanggalulangtahun=NULL)
+            'RC3' => 'PC',
             default => 'PC'
         };
     }
