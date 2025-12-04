@@ -498,7 +498,9 @@ class GudangController extends Controller
                             'itemprice'  => $itemprice,
                             'costcenter' => $request->costcenter,
                             'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,  
-                            'endstock'   => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0  
+                            'endstock'   => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+                            'updatedat'   => date("Y-m-d H:i"),
+                            'updatedby'   => Auth::user()->userid
                         ]);
 
                     // Cek hasil di database
