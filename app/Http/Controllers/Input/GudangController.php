@@ -515,7 +515,8 @@ class GudangController extends Controller
                 }
                  
                 // Update header status
-                usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED']);
+                usematerialhdr::where('rkhno', $request->rkhno)->where('companycode',session('companycode'))->update(['flagstatus' => 'DISPATCHED','updatedat'   => date("Y-m-d H:i:s"),
+                            'updatedby'   => Auth::user()->userid]);
                 
                 DB::commit();
                 Cache::forget($lockKey);
