@@ -2832,7 +2832,7 @@ public function loadAbsenByDate(Request $request)
             'masterlist' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
                     $join->on('m.activebatchno', '=', 'b.batchno')
-                        ->where('b.companycode', '=', $companycode); // ✅ Filter batch by company
+                        ->where('b.companycode', '=', $companycode);
                 })
                 ->leftJoin(DB::raw('(
                     SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
@@ -2923,8 +2923,7 @@ public function loadAbsenByDate(Request $request)
                 ->orderBy('plot')
                 ->get(),
             
-            'operatorsData' => $this->getOperatorsWithVehicles($companycode),
-            
+            'vehiclesData' => $this->getVehiclesWithOperators($companycode),
             'helpersData' => TenagaKerja::where('companycode', $companycode)
                 ->where('jenistenagakerja', 4)
                 ->where('isactive', 1)
@@ -4982,15 +4981,33 @@ public function loadAbsenByDate(Request $request)
     }
 
     /**
-     * Get operators with vehicle data (for form dropdown)
-     * Uses existing Kendaraan model method
+     * Get ALL vehicles with their operators for modal
+     * NEW: 1 operator can have many vehicles
      * 
      * @param string $companycode
      * @return \Illuminate\Support\Collection
      */
-    private function getOperatorsWithVehicles($companycode)
+    private function getVehiclesWithOperators($companycode)
     {
-        return Kendaraan::getOperatorsWithVehicles($companycode);
+        return DB::table('kendaraan as k')
+            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
+                $join->on('k.idtenagakerja', '=', 'tk.tenagakerjaid')
+                    ->where('tk.companycode', '=', $companycode)
+                    ->where('tk.jenistenagakerja', '=', 3) // Operator
+                    ->where('tk.isactive', '=', 1);
+            })
+            ->where('k.companycode', $companycode)
+            ->where('k.isactive', 1)
+            ->select([
+                'k.nokendaraan',
+                'k.jenis as vehicle_type',
+                'k.idtenagakerja as operator_id',
+                'tk.nama as operator_name',
+                'tk.nik as operator_nik'
+            ])
+            ->orderBy('k.jenis')
+            ->orderBy('k.nokendaraan')
+            ->get();
     }
 
     // =====================================

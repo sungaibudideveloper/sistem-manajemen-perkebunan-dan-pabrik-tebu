@@ -5,22 +5,10 @@
   x-cloak
   @open-kendaraan-modal.window="handleOpen($event.detail)"
   class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-  x-transition:enter="transition ease-out duration-300"
-  x-transition:enter-start="opacity-0"
-  x-transition:enter-end="opacity-100"
-  x-transition:leave="transition ease-in duration-200"
-  x-transition:leave-start="opacity-100"
-  x-transition:leave-end="opacity-0"
 >
   <div
     @click.away="open = false"
     class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0 transform scale-95"
-    x-transition:enter-end="opacity-100 transform scale-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100 transform scale-100"
-    x-transition:leave-end="opacity-0 transform scale-95"
   >
     {{-- Header --}}
     <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
@@ -35,14 +23,13 @@
           <h2 class="text-lg font-semibold text-gray-900">Pilih Kendaraan & Operator</h2>
         </div>
         <button @click="open = false" type="button"
-          class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200">
+          class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M6 18L18 6M6 6l12 12" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <p class="text-sm text-gray-600 mt-1">Pilih aktivitas, operator, dan helper (opsional) untuk assignment kendaraan</p>
+      <p class="text-sm text-gray-600 mt-1">Pilih kendaraan (dengan operator) untuk assignment</p>
     </div>
 
     {{-- Activity Selector & Helper Checkbox --}}
@@ -80,7 +67,7 @@
     {{-- Search Bar --}}
     <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
       <div class="grid grid-cols-1 gap-4" :class="useHelper ? 'md:grid-cols-2' : ''">
-        <!-- Search Operator -->
+        <!-- Search Vehicle -->
         <div class="relative">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,9 +77,9 @@
           </div>
           <input
             type="text"
-            placeholder="Cari operator (nama, ID, nomor kendaraan)..."
-            x-model="searchOperatorQuery"
-            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+            placeholder="Cari kendaraan (nomor, jenis, operator)..."
+            x-model="searchVehicleQuery"
+            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
         </div>
 
@@ -108,7 +95,7 @@
             type="text"
             placeholder="Cari helper (nama, ID)..."
             x-model="searchHelperQuery"
-            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors duration-200"
+            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
           >
         </div>
       </div>
@@ -118,44 +105,44 @@
     <div class="flex-1 overflow-y-auto max-h-[400px]">
       <div class="grid" :class="useHelper ? 'md:grid-cols-2' : 'grid-cols-1'">
 
-        {{-- Operator List --}}
+        {{-- Vehicle List (LEFT) --}}
         <div class="border-r border-gray-200">
           <div class="px-4 py-2 bg-green-100 border-b">
-            <h3 class="text-sm font-semibold text-green-800">Pilih Operator & Kendaraan</h3>
+            <h3 class="text-sm font-semibold text-green-800">Pilih Kendaraan</h3>
           </div>
           <div class="overflow-y-auto max-h-[350px]">
             <table class="w-full">
               <thead class="bg-gray-50 sticky top-0">
                 <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kendaraan</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">No. Kendaraan</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
-                <template x-for="operator in filteredOperators" :key="operator.tenagakerjaid">
+                <template x-for="vehicle in filteredVehicles" :key="vehicle.nokendaraan">
                   <tr
-                    @click="selectOperator(operator)"
+                    @click="selectVehicle(vehicle)"
                     class="cursor-pointer transition-colors duration-150"
                     :class="{
-                      'bg-green-100 hover:bg-green-150': selectedOperator && selectedOperator.tenagakerjaid === operator.tenagakerjaid,
-                      'hover:bg-green-50': !selectedOperator || selectedOperator.tenagakerjaid !== operator.tenagakerjaid,
-                      'opacity-50 cursor-not-allowed': isOperatorDisabled(operator)
+                      'bg-green-100 hover:bg-green-150': selectedVehicle && selectedVehicle.nokendaraan === vehicle.nokendaraan,
+                      'hover:bg-green-50': !selectedVehicle || selectedVehicle.nokendaraan !== vehicle.nokendaraan,
+                      'opacity-50 cursor-not-allowed': isVehicleDisabled(vehicle)
                     }"
                   >
                     <td class="px-3 py-3 whitespace-nowrap">
-                      <span class="text-sm font-medium text-gray-900" x-text="operator.tenagakerjaid"></span>
-                      <template x-if="isOperatorDisabled(operator)">
+                      <span class="text-sm font-medium text-gray-900" x-text="vehicle.nokendaraan"></span>
+                      <template x-if="isVehicleDisabled(vehicle)">
                         <span class="ml-1 text-xs text-red-600">(Sudah dipilih)</span>
                       </template>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap">
-                      <div class="text-sm text-gray-900" x-text="operator.nama"></div>
+                      <div class="text-xs text-gray-700" x-text="vehicle.vehicle_type || '-'"></div>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap">
-                      <div class="text-xs">
-                        <div class="font-medium" x-text="operator.nokendaraan"></div>
-                        <div class="text-gray-500" x-text="operator.jenis"></div>
+                      <div class="text-sm">
+                        <div class="font-medium text-gray-900" x-text="vehicle.operator_name || 'No Operator'"></div>
+                        <div class="text-xs text-gray-500" x-text="vehicle.operator_id || '-'"></div>
                       </div>
                     </td>
                   </tr>
@@ -163,20 +150,20 @@
               </tbody>
             </table>
 
-            {{-- Empty State Operator --}}
-            <template x-if="filteredOperators.length === 0">
+            {{-- Empty State Vehicle --}}
+            <template x-if="filteredVehicles.length === 0">
               <div class="text-center py-8">
                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
                 </svg>
-                <p class="mt-2 text-sm text-gray-500">Tidak ada operator ditemukan</p>
+                <p class="mt-2 text-sm text-gray-500">Tidak ada kendaraan ditemukan</p>
               </div>
             </template>
           </div>
         </div>
 
-        {{-- Helper List --}}
+        {{-- Helper List (RIGHT) --}}
         <div x-show="useHelper">
           <div class="px-4 py-2 bg-gray-200 border-b">
             <h3 class="text-sm font-semibold text-gray-800">Pilih Helper</h3>
@@ -232,7 +219,7 @@
       <div class="flex justify-between items-center">
         <div class="text-xs text-gray-500">
           <div>
-            <span x-text="`${filteredOperators.length} operator tersedia`"></span>
+            <span x-text="`${filteredVehicles.length} kendaraan tersedia`"></span>
             <template x-if="useHelper">
               <span> • <span x-text="`${filteredHelpers.length} helper tersedia`"></span></span>
             </template>
@@ -241,8 +228,11 @@
             <span x-show="selectedActivityCode" class="text-green-700 font-medium">
               Aktivitas: <span x-text="selectedActivityCode"></span>
             </span>
-            <span x-show="selectedOperator" class="text-green-600 ml-3">
-              Operator: <span x-text="selectedOperator ? selectedOperator.nama : ''"></span>
+            <span x-show="selectedVehicle" class="text-green-600 ml-3">
+              Kendaraan: <span x-text="selectedVehicle ? selectedVehicle.nokendaraan : ''"></span>
+              <template x-if="selectedVehicle && selectedVehicle.operator_name">
+                <span class="text-gray-600"> (Op: <span x-text="selectedVehicle.operator_name"></span>)</span>
+              </template>
             </span>
             <template x-if="useHelper && selectedHelper">
               <span class="text-gray-700 ml-3">
@@ -276,27 +266,29 @@
 
 <script>
 /**
- * ✅ Kendaraan Modal Component
- * Handles multiple vehicle selection per activity with duplicate prevention
+ * ✅ NEW: Kendaraan Modal Component
+ * UPDATED for new database structure: 1 operator = many vehicles
  */
 function kendaraanModalComponent() {
   return {
     open: false,
     availableActivityCodes: [],
     selectedActivityCode: '',
-    searchOperatorQuery: '',
+    searchVehicleQuery: '',
     searchHelperQuery: '',
-    selectedOperator: null,
+    selectedVehicle: null,
     selectedHelper: null,
     useHelper: false,
 
     get canConfirm() {
-      return this.selectedActivityCode && this.selectedOperator && !this.isOperatorDisabled(this.selectedOperator);
+      return this.selectedActivityCode && 
+             this.selectedVehicle && 
+             !this.isVehicleDisabled(this.selectedVehicle);
     },
 
-    get availableOperators() {
-      if (!window.operatorsData) return [];
-      return window.operatorsData.filter(op => op.hasVehicle === 1 || op.hasVehicle === true);
+    get availableVehicles() {
+      if (!window.vehiclesData) return [];
+      return window.vehiclesData;
     },
 
     get availableHelpers() {
@@ -304,14 +296,14 @@ function kendaraanModalComponent() {
       return window.helpersData;
     },
 
-    get filteredOperators() {
-      if (!this.searchOperatorQuery) return this.availableOperators;
-      const q = this.searchOperatorQuery.toString().toUpperCase();
-      return this.availableOperators.filter(op =>
-        op.nama.toUpperCase().includes(q) ||
-        op.tenagakerjaid.toString().toUpperCase().includes(q) ||
-        (op.nokendaraan && op.nokendaraan.toUpperCase().includes(q)) ||
-        (op.jenis && op.jenis.toUpperCase().includes(q))
+    get filteredVehicles() {
+      if (!this.searchVehicleQuery) return this.availableVehicles;
+      const q = this.searchVehicleQuery.toString().toUpperCase();
+      return this.availableVehicles.filter(v =>
+        v.nokendaraan.toUpperCase().includes(q) ||
+        (v.vehicle_type && v.vehicle_type.toUpperCase().includes(q)) ||
+        (v.operator_name && v.operator_name.toUpperCase().includes(q)) ||
+        (v.operator_id && v.operator_id.toString().toUpperCase().includes(q))
       );
     },
 
@@ -325,10 +317,10 @@ function kendaraanModalComponent() {
       );
     },
 
-    isOperatorDisabled(operator) {
-      if (!this.selectedActivityCode || !operator) return false;
+    isVehicleDisabled(vehicle) {
+      if (!this.selectedActivityCode || !vehicle) return false;
       
-      // Get kendaraan card to check if operator's vehicle is already selected
+      // Check if THIS vehicle (nokendaraan) is already selected for this activity
       const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
       if (!kendaraanCardElement || !kendaraanCardElement._x_dataStack || !kendaraanCardElement._x_dataStack[0]) {
         return false;
@@ -339,9 +331,9 @@ function kendaraanModalComponent() {
       
       if (!activityKendaraan) return false;
 
-      // Check if this operator's vehicle (nokendaraan) is already in the list
+      // ✅ CRITICAL: Check by nokendaraan (not operator)
       return Object.values(activityKendaraan).some(
-        item => item.nokendaraan === operator.nokendaraan
+        item => item.nokendaraan === vehicle.nokendaraan
       );
     },
 
@@ -352,22 +344,22 @@ function kendaraanModalComponent() {
       }
 
       this.availableActivityCodes = detail.activityCodes;
-      this.selectedActivityCode = detail.activityCodes[0]; // Default to first
+      this.selectedActivityCode = detail.activityCodes[0];
       this.open = true;
     },
 
-    selectOperator(operator) {
-      // Prevent selection if operator is disabled
-      if (this.isOperatorDisabled(operator)) {
-        showToast(`Kendaraan ${operator.nokendaraan} sudah dipilih untuk aktivitas ini`, 'warning', 3000);
+    selectVehicle(vehicle) {
+      if (this.isVehicleDisabled(vehicle)) {
+        showToast(`Kendaraan ${vehicle.nokendaraan} sudah dipilih untuk aktivitas ini`, 'warning', 3000);
         return;
       }
 
-      this.selectedOperator = {
-        tenagakerjaid: operator.tenagakerjaid,
-        nama: operator.nama,
-        nokendaraan: operator.nokendaraan,
-        jenis: operator.jenis
+      this.selectedVehicle = {
+        nokendaraan: vehicle.nokendaraan,
+        vehicle_type: vehicle.vehicle_type,
+        operator_id: vehicle.operator_id,
+        operator_name: vehicle.operator_name,
+        operator_nik: vehicle.operator_nik
       };
     },
 
@@ -381,18 +373,17 @@ function kendaraanModalComponent() {
 
     confirmSelection() {
       if (!this.canConfirm) {
-        showToast('Pilih aktivitas dan operator terlebih dahulu', 'warning', 2000);
+        showToast('Pilih aktivitas dan kendaraan terlebih dahulu', 'warning', 2000);
         return;
       }
 
-      // Get kendaraan card component
       const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
       if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
         const kendaraanCard = kendaraanCardElement._x_dataStack[0];
         
         const success = kendaraanCard.addKendaraan(
           this.selectedActivityCode,
-          this.selectedOperator,
+          this.selectedVehicle,
           this.useHelper ? this.selectedHelper : null
         );
 
@@ -400,15 +391,14 @@ function kendaraanModalComponent() {
           showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
           this.clearSelection();
         }
-        // If not success, the addKendaraan function already showed a toast
       }
     },
 
     clearSelection() {
-      this.selectedOperator = null;
+      this.selectedVehicle = null;
       this.selectedHelper = null;
       this.useHelper = false;
-      this.searchOperatorQuery = '';
+      this.searchVehicleQuery = '';
       this.searchHelperQuery = '';
     },
 
