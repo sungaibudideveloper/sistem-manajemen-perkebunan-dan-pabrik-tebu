@@ -10,24 +10,24 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
-// ? ADDED: Import Services for post-approval actions
+// Import Services for post-approval actions
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
 use App\Services\GenerateNewBatchService;
+use App\Services\SplitMergePlotService;
 
 /**
  * ApprovalController
  * 
- * Handles mobile-friendly approval interface for RKH and LKH
- * Simplified version without modals - direct list and action
- * 
- * FIXED VERSION: Now includes ALL post-approval actions from RencanaKerjaHarianController
+ * Handles mobile-friendly approval interface for:
+ * 1. RKH (daily work plan)
+ * 2. LKH (daily work report)
+ * 3. Other Approvals (Split/Merge, Purchase Request, etc)
  */
 class ApprovalController extends Controller
 {
     /**
      * Show approval dashboard with date filter
-     * UPDATED: Added date filter support
      */
     public function index(Request $request)
     {
@@ -43,11 +43,10 @@ class ApprovalController extends Controller
         $filterDate = $request->input('filter_date');
         $allDate = $request->input('all_date', false);
 
-        // Get pending RKH approvals with date filter
+        // Get pending approvals
         $pendingRKH = $this->getPendingRKHApprovals($companycode, $currentUser, $filterDate, $allDate);
-        
-        // Get pending LKH approvals with date filter
         $pendingLKH = $this->getPendingLKHApprovals($companycode, $currentUser, $filterDate, $allDate);
+        $pendingOther = $this->getPendingOtherApprovals($companycode, $currentUser, $filterDate, $allDate);
 
         return view('input.approval.index', [
             'title' => 'Approval Center',
@@ -55,6 +54,7 @@ class ApprovalController extends Controller
             'nav' => 'Approval',
             'pendingRKH' => $pendingRKH,
             'pendingLKH' => $pendingLKH,
+            'pendingOther' => $pendingOther,
             'userInfo' => $this->getUserInfo($currentUser),
             'filterDate' => $filterDate,
             'allDate' => $allDate
@@ -63,7 +63,6 @@ class ApprovalController extends Controller
 
     /**
      * Process RKH approval
-     * FIXED: Now includes COMPLETE post-approval actions (LKH generation, Material usage, Batch creation)
      */
     public function processRKHApproval(Request $request)
     {
@@ -80,7 +79,6 @@ class ApprovalController extends Controller
             $action = $request->action;
             $level = $request->level;
 
-            // ? CRITICAL: Wrap everything in transaction
             DB::beginTransaction();
 
             $rkh = DB::table('rkhhdr as r')
@@ -136,7 +134,7 @@ class ApprovalController extends Controller
 
             $message = 'RKH ' . $rkhno . ' berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
 
-            // ? FIXED: Handle post-approval actions if fully approved (NOW COMPLETE)
+            // Handle post-approval actions if fully approved
             if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
                 $message = $this->handlePostApprovalActionsTransactional($rkhno, $message, $companycode);
             }
@@ -217,13 +215,12 @@ class ApprovalController extends Controller
 
             $message = 'LKH ' . $lkhno . ' berhasil ' . ($action === 'approve' ? 'disetujui' : 'ditolak');
 
-            // ✅ NEW: Trigger batch generation setelah LKH fully approved
+            // Trigger batch generation setelah LKH fully approved
             if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
                 $batchService = new GenerateNewBatchService();
                 $batchResult = $batchService->checkAndGenerate($lkhno, $companycode);
                 
                 if ($batchResult['success']) {
-                    // Handle panen transitions (PC→RC1, RC1→RC2, RC2→RC3)
                     if (!empty($batchResult['transitions'])) {
                         foreach ($batchResult['transitions'] as $transition) {
                             if ($transition['success']) {
@@ -232,7 +229,6 @@ class ApprovalController extends Controller
                         }
                     }
                     
-                    // Handle planting PC batches (RC3→PC or new plot)
                     if (!empty($batchResult['batches'])) {
                         foreach ($batchResult['batches'] as $batch) {
                             if ($batch['success']) {
@@ -241,7 +237,6 @@ class ApprovalController extends Controller
                         }
                     }
                 } else {
-                    // Log batch generation failure but don't block approval
                     Log::warning("Batch generation failed for LKH {$lkhno}", [
                         'message' => $batchResult['message'] ?? 'Unknown error'
                     ]);
@@ -258,214 +253,101 @@ class ApprovalController extends Controller
         }
     }
 
-    // =====================================
-    // ? FIXED: POST-APPROVAL ACTIONS - NOW COMPLETE
-    // =====================================
-
     /**
-     * Handle post-approval actions within existing transaction
-     * FIXED: Now includes ALL 3 steps from RencanaKerjaHarianController
+     * Process Other Approval (Split/Merge, Purchase Request, etc)
+     * NEW METHOD
      */
-    private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
+    public function processOtherApproval(Request $request)
     {
-        // Get updated RKH data
-        $updatedRkh = DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->first();
+        $request->validate([
+            'approvalno' => 'required|string',
+            'action' => 'required|in:approve,decline',
+            'level' => 'required|integer|between:1,3'
+        ]);
 
-        if (!$this->isRkhFullyApproved($updatedRkh)) {
-            return $responseMessage;
-        }
+        try {
+            $companycode = Session::get('companycode');
+            $currentUser = Auth::user();
+            $approvalno = $request->approvalno;
+            $action = $request->action;
+            $level = $request->level;
 
-        // STEP 1: Generate LKH (PASS COMPANYCODE)
-        $lkhGenerator = new LkhGeneratorService();
-        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
-        
-        if (!$lkhResult['success']) {
-            $errorMsg = $lkhResult['message'] ?? 'Unknown error';
+            DB::beginTransaction();
+
+            // Get approval transaction
+            $approval = DB::table('approvaltransaction as at')
+                ->join('approval as am', 'at.approvalcategoryid', '=', 'am.id')
+                ->where('at.companycode', $companycode)
+                ->where('at.approvalno', $approvalno)
+                ->select(['at.*', 'am.category'])
+                ->first();
+
+            if (!$approval) {
+                DB::rollBack();
+                return back()->with('error', 'Approval tidak ditemukan');
+            }
+
+            // Validate approval authority
+            $validationResult = $this->validateOtherApprovalAuthority($approval, $currentUser, $level);
+            if (!$validationResult['success']) {
+                DB::rollBack();
+                return back()->with('error', $validationResult['message']);
+            }
+
+            // Process approval
+            $approvalValue = $action === 'approve' ? '1' : '0';
+            $approvalField = "approval{$level}flag";
+            $approvalDateField = "approval{$level}date";
+            $approvalUserField = "approval{$level}userid";
             
-            Log::error("LKH auto-generation failed", [
-                'rkhno' => $rkhno,
-                'companycode' => $companycode,
-                'error' => $errorMsg
-            ]);
-            
-            throw new \Exception("LKH auto-generation gagal: {$errorMsg}. Approval dibatalkan untuk menjaga konsistensi data.");
-        }
-        
-        $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
-        
-        // STEP 2: Handle Planting Activities (Create Batch) - FIXED: NOW INCLUDED
-        if ($this->hasPlantingActivities($rkhno, $companycode)) {
-            try {
-                $createdBatches = $this->handlePlantingActivity($rkhno, $companycode);
-                if (!empty($createdBatches)) {
-                    $responseMessage .= '. Batch penanaman dibuat: ' . implode(', ', $createdBatches);
+            $updateData = [
+                $approvalField => $approvalValue,
+                $approvalDateField => now(),
+                $approvalUserField => $currentUser->userid,
+                'updateby' => $currentUser->userid,
+                'updatedat' => now()
+            ];
+
+            // Update approvalstatus based on action
+            if ($action === 'approve') {
+                $tempApproval = clone $approval;
+                $tempApproval->$approvalField = '1';
+                
+                if ($this->isOtherApprovalFullyApproved($tempApproval)) {
+                    $updateData['approvalstatus'] = '1';
+                } else {
+                    $updateData['approvalstatus'] = null;
                 }
-            } catch (\Exception $e) {
-                Log::error("Batch creation failed", [
-                    'rkhno' => $rkhno,
-                    'error' => $e->getMessage()
-                ]);
-                throw new \Exception('Batch creation gagal: ' . $e->getMessage() . '. Approval dibatalkan untuk menjaga konsistensi data.');
+            } else {
+                $updateData['approvalstatus'] = '0';
             }
-        }
-        
-        // STEP 3: Check if RKH needs material usage generation - FIXED: NOW INCLUDED
-        $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
-        
-        if (!$needsMaterialUsage) {
-            $responseMessage .= '. No material usage required for this RKH';
-            return $responseMessage;
-        }
 
-        // STEP 4: Generate Material Usage (CRITICAL - HARD FAILURE) - FIXED: NOW INCLUDED
-        $materialUsageGenerator = new MaterialUsageGeneratorService();
-        $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
-        
-        if (!$materialResult['success']) {
-            Log::error("Material usage auto-generation failed", [
-                'rkhno' => $rkhno,
-                'error' => $materialResult['message'] ?? 'Unknown error'
-            ]);
-            throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message'] . '. Approval dibatalkan untuk menjaga konsistensi data.');
-        }
-        
-        if (($materialResult['total_items'] ?? 0) > 0) {
-            $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items created)';
-        } else {
-            $responseMessage .= '. Material usage processed (no items needed)';
-        }
-        
-        return $responseMessage;
-    }
+            DB::table('approvaltransaction')
+                ->where('companycode', $companycode)
+                ->where('approvalno', $approvalno)
+                ->update($updateData);
 
-    /**
-     * Check if RKH needs material usage generation
-     * FIXED: NOW INCLUDED (copied from RencanaKerjaHarianController)
-     */
-    private function checkIfRkhNeedsMaterialUsage($rkhno, $companycode)
-    {
-        $hasMaterialUsage = DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('usingmaterial', 1)
-            ->whereNotNull('herbisidagroupid')
-            ->exists();
-        
-        return $hasMaterialUsage;
-    }
+            $message = "{$approval->category} [{$approval->transactionnumber}] berhasil " . ($action === 'approve' ? 'disetujui' : 'ditolak');
 
-    /**
-     * Check if RKH has planting activities
-     * FIXED: NOW INCLUDED (copied from RencanaKerjaHarianController)
-     */
-    private function hasPlantingActivities($rkhno, $companycode)
-    {
-        return DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('activitycode', '2.2.7')
-            ->exists();
-    }
-
-    /**
-     * Handle batch creation for planting activities
-     * FIXED: NOW INCLUDED (copied from RencanaKerjaHarianController)
-     */
-    private function handlePlantingActivity($rkhno, $companycode)
-    {
-        $plantingPlots = DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('activitycode', '2.2.7')
-            ->get();
-        
-        if ($plantingPlots->isEmpty()) {
-            return [];
-        }
-        
-        $createdBatches = [];
-        
-        foreach ($plantingPlots as $plotData) {
-            try {
-                // Generate batch number
-                $batchNo = $this->generateBatchNo($companycode, $plotData->plot);
-                
-                // Create batch record
-                DB::table('batch')->insert([
-                    'batchno' => $batchNo,
-                    'companycode' => $companycode,
-                    'plot' => $plotData->plot,
-                    'batchdate' => $plotData->rkhdate,
-                    'batcharea' => $plotData->luasarea,
-                    'plantingrkhno' => $rkhno,
-                    'inputby' => Auth::user()->userid,
-                    'createdat' => now()
-                ]);
-                
-                // Update masterlist
-                DB::table('masterlist')->updateOrInsert(
-                    ['companycode' => $companycode, 'plot' => $plotData->plot],
-                    [
-                        'batchno' => $batchNo,
-                        'batchdate' => $plotData->rkhdate,
-                        'batcharea' => $plotData->luasarea,
-                        'kodestatus' => 'PC',
-                        'cyclecount' => DB::raw('COALESCE(cyclecount, 0) + 1'),
-                        'isactive' => 1
-                    ]
-                );
-                
-                $createdBatches[] = $batchNo;
-                
-                Log::info("Batch created successfully", [
-                    'batchno' => $batchNo,
-                    'plot' => $plotData->plot,
-                    'rkhno' => $rkhno
-                ]);
-                
-            } catch (\Exception $e) {
-                Log::error("Failed to create batch for plot {$plotData->plot}: " . $e->getMessage());
-                throw $e;
+            // Execute post-approval actions if fully approved
+            if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
+                $message = $this->executeOtherApprovalActions($approval, $message, $companycode);
             }
-        }
-        
-        return $createdBatches;
-    }
 
-    /**
-     * Generate unique batch number
-     * FIXED: NOW INCLUDED (copied from RencanaKerjaHarianController)
-     */
-    private function generateBatchNo($companycode, $plot)
-    {
-        $date = date('dm');
-        $year = date('y');
-        
-        // Get sequence for today
-        $sequence = DB::table('batch')
-            ->where('companycode', $companycode)
-            ->whereDate('batchdate', date('Y-m-d'))
-            ->count() + 1;
-        
-        return "BATCH{$date}{$plot}{$year}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+            DB::commit();
+            return back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Other approval process failed: " . $e->getMessage());
+            return back()->with('error', 'Gagal memproses approval: ' . $e->getMessage());
+        }
     }
 
     // =====================================
-    // PRIVATE HELPER METHODS
+    // PRIVATE HELPER METHODS - RKH
     // =====================================
 
-    private function validateUserForApproval($currentUser)
-    {
-        return $currentUser && $currentUser->idjabatan;
-    }
-
-    /**
-     * Get pending RKH approvals for current user
-     * UPDATED: Include activity details, material usage, and kendaraan info
-     */
     private function getPendingRKHApprovals($companycode, $currentUser, $filterDate = null, $allDate = false)
     {
         $query = DB::table('rkhhdr as r')
@@ -505,9 +387,7 @@ class ApprovalController extends Controller
             ->orderBy('r.rkhdate', 'desc')
             ->get();
 
-        // ✅ Enrich with activity details, material & kendaraan info
         return $results->map(function($rkh) use ($companycode) {
-            // Get activities dari rkhlst
             $activities = DB::table('rkhlst as l')
                 ->join('activity as a', 'l.activitycode', '=', 'a.activitycode')
                 ->where('l.companycode', $companycode)
@@ -517,14 +397,12 @@ class ApprovalController extends Controller
                 ->pluck('activityname')
                 ->join(', ');
 
-            // Check material usage
             $hasMaterial = DB::table('rkhlst')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkh->rkhno)
                 ->where('usingmaterial', 1)
                 ->exists();
 
-            // Check kendaraan usage
             $hasKendaraan = DB::table('rkhlstkendaraan')
                 ->where('companycode', $companycode)
                 ->where('rkhno', $rkh->rkhno)
@@ -538,10 +416,140 @@ class ApprovalController extends Controller
         });
     }
 
-    /**
-     * Get pending LKH approvals for current user
-     * UPDATED: Include activity name and material/kendaraan info
-     */
+    private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
+    {
+        $updatedRkh = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->first();
+
+        if (!$this->isRkhFullyApproved($updatedRkh)) {
+            return $responseMessage;
+        }
+
+        // STEP 1: Generate LKH
+        $lkhGenerator = new LkhGeneratorService();
+        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
+        
+        if (!$lkhResult['success']) {
+            throw new \Exception("LKH auto-generation gagal: " . ($lkhResult['message'] ?? 'Unknown error'));
+        }
+        
+        $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
+        
+        // STEP 2: Handle Planting Activities
+        if ($this->hasPlantingActivities($rkhno, $companycode)) {
+            try {
+                $createdBatches = $this->handlePlantingActivity($rkhno, $companycode);
+                if (!empty($createdBatches)) {
+                    $responseMessage .= '. Batch penanaman dibuat: ' . implode(', ', $createdBatches);
+                }
+            } catch (\Exception $e) {
+                throw new \Exception('Batch creation gagal: ' . $e->getMessage());
+            }
+        }
+        
+        // STEP 3: Generate Material Usage
+        $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
+        
+        if ($needsMaterialUsage) {
+            $materialUsageGenerator = new MaterialUsageGeneratorService();
+            $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+            
+            if (!$materialResult['success']) {
+                throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message']);
+            }
+            
+            if (($materialResult['total_items'] ?? 0) > 0) {
+                $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items)';
+            }
+        }
+        
+        return $responseMessage;
+    }
+
+    private function checkIfRkhNeedsMaterialUsage($rkhno, $companycode)
+    {
+        return DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('usingmaterial', 1)
+            ->whereNotNull('herbisidagroupid')
+            ->exists();
+    }
+
+    private function hasPlantingActivities($rkhno, $companycode)
+    {
+        return DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('activitycode', '2.2.7')
+            ->exists();
+    }
+
+    private function handlePlantingActivity($rkhno, $companycode)
+    {
+        $plantingPlots = DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('activitycode', '2.2.7')
+            ->get();
+        
+        if ($plantingPlots->isEmpty()) {
+            return [];
+        }
+        
+        $createdBatches = [];
+        
+        foreach ($plantingPlots as $plotData) {
+            $batchNo = $this->generateBatchNo($companycode, $plotData->plot);
+            
+            DB::table('batch')->insert([
+                'batchno' => $batchNo,
+                'companycode' => $companycode,
+                'plot' => $plotData->plot,
+                'batchdate' => $plotData->rkhdate,
+                'batcharea' => $plotData->luasarea,
+                'plantingrkhno' => $rkhno,
+                'inputby' => Auth::user()->userid,
+                'createdat' => now()
+            ]);
+            
+            DB::table('masterlist')->updateOrInsert(
+                ['companycode' => $companycode, 'plot' => $plotData->plot],
+                [
+                    'batchno' => $batchNo,
+                    'batchdate' => $plotData->rkhdate,
+                    'batcharea' => $plotData->luasarea,
+                    'kodestatus' => 'PC',
+                    'cyclecount' => DB::raw('COALESCE(cyclecount, 0) + 1'),
+                    'isactive' => 1
+                ]
+            );
+            
+            $createdBatches[] = $batchNo;
+        }
+        
+        return $createdBatches;
+    }
+
+    private function generateBatchNo($companycode, $plot)
+    {
+        $date = date('dm');
+        $year = date('y');
+        
+        $sequence = DB::table('batch')
+            ->where('companycode', $companycode)
+            ->whereDate('batchdate', date('Y-m-d'))
+            ->count() + 1;
+        
+        return "BATCH{$date}{$plot}{$year}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+    }
+
+    // =====================================
+    // PRIVATE HELPER METHODS - LKH
+    // =====================================
+
     private function getPendingLKHApprovals($companycode, $currentUser, $filterDate = null, $allDate = false)
     {
         $query = DB::table('lkhhdr as h')
@@ -577,15 +585,12 @@ class ApprovalController extends Controller
             ->orderBy('h.lkhdate', 'desc')
             ->get();
 
-        // ✅ Enrich with material & kendaraan info
         return $results->map(function($lkh) use ($companycode) {
-            // Check material usage
             $hasMaterial = DB::table('lkhdetailmaterial')
                 ->where('companycode', $companycode)
                 ->where('lkhno', $lkh->lkhno)
                 ->exists();
 
-            // Check kendaraan usage
             $hasKendaraan = DB::table('lkhdetailkendaraan')
                 ->where('companycode', $companycode)
                 ->where('lkhno', $lkh->lkhno)
@@ -596,6 +601,192 @@ class ApprovalController extends Controller
 
             return $lkh;
         });
+    }
+
+    // =====================================
+    // PRIVATE HELPER METHODS - OTHER APPROVALS
+    // =====================================
+
+    /**
+     * Get pending other approvals (Split/Merge, Purchase Request, etc)
+     */
+    private function getPendingOtherApprovals($companycode, $currentUser, $filterDate = null, $allDate = false)
+    {
+        $query = DB::table('approvaltransaction as at')
+            ->join('approval as am', 'at.approvalcategoryid', '=', 'am.id')
+            ->leftJoin('plottransaction as pt', function($join) use ($companycode) {
+                $join->on('at.transactionnumber', '=', 'pt.transactionnumber')
+                    ->where('pt.companycode', '=', $companycode);
+            })
+            ->leftJoin('user as u', 'at.inputby', '=', 'u.userid')
+            ->where('at.companycode', $companycode)
+            ->where(function($query) use ($currentUser) {
+                $query->where(function($q) use ($currentUser) {
+                    $q->where('at.approval1idjabatan', $currentUser->idjabatan)->whereNull('at.approval1flag');
+                })->orWhere(function($q) use ($currentUser) {
+                    $q->where('at.approval2idjabatan', $currentUser->idjabatan)->where('at.approval1flag', '1')->whereNull('at.approval2flag');
+                })->orWhere(function($q) use ($currentUser) {
+                    $q->where('at.approval3idjabatan', $currentUser->idjabatan)->where('at.approval1flag', '1')->where('at.approval2flag', '1')->whereNull('at.approval3flag');
+                });
+            });
+
+        if (!$allDate && $filterDate) {
+            $query->whereDate('at.createdat', $filterDate);
+        }
+
+        $results = $query->select([
+                'at.*',
+                'am.category',
+                'u.name as inputby_name',
+                'pt.transactiontype',
+                'pt.sourceplots',
+                'pt.resultplots',
+                'pt.sourcebatches',
+                'pt.resultbatches',
+                'pt.areamap',
+                'pt.dominantplot',
+                'pt.splitmergedreason',
+                DB::raw("DATE_FORMAT(pt.transactiondate, '%d/%m/%Y') as formatted_date"),
+                DB::raw('CASE 
+                    WHEN at.approval1idjabatan = '.$currentUser->idjabatan.' AND at.approval1flag IS NULL THEN 1
+                    WHEN at.approval2idjabatan = '.$currentUser->idjabatan.' AND at.approval1flag = "1" AND at.approval2flag IS NULL THEN 2
+                    WHEN at.approval3idjabatan = '.$currentUser->idjabatan.' AND at.approval1flag = "1" AND at.approval2flag = "1" AND at.approval3flag IS NULL THEN 3
+                    ELSE 0
+                END as approval_level')
+            ])
+            ->orderBy('at.createdat', 'desc')
+            ->get();
+
+        // Decode JSON for display dan ambil area REAL dari batch
+        return $results->map(function($approval) use ($companycode) {
+            if ($approval->sourceplots) {
+                $approval->sourceplots_array = json_decode($approval->sourceplots, true);
+            }
+            if ($approval->resultplots) {
+                $approval->resultplots_array = json_decode($approval->resultplots, true);
+            }
+            if ($approval->sourcebatches) {
+                $approval->sourcebatches_array = json_decode($approval->sourcebatches, true);
+                
+                // TAMBAHAN: Fetch REAL batch area dari database
+                $batchAreas = [];
+                foreach ($approval->sourcebatches_array as $batchno) {
+                    $batch = DB::table('batch')
+                        ->where('companycode', $companycode)
+                        ->where('batchno', $batchno)
+                        ->select('plot', 'batcharea')
+                        ->first();
+                    
+                    if ($batch) {
+                        $batchAreas[$batch->plot] = $batch->batcharea;
+                    }
+                }
+                $approval->real_batch_areas = $batchAreas;
+            }
+            if ($approval->resultbatches) {
+                $approval->resultbatches_array = json_decode($approval->resultbatches, true);
+            }
+            if ($approval->areamap) {
+                $approval->areamap_array = json_decode($approval->areamap, true);
+            }
+            return $approval;
+        });
+    }
+
+    /**
+     * Validate other approval authority
+     */
+    private function validateOtherApprovalAuthority($approval, $currentUser, $level)
+    {
+        $approvalJabatanField = "approval{$level}idjabatan";
+        $approvalField = "approval{$level}flag";
+
+        if (!isset($approval->$approvalJabatanField) || $approval->$approvalJabatanField != $currentUser->idjabatan) {
+            return ['success' => false, 'message' => 'Anda tidak memiliki wewenang untuk approve level ini'];
+        }
+
+        if (isset($approval->$approvalField) && $approval->$approvalField !== null) {
+            return ['success' => false, 'message' => 'Approval level ini sudah diproses sebelumnya'];
+        }
+
+        if ($level > 1) {
+            $prevLevel = $level - 1;
+            $prevApprovalField = "approval{$prevLevel}flag";
+            if (!isset($approval->$prevApprovalField) || $approval->$prevApprovalField !== '1') {
+                return ['success' => false, 'message' => 'Approval level sebelumnya belum disetujui'];
+            }
+        }
+
+        return ['success' => true];
+    }
+
+    /**
+     * Check if other approval is fully approved
+     */
+    private function isOtherApprovalFullyApproved($approval)
+    {
+        if (!$approval->jumlahapproval || $approval->jumlahapproval == 0) {
+            return true;
+        }
+
+        switch ($approval->jumlahapproval) {
+            case 1:
+                return $approval->approval1flag === '1';
+            case 2:
+                return $approval->approval1flag === '1' && $approval->approval2flag === '1';
+            case 3:
+                return $approval->approval1flag === '1' && 
+                       $approval->approval2flag === '1' && 
+                       $approval->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Execute post-approval actions for other approvals
+     */
+    private function executeOtherApprovalActions($approval, $responseMessage, $companycode)
+    {
+        // Get transaction data
+        $transaction = DB::table('plottransaction')
+            ->where('companycode', $companycode)
+            ->where('transactionnumber', $approval->transactionnumber)
+            ->first();
+
+        if (!$transaction) {
+            throw new \Exception("Transaction {$approval->transactionnumber} tidak ditemukan");
+        }
+
+        // Execute based on transaction type
+        $service = new SplitMergePlotService();
+
+        if ($transaction->transactiontype === 'SPLIT') {
+            $result = $service->executeSplit($approval->transactionnumber, $companycode);
+            if ($result['success']) {
+                $responseMessage .= '. ' . $result['message'];
+            } else {
+                throw new \Exception($result['message']);
+            }
+        } elseif ($transaction->transactiontype === 'MERGE') {
+            $result = $service->executeMerge($approval->transactionnumber, $companycode);
+            if ($result['success']) {
+                $responseMessage .= '. ' . $result['message'];
+            } else {
+                throw new \Exception($result['message']);
+            }
+        }
+
+        return $responseMessage;
+    }
+
+    // =====================================
+    // COMMON HELPER METHODS
+    // =====================================
+
+    private function validateUserForApproval($currentUser)
+    {
+        return $currentUser && $currentUser->idjabatan;
     }
 
     private function getUserInfo($currentUser)

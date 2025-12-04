@@ -212,180 +212,6 @@
             @endif
         </div>
 
-        <!-- Modal Form -->
-        <div x-show="showModal" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto"
-            x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="ease-in duration-200"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0">
-
-            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                <!-- Background overlay -->
-                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal()"></div>
-
-                <!-- Modal panel -->
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full"
-                    x-transition:enter="ease-out duration-300"
-                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                    x-transition:leave="ease-in duration-200"
-                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
-
-                    <form :action="formAction" method="POST">
-                        @csrf
-                        <div x-show="mode === 'edit'">
-                            @method('POST')
-                        </div>
-
-                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                            <div class="sm:flex sm:items-start">
-                                <div class="w-full">
-                                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" x-text="modalTitle"></h3>
-
-                                    <!-- Step 1: Company Code dan Nomor Surat Jalan -->
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Company Code</label>
-                                            <input type="text" name="companycode" x-model="form.companycode"
-                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
-                                                placeholder="Masukkan company code" required>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Nomor Surat Jalan</label>
-                                            <input type="text" name="no_surat_jalan" x-model="form.no_surat_jalan"
-                                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
-                                                placeholder="Masukkan nomor surat jalan" required>
-                                        </div>
-                                    </div>
-
-                                    <!-- Tombol Cari -->
-                                    <div class="mb-4">
-                                        <button type="button" @click="searchSuratJalan()"
-                                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                            </svg>
-                                            Cari Surat Jalan
-                                        </button>
-                                        <div x-show="searchMessage" class="mt-2 text-sm" :class="searchSuccess ? 'text-green-600' : 'text-red-600'" x-text="searchMessage"></div>
-                                    </div>
-
-                                    <!-- Step 2: Data Entry Fields (shown only after successful search) -->
-                                    <div x-show="suratJalanFound" x-transition class="space-y-4">
-
-                                        <!-- Row 1: Jenis -->
-                                        <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                                                <select name="jenis" x-model="form.jenis"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
-                                                    <option value="">Pilih Jenis</option>
-                                                    <option value="manual">Manual</option>
-                                                    <option value="mesin">Mesin</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <!-- Row 2: Berat Bersih, Pucuk, Daun -->
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Berat Bersih</label>
-                                                <input type="text" name="berat_bersih" x-model="form.berat_bersih"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('berat_bersih')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Pucuk</label>
-                                                <input type="text" name="pucuk" x-model="form.pucuk"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('pucuk')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Daun Gulma</label>
-                                                <input type="text" name="daun_gulma" x-model="form.daun_gulma"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('daun_gulma')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                        </div>
-
-                                        <!-- Row 3: Sogolan, Siwilan, Tebu Mati -->
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Sogolan</label>
-                                                <input type="text" name="sogolan" x-model="form.sogolan"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('sogolan')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Siwilan</label>
-                                                <input type="text" name="siwilan" x-model="form.siwilan"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('siwilan')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Tebu Mati</label>
-                                                <input type="text" name="tebumati" x-model="form.tebumati"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('tebumati')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                        </div>
-
-                                        <!-- Row 4: Tanah dan Lain, Berat Kotor, Toleransi -->
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Tanah dll</label>
-                                                <input type="text" name="tanah_etc" x-model="form.tanah_etc"
-                                                    @input="calculateBeratKotor()"
-                                                    @blur="formatInput('tanah_etc')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                    Berat Kotor
-                                                    <span class="text-xs text-gray-500">(Auto Calculate)</span>
-                                                </label>
-                                                <input type="text" name="berat_kotor" x-model="form.berat_kotor" readonly
-                                                    class="w-full border border-gray-200 rounded-md shadow-sm bg-gray-50 px-3 py-2 text-gray-700 cursor-not-allowed"
-                                                    placeholder="Auto calculated">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Toleransi (%)</label>
-                                                <input type="text" name="toleransi" x-model="form.toleransi"
-                                                    @blur="formatInput('toleransi')"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
-                                                    placeholder="Default: 5,00" required>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                            <button type="submit" x-show="suratJalanFound"
-                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                                <span x-text="mode === 'create' ? 'Simpan' : 'Update'"></span>
-                            </button>
-                            <button type="button" @click="closeModal()"
-                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                                Batal
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
         <!-- Modal Report - Updated Version with Monthly Option -->
         <div x-show="showReportModal" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto"
@@ -492,7 +318,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Company Selection - Only show for Mingguan -->
+                                        <!-- Company Selection - Updated untuk lebih spesifik -->
                                         <div x-show="reportForm.report_type === 'mingguan'" x-transition>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                                 Company <span class="text-red-500">*</span>
@@ -500,19 +326,32 @@
                                             <select name="company" x-model="reportForm.company"
                                                 class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
                                                 :required="reportForm.report_type === 'mingguan'">
-                                                <option value="">Pilih Company</option>
-                                                <option value="TBL">TBL</option>
-                                                <option value="BNIL">BNIL</option>
+                                                <!-- Group Options -->
+                                                <optgroup label="Group Company">
+                                                    <option value="TBL">TBL</option>
+                                                    <option value="BNIL">BNIL</option>
+                                                    <option value="SIL">SILVA</option>
+                                                </optgroup>
+
+                                                <!-- Individual Company Options -->
+                                                <!-- <optgroup label="Company Spesifik">
+                                                    <option value="TBL1">TBL1 saja</option>
+                                                    <option value="TBL2">TBL2 saja</option>
+                                                    <option value="TBL3">TBL3 saja</option>
+                                                    <option value="BNL1">BNL1 saja</option>
+                                                    <option value="BNL2">BNL2 saja</option>
+                                                    <option value="BNL3">BNL3 saja</option>
+                                                    <option value="BNL4">BNL4 saja</option>
+                                                    <option value="SIL1">SIL1 saja</option>
+                                                    <option value="SIL2">SIL2 saja</option>
+                                                    <option value="SIL3">SIL3 saja</option>
+                                                </optgroup> -->
                                             </select>
 
                                             <div class="mt-1 text-xs text-gray-500">
-                                                Laporan mingguan berdasarkan kelompok company
+                                                Pilih group untuk laporan gabungan atau company spesifik untuk laporan individual
                                             </div>
                                         </div>
-
-                                        <!-- Hidden input for harian and bulanan -->
-                                        <input x-show="reportForm.report_type === 'harian' || reportForm.report_type === 'bulanan'"
-                                            type="hidden" name="company" value="all">
 
                                         <!-- Info text untuk harian dan bulanan -->
                                         <div x-show="reportForm.report_type === 'harian'" class="text-xs text-gray-500 bg-blue-50 p-2 rounded">
@@ -550,13 +389,390 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <style>
-        [x-cloak] {
-            display: none !important;
-        }
-    </style>
+        <!-- Modal Form dengan Tab System -->
+        <div x-show="showModal" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto"
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <!-- Background overlay -->
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal()"></div>
+
+                <!-- Modal panel -->
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+
+                    <form :action="formAction" method="POST">
+                        @csrf
+                        <div x-show="mode === 'edit'">
+                            @method('POST')
+                        </div>
+
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div class="w-full">
+                                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" x-text="modalTitle"></h3>
+
+                                    <!-- Tab Navigation - Hanya tampil di mode create -->
+                                    <div x-show="mode === 'create'" class="border-b border-gray-200 mb-6">
+                                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                                            <button type="button"
+                                                @click="activeTab = 'suratjalan'"
+                                                :class="activeTab === 'suratjalan' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                                class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200">
+                                                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                                Cari by Surat Jalan
+                                            </button>
+                                            <button type="button"
+                                                @click="activeTab = 'tanggal'"
+                                                :class="activeTab === 'tanggal' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                                class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200">
+                                                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                                Cari by Tanggal
+                                            </button>
+                                        </nav>
+                                    </div>
+
+                                    <!-- Tab 1: Cari by Surat Jalan (Form yang sudah ada) -->
+                                    <div x-show="(mode === 'create' && activeTab === 'suratjalan') || mode === 'edit'"
+                                        x-transition:enter="transition ease-out duration-200"
+                                        x-transition:enter-start="opacity-0 transform translate-x-4"
+                                        x-transition:enter-end="opacity-100 transform translate-x-0">
+
+                                        <!-- Step 1: Company Code dan Nomor Surat Jalan -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Company Code</label>
+                                                <input type="text" name="companycode" x-model="form.companycode"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                                                    placeholder="Masukkan company code" required>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Nomor Surat Jalan</label>
+                                                <input type="text" name="no_surat_jalan" x-model="form.no_surat_jalan"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                                                    placeholder="Masukkan nomor surat jalan" required>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tombol Cari - hanya untuk create mode -->
+                                        <div x-show="mode === 'create'" class="mb-4">
+                                            <button type="button" @click="searchSuratJalan()"
+                                                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                </svg>
+                                                Cari Surat Jalan
+                                            </button>
+                                            <div x-show="searchMessage" class="mt-2 text-sm" :class="searchSuccess ? 'text-green-600' : 'text-red-600'" x-text="searchMessage"></div>
+                                        </div>
+
+                                        <!-- Step 2: Data Entry Fields -->
+                                        <div x-show="suratJalanFound || mode === 'edit'" x-transition class="space-y-4">
+                                            <!-- Row 1: Jenis -->
+                                            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                                                    <select name="jenis" x-model="form.jenis"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
+                                                        <option value="">Pilih Jenis</option>
+                                                        <option value="manual">Manual</option>
+                                                        <option value="mesin">Mesin</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 2: Berat Bersih, Pucuk, Daun -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Berat Bersih</label>
+                                                    <input type="text" name="berat_bersih" x-model="form.berat_bersih"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('berat_bersih')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pucuk</label>
+                                                    <input type="text" name="pucuk" x-model="form.pucuk"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('pucuk')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Daun Gulma</label>
+                                                    <input type="text" name="daun_gulma" x-model="form.daun_gulma"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('daun_gulma')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 3: Sogolan, Siwilan, Tebu Mati -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Sogolan</label>
+                                                    <input type="text" name="sogolan" x-model="form.sogolan"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('sogolan')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Siwilan</label>
+                                                    <input type="text" name="siwilan" x-model="form.siwilan"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('siwilan')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tebu Mati</label>
+                                                    <input type="text" name="tebumati" x-model="form.tebumati"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('tebumati')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 4: Tanah dan Lain, Berat Kotor, Toleransi -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanah dll</label>
+                                                    <input type="text" name="tanah_etc" x-model="form.tanah_etc"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('tanah_etc')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                        Berat Kotor
+                                                        <span class="text-xs text-gray-500">(Auto Calculate)</span>
+                                                    </label>
+                                                    <input type="text" name="berat_kotor" x-model="form.berat_kotor" readonly
+                                                        class="w-full border border-gray-200 rounded-md shadow-sm bg-gray-50 px-3 py-2 text-gray-700 cursor-not-allowed"
+                                                        placeholder="Auto calculated">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Toleransi (%)</label>
+                                                    <input type="text" name="toleransi" x-model="form.toleransi"
+                                                        @blur="formatInput('toleransi')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                                                        placeholder="Default: 5,00" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tab 2: Cari by Tanggal -->
+                                    <div x-show="mode === 'create' && activeTab === 'tanggal'"
+                                        x-transition:enter="transition ease-out duration-200"
+                                        x-transition:enter-start="opacity-0 transform translate-x-4"
+                                        x-transition:enter-end="opacity-100 transform translate-x-0">
+
+                                        <!-- Step 1: Company dan Tanggal Search -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                                                <select x-model="searchForm.company"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                    <option value="">Pilih Company</option>
+                                                    @foreach ($companies as $c)
+                                                    <option value="{{ $c->companycode }}">{{ $c->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
+                                                <input type="date" x-model="searchForm.date"
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tombol Cari -->
+                                        <div class="mb-4">
+                                            <button type="button" @click="searchByDate()"
+                                                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                </svg>
+                                                Cari Surat Jalan
+                                            </button>
+                                            <div x-show="dateSearchMessage" class="mt-2 text-sm" :class="dateSearchSuccess ? 'text-green-600' : 'text-red-600'" x-text="dateSearchMessage"></div>
+                                        </div>
+
+                                        <!-- Step 2: List Surat Jalan -->
+                                        <div x-show="dateSearchSuccess && suratJalanList.length > 0" x-transition class="mb-6">
+                                            <h4 class="text-md font-medium text-gray-900 mb-3">Pilih Surat Jalan:</h4>
+                                            <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                                                <template x-for="sj in suratJalanList" :key="sj.suratjalanno">
+                                                    <div class="flex items-center justify-between p-3 bg-white rounded-md shadow-sm mb-2 border border-gray-200">
+                                                        <div class="flex-grow">
+                                                            <div class="flex items-center space-x-4">
+                                                                <div>
+                                                                    <span class="font-medium text-gray-900" x-text="sj.suratjalanno"></span>
+                                                                    <span class="text-sm text-gray-500 ml-2" x-text="`(${sj.companycode})`"></span>
+                                                                </div>
+                                                                <div class="text-sm text-gray-600">
+                                                                    <span>Plot: </span><span class="font-medium" x-text="sj.plot || '-'"></span>
+                                                                </div>
+                                                                <div class="text-sm text-gray-600">
+                                                                    <span>Varietas: </span><span class="font-medium" x-text="sj.varietas || '-'"></span>
+                                                                </div>
+                                                                <div class="text-sm text-gray-600">
+                                                                    <span>Kategori: </span><span class="font-medium" x-text="sj.kategori || '-'"></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button @click="selectSuratJalan(sj)"
+                                                            class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-1 transition-colors duration-200">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                            </svg>
+                                                            <span class="text-sm">Tambah</span>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <!-- Step 3: Data Entry Fields (sama seperti tab surat jalan) -->
+                                        <div x-show="selectedSuratJalan !== null" x-transition class="space-y-4">
+                                            <!-- Alert info surat jalan terpilih -->
+                                            <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+                                                <div class="flex items-center">
+                                                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <span class="text-sm font-medium text-blue-800">
+                                                        Surat Jalan Terpilih: <span x-text="selectedSuratJalan ? selectedSuratJalan.suratjalanno : ''"></span>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 1: Jenis -->
+                                            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                                                    <select name="jenis" x-model="form.jenis"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
+                                                        <option value="">Pilih Jenis</option>
+                                                        <option value="manual">Manual</option>
+                                                        <option value="mesin">Mesin</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 2: Berat Bersih, Pucuk, Daun -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Berat Bersih</label>
+                                                    <input type="text" name="berat_bersih" x-model="form.berat_bersih"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('berat_bersih')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2" required>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pucuk</label>
+                                                    <input type="text" name="pucuk" x-model="form.pucuk"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('pucuk')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Daun Gulma</label>
+                                                    <input type="text" name="daun_gulma" x-model="form.daun_gulma"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('daun_gulma')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 3: Sogolan, Siwilan, Tebu Mati -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Sogolan</label>
+                                                    <input type="text" name="sogolan" x-model="form.sogolan"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('sogolan')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Siwilan</label>
+                                                    <input type="text" name="siwilan" x-model="form.siwilan"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('siwilan')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tebu Mati</label>
+                                                    <input type="text" name="tebumati" x-model="form.tebumati"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('tebumati')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 4: Tanah dan Lain, Berat Kotor, Toleransi -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanah dll</label>
+                                                    <input type="text" name="tanah_etc" x-model="form.tanah_etc"
+                                                        @input="calculateBeratKotor()"
+                                                        @blur="formatInput('tanah_etc')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                        Berat Kotor
+                                                        <span class="text-xs text-gray-500">(Auto Calculate)</span>
+                                                    </label>
+                                                    <input type="text" name="berat_kotor" x-model="form.berat_kotor" readonly
+                                                        class="w-full border border-gray-200 rounded-md shadow-sm bg-gray-50 px-3 py-2 text-gray-700 cursor-not-allowed"
+                                                        placeholder="Auto calculated">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Toleransi (%)</label>
+                                                    <input type="text" name="toleransi" x-model="form.toleransi"
+                                                        @blur="formatInput('toleransi')"
+                                                        class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+                                                        placeholder="Default: 5,00" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                            <button type="submit"
+                                x-show="(mode === 'create' && activeTab === 'suratjalan' && suratJalanFound) || (mode === 'create' && activeTab === 'tanggal' && selectedSuratJalan !== null) || mode === 'edit'"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                <span x-text="mode === 'create' ? 'Simpan' : 'Update'"></span>
+                            </button>
+                            <button type="button" @click="closeModal()"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         function trashManagement() {
@@ -569,6 +785,7 @@
                 suratJalanFound: false,
                 searchMessage: '',
                 searchSuccess: false,
+                activeTab: 'suratjalan', // Default tab
 
                 // Form data yang sudah ada
                 form: {
@@ -586,14 +803,27 @@
                     berat_kotor: ''
                 },
 
+                // Form data untuk search by date
+                searchForm: {
+                    company: '',
+                    date: ''
+                },
+
+                // State variables untuk tab tanggal
+                suratJalanList: [],
+                selectedSuratJalan: null,
+                dateSearchMessage: '',
+                dateSearchSuccess: false,
+                companies: [], // Akan diisi dari server
+
                 // Update reportForm dengan field untuk bulanan
                 reportForm: {
                     start_date: '',
                     end_date: '',
-                    month: '', // Field untuk bulan
-                    year: '', // Field untuk tahun
+                    month: '',
+                    year: '',
                     report_type: 'harian',
-                    company: '{{ session("companycode") }}',
+                    company: '',
                     format: 'pdf'
                 },
 
@@ -606,35 +836,15 @@
                     this.reportForm.end_date = today.toISOString().split('T')[0];
                     this.reportForm.start_date = yesterday.toISOString().split('T')[0];
 
+                    // Set default tanggal untuk search form ke hari ini
+                    this.searchForm.date = today.toISOString().split('T')[0];
+
                     // Set default month dan year ke bulan/tahun sekarang
                     this.reportForm.month = String(today.getMonth() + 1).padStart(2, '0');
                     this.reportForm.year = String(today.getFullYear());
                 },
 
-                openModal(mode, data = null) {
-                    this.mode = mode;
-                    this.showModal = true;
-                    this.suratJalanFound = false;
-                    this.searchMessage = '';
-
-                    if (mode === 'create') {
-                        this.modalTitle = 'Tambah Data Trash';
-                        this.formAction = '{{ route("pabrik.trash.store") }}';
-                        this.resetForm();
-                    } else {
-                        this.modalTitle = 'Edit Data Trash';
-                        this.formAction = `{{ url('/') }}/pabrik/trash/update/${data.suratjalanno}/${data.companycode}/${data.jenis}`;
-                        console.log('Form Action:', this.formAction);
-                        this.fillForm(data);
-                        this.suratJalanFound = true;
-                    }
-                },
-
-                closeModal() {
-                    this.showModal = false;
-                    this.resetForm();
-                },
-
+                // Reset form dan tab
                 resetForm() {
                     this.form = {
                         companycode: '',
@@ -650,6 +860,47 @@
                         tanah_etc: '',
                         berat_kotor: ''
                     };
+
+                    // Reset search form
+                    const today = new Date();
+                    this.searchForm = {
+                        company: '',
+                        date: today.toISOString().split('T')[0]
+                    };
+
+                    // Reset state variables
+                    this.activeTab = 'suratjalan';
+                    this.suratJalanFound = false;
+                    this.searchMessage = '';
+                    this.searchSuccess = false;
+                    this.suratJalanList = [];
+                    this.selectedSuratJalan = null;
+                    this.dateSearchMessage = '';
+                    this.dateSearchSuccess = false;
+                },
+
+                openModal(mode, data = null) {
+                    this.mode = mode;
+                    this.showModal = true;
+                    this.suratJalanFound = false;
+                    this.searchMessage = '';
+
+                    if (mode === 'create') {
+                        this.modalTitle = 'Tambah Data Trash';
+                        this.formAction = '{{ route("pabrik.trash.store") }}'; // FIX
+                        this.resetForm();
+                    } else {
+                        this.modalTitle = 'Edit Data Trash';
+                        // Untuk dynamic URL, pakai url() helper
+                        this.formAction = `{{ url('pabrik/trash/update') }}/${data.suratjalanno}/${data.companycode}/${data.jenis}`; // FIX
+                        this.fillForm(data);
+                        this.suratJalanFound = true;
+                    }
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    this.resetForm();
                 },
 
                 // Method untuk update company options berdasarkan report type
@@ -715,9 +966,8 @@
                     this.searchMessage = 'Mencari...';
 
                     try {
-                        const response = await fetch(`{{ url('/') }}/pabrik/trash/surat-jalan/check?no=${encodeURIComponent(this.form.no_surat_jalan)}`);
+                        const response = await fetch(`{{ route('pabrik.trash.surat-jalan.check') }}?no=${encodeURIComponent(this.form.no_surat_jalan)}`);
                         const result = await response.json();
-
                         if (result.exists) {
                             this.searchMessage = result.message || 'Surat jalan ditemukan!';
                             this.searchSuccess = true;
@@ -739,12 +989,79 @@
                     }
                 },
 
+                // Method baru untuk search by date
+                async searchByDate() {
+                    if (!this.searchForm.company || !this.searchForm.date) {
+                        this.dateSearchMessage = 'Company dan tanggal harus diisi';
+                        this.dateSearchSuccess = false;
+                        return;
+                    }
+
+                    this.dateSearchMessage = 'Mencari surat jalan...';
+                    this.dateSearchSuccess = false;
+
+                    try {
+                        // Gunakan AJAX seperti contoh report page
+                        $.ajax({
+                            url: '{{ route("pabrik.trash.surat-jalan.search-by-date") }}',
+                            method: 'GET',
+                            data: {
+                                company: this.searchForm.company,
+                                date: this.searchForm.date
+                            },
+                            success: (result) => {
+                                if (result.success && result.data.length > 0) {
+                                    this.suratJalanList = result.data;
+                                    this.dateSearchMessage = `Ditemukan ${result.data.length} surat jalan`;
+                                    this.dateSearchSuccess = true;
+                                } else {
+                                    this.suratJalanList = [];
+                                    this.dateSearchMessage = 'Tidak ditemukan surat jalan untuk tanggal dan company tersebut';
+                                    this.dateSearchSuccess = false;
+                                }
+                            },
+                            error: (xhr, status, error) => {
+                                console.error('Error:', error);
+                                this.dateSearchMessage = 'Terjadi kesalahan saat mencari surat jalan';
+                                this.dateSearchSuccess = false;
+                                this.suratJalanList = [];
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.dateSearchMessage = 'Terjadi kesalahan saat mencari surat jalan';
+                        this.dateSearchSuccess = false;
+                        this.suratJalanList = [];
+                    }
+                },
+
+                // Method untuk memilih surat jalan dari list
+                selectSuratJalan(suratJalan) {
+                    this.selectedSuratJalan = suratJalan;
+
+                    // Set form data dari surat jalan yang dipilih
+                    this.form.companycode = suratJalan.companycode;
+                    this.form.no_surat_jalan = suratJalan.suratjalanno;
+
+                    // Reset form fields lainnya
+                    this.form.jenis = '';
+                    this.form.berat_bersih = '';
+                    this.form.pucuk = '';
+                    this.form.daun_gulma = '';
+                    this.form.sogolan = '';
+                    this.form.siwilan = '';
+                    this.form.tebumati = '';
+                    this.form.tanah_etc = '';
+                    this.form.berat_kotor = '';
+                },
+
                 deleteItem(data) {
                     if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
                         const form = document.createElement('form');
                         form.method = 'POST';
-                        form.action = `{{ url('/') }}/pabrik/trash/delete/${data.suratjalanno}/${data.companycode}/${data.jenis}`;
-                        form.innerHTML = `@csrf`;
+                        // FIX: pakai url()
+                        form.action = `{{ url('pabrik/trash/delete') }}/${data.suratjalanno}/${data.companycode}/${data.jenis}`;
+                        form.innerHTML = '@csrf';
                         document.body.appendChild(form);
                         form.submit();
                     }
@@ -771,7 +1088,7 @@
                         month: String(today.getMonth() + 1).padStart(2, '0'),
                         year: String(today.getFullYear()),
                         report_type: 'harian',
-                        company: '{{ session("companycode") }}',
+                        company: '',
                         format: 'pdf'
                     };
                 },
@@ -842,4 +1159,9 @@
         }
     </script>
 
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 </x-layout>

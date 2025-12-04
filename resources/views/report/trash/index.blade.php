@@ -34,7 +34,7 @@
                 </div>
                 <div class="flex items-center space-x-3">
                     <!-- Back Button -->
-                    <a href="{{ route('pabrik.trash.index') }}"                         class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center gap-2 transition-colors duration-200">
+                    <a href="{{ route('pabrik.trash.index') }}" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m0 7h18"></path>
                         </svg>
@@ -177,7 +177,7 @@
 
             // Populate year options
             populateYearOptions();
-            
+
             // Set default month and year to current
             const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
             const currentYear = today.getFullYear();
@@ -194,7 +194,7 @@
         function populateYearOptions() {
             const currentYear = new Date().getFullYear();
             const yearSelect = $('#year');
-            
+
             for (let year = currentYear; year >= currentYear - 10; year--) {
                 yearSelect.append(`<option value="${year}">${year}</option>`);
             }
@@ -218,14 +218,14 @@
                 // For harian: only "Semua Company"
                 companySelect.append('<option value="all">Semua Company</option>');
                 companySelect.val('all');
-                
+
             } else if (reportType === 'mingguan') {
                 // Show date range fields
                 dateRangeFields.show().find('input').attr('required', 'required');
                 // For mingguan: TBL and BNIL
                 companySelect.append('<option value="TBL">TBL</option>');
                 companySelect.append('<option value="BNIL">BNIL</option>');
-                
+                companySelect.append('<option value="SIL">SILVA</option>');
             } else if (reportType === 'bulanan') {
                 // Show month/year fields
                 monthYearFields.show().find('select').attr('required', 'required');
@@ -263,25 +263,71 @@
             // Simulate API call with mock data
             setTimeout(function() {
                 loader.hide();
-                
+
                 const mockResponse = generateMockReport(formData);
-                
+
                 // Add print button to preview response
                 const previewWithButton = `
-                    <div class="no-print flex justify-end mb-4">
-                        <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 001 1v4a1 1 0 001 1zm3-5h2a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2h2"></path>
-                            </svg>
-                            Print Preview
-                        </button>
-                    </div>
-                    ${mockResponse}
-                `;
+        <div class="no-print flex justify-end mb-4">
+            <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 001 1v4a1 1 0 001 1zm3-5h2a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2h2"></path>
+                </svg>
+                Print Preview
+            </button>
+        </div>
+        ${mockResponse}
+    `;
 
                 $('#reportResults').html(previewWithButton);
             }, 2000);
+
+            // Dengan ini:
+            // Real AJAX call to backend
+            $.ajax({
+                url: '{{ route("pabrik.trash.report.preview") }}',
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    loader.hide();
+
+                    // Add print button to preview response
+                    const previewWithButton = `
+            <div class="no-print flex justify-end mb-4">
+                <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 001 1v4a1 1 0 001 1zm3-5h2a2 2 0 002-2v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3a2 2 0 002 2h2"></path>
+                    </svg>
+                    Print Preview
+                </button>
+            </div>
+            ${response}
+        `;
+
+                    $('#reportResults').html(previewWithButton);
+                },
+                error: function(xhr, status, error) {
+                    loader.hide();
+                    console.error('Error:', error);
+
+                    let errorMessage = 'Terjadi kesalahan saat memuat data';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    $('#reportResults').html(`
+            <div class="text-center py-12">
+                <div class="text-red-600 text-lg font-medium mb-2">Error</div>
+                <div class="text-gray-600">${errorMessage}</div>
+                <button onclick="location.reload()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    Reload Halaman
+                </button>
+            </div>
+        `);
+                }
+            });
         });
+
 
         function validateForm() {
             const reportType = $('#report_type').val();
@@ -295,7 +341,7 @@
             if (reportType === 'harian' || reportType === 'mingguan') {
                 const startDate = $('#start_date').val();
                 const endDate = $('#end_date').val();
-                
+
                 if (!startDate || !endDate) {
                     alert('Mohon lengkapi tanggal mulai dan selesai');
                     return false;
@@ -303,7 +349,7 @@
             } else if (reportType === 'bulanan') {
                 const month = $('#month').val();
                 const year = $('#year').val();
-                
+
                 if (!month || !year) {
                     alert('Mohon pilih bulan dan tahun');
                     return false;
@@ -319,15 +365,42 @@
     <!-- Print Styles -->
     <style>
         @media print {
-            .no-print { display: none !important; }
-            body { margin: 0; padding: 0; font-size: 10px; }
-            table { font-size: 9px; border-collapse: collapse !important; }
-            th, td { padding: 3px !important; border: 2px solid #333 !important; }
-            .border-2 { border-width: 2px !important; border-color: #333 !important; }
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                font-size: 10px;
+            }
+
+            table {
+                font-size: 9px;
+                border-collapse: collapse !important;
+            }
+
+            th,
+            td {
+                padding: 3px !important;
+                border: 2px solid #333 !important;
+            }
+
+            .border-2 {
+                border-width: 2px !important;
+                border-color: #333 !important;
+            }
         }
 
-        .print-only { display: none; }
-        @media print { .print-only { display: block !important; } }
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            .print-only {
+                display: block !important;
+            }
+        }
 
         /* Uniform table styling for perfect alignment */
         .uniform-table {

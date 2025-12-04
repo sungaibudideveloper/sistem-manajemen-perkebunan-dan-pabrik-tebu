@@ -9,10 +9,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Http\Controllers\NotificationController;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
 use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
@@ -27,6 +24,59 @@ class HPTController extends Controller
             'routeName' => route('input.hpt.index'),
         ]);
     }
+
+    protected function requestValidated(): array
+    {
+        return [
+            'nosample' => 'required',
+            'companycode' => 'required',
+            'blok' => 'required',
+            'plot' => 'required',
+            // 'idblokplot' => 'required|exists:mapping,idblokplot',
+            'varietas' => 'required',
+            'kat' => 'required',
+            'tanggaltanam' => 'required',
+            'tanggalpengamatan' => 'required',
+            'lists.*.nourut' => 'required',
+            'lists.*.ppt_aktif' => 'required',
+            'lists.*.pbt_aktif' => 'required',
+            'lists.*.skor0' => 'required',
+            'lists.*.skor1' => 'required',
+            'lists.*.skor2' => 'required',
+            'lists.*.skor3' => 'required',
+            'lists.*.skor4' => 'required',
+            'lists.*.telur_ppt' => 'required',
+            'lists.*.larva_ppt1' => 'required',
+            'lists.*.larva_ppt2' => 'required',
+            'lists.*.larva_ppt3' => 'required',
+            'lists.*.larva_ppt4' => 'required',
+            'lists.*.pupa_ppt' => 'required',
+            'lists.*.ngengat_ppt' => 'required',
+            'lists.*.kosong_ppt' => 'required',
+            'lists.*.telur_pbt' => 'required',
+            'lists.*.larva_pbt1' => 'required',
+            'lists.*.larva_pbt2' => 'required',
+            'lists.*.larva_pbt3' => 'required',
+            'lists.*.larva_pbt4' => 'required',
+            'lists.*.pupa_pbt' => 'required',
+            'lists.*.ngengat_pbt' => 'required',
+            'lists.*.kosong_pbt' => 'required',
+            'lists.*.dh' => 'required',
+            'lists.*.dt' => 'required',
+            'lists.*.kbp' => 'required',
+            'lists.*.kbb' => 'required',
+            'lists.*.kp' => 'required',
+            'lists.*.cabuk' => 'required',
+            'lists.*.belalang' => 'required',
+            'lists.*.serang_grayak' => 'required',
+            'lists.*.jum_grayak' => 'required',
+            'lists.*.serang_smut' => 'required',
+            'lists.*.smut_stadia1' => 'required',
+            'lists.*.smut_stadia2' => 'required',
+            'lists.*.smut_stadia3' => 'required',
+        ];
+    }
+
     public function index(Request $request)
     {
         $title = "Daftar HPT";
@@ -63,8 +113,7 @@ class HPTController extends Controller
 
         if (!empty($search)) {
             $hpt->where(function ($query) use ($search) {
-                $query->where('hpthdr.idblokplot', 'like', '%' . $search . '%')
-                    ->orWhere('hpthdr.nosample', 'like', '%' . $search . '%')
+                $query->where('hpthdr.nosample', 'like', '%' . $search . '%')
                     ->orWhere('hpthdr.varietas', 'like', '%' . $search . '%')
                     ->orWhere('hpthdr.plot', 'like', '%' . $search . '%')
                     ->orWhere('hpthdr.kat', 'like', '%' . $search . '%');
@@ -111,100 +160,43 @@ class HPTController extends Controller
         return view('input.hpt.form', compact('mapping', 'title', 'method', 'url', 'buttonSubmit'));
     }
 
-    public function getFieldByMapping(Request $request)
+    public function getBlokbyField(Request $request)
     {
-        $idblokplot = $request->input('idblokplot');
-        $mapping = DB::table('mapping')
+        // $idblokplot = $request->input('idblokplot');
+        $plot = $request->input('plot');
+        $blok = DB::table('masterlist')->where('plot', $plot)
             ->where('companycode', session('companycode'))
-            ->where('idblokplot', $idblokplot)->first();
+            ->where('isactive', 1)
+            ->first();
 
-        if ($mapping) {
+        if ($blok) {
             return response()->json([
-                'companycode' => $mapping->companycode,
-                'blok' => $mapping->blok,
-                'plot' => $mapping->plot,
+                // 'idblokplot' => $blok->idblokplot,
+                'blok' => $blok->blok,
             ]);
         }
 
         return response()->json(['message' => 'Data not found'], 404);
     }
 
-    public function checkData(Request $request)
+    public function getVarietasandKategori(Request $request)
     {
-        $noSample = $request->get('nosample');
-        $kdPlotSample = $request->get('idblokplot');
-
-        $data = DB::table('hpthdr')
-            ->where('nosample', $noSample)
-            ->where('idblokplot', $kdPlotSample)
+        // $idblokplot = $request->input('idblokplot');
+        $plot = $request->input('plot');
+        $batch = DB::table('batch')->where('plot', $plot)
             ->where('companycode', session('companycode'))
+            ->where('isactive', 1)
             ->first();
 
-        if ($data) {
+        if ($batch) {
             return response()->json([
-                'success' => true,
-                'kat' => $data->kat,
-                'varietas' => $data->varietas,
-                'tanggaltanam' => $data->tanggaltanam,
+                'varietas' => $batch->kodevarietas,
+                'kat' => $batch->lifecyclestatus,
+                'tanggaltanam' => $batch->tanggalulangtahun,
             ]);
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Data not found',
-        ]);
-    }
-
-    protected function requestValidated(): array
-    {
-        return [
-            'nosample' => 'required',
-            'companycode' => 'required',
-            'blok' => 'required',
-            'plot' => 'required',
-            'idblokplot' => 'required|exists:mapping,idblokplot',
-            'varietas' => 'required',
-            'kat' => 'required',
-            'tanggaltanam' => 'required',
-            'tanggalpengamatan' => 'required',
-            'lists.*.nourut' => 'required',
-            'lists.*.ppt_aktif' => 'required',
-            'lists.*.pbt_aktif' => 'required',
-            'lists.*.skor0' => 'required',
-            'lists.*.skor1' => 'required',
-            'lists.*.skor2' => 'required',
-            'lists.*.skor3' => 'required',
-            'lists.*.skor4' => 'required',
-            'lists.*.telur_ppt' => 'required',
-            'lists.*.larva_ppt1' => 'required',
-            'lists.*.larva_ppt2' => 'required',
-            'lists.*.larva_ppt3' => 'required',
-            'lists.*.larva_ppt4' => 'required',
-            'lists.*.pupa_ppt' => 'required',
-            'lists.*.ngengat_ppt' => 'required',
-            'lists.*.kosong_ppt' => 'required',
-            'lists.*.telur_pbt' => 'required',
-            'lists.*.larva_pbt1' => 'required',
-            'lists.*.larva_pbt2' => 'required',
-            'lists.*.larva_pbt3' => 'required',
-            'lists.*.larva_pbt4' => 'required',
-            'lists.*.pupa_pbt' => 'required',
-            'lists.*.ngengat_pbt' => 'required',
-            'lists.*.kosong_pbt' => 'required',
-            'lists.*.dh' => 'required',
-            'lists.*.dt' => 'required',
-            'lists.*.kbp' => 'required',
-            'lists.*.kbb' => 'required',
-            'lists.*.kp' => 'required',
-            'lists.*.cabuk' => 'required',
-            'lists.*.belalang' => 'required',
-            'lists.*.serang_grayak' => 'required',
-            'lists.*.jum_grayak' => 'required',
-            'lists.*.serang_smut' => 'required',
-            'lists.*.smut_stadia1' => 'required',
-            'lists.*.smut_stadia2' => 'required',
-            'lists.*.smut_stadia3' => 'required',
-        ];
+        return response()->json(['message' => 'Data not found'], 404);
     }
 
     public function store(Request $request)
@@ -237,7 +229,7 @@ class HPTController extends Controller
                 'companycode' => $validated['companycode'],
                 'blok' => $validated['blok'],
                 'plot' => $validated['plot'],
-                'idblokplot' => $validated['idblokplot'],
+                // 'idblokplot' => $validated['idblokplot'],
                 'varietas' => $validated['varietas'],
                 'kat' => $validated['kat'],
                 'tanggaltanam' => $validated['tanggaltanam'],
@@ -462,7 +454,7 @@ class HPTController extends Controller
                     'companycode' => $validated['companycode'],
                     'blok' => $validated['blok'],
                     'plot' => $validated['plot'],
-                    'idblokplot' => $validated['idblokplot'],
+                    // 'idblokplot' => $validated['idblokplot'],
                     'varietas' => $validated['varietas'],
                     'kat' => $validated['kat'],
                     'tanggaltanam' => $validated['tanggaltanam'],

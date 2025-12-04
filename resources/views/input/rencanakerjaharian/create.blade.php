@@ -97,10 +97,10 @@
 
           <!-- Mandor -->
           <div x-data="mandorPicker()" x-init="
-            @if(old('mandor_id'))
+            @if(old('mandor_id') || request('mandor_id'))
                 selected = {
-                    userid: '{{ old('mandor_id') }}',
-                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id'))->name ?? '' }}'
+                    userid: '{{ old('mandor_id', request('mandor_id')) }}',
+                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id', request('mandor_id')))->name ?? '' }}'
                 }
             @else
                 checkIfUserIsMandor()
@@ -108,24 +108,15 @@
           ">
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
-              type="text"
-              name="mandor"
-              id="mandor"
-              readonly
-              placeholder="Pilih Mandor"
-              @click="!isMandorUser && (open = true)"
-              :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
-              :class="{
-                'cursor-not-allowed bg-gray-100 border-gray-300': isMandorUser,
-                'cursor-pointer bg-white hover:bg-gray-50': !isMandorUser
-              }"
-              class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-3 py-2 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                name="mandor"
+                id="mandor"
+                readonly
+                placeholder="Mandor telah dipilih"
+                :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
+                class="w-full text-sm font-medium border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
             >
             <input type="hidden" name="mandor_id" x-model="selected.userid">
-
-            <template x-if="!isMandorUser">
-              @include('input.rencanakerjaharian.modal-mandor')
-            </template>
           </div>
 
           <!-- Tanggal -->
@@ -656,7 +647,7 @@
 
 <script>
 // ============================================================
-// ROW MANAGER - DYNAMIC ADD/REMOVE ROWS
+// ROW MANAGER - FIXED DELETE WITH PROPER REINDEXING
 // ============================================================
 function rowManager() {
   return {
@@ -664,10 +655,7 @@ function rowManager() {
     nextId: 1,
 
     init() {
-      // Start with 1 empty row
       this.addRow();
-
-      // Listen for delete events
       this.$el.addEventListener('delete-row', (e) => {
         this.deleteRow(e.detail.rowId, e.detail.index);
       });
@@ -684,7 +672,6 @@ function rowManager() {
       
       this.rows.push(newRow);
       
-      // Reinitialize validation after adding row
       this.$nextTick(() => {
         initializeRowValidation();
         showToast('Baris baru ditambahkan', 'success', 2000);
@@ -697,7 +684,7 @@ function rowManager() {
         return;
       }
 
-      // Get activity code before deleting
+      // ✅ 1. Cleanup activity dari cards
       const activityStore = Alpine.store('activityPerRow');
       const activity = activityStore.getActivity(index);
       
@@ -721,56 +708,123 @@ function rowManager() {
         }
       }
 
-      // Remove from stores
-      Alpine.store('blokPerRow').selected[index] = '';
-      Alpine.store('activityPerRow').selected[index] = null;
-      Alpine.store('uniqueCombinations').setCombination(index, '', '', '');
-
-      // Remove row
+      // ✅ 2. Remove row from array
       this.rows.splice(index, 1);
 
-      // Reindex all stores after deletion
+      // ✅ 3. Update all components dan stores
       this.$nextTick(() => {
-        this.reindexStores();
+        this.updateAllRowIndexes(index);
         showToast('Baris berhasil dihapus', 'success', 2000);
       });
     },
 
-    reindexStores() {
-      // Reindex blok store
+    // ✅ NEW: Update rowIndex di semua Alpine components
+    updateAllRowIndexes(deletedIndex) {
+  const allRows = document.querySelectorAll('#rkh-tbody tr.rkh-row');
+  
+  allRows.forEach((rowElement, newIndex) => {
+    // Update activityPicker
+    const activityComp = rowElement.querySelector('[x-data*="activityPicker"]');
+    if (activityComp && activityComp._x_dataStack && activityComp._x_dataStack[0]) {
+      activityComp._x_dataStack[0].rowIndex = newIndex;
+    }
+
+    // Update blokPicker
+    const blokComp = rowElement.querySelector('[x-data*="blokPicker"]');
+    if (blokComp && blokComp._x_dataStack && blokComp._x_dataStack[0]) {
+      blokComp._x_dataStack[0].rowIndex = newIndex;
+    }
+
+    // Update plotPicker
+    const plotComp = rowElement.querySelector('[x-data*="plotPicker"]');
+    if (plotComp && plotComp._x_dataStack && plotComp._x_dataStack[0]) {
+      plotComp._x_dataStack[0].rowIndex = newIndex;
+    }
+
+    // Update plotInfoPicker
+    const plotInfoComp = rowElement.querySelector('[x-data*="plotInfoPicker"]');
+    if (plotInfoComp && plotInfoComp._x_dataStack && plotInfoComp._x_dataStack[0]) {
+      plotInfoComp._x_dataStack[0].rowIndex = newIndex;
+    }
+
+    // Update materialPicker
+    const materialComp = rowElement.querySelector('[x-data*="materialPicker"]');
+    if (materialComp && materialComp._x_dataStack && materialComp._x_dataStack[0]) {
+      materialComp._x_dataStack[0].rowIndex = newIndex;
+    }
+
+    // ✅ FIX: Cleanup old validation listeners
+    const blokInput = rowElement.querySelector('input[name$="[blok]"]');
+    const plotInput = rowElement.querySelector('input[name$="[plot]"]');
+    const activityInput = rowElement.querySelector('input[name$="[nama]"]');
+
+    [blokInput, plotInput, activityInput].forEach(input => {
+      if (input && input.uniqueValidationObserver) {
+        input.uniqueValidationObserver.disconnect();
+        delete input.uniqueValidationObserver;
+      }
+    });
+  });
+
+  // ✅ Reindex stores dengan mapping yang benar
+  this.reindexStoresProper(deletedIndex);
+  
+  // ✅ Re-attach validation listeners dengan rowIndex baru
+  this.$nextTick(() => {
+    initializeRowValidation();
+  });
+},
+
+    // ✅ FIXED: Reindex stores dengan proper mapping
+    reindexStoresProper(deletedIndex) {
+      // 1. Reindex blokPerRow
       const blokStore = Alpine.store('blokPerRow');
       const newBlokSelected = {};
+      
       Object.keys(blokStore.selected).forEach(oldIndex => {
-        const newIndex = parseInt(oldIndex);
-        if (newIndex < this.rows.length) {
-          newBlokSelected[newIndex] = blokStore.selected[oldIndex];
+        const oldIdx = parseInt(oldIndex);
+        
+        if (oldIdx < deletedIndex) {
+          // Row sebelum deleted: index tetap
+          newBlokSelected[oldIdx] = blokStore.selected[oldIndex];
+        } else if (oldIdx > deletedIndex) {
+          // Row setelah deleted: index turun 1
+          newBlokSelected[oldIdx - 1] = blokStore.selected[oldIndex];
         }
+        // oldIdx === deletedIndex: skip (sudah dihapus)
       });
+      
       blokStore.selected = newBlokSelected;
 
-      // Reindex activity store
+      // 2. Reindex activityPerRow
       const activityStore = Alpine.store('activityPerRow');
       const newActivitySelected = {};
+      
       Object.keys(activityStore.selected).forEach(oldIndex => {
-        const newIndex = parseInt(oldIndex);
-        if (newIndex < this.rows.length) {
-          newActivitySelected[newIndex] = activityStore.selected[oldIndex];
+        const oldIdx = parseInt(oldIndex);
+        
+        if (oldIdx < deletedIndex) {
+          newActivitySelected[oldIdx] = activityStore.selected[oldIndex];
+        } else if (oldIdx > deletedIndex) {
+          newActivitySelected[oldIdx - 1] = activityStore.selected[oldIndex];
         }
       });
+      
       activityStore.selected = newActivitySelected;
 
-      // Reindex unique combinations
+      // 3. Reindex uniqueCombinations
       const uniqueStore = Alpine.store('uniqueCombinations');
       const newCombinations = new Map();
+      
       for (const [oldIndex, combo] of uniqueStore.combinations) {
-        if (oldIndex < this.rows.length) {
+        if (oldIndex < deletedIndex) {
           newCombinations.set(oldIndex, combo);
+        } else if (oldIndex > deletedIndex) {
+          newCombinations.set(oldIndex - 1, combo);
         }
       }
+      
       uniqueStore.combinations = newCombinations;
-
-      // Reinitialize validation
-      initializeRowValidation();
     }
   };
 }
@@ -781,10 +835,10 @@ function rowManager() {
 window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
-window.operatorsData = @json($operatorsData ?? []);
 window.absenData = @json($absentenagakerja ?? []);
 window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
+window.vehiclesData = @json($vehiclesData ?? []);
 window.helpersData = @json($helpersData ?? []);
 
 window.currentUser = {
@@ -802,6 +856,7 @@ window.PLOT_INFO_BASE_URL = "{{ url('input/kerjaharian/rencanakerjaharian/plot-i
 
 /**
  * Kendaraan Info Card Component
+ * Now stores: nokendaraan (primary), operator_id, helper_id
  */
 function kendaraanInfoCard() {
   return {
@@ -849,15 +904,16 @@ function kendaraanInfoCard() {
       }));
     },
 
-    addKendaraan(activityCode, operatorData, helperData = null) {
-      // Check for duplicate kendaraan in the same activity
+    // ✅ UPDATED: vehicleData now contains nokendaraan + operator info
+    addKendaraan(activityCode, vehicleData, helperData = null) {
+      // Check for duplicate VEHICLE (not operator)
       if (this.kendaraan[activityCode]) {
         const isDuplicate = Object.values(this.kendaraan[activityCode]).some(
-          item => item.nokendaraan === operatorData.nokendaraan
+          item => item.nokendaraan === vehicleData.nokendaraan
         );
         
         if (isDuplicate) {
-          showToast(`Kendaraan ${operatorData.nokendaraan} sudah ditambahkan untuk aktivitas ini`, 'warning', 3000);
+          showToast(`Kendaraan ${vehicleData.nokendaraan} sudah ditambahkan untuk aktivitas ini`, 'warning', 3000);
           return false;
         }
       }
@@ -869,9 +925,9 @@ function kendaraanInfoCard() {
       const urutan = Object.keys(this.kendaraan[activityCode]).length + 1;
 
       this.kendaraan[activityCode][urutan] = {
-        nokendaraan: operatorData.nokendaraan,
-        operatorid: operatorData.tenagakerjaid,
-        operatorName: operatorData.nama,
+        nokendaraan: vehicleData.nokendaraan,
+        operatorid: vehicleData.operator_id || null,
+        operatorName: vehicleData.operator_name || 'No Operator',
         helperid: helperData ? helperData.tenagakerjaid : null,
         helperName: helperData ? helperData.nama : null
       };
@@ -1242,17 +1298,24 @@ function attachUniqueValidationListeners(row, rowIndex) {
   const activityInput = row.querySelector('input[name$="[nama]"]');
 
   const validateUniqueness = debounce(() => {
+    // ✅ FIX: Baca rowIndex real-time dari DOM, jangan pakai closure
+    const currentRow = blokInput.closest('tr.rkh-row');
+    const allRows = Array.from(document.querySelectorAll('#rkh-tbody tr.rkh-row'));
+    const currentRowIndex = allRows.indexOf(currentRow);
+    
+    if (currentRowIndex === -1) return; // Row sudah tidak ada di DOM
+
     const blok = blokInput?.value || '';
     const plot = plotInput?.value || '';
     const activity = activityInput?.value || '';
 
-    Alpine.store('uniqueCombinations').setCombination(rowIndex, blok, plot, activity);
-    clearDuplicateHighlight(rowIndex);
+    Alpine.store('uniqueCombinations').setCombination(currentRowIndex, blok, plot, activity);
+    clearDuplicateHighlight(currentRowIndex);
 
     if (blok && plot && activity) {
-      const isDuplicate = Alpine.store('uniqueCombinations').isDuplicate(rowIndex, blok, plot, activity);
+      const isDuplicate = Alpine.store('uniqueCombinations').isDuplicate(currentRowIndex, blok, plot, activity);
       if (isDuplicate) {
-        highlightDuplicateRow(rowIndex);
+        highlightDuplicateRow(currentRowIndex);
         showToast('Kombinasi duplikat terdeteksi', 'warning', 3000);
       }
     }
@@ -1261,11 +1324,17 @@ function attachUniqueValidationListeners(row, rowIndex) {
 
   [blokInput, plotInput, activityInput].forEach(input => {
     if (input) {
+      // Cleanup old observer
+      if (input.uniqueValidationObserver) {
+        input.uniqueValidationObserver.disconnect();
+        delete input.uniqueValidationObserver;
+      }
+      
       const observer = new MutationObserver(validateUniqueness);
       observer.observe(input, { attributes: true, attributeFilter: ['value'] });
       input.addEventListener('change', validateUniqueness);
       input.addEventListener('input', validateUniqueness);
-      if (!input.uniqueValidationObserver) input.uniqueValidationObserver = observer;
+      input.uniqueValidationObserver = observer;
     }
   });
 }

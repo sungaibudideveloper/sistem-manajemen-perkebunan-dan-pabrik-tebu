@@ -154,7 +154,7 @@ class RencanaKerjaMingguanController extends Controller
     public function getPlot($blok)
     {
         $comp = session('companycode');
-        $plots = DB::table('plot')
+        $plots = DB::table('masterlist')
             ->where('companycode', $comp)
             // ->where('tgl2', '=', null)
             ->where('plot', 'like', $blok . '%')
@@ -167,12 +167,25 @@ class RencanaKerjaMingguanController extends Controller
     public function getData(Request $request)
     {
         $plot = $request->input('plot');
-        $luas = DB::table('plot')->where('plot', $plot)
-            ->where('companycode', session('companycode'))->first();
+        $luas = DB::table('lkhdetailplot')
+            ->where('plot', $plot)
+            ->where('companycode', session('companycode'))
+            ->orderBy('createdat', 'desc')
+            ->first();
+        $luasActual = DB::table('batch')
+            ->where('plot', $plot)
+            ->where('isactive', 1)
+            ->where('companycode', session('companycode'))
+            ->first();
 
-        if ($luas) {
+        if ($luas && $luas->luassisa != 0) {
             return response()->json([
-                'luasarea' => $luas->luasarea,
+                'luasarea' => $luas->luassisa,
+            ]);
+        }
+        if ((!$luas) || $luas && $luas->luassisa == 0) {
+            return response()->json([
+                'luasarea' => $luasActual ? $luasActual->batcharea : 0,
             ]);
         }
 

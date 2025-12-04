@@ -185,9 +185,9 @@ $item->name
        
         @php
         // DEBUG: Tambahkan console.log di sini (INSIDE LOOP)
-        if ($menu->slug === 'report') {
-            $permissionName = $navComposer->getPermissionName('report', 'panen-tebu-report');
-            echo "<script>console.log('Permission needed for panen-tebu-report: " . $permissionName . "');</script>";
+        if ($menu->slug === 'masterdata') {
+            $permissionName = $navComposer->getPermissionName('masterdata', 'tenagakerja');
+            echo "<script>console.log('Permission needed for tenagakerja: " . $permissionName . "');</script>";
             
             $hasAccess = $navComposer->hasPermission($permissionName);
             echo "<script>console.log('User has permission: " . ($hasAccess ? 'YES' : 'NO') . "');</script>";

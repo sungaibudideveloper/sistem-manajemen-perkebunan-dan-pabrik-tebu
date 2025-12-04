@@ -69,13 +69,52 @@ class RencanaKerjaHarianController extends Controller
         $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
         $rkhData = $query->paginate($perPage);
 
-        // NEW: Add progress status untuk setiap RKH
-        $rkhData->getCollection()->transform(function ($rkh) use ($companycode) {
-            $rkh->lkh_progress_status = $this->getRkhProgressStatus($rkh->rkhno, $companycode);
+        $lkhProgress = DB::table('lkhhdr')
+            ->whereIn('rkhno', $rkhData->pluck('rkhno'))
+            ->where('companycode', $companycode)
+            ->select('rkhno', 'status')
+            ->get()
+            ->groupBy('rkhno')
+            ->map(function($lkhs) {
+                if ($lkhs->isEmpty()) {
+                    return [
+                        'status' => 'no_lkh',
+                        'progress' => 'No LKH Created',
+                        'can_complete' => false,
+                        'color' => 'gray'
+                    ];
+                }
+                
+                $totalLkh = $lkhs->count();
+                $completedLkh = $lkhs->where('status', 'APPROVED')->count();
+                
+                if ($completedLkh === $totalLkh) {
+                    return [
+                        'status' => 'complete',
+                        'progress' => 'All Complete',
+                        'can_complete' => true,
+                        'color' => 'green'
+                    ];
+                } else {
+                    return [
+                        'status' => 'in_progress',
+                        'progress' => "LKH In Progress ({$completedLkh}/{$totalLkh})",
+                        'can_complete' => false,
+                        'color' => 'yellow'
+                    ];
+                }
+            });
+
+        $rkhData->getCollection()->transform(function ($rkh) use ($lkhProgress) {
+            $rkh->lkh_progress_status = $lkhProgress[$rkh->rkhno] ?? [
+                'status' => 'no_lkh',
+                'progress' => 'No LKH Created',
+                'can_complete' => false,
+                'color' => 'gray'
+            ];
             return $rkh;
         });
 
-        // Get attendance data for modal
         $absenData = $this->getAttendanceData($companycode, $filterDate);
 
         return view('input.rencanakerjaharian.index', [
@@ -90,6 +129,7 @@ class RencanaKerjaHarianController extends Controller
             'allDate' => $allDate,
             'rkhData' => $rkhData,
             'absentenagakerja' => $absenData,
+            'mandors' => User::getMandorByCompany($companycode),
         ]);
     }
 
@@ -99,10 +139,11 @@ class RencanaKerjaHarianController extends Controller
     public function create(Request $request)
     {
         $selectedDate = $request->input('date');
+        $mandorId = $request->input('mandor_id');
         
-        if (!$selectedDate) {
+        if (!$selectedDate || !$mandorId) {
             return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', 'Silakan pilih tanggal terlebih dahulu');
+                ->with('error', 'Silakan pilih tanggal dan mandor terlebih dahulu');
         }
 
         // Validate date range
@@ -111,13 +152,35 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
         }
 
-        $targetDate = Carbon::parse($selectedDate);
+        // ✅ BACKEND VALIDATION: Double-check for outstanding RKH
         $companycode = Session::get('companycode');
+        $outstandingRKH = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('mandorid', $mandorId)
+            ->where(function($query) {
+                $query->where('status', '!=', 'Completed')
+                      ->orWhereNull('status');
+            })
+            ->orderBy('rkhdate', 'desc')
+            ->first();
+
+        if ($outstandingRKH) {
+            $mandor = DB::table('user')->where('userid', $mandorId)->first();
+            return redirect()->route('input.rencanakerjaharian.index')
+                ->with('error', sprintf(
+                    'Mandor %s masih memiliki RKH outstanding (No: %s, Tanggal: %s). Selesaikan terlebih dahulu.',
+                    $mandor->name ?? $mandorId,
+                    $outstandingRKH->rkhno,
+                    Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y')
+                ));
+        }
+
+        $targetDate = Carbon::parse($selectedDate);
 
         // Generate preview RKH number
         $previewRkhNo = $this->generatePreviewRkhNo($targetDate, $companycode);
 
-        // Load form data (includes operators/kendaraan)
+        // Load form data
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
         return view('input.rencanakerjaharian.create', array_merge([
@@ -126,6 +189,7 @@ class RencanaKerjaHarianController extends Controller
             'nav' => 'Rencana Kerja Harian',
             'rkhno' => $previewRkhNo,
             'selectedDate' => $targetDate->format('Y-m-d'),
+            'selectedMandorId' => $mandorId, // ✅ NEW: Pass mandor_id
             'oldInput' => old(),
         ], $formData));
     }
@@ -570,7 +634,6 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Get LKH data for specific RKH
-     * FIXED: Updated to use new table structure
      */
     public function getLKHData($rkhno)
     {
@@ -579,7 +642,35 @@ class RencanaKerjaHarianController extends Controller
             
             $lkhList = $this->buildLkhDataQuery($companycode, $rkhno)->get();
 
-            $formattedData = $this->formatLkhData($lkhList, $companycode);
+            // Batch load ALL related data BEFORE formatting
+            $lkhNos = $lkhList->pluck('lkhno');
+            
+            // Load plots data (1 query)
+            $plotsByLkh = DB::table('lkhdetailplot')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', 'blok', 'plot', 'luasrkh')
+                ->get()
+                ->groupBy('lkhno');
+            
+            // Load workers count (1 query)
+            $workersByLkh = DB::table('lkhdetailworker')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', DB::raw('COUNT(*) as count'))
+                ->groupBy('lkhno')
+                ->pluck('count', 'lkhno');
+            
+            // Load materials count (1 query)
+            $materialsByLkh = DB::table('lkhdetailmaterial')
+                ->where('companycode', $companycode)
+                ->whereIn('lkhno', $lkhNos)
+                ->select('lkhno', DB::raw('COUNT(*) as count'))
+                ->groupBy('lkhno')
+                ->pluck('count', 'lkhno');
+
+            // Pass pre-loaded data to formatLkhData
+            $formattedData = $this->formatLkhData($lkhList, $companycode, $plotsByLkh, $workersByLkh, $materialsByLkh);
             $generateInfo = $this->getLkhGenerateInfo($companycode, $rkhno, $lkhList);
 
             return response()->json([
@@ -1270,43 +1361,35 @@ class RencanaKerjaHarianController extends Controller
 
     /**
      * Format LKH data for response
+     * No more N+1, use pre-loaded data
      */
-    private function formatLkhData($lkhList, $companycode)
+    private function formatLkhData($lkhList, $companycode, $plotsByLkh, $workersByLkh, $materialsByLkh)
     {
-        return $lkhList->map(function($lkh) use ($companycode) {
+        return $lkhList->map(function($lkh) use ($companycode, $plotsByLkh, $workersByLkh, $materialsByLkh) {
             $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
             
-            // FIXED: Logic yang lebih sederhana dan benar
-            $canEdit = !$lkh->issubmit;  // Bisa edit kalau belum di-submit
-            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';  // Bisa submit kalau belum di-submit dan status DRAFT
+            // FIXED: Gak query lagi, pakai data yang sudah di-load
+            $canEdit = !$lkh->issubmit;
+            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';
 
-            // FIXED: Get plots for this LKH from lkhdetailplot table - HANYA PLOT
-            $plots = LkhDetailPlot::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->select('blok', 'plot', 'luasrkh')
-                ->get()
-                ->map(function($item) {
-                    return $item->plot; // HANYA plot saja, format: B002
-                })
+            // Get plots from pre-loaded data (NO QUERY!)
+            $plots = ($plotsByLkh[$lkh->lkhno] ?? collect())
+                ->pluck('plot')
                 ->unique()
                 ->join(', ');
 
-            // FIXED: Get workers count from lkhdetailworker table
-            $workersAssigned = LkhDetailWorker::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->count();
+            // Get workers count from pre-loaded data (NO QUERY!)
+            $workersAssigned = $workersByLkh[$lkh->lkhno] ?? 0;
 
-            // FIXED: Get material count from lkhdetailmaterial table
-            $materialCount = LkhDetailMaterial::where('companycode', $companycode)
-                ->where('lkhno', $lkh->lkhno)
-                ->count();
+            // Get material count from pre-loaded data (NO QUERY!)
+            $materialCount = $materialsByLkh[$lkh->lkhno] ?? 0;
 
             return [
                 'lkhno' => $lkh->lkhno,
                 'activitycode' => $lkh->activitycode,
                 'activityname' => $lkh->activityname ?? 'Unknown Activity',
                 'plots' => $plots ?: 'No plots assigned',
-                'jenistenagakerja' => $lkh->jenistenagakerja, // Add this for jenis detection
+                'jenistenagakerja' => $lkh->jenistenagakerja,
                 'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
                 'status' => $lkh->status ?? 'EMPTY',
                 'approval_status' => $approvalStatus,
@@ -1320,7 +1403,7 @@ class RencanaKerjaHarianController extends Controller
                 'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
                 'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
                 'can_edit' => $canEdit,
-                'can_submit' => $canSubmit,  // FIXED: Logic yang benar
+                'can_submit' => $canSubmit,
                 'view_url' => route('input.rencanakerjaharian.showLKH', $lkh->lkhno),
                 'edit_url' => route('input.rencanakerjaharian.editLKH', $lkh->lkhno)
             ];
@@ -2749,7 +2832,7 @@ public function loadAbsenByDate(Request $request)
             'masterlist' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
                     $join->on('m.activebatchno', '=', 'b.batchno')
-                        ->where('b.companycode', '=', $companycode); // ✅ Filter batch by company
+                        ->where('b.companycode', '=', $companycode);
                 })
                 ->leftJoin(DB::raw('(
                     SELECT batchno, COALESCE(SUM(luashasil), 0) as total_panen
@@ -2840,8 +2923,7 @@ public function loadAbsenByDate(Request $request)
                 ->orderBy('plot')
                 ->get(),
             
-            'operatorsData' => $this->getOperatorsWithVehicles($companycode),
-            
+            'vehiclesData' => $this->getVehiclesWithOperators($companycode),
             'helpersData' => TenagaKerja::where('companycode', $companycode)
                 ->where('jenistenagakerja', 4)
                 ->where('isactive', 1)
@@ -4899,15 +4981,33 @@ public function loadAbsenByDate(Request $request)
     }
 
     /**
-     * Get operators with vehicle data (for form dropdown)
-     * Uses existing Kendaraan model method
+     * Get ALL vehicles with their operators for modal
+     * NEW: 1 operator can have many vehicles
      * 
      * @param string $companycode
      * @return \Illuminate\Support\Collection
      */
-    private function getOperatorsWithVehicles($companycode)
+    private function getVehiclesWithOperators($companycode)
     {
-        return Kendaraan::getOperatorsWithVehicles($companycode);
+        return DB::table('kendaraan as k')
+            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
+                $join->on('k.idtenagakerja', '=', 'tk.tenagakerjaid')
+                    ->where('tk.companycode', '=', $companycode)
+                    ->where('tk.jenistenagakerja', '=', 3) // Operator
+                    ->where('tk.isactive', '=', 1);
+            })
+            ->where('k.companycode', $companycode)
+            ->where('k.isactive', 1)
+            ->select([
+                'k.nokendaraan',
+                'k.jenis as vehicle_type',
+                'k.idtenagakerja as operator_id',
+                'tk.nama as operator_name',
+                'tk.nik as operator_nik'
+            ])
+            ->orderBy('k.jenis')
+            ->orderBy('k.nokendaraan')
+            ->get();
     }
 
     // =====================================
@@ -5095,5 +5195,70 @@ public function loadAbsenByDate(Request $request)
         }
         
         return $errors;
+    }
+
+    /**
+     * Check if mandor has outstanding RKH (status != Completed)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkOutstandingRKH(Request $request)
+    {
+        $request->validate([
+            'mandor_id' => 'required|string',
+            'date' => 'required|date'
+        ]);
+
+        try {
+            $companycode = Session::get('companycode');
+            $mandorId = $request->mandor_id;
+
+            // Check for ANY outstanding RKH (not filtered by date)
+            $outstandingRKH = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('mandorid', $mandorId)
+                ->where(function($query) {
+                    $query->where('status', '!=', 'Completed')
+                          ->orWhereNull('status');
+                })
+                ->orderBy('rkhdate', 'desc')
+                ->select(['rkhno', 'rkhdate', 'status'])
+                ->first();
+
+            if ($outstandingRKH) {
+                // Get mandor name
+                $mandor = DB::table('user')
+                    ->where('userid', $mandorId)
+                    ->first();
+
+                return response()->json([
+                    'success' => false,
+                    'hasOutstanding' => true,
+                    'message' => 'Mandor masih memiliki RKH yang belum diselesaikan',
+                    'details' => [
+                        'rkhno' => $outstandingRKH->rkhno,
+                        'rkhdate' => Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y'),
+                        'status' => $outstandingRKH->status,
+                        'mandor_name' => $mandor->name ?? 'Unknown',
+                        'mandor_id' => $mandorId
+                    ]
+                ]);
+            }
+
+            // No outstanding RKH found
+            return response()->json([
+                'success' => true,
+                'hasOutstanding' => false,
+                'message' => 'Mandor tidak memiliki RKH outstanding'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error checking outstanding RKH: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

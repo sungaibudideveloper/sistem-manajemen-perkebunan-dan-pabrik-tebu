@@ -42,11 +42,11 @@
                     </div>
                 </div>
 
-                <!-- Total Netto -->
+                <!-- Total Tonase (Netto) -->
                 <div class="bg-white rounded-xl shadow-lg p-5 border-l-4 border-green-500 transform hover:scale-105 transition-transform hover:shadow-xl">
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Netto</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Tonase (Netto)</p>
                             <p class="text-4xl font-bold text-gray-900" x-text="formatTon(data.summary?.total_netto || 0)"></p>
                         </div>
                         <div class="bg-green-100 rounded-lg px-3 py-1.5">
@@ -207,7 +207,7 @@
             </div>
 
             <!-- Charts Row 1: SJ & Tonase per Tanggal -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+            <div x-show="!data.isSingleDay" class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <!-- SJ per Tanggal -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <div class="flex justify-between items-center mb-4">
@@ -223,7 +223,7 @@
                 <!-- Tonase per Tanggal -->
                 <div class="bg-white rounded-xl shadow-md p-5">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hasil Tonase</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hasil Tonase (Netto)</h3>
                         <div class="flex gap-2">
                             <button @click="setTonasePeriod('daily')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Harian</button>
                             <button @click="setTonasePeriod('monthly')" :disabled="chartLoading.tonase" :class="tonasePeriod === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Bulanan</button>
@@ -236,26 +236,62 @@
             <!-- Charts Row 2: Hourly (if single day) -->
             <div x-show="data.isSingleDay" class="mb-5">
                 <div class="bg-white rounded-xl shadow-md p-5">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Trend Netto Per Jam (Akumulasi)</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Trend Hasil Kumulatif Tonase Per Jam - Grafik Harian</h3>
                     <canvas id="hourlyChart" height="90"></canvas>
                 </div>
             </div>
 
-            <!-- Charts Row 3: Status, Vehicle, Durasi (3 kolom) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-                <!-- Status Breakdown -->
-                <div class="bg-white rounded-xl shadow-md p-5">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Status Timbangan</h3>
-                    <canvas id="statusChart" height="200"></canvas>
+            <!-- Charts Row 3: Rit, Vehicle, Durasi (3 kolom) -->
+            <div class="grid grid-cols-1 md:grid-cols-11 gap-5 mb-5">
+                <!-- RIT PER KONTRAKTOR -->
+                <div class="bg-white rounded-xl shadow-md p-5 min-h-[500px] md:col-span-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Jumlah Rit per Kontraktor</h3>
+                    <div class="max-h-80">
+                        <table class="min-w-full text-base">
+                            <thead class="sticky top-0 bg-gray-100 z-10">
+                                <tr>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-left">Kontraktor</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Total<br>Rit</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Sudah<br>Timbang</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Pending</th>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-right">Total<br>Netto<br>(ton)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, index) in data.ritPerKontraktor" :key="item.kontraktor">
+                                    <tr class="hover:bg-blue-50">
+                                        <td class="border border-gray-300 px-2 py-1.5 font-semibold text-xs" x-text="item.kontraktor"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="item.total_rit"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.sudah_timbang"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.pending"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
+                                    </tr>
+                                </template>
+                                <tr class="bg-gray-100 font-bold border-t-2 border-gray-400">
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right">TOTAL</td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center text-blue-700" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.total_rit, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.sudah_timbang, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.pending, 0) || 0"></td>
+                                    <td class="border border-gray-300 px-2 py-1.5 text-right text-green-700" x-text="formatTon(data.ritPerKontraktor?.reduce((sum, item) => sum + (item.total_netto || 0), 0) || 0)"></td>
+                                </tr>
+                                <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Vehicle Performance List (Scrollable) -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Performance Kendaraan</h3>
-                    <div class="overflow-y-auto max-h-80">
+                    <div class="overflow-y-auto max-h-96">
                         <table class="min-w-full text-xs">
                             <thead class="sticky top-0 bg-gray-100 z-10">
                                 <tr>
+                                    <th class="border border-gray-300 px-2 py-1.5 text-center">No</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-left">No Polisi</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-center">Trip</th>
                                     <th class="border border-gray-300 px-2 py-1.5 text-right">Total Netto</th>
@@ -266,6 +302,7 @@
                             <tbody>
                                 <template x-for="(vehicle, index) in data.vehiclePerformance" :key="vehicle.nopol">
                                     <tr class="hover:bg-blue-50">
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="index + 1"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 font-semibold" x-text="vehicle.nopol"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="vehicle.trip_count"></td>
                                         <td class="border border-gray-300 px-2 py-1.5 text-right" x-text="formatNumber(vehicle.total_netto)"></td>
@@ -275,7 +312,7 @@
                                 </template>
                                 <template x-if="!data.vehiclePerformance || data.vehiclePerformance.length === 0">
                                     <tr>
-                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
+                                        <td colspan="6" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -284,7 +321,7 @@
                 </div>
 
                 <!-- Durasi Perjalanan Chart -->
-                <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Distribusi Durasi Perjalanan</h3>
                     <p class="text-xs text-gray-500 mb-3">Waktu dari Cetak POS ke Timbangan</p>
                     <canvas id="durasiChart" height="200"></canvas>
@@ -366,57 +403,21 @@
                 </div>
             </div>
 
-            <!-- Charts Row 5: Rit, Kontraktor & Subkontraktor (ratio 1:2:2) -->
+            <!-- Charts Row 5: Status, Kontraktor & Subkontraktor -->
             <div class="grid grid-cols-1 md:grid-cols-8 gap-5 mb-5">
-                <!-- Rit per Kontraktor (1 kolom - Table) -->
+                <!-- STATUS TIMBANGAN -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-2">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Jumlah Rit per Kontraktor</h3>
-                    <div class="overflow-y-auto max-h-80">
-                        <table class="min-w-full text-xs">
-                            <thead class="sticky top-0 bg-gray-100 z-10">
-                                <tr>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-left">Kontraktor</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Total<br>Rit</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Sudah<br>Timbang</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-center">Pending</th>
-                                    <th class="border border-gray-300 px-2 py-1.5 text-right">Total<br>Netto<br>(ton)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, index) in data.ritPerKontraktor" :key="item.kontraktor">
-                                    <tr class="hover:bg-blue-50">
-                                        <td class="border border-gray-300 px-2 py-1.5 font-semibold text-xs" x-text="item.kontraktor"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-600" x-text="item.total_rit"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.sudah_timbang"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="item.pending"></td>
-                                        <td class="border border-gray-300 px-2 py-1.5 text-right font-semibold" x-text="formatTon(item.total_netto)"></td>
-                                    </tr>
-                                </template>
-                                <!-- TOTAL ROW -->
-                                <tr class="bg-gray-100 font-bold border-t-2 border-gray-400">
-                                    <td class="border border-gray-300 px-2 py-1.5 text-right">TOTAL</td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center text-blue-700" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.total_rit, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.sudah_timbang, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-center" x-text="data.ritPerKontraktor?.reduce((sum, item) => sum + item.pending, 0) || 0"></td>
-                                    <td class="border border-gray-300 px-2 py-1.5 text-right text-green-700" x-text="formatTon(data.ritPerKontraktor?.reduce((sum, item) => sum + (item.total_netto || 0), 0) || 0)"></td>
-                                </tr>
-                                <template x-if="!data.ritPerKontraktor || data.ritPerKontraktor.length === 0">
-                                    <tr>
-                                        <td colspan="5" class="border border-gray-300 px-2 py-4 text-center text-gray-500">Tidak ada data</td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Status Timbangan</h3>
+                    <canvas id="statusChart" height="200"></canvas>
                 </div>
 
-                <!-- Kontraktor by Tonase (2 kolom - Chart) -->
+                <!-- Kontraktor by Tonase (posisi 3, ukuran 2 kolom) -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Kontraktor by Tonase</h3>
                     <canvas id="kontraktorChart" height="220"></canvas>
                 </div>
 
-                <!-- Subkontraktor by Tonase (2 kolom - Chart) -->
+                <!-- Subkontraktor by Tonase (posisi 4, ukuran 2 kolom) -->
                 <div class="bg-white rounded-xl shadow-md p-5 md:col-span-3">
                     <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Sub Kontraktor by Tonase</h3>
                     <canvas id="subkontraktorChart" height="220"></canvas>
@@ -476,11 +477,11 @@
                             <template x-for="(item, index) in data.details" :key="`${item.companycode}-${item.suratjalanno}`">
                                 <tr :class="item.status === 'Sudah Timbang' ? 'bg-green-50 hover:bg-green-100' : 'bg-yellow-50 hover:bg-yellow-100'" class="transition-colors">
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="index + 1"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center font-semibold" x-text="item.companycode"></td>
                                     <td class="border border-gray-300 px-2 py-2">
                                         <a :href="`{{ route('report.report-surat-jalan-timbangan.index') }}/${item.suratjalanno}`" 
                                            target="_blank"
-                                           class="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                                           class="font-semibold text-blue-600 hover:text-blue-800 underline"
                                            x-text="item.suratjalanno"></a>
                                     </td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDate(item.tanggalcetakpossecurity)"></td>
@@ -491,9 +492,7 @@
                                         <span class="px-2 py-1 rounded text-xs font-semibold" :class="getKategoriColor(item.kategori)" x-text="item.kategori || '-'"></span>
                                     </td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.varietas || '-'"></td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.kodetebang === 'Premium' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-semibold" x-text="item.kodetebang || '-'"></span>
-                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.kodetebang || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center">
                                         <span x-show="item.langsir === 1" class="text-green-600">✓</span>
                                         <span x-show="item.langsir === 0" class="text-gray-400">-</span>
@@ -502,9 +501,7 @@
                                         <span x-show="item.tebusulit === 1" class="text-red-600">✓</span>
                                         <span x-show="item.tebusulit === 0" class="text-gray-400">-</span>
                                     </td>
-                                    <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.kendaraankontraktor === 0 ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'" class="px-2 py-1 rounded text-xs font-semibold" x-text="item.kendaraankontraktor === 0 ? 'WL' : 'Umum'"></span>
-                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-center" x-text="item.kendaraankontraktor === 0 ? 'WL' : 'Umum'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center font-medium" x-text="item.nomorpolisi || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2" x-text="item.namasupir || '-'"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-xs" x-text="item.nama_kontraktor_lengkap || '-'"></td>
@@ -518,13 +515,15 @@
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_pos_timbangan)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center" x-text="formatDuration(item.durasi_deload)"></td>
                                     <td class="border border-gray-300 px-2 py-2 text-center">
-                                        <span :class="item.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="px-2 py-1 rounded-full text-xs font-bold" x-text="item.status"></span>
+                                        <span :class="item.status === 'Sudah Timbang' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+                                              class="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap inline-block" 
+                                              x-text="item.status"></span>
                                     </td>
                                 </tr>
                             </template>
                             <template x-if="!data.details || data.details.length === 0">
                                 <tr>
-                                    <td colspan="25" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
+                                    <td colspan="26" class="border border-gray-300 px-3 py-8 text-center text-gray-500 font-medium">Tidak ada data</td>
                                 </tr>
                             </template>
                         </tbody>
@@ -659,25 +658,32 @@
                     data: {
                         labels: this.data.hourlyTrend.map(d => d.hour),
                         datasets: [{
-                            label: 'Netto Kumulatif (kg)',
-                            data: this.data.hourlyTrend.map(d => d.netto),
+                            label: 'Hasil Tonase Kumulatif (ton)',
+                            data: this.data.hourlyTrend.map(d => d.netto / 1000),
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
-                            tension: 0.4,
-                            borderWidth: 2
+                            tension: 0,
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false }
+                            legend: { 
+                                display: false
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: { color: '#f3f4f6' }
+                                grid: { color: '#f3f4f6' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('id-ID') + ' ton';
+                                    }
+                                }
                             },
                             x: {
                                 grid: { display: false },
@@ -755,14 +761,21 @@
                 const chartData = this.sjPeriod === 'monthly' ? this.data.sjMonthly : this.data.sjDaily;
 
                 this.charts.sjPerTanggal = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: chartData.map(d => d.label),
                         datasets: [{
                             label: 'Jumlah SJ',
                             data: chartData.map(d => d.value),
+                            borderColor: '#3b82f6',
                             backgroundColor: '#3b82f6',
-                            borderRadius: 6
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#070088ff',
+                            pointBorderWidth: 1,
+                            pointRadius: 5,
+                            tension: 0,
+                            borderWidth: 4,
+                            fill: false
                         }]
                     },
                     options: {
@@ -797,26 +810,45 @@
                 const chartData = this.tonasePeriod === 'monthly' ? this.data.tonaseMonthly : this.data.tonaseDaily;
 
                 this.charts.tonasePerTanggal = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: chartData.map(d => d.label),
                         datasets: [{
-                            label: 'Tonase (kg)',
-                            data: chartData.map(d => d.value),
+                            label: 'Tonase (ton)',
+                            data: chartData.map(d => d.value / 1000),
+                            borderColor: '#10b981',
                             backgroundColor: '#10b981',
-                            borderRadius: 6
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#0a6b34ff',
+                            pointBorderWidth: 1,
+                            pointRadius: 5,
+                            tension: 0,
+                            borderWidth: 4,
+                            fill: false
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false }
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ton';
+                                    }
+                                }
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: { color: '#f3f4f6' }
+                                grid: { color: '#f3f4f6' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('id-ID') + ' ton';
+                                    }
+                                }
                             },
                             x: {
                                 grid: { display: false },

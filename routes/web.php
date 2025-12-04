@@ -43,6 +43,7 @@ Route::group(['middleware' => ['auth', 'mandor.access']], function () {
             Route::get('/', 'index')->name('index');
             Route::post('/process-rkh', 'processRKHApproval')->name('processRKH');
             Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
+            Route::post('/process-other', 'processOtherApproval')->name('processOther');
         });
 
     // Utility deployment route

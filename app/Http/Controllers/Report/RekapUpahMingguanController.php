@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Report;
 
+use NumberFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Number;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +66,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.jenistenagakerja',
                 'lkhhdr.totalupahall',
                 'lkhhdr.lkhdate',
+                'lkhhdr.totalworkers',
                 'activity.activityname'
             );
 
@@ -84,6 +86,7 @@ class RekapUpahMingguanController extends Controller
                 'lkhhdr.jenistenagakerja',
                 'lkhhdr.totalupahall',
                 'lkhhdr.lkhdate',
+                'lkhhdr.totalworkers',
                 'activity.activityname',
                 DB::raw("GROUP_CONCAT(DISTINCT lkhdetailplot.plot ORDER BY lkhdetailplot.plot SEPARATOR ', ') as plots")
             )
@@ -275,6 +278,7 @@ class RekapUpahMingguanController extends Controller
                         ) AS batchdate
                     "),
                     DB::raw("(SELECT nama FROM tenagakerja WHERE tenagakerjaid = d.tenagakerjaid LIMIT 1) AS namatenagakerja"),
+                    // DB::raw("(SELECT plot FROM lkhdetailbsm WHERE lkhno = a.lkhno AND companycode = a.companycode LIMIT 1) AS plot"),
                 );
 
         } elseif ($tk == 2) {
@@ -336,6 +340,25 @@ class RekapUpahMingguanController extends Controller
         }
         // $data = YourModel::query()->get(); // Ganti dengan query Anda
         return view('report.rum.print', compact('title', 'startDate', 'endDate', 'data'));
+    }
+
+    public function printBp(Request $request)
+    {
+        $title = "Print Bukti Pembayaran";
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $tenagakerjarum = session('tenagakerjarum');
+        $tk = $tenagakerjarum === 'Harian' ? 1 : 2;
+        $query = DB::table('lkhhdr')->whereBetween('lkhdate', [$startDate, $endDate])
+            ->where('jenistenagakerja', $tk)
+            ->where('status', '=', 'APPROVED')
+            ->where('companycode', session('companycode'));
+        $totalAmount = $query->sum('totalupahall');
+
+        // Konversi ke terbilang (Indonesia)
+        $formatter = new NumberFormatter('id_ID', NumberFormatter::SPELLOUT);
+        $amountInWords = ucfirst($formatter->format($totalAmount)) . ' rupiah';
+        return view('report.rum.printbp', compact('title', 'totalAmount', 'amountInWords', 'startDate', 'endDate', 'tk', 'tenagakerjarum'));
     }
 
     public function exportExcel(Request $request)

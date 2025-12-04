@@ -23,6 +23,7 @@ use App\Http\Controllers\MasterData\KendaraanController;
 use App\Http\Controllers\MasterData\UserManagementController;
 use App\Http\Controllers\MasterData\KontraktorController;
 use App\Http\Controllers\MasterData\SubkontraktorController;
+use App\Http\Controllers\MasterData\SplitMergePlotController;
 
 /*
 |--------------------------------------------------------------------------
@@ -210,6 +211,31 @@ Route::middleware(['auth', 'permission:Hapus Batch'])->group(function () {
     Route::delete('masterdata/batch/{batchno}', [BatchController::class, 'destroy'])->name('masterdata.batch.destroy');
 });
 
+// Split & Merge Plot management
+Route::middleware(['auth', 'permission:Split Merge Plot'])->group(function () {
+    Route::get('masterdata/split-merge-plot', [SplitMergePlotController::class, 'index'])
+        ->name('masterdata.split-merge-plot.index');
+    Route::get('masterdata/split-merge-plot/approval/{approvalno}', [SplitMergePlotController::class, 'getApprovalDetail'])
+        ->name('masterdata.split-merge-plot.getApprovalDetail');
+    Route::get('masterdata/split-merge-plot/batch/{batchno}', [SplitMergePlotController::class, 'getBatchDetails'])
+        ->name('masterdata.split-merge-plot.batch-details');
+    
+    // Check plot name availability - TAMBAHKAN DI SINI
+    Route::get('masterdata/split-merge-plot/check-plot', [SplitMergePlotController::class, 'checkPlotExists'])
+        ->name('masterdata.split-merge-plot.check-plot');
+    
+    // Create split/merge REQUEST (not execute)
+    Route::post('masterdata/split-merge-plot/split', [SplitMergePlotController::class, 'split'])
+        ->name('masterdata.split-merge-plot.split');
+    Route::post('masterdata/split-merge-plot/merge', [SplitMergePlotController::class, 'merge'])
+        ->name('masterdata.split-merge-plot.merge');
+    
+    // Delete transaction (waiting approval only)
+    Route::delete('masterdata/split-merge-plot/{transactionNumber}', [SplitMergePlotController::class, 'destroy'])
+        ->name('masterdata.split-merge-plot.destroy');
+});
+
+
 // Mandor management
 Route::get('masterdata/mandor', [MandorController::class, 'index'])->name('masterdata.mandor.index');
 Route::post('masterdata/mandor', [MandorController::class, 'store'])->name('masterdata.mandor.store');
@@ -217,12 +243,7 @@ Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorCo
 Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])->name('masterdata.mandor.destroy');
 
 // Tenaga kerja management
-Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
-Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
-Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
-Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
-
-Route::middleware(['auth', 'permission:Tenaga Kerja'])->group(function () {
+Route::middleware(['auth', 'permission:Tenagakerja'])->group(function () {
     Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
     Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
     Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');

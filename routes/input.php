@@ -21,8 +21,9 @@ Route::group(['middleware' => ['auth', 'permission:Agronomi']], function () {
     Route::post('input/agronomi', [AgronomiController::class, 'handle'])->name('input.agronomi.handle');
     Route::get('input/agronomi/show/{nosample}/{companycode}/{tanggalpengamatan}', [AgronomiController::class, 'show'])
         ->name('input.agronomi.show');
-    Route::post('input/agronomi/get-field', [AgronomiController::class, 'getFieldByMapping'])->name('input.agronomi.getFieldByMapping');
-    Route::get('input/agronomi/check-data', [AgronomiController::class, 'checkData'])->name('input.agronomi.check-data');
+    Route::post('input/agronomi/get-blok', [AgronomiController::class, 'getBlokbyField'])->name('input.agronomi.getBlok');
+    Route::post('input/agronomi/get-var', [AgronomiController::class, 'getVarietasandKategori'])->name('input.agronomi.getVar');
+    // Route::get('input/agronomi/check-data', [AgronomiController::class, 'checkData'])->name('input.agronomi.check-data');
 });
 
 Route::get('input/agronomi/excel', [AgronomiController::class, 'excel'])
@@ -47,8 +48,9 @@ Route::group(['middleware' => ['auth', 'permission:Hpt']], function () {
     Route::post('input/hpt', [HPTController::class, 'handle'])->name('input.hpt.handle');
     Route::get('input/hpt/show/{nosample}/{companycode}/{tanggalpengamatan}', [HPTController::class, 'show'])
         ->name('input.hpt.show');
-    Route::post('input/hpt/get-field', [HPTController::class, 'getFieldByMapping'])->name('input.hpt.getFieldByMapping');
-    Route::get('input/hpt/check-data', [HPTController::class, 'checkData'])->name('input.hpt.check-data');
+    Route::post('input/hpt/get-blok', [HPTController::class, 'getBlokbyField'])->name('input.hpt.getBlok');
+    Route::post('input/hpt/get-var', [HPTController::class, 'getVarietasandKategori'])->name('input.hpt.getVar');
+    // Route::get('input/hpt/check-data', [HPTController::class, 'checkData'])->name('input.hpt.check-data');
 });
 
 Route::get('input/hpt/excel', [HPTController::class, 'excel'])
@@ -134,6 +136,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
 
             // Other utility routes
+            Route::post('/check-outstanding', 'checkOutstandingRKH')->name('checkOutstanding');
             Route::post('/update-status', 'updateStatus')->name('updateStatus');
             Route::get('/load-absen-by-date', 'loadAbsenByDate')->name('loadAbsenByDate');
             Route::post('/generate-dth', 'generateDTH')->name('generateDTH');
