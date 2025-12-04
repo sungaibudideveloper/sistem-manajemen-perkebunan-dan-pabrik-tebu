@@ -201,5 +201,5 @@ Route::middleware('auth')->group(function () {
 
 Route::group(['middleware' => ['auth', 'permission:Mapping BSM']], function () {
     Route::match(['GET', 'POST'], 'input/mapping-bsm', [MappingBsmController::class, 'index'])->name('input.mapping-bsm.index');
-    // Route::post('report/panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('report.panen-tebu-report.proses');
+    Route::get('input/mapping-bsm/get-bsm-detail', [MappingBsmController::class, 'getBsmDetail'])->name('input.mapping-bsm.get-bsm-detail');
 });
