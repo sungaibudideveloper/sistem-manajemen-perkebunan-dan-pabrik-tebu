@@ -155,7 +155,7 @@
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Group</label>
                         <select x-model="filters.group" class="w-full text-xs border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">Current Company</option>
-                            <option value="all-tbl">All TBL (TBL1/2/3)</option>
+                            <option value="all-tbl">All TBL (TBL I/TBL II/TBL III)</option>
                             <option value="all-divisi">All Divisi</option>
                         </select>
                     </div>
@@ -262,12 +262,13 @@
                                 <th class="border border-gray-300 px-3 py-2">Plot</th>
                                 <th class="border border-gray-300 px-3 py-2">Type</th>
                                 <th class="border border-gray-300 px-3 py-2">Batch No</th>
-                                <th class="border border-gray-300 px-3 py-2">Area (Ha)</th>
+                                <th class="border border-gray-300 px-3 py-2">Area<br>(Ha)</th>
                                 <th class="border border-gray-300 px-3 py-2">Lifecycle</th>
                                 <th class="border border-gray-300 px-3 py-2">Varietas</th>
                                 <th class="border border-gray-300 px-3 py-2">PKP</th>
-                                <th class="border border-gray-300 px-3 py-2">Batch Date</th>
-                                <th class="border border-gray-300 px-3 py-2">Age (Days)</th>
+                                <th class="border border-gray-300 px-3 py-2">Tanggal<br>Ulang Tahun</th>
+                                <th class="border border-gray-300 px-3 py-2">Age<br>(Months)</th>
+                                <th class="border border-gray-300 px-3 py-2">Age<br>(Days)</th>
                                 <th class="border border-gray-300 px-3 py-2">Status</th>
                             </tr>
                         </thead>
@@ -275,9 +276,9 @@
                             <template x-for="(item, index) in data.details" :key="`${item.companycode}-${item.batchno}`">
                                 <tr class="hover:bg-blue-50 transition-colors">
                                     <td class="border border-gray-300 px-3 py-2 text-center" x-text="index + 1"></td>
-                                    <td class="border border-gray-300 px-3 py-2 text-center font-semibold text-blue-700" x-text="item.companycode"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center font-semibold" x-text="item.companycode_formatted"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center font-semibold" x-text="item.blok"></td>
-                                    <td class="border border-gray-300 px-3 py-2 font-bold text-blue-600" x-text="item.plot"></td>
+                                    <td class="border border-gray-300 px-3 py-2 font-semibold" x-text="item.plot"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center">
                                         <span class="px-2 py-1 rounded text-xs font-semibold" :class="item.plottype === 'KBD' ? 'bg-purple-100 text-purple-800' : 'bg-teal-100 text-teal-800'" x-text="item.plottype || '-'"></span>
                                     </td>
@@ -288,10 +289,11 @@
                                     </td>
                                     <td class="border border-gray-300 px-3 py-2 text-center font-medium" x-text="item.kodevarietas || '-'"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center" x-text="item.pkp || '-'"></td>
-                                    <td class="border border-gray-300 px-3 py-2 text-center" x-text="formatDate(item.batchdate)"></td>
-                                    <td class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700" x-text="item.age_days"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center" x-text="formatDate(item.tanggalulangtahun)"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center" x-text="item.age_months"></td>
+                                    <td class="border border-gray-300 px-3 py-2 text-center" x-text="item.age_days"></td>
                                     <td class="border border-gray-300 px-3 py-2 text-center">
-                                        <span :class="getAgeStatusColor(item.age_days)" class="px-3 py-1 rounded-full text-xs font-bold" x-text="getAgeStatus(item.age_days)"></span>
+                                        <span :class="getAgeStatusColor(item.age_months)" class="px-3 py-1 rounded-full text-xs font-bold" x-text="getAgeStatus(item.age_months)"></span>
                                     </td>
                                 </tr>
                             </template>
@@ -366,11 +368,12 @@
 
             getCurrentCompanyTitle() {
                 if (this.appliedFilters.group === 'all-tbl') {
-                    return 'TBL Group (TBL1, TBL2 & TBL3)';
+                    return 'TBL Group (TBL I, TBL II & TBL III)';
                 } else if (this.appliedFilters.group === 'all-divisi') {
                     return 'All Division';
                 } else {
-                    return '{{ Session::get("companycode") }}';
+                    // Pakai PHP helper langsung dari Blade
+                    return '{{ formatCompanyCode(Session::get("companycode")) }}';
                 }
             },
 
@@ -569,7 +572,7 @@
                 this.charts.age = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['0-90', '91-180', '181-365', '>365'],
+                        labels: ['0-3', '4-6', '7-12', '>12'],  // dalam bulan
                         datasets: [{
                             label: 'Plot Count',
                             data: [
@@ -592,7 +595,7 @@
                             tooltip: {
                                 callbacks: {
                                     title: (items) => {
-                                        const labels = ['Young (0-90 days)', 'Growing (91-180 days)', 'Mature (181-365 days)', 'Overdue (>365 days)'];
+                                        const labels = ['Young (0-3 months)', 'Growing (4-6 months)', 'Mature (7-12 months)', 'Overdue (>12 months)'];
                                         return labels[items[0].dataIndex];
                                     }
                                 }
@@ -606,7 +609,7 @@
                             },
                             x: {
                                 grid: { display: false },
-                                title: { display: true, text: 'Age Range (Days)', font: { size: 11 } }
+                                title: { display: true, text: 'Age Range (Months)', font: { size: 11 } }
                             }
                         }
                     }
@@ -650,17 +653,17 @@
                 return colors[lifecycle] || 'bg-gray-100 text-gray-800';
             },
 
-            getAgeStatus(days) {
-                if (days <= 90) return 'Young';
-                if (days <= 180) return 'Growing';
-                if (days <= 365) return 'Mature';
+            getAgeStatus(months) {
+                if (months <= 3) return 'Young';
+                if (months <= 6) return 'Growing';
+                if (months <= 12) return 'Mature';
                 return 'Overdue';
             },
 
-            getAgeStatusColor(days) {
-                if (days <= 90) return 'bg-green-100 text-green-700';
-                if (days <= 180) return 'bg-blue-100 text-blue-700';
-                if (days <= 365) return 'bg-amber-100 text-amber-700';
+            getAgeStatusColor(months) {
+                if (months <= 3) return 'bg-green-100 text-green-700';
+                if (months <= 6) return 'bg-blue-100 text-blue-700';
+                if (months <= 12) return 'bg-amber-100 text-amber-700';
                 return 'bg-red-100 text-red-700';
             },
 

@@ -91,18 +91,25 @@ class MasterLahanReportController extends Controller
                     'b.batchno',
                     'b.batcharea',
                     'b.batchdate',
+                    'b.tanggalulangtahun',
                     'b.lifecyclestatus',
                     'b.kodevarietas',
                     'b.pkp',
                     'b.plottype',
                     'b.tanggalpanen',
                     'b.kontraktorid',
-                    DB::raw('DATEDIFF(CURDATE(), b.batchdate) as age_days')
+                    DB::raw('DATEDIFF(CURDATE(), b.tanggalulangtahun) as age_days'),
+                    DB::raw('ROUND(DATEDIFF(CURDATE(), b.tanggalulangtahun) / 30.44) as age_months')
                 ])
                 ->orderBy('m.companycode')
                 ->orderBy('m.blok')
                 ->orderBy('m.plot')
                 ->get();
+
+            $detailData = $detailData->map(function($item) {
+                $item->companycode_formatted = formatCompanyCode($item->companycode);
+                return $item;
+            });
 
             // Calculate summary statistics
             $summary = [
@@ -178,10 +185,10 @@ class MasterLahanReportController extends Controller
 
             // Age distribution
             $ageDistribution = [
-                'young' => $detailData->where('age_days', '<=', 90)->count(),
-                'growing' => $detailData->whereBetween('age_days', [91, 180])->count(),
-                'mature' => $detailData->whereBetween('age_days', [181, 365])->count(),
-                'overdue' => $detailData->where('age_days', '>', 365)->count(),
+                'young' => $detailData->where('age_months', '<=', 3)->count(),      // 0-3 bulan
+                'growing' => $detailData->whereBetween('age_months', [4, 6])->count(),  // 4-6 bulan
+                'mature' => $detailData->whereBetween('age_months', [7, 12])->count(),  // 7-12 bulan
+                'overdue' => $detailData->where('age_months', '>', 12)->count(),     // >12 bulan
             ];
 
             return response()->json([
