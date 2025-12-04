@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use App\Models\Timbangan;
+use App\Models\Rkhhdr;
 
 class MappingBsmController extends Controller
 {
@@ -24,38 +25,69 @@ class MappingBsmController extends Controller
 
     public function index(Request $request)
     {
-
+        // dd($request);
         $title = "Mapping BSM";
-        $nav = "Panen Tebu";
+        $nav = "Mapping BSM";
+        $companycode = session('companycode');
+        
+        // Initialize data variable
+        $data = collect(); // Empty collection by default
+        
+        // Validate form inputs if submitted
+        if ($request->isMethod('post')) {
+            $request->validate([
+                'tanggalawal' => 'required|date',
+                'tanggalakhir' => 'required|date|after_or_equal:tanggalawal',
+            ], [
+                'tanggalawal.required' => 'Tanggal awal wajib diisi',
+                'tanggalawal.date' => 'Format tanggal awal tidak valid',
+                'tanggalakhir.required' => 'Tanggal akhir wajib diisi',
+                'tanggalakhir.date' => 'Format tanggal akhir tidak valid',
+                'tanggalakhir.after_or_equal' => 'Tanggal akhir harus sama atau setelah tanggal awal',
+            ]);
 
-        $kontraktor = DB::table('kontraktor')->where('companycode', session('companycode'))->get();
-        $tabel_harga = DB::table('hargapanentebu')->where('companycode', session('companycode'))->get();
-        // dd($tabel_harga);
+            // Get data from model when form is submitted
+            $Rkhhdr = new Rkhhdr();
+            $data = $Rkhhdr->getDataBsmSJ($companycode, $request->tanggalawal, $request->tanggalakhir);
+            // dd($data);
+            
+            // Ensure data is a collection
+            if (!$data instanceof \Illuminate\Support\Collection) {
+                $data = collect($data);
+            }
+        }
 
-        return view('report.panen-tebu.index', compact('title', 'nav', 'kontraktor', 'tabel_harga'));
+        return view('input.mapping-bsm.index', compact('title', 'nav', 'data'));
     }
 
-    public function proses(Request $request){
-        // dd(round(2.538, 0, PHP_ROUND_HALF_UP));
-        // dd($request);
+    public function getBsmDetail(Request $request)
+    {
         $companycode = session('companycode');
-        // dd($request);
-        $timbangan = new Timbangan;
-
-
-        $data = $timbangan->getData($companycode, $request->idkontraktor, $request->start_date, $request->end_date);
-        $tabel_harga = DB::table('hargapanentebu')->where('companycode', session('companycode'))->where('kodeharga', $request->kode_harga)->get();
-        // dd($data);
-
-        $viewData = [
-                'data' => collect($data),
-                'kontraktor' => $request->idkontraktor,
-                'startDate' => $request->start_date,
-                'endDate' => $request->end_date,
-                'tabelharga' => collect($tabel_harga)
-            ];
-
-         return view('report.panen-tebu.result', $viewData);
+        $rkhno = $request->get('rkhno');
+        
+        if (!$rkhno) {
+            return response()->json([
+                'success' => false,
+                'message' => 'RKH number is required'
+            ], 400);
+        }
+        
+        try {
+            $Rkhhdr = new Rkhhdr();
+            $data = $Rkhhdr->getBsmDetailByRkh($companycode, $rkhno);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'total' => count($data)
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching BSM detail: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
 
