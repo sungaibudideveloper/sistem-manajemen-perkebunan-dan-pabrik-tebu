@@ -239,7 +239,7 @@ class GudangController extends Controller
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-                'connection' => '172.17.1.39',
+                'connection' => 'TESTING',
                 'company' => $companyinv->companyinventory,
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,
@@ -304,255 +304,526 @@ class GudangController extends Controller
     }
 
 
-    public function submit(Request $request)
-    {
-        //kunci proses di cache agar ga dobel submit 
-        $lockKey = 'submit_lock_' . session('companycode') . '_' . $request->rkhno;
-        if (Cache::has($lockKey)) {
-            return redirect()->back()->with('error', 'Sedang memproses request sebelumnya. Mohon tunggu...');
-        }
-        Cache::put($lockKey, true, 10);
-        // Validasi basic
-        $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
-        $first = $details->first();
+public function submit(Request $request)
+{
+    //kunci proses di cache agar ga dobel submit 
+    $lockKey = 'submit_lock_' . session('companycode') . '_' . $request->rkhno;
+    if (Cache::has($lockKey)) {
+        return redirect()->back()->with('error', 'Sedang memproses request sebelumnya. Mohon tunggu...');
+    }
+    Cache::put($lockKey, true, 20);
+    
+    // Validasi basic
+    $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
+    $first = $details->first();
 
-        if (strtoupper($first->flagstatus) != 'ACTIVE') {
-            Cache::forget($lockKey);
-            throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
-        }
-        if ($details->whereNotNull('nouse')->count() >= 1) {
-            Cache::forget($lockKey);
-            throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
-        }
+    if (strtoupper($first->flagstatus) != 'ACTIVE') {
+        Cache::forget($lockKey);
+        throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
+    }
+    if ($details->whereNotNull('nouse')->count() >= 1) {
+        Cache::forget($lockKey);
+        throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
+    }
 
-        // Validasi duplikat: lkhno + plot + itemcode
-        foreach ($request->itemcode as $lkhno => $items) {
-            foreach ($items as $itemcode => $plots) {
-                // Group by plot untuk itemcode tertentu di lkhno tertentu
-                $plotsForThisItem = array_keys($plots);
-                $uniquePlots = array_unique($plotsForThisItem);
+    // Validasi duplikat: lkhno + plot + itemcode
+    foreach ($request->itemcode as $lkhno => $items) {
+        foreach ($items as $itemcode => $plots) {
+            // Group by plot untuk itemcode tertentu di lkhno tertentu
+            $plotsForThisItem = array_keys($plots);
+            $uniquePlots = array_unique($plotsForThisItem);
 
-                if (count($plotsForThisItem) !== count($uniquePlots)) {
-                    // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
-                    $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
-                    $duplicatePlot = reset($duplicatePlots);
+            if (count($plotsForThisItem) !== count($uniquePlots)) {
+                // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+                $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+                $duplicatePlot = reset($duplicatePlots);
 
-                    Cache::forget($lockKey); // ⚠️ UNLOCK
-                    return redirect()->back()->withInput()
-                        ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
-                }
+                Cache::forget($lockKey);
+                return redirect()->back()->withInput()
+                    ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
             }
         }
+    }
 
-        // Get existing data dengan key lkhno-itemcode
-        $existingData = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get()->keyBy(function ($item) {
+    // Get existing data dengan key lkhno-itemcode
+    $existingData = usemateriallst::where('rkhno', $request->rkhno)
+        ->where('companycode', session('companycode'))
+        ->get()
+        ->keyBy(function ($item) {
             return $item->lkhno . '-' . $item->itemcode;
         });
 
-        // Key details by lkhno untuk lookup
-        $detailsByLkhno = $details->keyBy('lkhno');
-        $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
+    // Key details by lkhno untuk lookup
+    $detailsByLkhno = $details->keyBy('lkhno');
+    $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
 
-        $insertData = [];
-        $apiPayload = [];
-        $qtyByItemcode = [];
-        $itemDetails = [];
+    $insertData = [];
+    $apiPayload = [];
+    $qtyByItemcode = [];
+    $itemDetails = [];
 
-        // Process flat - langsung dari request
-        foreach ($request->itemcode as $lkhno => $items) {
-            $detail = $detailsByLkhno[$lkhno];
+    // Process flat - langsung dari request
+    foreach ($request->itemcode as $lkhno => $items) {
+        $detail = $detailsByLkhno[$lkhno];
 
-            foreach ($items as $itemcode => $keys) {
-                foreach ($keys as $key => $val) {
+        foreach ($items as $itemcode => $keys) {
+            foreach ($keys as $key => $val) {
 
-                    $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
-                    $unit = $request->unit[$lkhno][$itemcode][$key] ?? null;
-                    $luas = $request->luas[$lkhno][$itemcode][$key] ?? 0;
-                    $qtyraw = $luas * $dosage ?? 0;
-                    $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
-                    // $qty=round($qtyraw / 0.25) * 0.25;
+                $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
+                $unit = $request->unit[$lkhno][$itemcode][$key] ?? null;
+                $luas = $request->luas[$lkhno][$itemcode][$key] ?? 0;
+                $qtyraw = $luas * $dosage ?? 0;
+                $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
 
-                    $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
-                    $existing = $existingData->get($existingKey);
+                $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
+                $existing = $existingData->get($existingKey);
 
-                    $insertData[] = [
-                        'companycode' => session('companycode'),
-                        'rkhno' => $request->rkhno,
-                        'lkhno' => $lkhno,
-                        'itemcode' => $itemcode,
-                        'qty' => $qty,
-                        'unit' => $unit,
-                        'qtyretur' => $existing?->qtyretur ?? 0,
-                        'itemname' => $herbisidaItems[$itemcode]->itemname ?? '',
-                        'dosageperha' => $dosage,
-                        'nouse' => $existing?->nouse ?? null,
-                        'plot' => $key
+                $insertData[] = [
+                    'companycode' => session('companycode'),
+                    'rkhno' => $request->rkhno,
+                    'lkhno' => $lkhno,
+                    'itemcode' => $itemcode,
+                    'qty' => $qty,
+                    'unit' => $unit,
+                    'qtyretur' => $existing?->qtyretur ?? 0,
+                    'itemname' => $herbisidaItems[$itemcode]->itemname ?? '',
+                    'dosageperha' => $dosage,
+                    'nouse' => $existing?->nouse ?? null,
+                    'plot' => $key
+                ];
+
+                // Jumlahkan qty per itemcode
+                $qtyByItemcode[$itemcode] = ($qtyByItemcode[$itemcode] ?? 0) + $qty;
+
+                // Simpan detail itemcode (ambil yang pertama aja)
+                if (!isset($itemDetails[$itemcode])) {
+                    $itemDetails[$itemcode] = [
+                        'detail' => $detail,
+                        'unit' => $unit
                     ];
-
-                    // Jumlahkan qty per itemcode
-                    $qtyByItemcode[$itemcode] = ($qtyByItemcode[$itemcode] ?? 0) + $qty;
-
-                    // Simpan detail itemcode (ambil yang pertama aja)
-                    if (!isset($itemDetails[$itemcode])) {
-                        $itemDetails[$itemcode] = [
-                            'detail' => $detail,
-                            'unit' => $unit
-                        ];
-                    }
                 }
             }
-        }
-
-        foreach ($qtyByItemcode as $itemcode => $totalQty) {
-            $detail = $itemDetails[$itemcode]['detail'];
-            $unit = $itemDetails[$itemcode]['unit'];
-
-            $apiPayload[$itemcode] = [
-                'CompCodeTerima' => $detail->companyinv,
-                'FactoryTerima' => $detail->factoryinv,
-                'ItemGrup' => substr($itemcode, 0, 2),
-                'CompItemcode' => substr($itemcode, 2),
-                'prunit' => $unit,
-                'itemprice' => 0,
-                'currcode' => 'IDR',
-                'itemnote' => $detail->herbisidagroupname,
-                'qtybpb' => round($totalQty, 3),
-                'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
-                'vehiclenumber' => '',
-                'flagstatus' => $detail->flagstatus,
-                'qtydigunakan' => $detail->qtydigunakan
-            ];
-        }
-
-        // Gunakan DB Transaction untuk keamanan
-        DB::beginTransaction();
-
-        try {
-            // Delete existing records
-            usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->delete();
-            $companyinv = company::where('companycode', session('companycode'))->first();
-            // Bulk insert
-            usemateriallst::insert($insertData);
-
-            // API Call
-            if ($details->whereNotNull('nouse')->count() < 1) {
-                $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
-                    ->asJson()
-                    ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
-                        'connection' => '172.17.1.39',
-                        'company' => $companyinv->companyinventory,
-                        'factory' => $first->factoryinv,
-                        'costcenter' => $request->costcenter,
-                        'isi' => array_values($apiPayload),
-                        'userid' => substr(auth()->user()->userid, 0, 10)
-                    ]);
-            } else {
-                DB::rollback();
-                Cache::forget($lockKey);
-                dd(
-                    'MODE EDIT - Nouse sudah ada',
-                    'First data:',
-                    $first,
-                    'Details count:',
-                    $details->whereNotNull('nouse')->count()
-                );
-            }
-
-            // ✅ KEMBALIKAN: Log terpisah untuk success/error
-            // DD jika response TIDAK successful
-            if (!$response->successful()) {
-                dd([
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                    'payload_sent' => [
-                        'company' => $companyinv->companyinventory,
-                        'factory' => $first->factoryinv,
-                        'costcenter' => $request->costcenter,
-                        'isi' => array_values($apiPayload),
-                        'userid' => substr(auth()->user()->userid, 0, 10)
-                    ]
-                ]);
-            }
-
-            $responseData = $response->json();
-
-            // Check response
-            if ($response->status() == 200 && $responseData['status'] == 1) {
-
-                $itemPriceMap = [];
-                foreach ($responseData['stockitem'] as $row) {
-                    $itemcode = $row['Itemcode'] ?? null;
-                    if ($itemcode) {
-                        $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
-                    }
-                }
-
-
-                // update nouse & itemprice
-                foreach ($itemPriceMap as $itemcode => $itemprice) {
-
-                    Log::info("Before DB update:", [
-                        'itemcode' => $itemcode,
-                        'itemprice' => $itemprice,
-                        'type' => gettype($itemprice)
-                    ]);
-
-                    usemateriallst::where('rkhno', $request->rkhno)
-                        ->where('companycode', session('companycode'))
-                        ->where('itemcode', $itemcode)
-                        ->update([
-                            'nouse' => $responseData['noUse'],
-                            'itemprice' => $itemprice,
-                            'costcenter' => $request->costcenter,
-                            'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
-                            'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0
-                        ]);
-
-                    // Cek hasil di database
-                    $saved = usemateriallst::where('rkhno', $request->rkhno)
-                        ->where('companycode', session('companycode'))
-                        ->where('itemcode', $itemcode)
-                        ->value('itemprice');
-
-                    Log::info("After DB update:", [
-                        'itemcode' => $itemcode,
-                        'itemprice_saved' => $saved,
-                        'type' => gettype($saved)
-                    ]);
-                }
-
-                // Update header status
-                usematerialhdr::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->update([
-                    'flagstatus' => 'DISPATCHED',
-                    'updatedat' => date("Y-m-d H:i:s"),
-                    'updateby' => Auth::user()->userid
-                ]);
-
-                DB::commit();
-                Cache::forget($lockKey);
-                return redirect()->back()->with('success1', 'Data updated successfully');
-
-            } else {
-                DB::rollback();
-                Cache::forget($lockKey);
-                dd([
-                    'error' => 'Response gagal 516',
-                    'status' => $response->status(),
-                    'responseData' => $responseData
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            Cache::forget($lockKey);
-            Log::error('Submit error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
+
+    foreach ($qtyByItemcode as $itemcode => $totalQty) {
+        $detail = $itemDetails[$itemcode]['detail'];
+        $unit = $itemDetails[$itemcode]['unit'];
+
+        $apiPayload[$itemcode] = [
+            'CompCodeTerima' => $detail->companyinv,
+            'FactoryTerima' => $detail->factoryinv,
+            'ItemGrup' => substr($itemcode, 0, 2),
+            'CompItemcode' => substr($itemcode, 2),
+            'prunit' => $unit,
+            'itemprice' => 0,
+            'currcode' => 'IDR',
+            'itemnote' => $detail->herbisidagroupname,
+            'qtybpb' => round($totalQty, 3),
+            'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
+            'vehiclenumber' => '',
+            'flagstatus' => $detail->flagstatus,
+            'qtydigunakan' => $detail->qtydigunakan
+        ];
+    }
+
+    // Gunakan DB Transaction untuk keamanan
+    DB::beginTransaction();
+
+    try {
+
+        if (usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->whereNotNull('nouse')->exists()) {
+            throw new \Exception('Data sudah diproses oleh user lain!');
+        }
+        
+        // Delete existing records
+        usemateriallst::where('rkhno', $request->rkhno)
+            ->where('companycode', session('companycode'))
+            ->delete();
+        
+        // Bulk insert
+        usemateriallst::insert($insertData);
+
+        // Update header status
+        usematerialhdr::where('rkhno', $request->rkhno)
+            ->where('companycode', session('companycode'))
+            ->update([
+                'flagstatus' => 'DISPATCHED',
+                'updatedat' => date("Y-m-d H:i:s"),
+                'updateby' => Auth::user()->userid
+            ]);
+
+        // ✅ COMMIT - Semua operasi DB sudah selesai
+        DB::commit();
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Cache::forget($lockKey);
+        Log::error('Submit error before API', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
+    }
+
+    // ✅ API Call - SETELAH COMMIT
+    try {
+        $companyinv = company::where('companycode', session('companycode'))->first();
+        
+        $response = Http::withoutVerifying()
+            ->withOptions(['headers' => ['Accept' => 'application/json']])
+            ->asJson()
+            ->timeout(30)
+            ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
+                'connection' => 'TESTING',
+                'company' => $companyinv->companyinventory,
+                'factory' => $first->factoryinv,
+                'costcenter' => $request->costcenter,
+                'isi' => array_values($apiPayload),
+                'userid' => substr(auth()->user()->userid, 0, 10)
+            ]);
+
+        // Check jika API gagal
+        if (!$response->successful()) {
+            Cache::forget($lockKey);
+            Log::error('API use_api failed after commit', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'rkhno' => $request->rkhno,
+                'payload_sent' => [
+                    'company' => $companyinv->companyinventory,
+                    'factory' => $first->factoryinv,
+                    'costcenter' => $request->costcenter,
+                    'isi' => array_values($apiPayload),
+                    'userid' => substr(auth()->user()->userid, 0, 10)
+                ]
+            ]);
+            
+            return redirect()->back()->with('warning', 'Data tersimpan, tapi API gagal. Status: ' . $response->status());
+        }
+
+        $responseData = $response->json();
+
+        // Check response
+        if ($response->status() == 200 && isset($responseData['status']) && $responseData['status'] == 1) {
+
+            $itemPriceMap = [];
+            foreach ($responseData['stockitem'] as $row) {
+                $itemcode = $row['Itemcode'] ?? null;
+                if ($itemcode) {
+                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+                }
+            }
+
+            // Update nouse & itemprice
+            foreach ($itemPriceMap as $itemcode => $itemprice) {
+
+                Log::info("Before DB update:", [
+                    'itemcode' => $itemcode,
+                    'itemprice' => $itemprice,
+                    'type' => gettype($itemprice)
+                ]);
+
+                usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->where('itemcode', $itemcode)
+                    ->update([
+                        'nouse' => $responseData['noUse'],
+                        'itemprice' => $itemprice,
+                        'costcenter' => $request->costcenter,
+                        'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
+                        'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0
+                    ]);
+
+                // Cek hasil di database
+                $saved = usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->where('itemcode', $itemcode)
+                    ->value('itemprice');
+
+                Log::info("After DB update:", [
+                    'itemcode' => $itemcode,
+                    'itemprice_saved' => $saved,
+                    'type' => gettype($saved)
+                ]);
+            }
+
+            Cache::forget($lockKey);
+            return redirect()->back()->with('success1', 'Data updated successfully');
+
+        } else {
+            Cache::forget($lockKey);
+            Log::error('API response invalid after commit', [
+                'status' => $response->status(),
+                'responseData' => $responseData,
+                'rkhno' => $request->rkhno
+            ]);
+            
+            return redirect()->back()->with('warning', 'Data tersimpan, tapi response API tidak valid. Status: ' . $response->status());
+        }
+
+    } catch (\Exception $e) {
+        Cache::forget($lockKey);
+        Log::error('API error after commit', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'rkhno' => $request->rkhno
+        ]);
+        
+        return redirect()->back()->with('warning', 'Data tersimpan, tapi error pada proses API: ' . $e->getMessage());
+    }
+}
+
+    // lama use_api terlanjur masuk padahal ada update di bawah yang error
+    // public function submit(Request $request)
+    // {
+    //     //kunci proses di cache agar ga dobel submit 
+    //     $lockKey = 'submit_lock_' . session('companycode') . '_' . $request->rkhno;
+    //     if (Cache::has($lockKey)) {
+    //         return redirect()->back()->with('error', 'Sedang memproses request sebelumnya. Mohon tunggu...');
+    //     }
+    //     Cache::put($lockKey, true, 10);
+    //     // Validasi basic
+    //     $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
+    //     $first = $details->first();
+
+    //     if (strtoupper($first->flagstatus) != 'ACTIVE') {
+    //         Cache::forget($lockKey);
+    //         throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
+    //     }
+    //     if ($details->whereNotNull('nouse')->count() >= 1) {
+    //         Cache::forget($lockKey);
+    //         throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
+    //     }
+
+    //     // Validasi duplikat: lkhno + plot + itemcode
+    //     foreach ($request->itemcode as $lkhno => $items) {
+    //         foreach ($items as $itemcode => $plots) {
+    //             // Group by plot untuk itemcode tertentu di lkhno tertentu
+    //             $plotsForThisItem = array_keys($plots);
+    //             $uniquePlots = array_unique($plotsForThisItem);
+
+    //             if (count($plotsForThisItem) !== count($uniquePlots)) {
+    //                 // Ada duplikat plot untuk itemcode yang sama di lkhno yang sama
+    //                 $duplicatePlots = array_diff_assoc($plotsForThisItem, $uniquePlots);
+    //                 $duplicatePlot = reset($duplicatePlots);
+
+    //                 Cache::forget($lockKey); // ⚠️ UNLOCK
+    //                 return redirect()->back()->withInput()
+    //                     ->with('error', "Duplikat! LKH $lkhno, Plot $duplicatePlot dengan Item $itemcode tidak boleh diinput lebih dari 1 kali.");
+    //             }
+    //         }
+    //     }
+
+    //     // Get existing data dengan key lkhno-itemcode
+    //     $existingData = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get()->keyBy(function ($item) {
+    //         return $item->lkhno . '-' . $item->itemcode;
+    //     });
+
+    //     // Key details by lkhno untuk lookup
+    //     $detailsByLkhno = $details->keyBy('lkhno');
+    //     $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
+
+    //     $insertData = [];
+    //     $apiPayload = [];
+    //     $qtyByItemcode = [];
+    //     $itemDetails = [];
+
+    //     // Process flat - langsung dari request
+    //     foreach ($request->itemcode as $lkhno => $items) {
+    //         $detail = $detailsByLkhno[$lkhno];
+
+    //         foreach ($items as $itemcode => $keys) {
+    //             foreach ($keys as $key => $val) {
+
+    //                 $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
+    //                 $unit = $request->unit[$lkhno][$itemcode][$key] ?? null;
+    //                 $luas = $request->luas[$lkhno][$itemcode][$key] ?? 0;
+    //                 $qtyraw = $luas * $dosage ?? 0;
+    //                 $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
+    //                 // $qty=round($qtyraw / 0.25) * 0.25;
+
+    //                 $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
+    //                 $existing = $existingData->get($existingKey);
+
+    //                 $insertData[] = [
+    //                     'companycode' => session('companycode'),
+    //                     'rkhno' => $request->rkhno,
+    //                     'lkhno' => $lkhno,
+    //                     'itemcode' => $itemcode,
+    //                     'qty' => $qty,
+    //                     'unit' => $unit,
+    //                     'qtyretur' => $existing?->qtyretur ?? 0,
+    //                     'itemname' => $herbisidaItems[$itemcode]->itemname ?? '',
+    //                     'dosageperha' => $dosage,
+    //                     'nouse' => $existing?->nouse ?? null,
+    //                     'plot' => $key
+    //                 ];
+
+    //                 // Jumlahkan qty per itemcode
+    //                 $qtyByItemcode[$itemcode] = ($qtyByItemcode[$itemcode] ?? 0) + $qty;
+
+    //                 // Simpan detail itemcode (ambil yang pertama aja)
+    //                 if (!isset($itemDetails[$itemcode])) {
+    //                     $itemDetails[$itemcode] = [
+    //                         'detail' => $detail,
+    //                         'unit' => $unit
+    //                     ];
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     foreach ($qtyByItemcode as $itemcode => $totalQty) {
+    //         $detail = $itemDetails[$itemcode]['detail'];
+    //         $unit = $itemDetails[$itemcode]['unit'];
+
+    //         $apiPayload[$itemcode] = [
+    //             'CompCodeTerima' => $detail->companyinv,
+    //             'FactoryTerima' => $detail->factoryinv,
+    //             'ItemGrup' => substr($itemcode, 0, 2),
+    //             'CompItemcode' => substr($itemcode, 2),
+    //             'prunit' => $unit,
+    //             'itemprice' => 0,
+    //             'currcode' => 'IDR',
+    //             'itemnote' => $detail->herbisidagroupname,
+    //             'qtybpb' => round($totalQty, 3),
+    //             'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
+    //             'vehiclenumber' => '',
+    //             'flagstatus' => $detail->flagstatus,
+    //             'qtydigunakan' => $detail->qtydigunakan
+    //         ];
+    //     }
+
+    //     // Gunakan DB Transaction untuk keamanan
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Delete existing records
+    //         usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->delete();
+    //         $companyinv = company::where('companycode', session('companycode'))->first();
+    //         // Bulk insert
+    //         usemateriallst::insert($insertData);
+
+    //         // API Call
+    //         if ($details->whereNotNull('nouse')->count() < 1) {
+    //             $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
+    //                 ->asJson()
+    //                 ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
+    //                     'connection' => 'TESTING',
+    //                     'company' => $companyinv->companyinventory,
+    //                     'factory' => $first->factoryinv,
+    //                     'costcenter' => $request->costcenter,
+    //                     'isi' => array_values($apiPayload),
+    //                     'userid' => substr(auth()->user()->userid, 0, 10)
+    //                 ]);
+    //         } else {
+    //             DB::rollback();
+    //             Cache::forget($lockKey);
+    //             dd(
+    //                 'MODE EDIT - Nouse sudah ada',
+    //                 'First data:',
+    //                 $first,
+    //                 'Details count:',
+    //                 $details->whereNotNull('nouse')->count()
+    //             );
+    //         }
+
+    //         // ✅ KEMBALIKAN: Log terpisah untuk success/error
+    //         // DD jika response TIDAK successful
+    //         if (!$response->successful()) {
+    //             dd([
+    //                 'status' => $response->status(),
+    //                 'body' => $response->body(),
+    //                 'payload_sent' => [
+    //                     'company' => $companyinv->companyinventory,
+    //                     'factory' => $first->factoryinv,
+    //                     'costcenter' => $request->costcenter,
+    //                     'isi' => array_values($apiPayload),
+    //                     'userid' => substr(auth()->user()->userid, 0, 10)
+    //                 ]
+    //             ]);
+    //         }
+
+    //         $responseData = $response->json();
+
+    //         // Check response
+    //         if ($response->status() == 200 && $responseData['status'] == 1) {
+
+    //             $itemPriceMap = [];
+    //             foreach ($responseData['stockitem'] as $row) {
+    //                 $itemcode = $row['Itemcode'] ?? null;
+    //                 if ($itemcode) {
+    //                     $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+    //                 }
+    //             }
+
+
+    //             // update nouse & itemprice
+    //             foreach ($itemPriceMap as $itemcode => $itemprice) {
+
+    //                 Log::info("Before DB update:", [
+    //                     'itemcode' => $itemcode,
+    //                     'itemprice' => $itemprice,
+    //                     'type' => gettype($itemprice)
+    //                 ]);
+
+    //                 usemateriallst::where('rkhno', $request->rkhno)
+    //                     ->where('companycode', session('companycode'))
+    //                     ->where('itemcode', $itemcode)
+    //                     ->update([
+    //                         'nouse' => $responseData['noUse'],
+    //                         'itemprice' => $itemprice,
+    //                         'costcenter' => $request->costcenter,
+    //                         'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
+    //                         'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0
+    //                     ]);
+
+    //                 // Cek hasil di database
+    //                 $saved = usemateriallst::where('rkhno', $request->rkhno)
+    //                     ->where('companycode', session('companycode'))
+    //                     ->where('itemcode', $itemcode)
+    //                     ->value('itemprice');
+
+    //                 Log::info("After DB update:", [
+    //                     'itemcode' => $itemcode,
+    //                     'itemprice_saved' => $saved,
+    //                     'type' => gettype($saved)
+    //                 ]);
+    //             }
+
+    //             // Update header status
+    //             usematerialhdr::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->update([
+    //                 'flagstatus' => 'DISPATCHED',
+    //                 'updatedat' => date("Y-m-d H:i:s"),
+    //                 'updateby' => Auth::user()->userid
+    //             ]);
+
+    //             DB::commit();
+    //             Cache::forget($lockKey);
+    //             return redirect()->back()->with('success1', 'Data updated successfully');
+
+    //         } else {
+    //             DB::rollback();
+    //             Cache::forget($lockKey);
+    //             dd([
+    //                 'error' => 'Response gagal 516',
+    //                 'status' => $response->status(),
+    //                 'responseData' => $responseData
+    //             ]);
+    //         }
+
+    //     } catch (\Exception $e) {
+    //         DB::rollback();
+    //         Cache::forget($lockKey);
+    //         Log::error('Submit error', [
+    //             'message' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
+    //     }
+    // }
 
 
 
