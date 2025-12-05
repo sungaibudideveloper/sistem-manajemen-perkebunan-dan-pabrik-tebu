@@ -2,10 +2,10 @@
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\TimelineController;
 use App\Http\Controllers\Dashboard\MapsController;
+use App\Http\Controllers\Pabrik\DashboardPanenPabrikController;
 
 
 
-// Option 2: Gunakan permission yang lebih spesifik
 Route::match(['POST', 'GET'], 'dashboard/agronomi', [DashboardController::class, 'agronomi'])
     ->name('dashboard.agronomi')
     ->middleware('permission:Agronomi');
@@ -33,3 +33,13 @@ Route::match(['POST', 'GET'], 'dashboard/timeline-plot',  [TimelineController::c
 
         Route::match(['POST', 'GET'], 'dashboard/maps/upload',  [MapsController::class, 'upload'])
             ->name('dashboard.maps.upload');
+
+
+
+// Dashboard Panen Pabrik
+Route::group(['middleware' => ['auth', 'permission:Panen Pabrik']], function () {
+    Route::get('pabrik/panen-pabrik', [DashboardPanenPabrikController::class, 'index'])
+        ->name('pabrik.panen-pabrik.index');
+    Route::get('pabrik/panen-pabrik/data', [DashboardPanenPabrikController::class, 'getData'])
+        ->name('pabrik.panen-pabrik.data');
+});
