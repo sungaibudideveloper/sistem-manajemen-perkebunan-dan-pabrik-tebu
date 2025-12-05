@@ -5,7 +5,6 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
     <div class="max-w-full mx-auto">
-        <!-- Header & Filters -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-200">
             <div class="flex justify-between items-start mb-4">
                 <div>
@@ -34,7 +33,6 @@
                 </div>
             </div>
 
-            <!-- Filters -->
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Tanggal</label>
@@ -79,23 +77,17 @@
             </div>
         </div>
 
-        <!-- Loading State -->
         <div id="loadingState" class="hidden bg-white rounded-lg shadow-lg p-12 text-center border border-gray-200">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
             <p class="text-gray-600 font-medium">Memuat data...</p>
         </div>
 
-        <!-- Summary Cards -->
         <div id="summarySection" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <!-- Will be populated by JavaScript -->
-        </div>
+            </div>
 
-        <!-- Data Section (Grouped by Mandor) -->
         <div id="dataSection" class="hidden space-y-6">
-            <!-- Will be populated by JavaScript - one table per mandor -->
-        </div>
+            </div>
 
-        <!-- Empty State -->
         <div id="emptyState" class="bg-white rounded-lg shadow-lg p-12 text-center border border-gray-200">
             <svg class="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -169,10 +161,12 @@
         }
 
         function renderSummary(summary) {
+            // MENGGUNAKAN STYLE ORIGINAL (KOTAK PUTIH SIMPLE)
+            // Tapi datanya adalah Grand Total Summary
             const section = document.getElementById('summarySection');
             section.innerHTML = `
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-800">
-                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Plot</p>
+                    <p class="text-sm text-gray-600 mb-1 font-semibold">Total Plot (Grand Total)</p>
                     <p class="text-3xl font-bold text-gray-900">${summary.total_plots}</p>
                     <div class="mt-2 flex gap-2 text-xs">
                         <span class="px-2 py-1 bg-green-100 text-green-800 rounded">${summary.panen_hari_ini} hari ini</span>
@@ -190,7 +184,7 @@
                     <p class="text-xs text-gray-500 mt-2">Hektar</p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-orange-600">
-                    <p class="text-sm text-gray-600 mb-1 font-semibold">Sisa</p>
+                    <p class="text-sm text-gray-600 mb-1 font-semibold">Sisa (Grand Total)</p>
                     <p class="text-3xl font-bold text-orange-600">${parseFloat(summary.total_sisa).toFixed(2)}</p>
                     <p class="text-xs text-gray-500 mt-2">Hektar • ${parseFloat(summary.avg_progress).toFixed(1)}% progress</p>
                 </div>
@@ -279,32 +273,8 @@
                 
                 section.innerHTML += tableHtml;
             });
-
-            // Add grand total section
-            const grandTotalHtml = `
-                <div class="bg-gray-900 rounded-lg shadow-lg p-6 text-white">
-                    <h3 class="text-lg font-bold mb-4">Grand Total - Semua Mandor</h3>
-                    <div class="grid grid-cols-4 gap-4">
-                        <div class="text-center">
-                            <p class="text-sm opacity-80">Total Plot</p>
-                            <p class="text-2xl font-bold">${summary.total_plots}</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm opacity-80">Luas Batch</p>
-                            <p class="text-2xl font-bold">${parseFloat(summary.total_luas_batch).toFixed(2)} Ha</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm opacity-80">Sudah Dipanen</p>
-                            <p class="text-2xl font-bold">${parseFloat(summary.total_dipanen).toFixed(2)} Ha</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm opacity-80">Sisa</p>
-                            <p class="text-2xl font-bold">${parseFloat(summary.total_sisa).toFixed(2)} Ha</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            section.innerHTML += grandTotalHtml;
+            
+            // GRAND TOTAL DI BAWAH SUDAH DIHAPUS (dipindah ke atas sebagai card)
         }
 
         function renderMandorRows(mandorData) {
