@@ -741,11 +741,11 @@ class RencanaKerjaHarianController extends Controller
             if ($isPanenActivity) {
                 $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
-
                 $kontraktorSummary = $this->getKontraktorSummaryForLkh($companycode, $lkhno);
                 $subkontraktorDetail = $this->getSubkontraktorDetailForLkh($companycode, $lkhno);
                 
-                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
+                // ✅ NEW: Get ongoing plots (not in current LKH but still being harvested by this mandor)
+                $ongoingPlots = $this->getOngoingPlotsForMandor($companycode, $lkhno, $lkhData->mandorid);
 
                 return view('input.rencanakerjaharian.lkh-report-panen', [
                     'title' => 'Laporan Kegiatan Harian (LKH) - Panen',
@@ -753,10 +753,10 @@ class RencanaKerjaHarianController extends Controller
                     'nav' => 'Rencana Kerja Harian',
                     'lkhData' => $lkhData,
                     'lkhPanenDetails' => $lkhPanenDetails,
-                    'lkhWorkerDetails' => $lkhWorkerDetails,
                     'approvals' => $approvals,
                     'kontraktorSummary' => $kontraktorSummary,
-                    'subkontraktorDetail' => $subkontraktorDetail 
+                    'subkontraktorDetail' => $subkontraktorDetail,
+                    'ongoingPlots' => $ongoingPlots  // ✅ NEW
                 ]);
             }
             
@@ -5337,5 +5337,91 @@ public function loadAbsenByDate(Request $request)
                 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * ✅ NEW METHOD: Get ongoing plots for mandor (not in current LKH)
+     * Location: Add to SECTION 3: LKH MANAGEMENT in RencanaKerjaHarianController
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param string $mandorid
+     * @return \Illuminate\Support\Collection
+     */
+    private function getOngoingPlotsForMandor($companycode, $lkhno, $mandorid)
+    {
+        // Get LKH date for reference
+        $lkhDate = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->value('lkhdate');
+        
+        // Get plots in current LKH (to exclude) - ✅ FIXED: Better exclusion
+        $currentLkhPlots = DB::table('lkhdetailplot')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->pluck('plot')
+            ->toArray();
+        
+        // Query ongoing plots for this mandor
+        $ongoingPlots = DB::table('masterlist as m')
+            ->join('batch as b', function($join) use ($companycode) {
+                $join->on('m.activebatchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode);
+            })
+            ->leftJoin(DB::raw('(
+                SELECT 
+                    ldp.plot,
+                    ldp.batchno,
+                    SUM(ldp.luashasil) as total_dipanen,
+                    MAX(lh.lkhdate) as last_harvest_date
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE ldp.companycode = "' . $companycode . '"
+                    AND lh.mandorid = "' . $mandorid . '"
+                    AND lh.approvalstatus = "1"
+                GROUP BY ldp.plot, ldp.batchno
+            ) as harvest_summary'), function($join) {
+                $join->on('m.plot', '=', 'harvest_summary.plot')
+                    ->on('b.batchno', '=', 'harvest_summary.batchno');
+            })
+            ->where('m.companycode', $companycode)
+            ->where('m.isactive', 1)
+            ->where('b.isactive', 1)
+            ->whereNotNull('b.tanggalpanen')
+            ->whereNotNull('harvest_summary.total_dipanen') // ✅ FIXED: Must have harvested before
+            ->whereNotIn('m.plot', $currentLkhPlots) // ✅ FIXED: Explicit exclude current LKH plots
+            ->select([
+                'm.plot',
+                'm.blok',
+                'b.batchno',
+                'b.batcharea',
+                'b.tanggalpanen',
+                'b.lifecyclestatus as kodestatus',
+                DB::raw('COALESCE(harvest_summary.total_dipanen, 0) as total_dipanen'),
+                DB::raw('(b.batcharea - COALESCE(harvest_summary.total_dipanen, 0)) as sisa'),
+                'harvest_summary.last_harvest_date',
+                // ✅ FIXED: Proper days calculation
+                DB::raw('DATEDIFF("' . $lkhDate . '", harvest_summary.last_harvest_date) as days_since_harvest')
+            ])
+            ->havingRaw('sisa > 0')
+            ->orderBy('m.blok')
+            ->orderBy('m.plot')
+            ->get();
+        
+        return $ongoingPlots->map(function($plot) {
+            return (object)[
+                'plot' => $plot->plot,
+                'blok' => $plot->blok,
+                'batchno' => $plot->batchno,
+                'batcharea' => number_format((float)$plot->batcharea, 2),
+                'tanggalpanen' => $plot->tanggalpanen ? Carbon::parse($plot->tanggalpanen)->format('d/m/Y') : '-',
+                'kodestatus' => $plot->kodestatus,
+                'total_dipanen' => number_format((float)$plot->total_dipanen, 2),
+                'sisa' => number_format((float)$plot->sisa, 2),
+                'last_harvest_date' => $plot->last_harvest_date ? Carbon::parse($plot->last_harvest_date)->format('d/m/Y') : '-',
+                'days_since_harvest' => (int)$plot->days_since_harvest
+            ];
+        });
     }
 }

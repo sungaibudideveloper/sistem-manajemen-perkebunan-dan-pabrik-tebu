@@ -74,6 +74,14 @@ Route::group(['middleware' => ['auth', 'permission:Panen Track Plot']], function
         ->name('report.panen-track-plot.data');
 });
 
+// Report Saldo Panen
+Route::group(['middleware' => ['auth', 'permission:Saldo Panen']], function () {
+    Route::get('report/saldo-panen', [App\Http\Controllers\Report\SaldoPanenReportController::class, 'index'])
+        ->name('report.saldo-panen.index');
+    Route::get('report/saldo-panen/data', [App\Http\Controllers\Report\SaldoPanenReportController::class, 'getData'])
+        ->name('report.saldo-panen.data');
+});
+
 // Report Rekap Upah Mingguan
 Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], function () {
     Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan', [RekapUpahMingguanController::class, 'index'])->name('report.rekap-upah-mingguan.index');
