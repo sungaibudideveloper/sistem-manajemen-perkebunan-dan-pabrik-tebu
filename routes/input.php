@@ -1,5 +1,7 @@
 <?php
 
+// routes\input.php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
 use App\Http\Controllers\Input\PiasController;

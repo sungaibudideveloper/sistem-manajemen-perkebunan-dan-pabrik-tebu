@@ -1,4 +1,7 @@
 <?php
+
+// routes\dashboard.php
+
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\TimelineController;
 use App\Http\Controllers\Dashboard\MapsController;

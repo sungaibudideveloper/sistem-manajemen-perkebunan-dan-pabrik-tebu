@@ -1,5 +1,7 @@
 <?php
 
+// routes\masterdata.php
+
 use App\Http\Controllers\MasterData\ActivityController;
 use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\BatchController;

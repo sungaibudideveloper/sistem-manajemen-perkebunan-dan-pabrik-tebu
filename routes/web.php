@@ -1,5 +1,7 @@
 <?php
 
+// routes\web.php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -8,16 +10,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\UsernameLoginController;
 use App\Http\Controllers\LiveChatController;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes - Traditional Blade Views
-|--------------------------------------------------------------------------
-|
-| Routes for traditional server-rendered Blade views and forms
-| Authentication: Session-based
-|
-*/
 
 // Authentication routes
 Route::get('/login', [UsernameLoginController::class, 'showLoginForm'])->name('login');
