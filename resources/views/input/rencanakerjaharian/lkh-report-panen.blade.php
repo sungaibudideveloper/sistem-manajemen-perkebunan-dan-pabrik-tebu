@@ -114,36 +114,36 @@
             </div>
         </div>
 
-        {{-- Section 2: HASIL PANEN --}}
+        {{-- Section 2: LAPORAN PANEN --}}
         <div class="mb-8">
             <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
-                <h3 class="font-bold text-sm uppercase tracking-wide">Hasil Panen</h3>
+                <h3 class="font-bold text-sm uppercase tracking-wide">Laporan Panen</h3>
             </div>
             
             <div class="overflow-x-auto border-x border-b border-gray-300 rounded-b-md">
                 <table class="min-w-full divide-y divide-gray-300 text-xs">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Blok</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Plot</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide">Luas Batch (Ha)</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Status</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Hari</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-orange-50">STC (Ha)</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-green-50">HC (Ha)</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-gray-50">BC (Ha)</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-blue-50">FB Rit</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-blue-50">FB Ton</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Subkontraktor</th>
+                            <th class="px-3 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide w-16">Blok</th>
+                            <th class="px-3 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide w-20">Plot</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide w-24">Luas Batch<br>(Ha)</th>
+                            <th class="px-3 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide w-20">Status</th>
+                            <th class="px-3 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide w-16">Hari</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-orange-50 w-20">STC<br>(Ha)</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-green-50 w-20">HC<br>(Ha)</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-gray-50 w-20">BC<br>(Ha)</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-blue-50 w-20">FB<br>Rit</th>
+                            <th class="px-3 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide bg-blue-50 w-20">FB<br>Ton</th>
+                            <th class="px-3 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide w-64">Subkontraktor</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
                         @forelse($lkhPanenDetails as $item)
                         <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->blok }}</td>
-                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
-                            <td class="px-4 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-3 py-3 text-gray-900 font-medium">{{ $item->blok }}</td>
+                            <td class="px-3 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
+                            <td class="px-3 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
+                            <td class="px-3 py-3 text-center">
                                 <span class="px-2 py-1 rounded text-xs font-medium 
                                     {{ $item->kodestatus == 'PC' ? 'bg-yellow-100 text-yellow-800' : 
                                     ($item->kodestatus == 'RC1' ? 'bg-green-100 text-green-800' : 
@@ -152,7 +152,7 @@
                                     {{ $item->kodestatus ?? '-' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-3 py-3 text-center">
                                 @if($item->haritebang === '-' || is_null($item->haritebang))
                                     <span class="text-gray-400">-</span>
                                 @elseif($item->haritebang == 1)
@@ -162,23 +162,20 @@
                                 @endif
                             </td>
                             
-                            {{-- ✅ STC SELALU tampil (dari RKH planning) --}}
-                            <td class="px-4 py-3 text-right font-semibold text-orange-700 bg-orange-50">
+                            <td class="px-3 py-3 text-right font-semibold text-orange-700 bg-orange-50">
                                 {{ number_format($item->stc, 2) }}
                             </td>
                             
-                            {{-- ✅ HC, BC, FB hanya tampil jika sudah ada input dari Android --}}
                             @if(!is_null($item->hc))
-                                <td class="px-4 py-3 text-right font-semibold text-green-700 bg-green-50">{{ number_format($item->hc, 2) }}</td>
-                                <td class="px-4 py-3 text-right text-gray-700 bg-gray-50">{{ number_format($item->bc, 2) }}</td>
-                                <td class="px-4 py-3 text-right text-blue-700 bg-blue-50">{{ $item->fieldbalancerit ? number_format($item->fieldbalancerit, 2) : '-' }}</td>
-                                <td class="px-4 py-3 text-right text-blue-700 bg-blue-50">{{ $item->fieldbalanceton ? number_format($item->fieldbalanceton, 2) : '-' }}</td>
+                                <td class="px-3 py-3 text-right font-semibold text-green-700 bg-green-50">{{ number_format($item->hc, 2) }}</td>
+                                <td class="px-3 py-3 text-right text-gray-700 bg-gray-50">{{ number_format($item->bc, 2) }}</td>
+                                <td class="px-3 py-3 text-right text-blue-700 bg-blue-50">{{ $item->fieldbalancerit ? number_format($item->fieldbalancerit, 2) : '-' }}</td>
+                                <td class="px-3 py-3 text-right text-blue-700 bg-blue-50">{{ $item->fieldbalanceton ? number_format($item->fieldbalanceton, 2) : '-' }}</td>
                             @else
-                                <td class="px-4 py-3 text-center text-gray-400 italic text-xs" colspan="4">Menunggu input hasil</td>
+                                <td class="px-3 py-3 text-center text-gray-400 italic text-xs" colspan="4">Menunggu input hasil</td>
                             @endif
                             
-                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan hyperlink SJ --}}
-                            <td class="px-4 py-3">
+                            <td class="px-3 py-3">
                                 @php
                                     $plotData = $subkontraktorDetail->where('plot', $item->plot);
                                 @endphp
@@ -188,14 +185,12 @@
                                         $kontraktor = $plotData->first();
                                     @endphp
                                     
-                                    {{-- Header Kontraktor dengan format ID - Nama --}}
                                     <div class="mb-2 pb-2 border-b border-gray-200">
                                         <div class="text-xs font-bold text-gray-800">
                                             {{ $kontraktor->kontraktor_id }} - {{ $kontraktor->kontraktor_nama ?? 'Unknown' }}
                                         </div>
                                     </div>
                                     
-                                    {{-- List Subkontraktor --}}
                                     <div class="space-y-1">
                                         @foreach($plotData as $sk)
                                         <div class="flex items-start gap-2">
@@ -222,7 +217,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="11" class="px-4 py-6 text-center text-gray-500">Tidak ada plot yang direncanakan</td>
+                            <td colspan="11" class="px-3 py-6 text-center text-gray-500">Tidak ada plot yang direncanakan</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -230,12 +225,12 @@
                     @if($lkhPanenDetails->count() > 0)
                     <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300">
                         <tr>
-                            <td colspan="5" class="px-4 py-3 text-right text-gray-900 uppercase">Total:</td>
-                            <td class="px-4 py-3 text-right text-orange-700 bg-orange-50">{{ number_format($lkhPanenDetails->sum('stc'), 2) }}</td>
-                            <td class="px-4 py-3 text-right text-green-700 bg-green-50">{{ number_format($lkhPanenDetails->sum('hc'), 2) }}</td>
-                            <td class="px-4 py-3 text-right text-gray-700 bg-gray-50">{{ number_format($lkhPanenDetails->sum('bc'), 2) }}</td>
-                            <td class="px-4 py-3 text-right text-blue-700 bg-blue-50">{{ number_format($lkhPanenDetails->sum('fieldbalancerit'), 2) }}</td>
-                            <td class="px-4 py-3 text-right text-blue-700 bg-blue-50">{{ number_format($lkhPanenDetails->sum('fieldbalanceton'), 2) }}</td>
+                            <td colspan="5" class="px-3 py-3 text-right text-gray-900 uppercase text-xs">Total:</td>
+                            <td class="px-3 py-3 text-right text-orange-700 bg-orange-50">{{ number_format($lkhPanenDetails->sum('stc'), 2) }}</td>
+                            <td class="px-3 py-3 text-right text-green-700 bg-green-50">{{ number_format($lkhPanenDetails->sum('hc'), 2) }}</td>
+                            <td class="px-3 py-3 text-right text-gray-700 bg-gray-50">{{ number_format($lkhPanenDetails->sum('bc'), 2) }}</td>
+                            <td class="px-3 py-3 text-right text-blue-700 bg-blue-50">{{ number_format($lkhPanenDetails->sum('fieldbalancerit'), 2) }}</td>
+                            <td class="px-3 py-3 text-right text-blue-700 bg-blue-50">{{ number_format($lkhPanenDetails->sum('fieldbalanceton'), 2) }}</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -244,164 +239,118 @@
             </div>
         </div>
 
-        {{-- Section 3: PETAK BARU (Hari Tebang = 1) --}}
+        {{-- Section 3: PETAK BARU HARI INI (COMPACT 1/3 WIDTH) --}}
         @php
             $petakBaru = $lkhPanenDetails->filter(function($item) {
                 return $item->haritebang == 1;
             });
         @endphp
 
-        <div class="mb-8">
+        <div class="mb-8 max-w-md">
             <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
                 <h3 class="font-bold text-sm uppercase tracking-wide">Petak Baru Hari Ini</h3>
+                <p class="text-xs text-gray-300 mt-1">Plot yang baru mulai dipanen hari ini (Hari Tebang 1)</p>
+            </div>
+            
+            <div class="border-x border-b border-gray-300 rounded-b-md bg-white">
+                @forelse($petakBaru as $item)
+                    <div class="px-4 py-3 border-b border-gray-200 hover:bg-yellow-50 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-gray-900">{{ $item->blok }}-{{ $item->plot }}</span>
+                            <span class="text-sm text-gray-600">{{ number_format($item->batcharea, 2) }} Ha</span>
+                        </div>
+                    </div>
+                @empty
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                        </svg>
+                        <p class="text-sm font-medium">Tidak ada petak baru hari ini</p>
+                    </div>
+                @endforelse
+                
+                @if($petakBaru->count() > 0)
+                <div class="bg-yellow-50 px-4 py-3 border-t-2 border-gray-300">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="font-bold text-gray-900 uppercase">Total:</span>
+                        <span class="font-bold text-gray-900">
+                            {{ $petakBaru->count() }} Plot • {{ number_format($petakBaru->sum('batcharea'), 2) }} Ha
+                        </span>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- ✅ NEW Section 4: PLOT MASIH ONGOING --}}
+        <div class="mb-8">
+            <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
+                <h3 class="font-bold text-sm uppercase tracking-wide">Plot Masih Ongoing</h3>
+                <p class="text-xs text-gray-300 mt-1">Plot yang sedang dipanen namun tidak ada di laporan hari ini</p>
             </div>
             
             <div class="overflow-x-auto border-x border-b border-gray-300 rounded-b-md">
                 <table class="min-w-full divide-y divide-gray-300 text-xs">
-                    <thead class="bg-yellow-50">
+                    <thead class="bg-gray-50">
                         <tr>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Blok</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Plot</th>
-                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide">Luas (Ha)</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Subkontraktor</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Batch No</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Status</th>
+                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide">Luas Batch (Ha)</th>
+                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide">Total Dipanen (Ha)</th>
+                            <th class="px-4 py-3 text-right font-semibold text-gray-700 uppercase tracking-wide">Sisa (Ha)</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wide">Terakhir Panen</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700 uppercase tracking-wide">Skip (Hari)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
-                        @forelse($petakBaru as $item)
-                        <tr class="hover:bg-yellow-50 transition-colors bg-yellow-50/30">
-                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->blok }}</td>
-                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $item->plot }}</td>
-                            <td class="px-4 py-3 text-right text-gray-700">{{ number_format($item->batcharea, 2) }}</td>
-                            
-                            {{-- ✅ UPDATED: Kolom Subkontraktor dengan hyperlink SJ untuk Petak Baru --}}
-                            <td class="px-4 py-3">
-                                @php
-                                    $plotData = $subkontraktorDetail->where('plot', $item->plot);
-                                @endphp
-                                
-                                @if($plotData->count() > 0)
-                                    <div class="text-xs">
-                                        @foreach($plotData as $sk)
-                                            <div class="mb-1">
-                                                <span class="font-semibold text-gray-900">{{ $sk->subkontraktor_nama ?? $sk->subkontraktor_id }}</span>
-                                                <button 
-                                                    onclick="showSJModal('{{ $item->plot }}', '{{ $sk->subkontraktor_id }}')"
-                                                    class="text-blue-600 hover:text-blue-800 underline ml-1 no-print cursor-pointer"
-                                                >
-                                                    ({{ $sk->jumlah_sj }} SJ)
-                                                </button>
-                                                <span class="text-gray-500 ml-1 print-only">({{ $sk->jumlah_sj }} SJ)</span>
-                                            </div>
-                                        @endforeach
-                                    </div>
+                        @forelse($ongoingPlots as $plot)
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $plot->blok }}</td>
+                            <td class="px-4 py-3 text-gray-900 font-medium">{{ $plot->plot }}</td>
+                            <td class="px-4 py-3 text-gray-900 font-mono text-xs">{{ $plot->batchno }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 rounded text-xs font-medium 
+                                    {{ $plot->kodestatus == 'PC' ? 'bg-yellow-100 text-yellow-800' : 
+                                    ($plot->kodestatus == 'RC1' ? 'bg-green-100 text-green-800' : 
+                                    ($plot->kodestatus == 'RC2' ? 'bg-blue-100 text-blue-800' : 
+                                    ($plot->kodestatus == 'RC3' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'))) }}">
+                                    {{ $plot->kodestatus }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-right text-gray-700">{{ $plot->batcharea }}</td>
+                            <td class="px-4 py-3 text-right text-green-700 font-semibold">{{ $plot->total_dipanen }}</td>
+                            <td class="px-4 py-3 text-right text-orange-700 font-semibold">{{ $plot->sisa }}</td>
+                            <td class="px-4 py-3 text-gray-700 text-xs">{{ $plot->last_harvest_date }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($plot->days_since_harvest == 1)
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-semibold">1 hari</span>
+                                @elseif($plot->days_since_harvest >= 3)
+                                    <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-bold">{{ $plot->days_since_harvest }} hari</span>
+                                @elseif($plot->days_since_harvest > 1)
+                                    <span class="text-gray-700">{{ $plot->days_since_harvest }} hari</span>
                                 @else
-                                    <span class="text-gray-400 italic text-xs">Belum ada SJ</span>
+                                    <span class="text-gray-400">Hari ini</span>
                                 @endif
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-gray-500">Tidak ada petak baru hari ini</td>
+                            <td colspan="9" class="px-4 py-6 text-center text-gray-500">
+                                <div class="flex flex-col items-center gap-2">
+                                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <p class="text-sm font-medium">Tidak ada plot ongoing lainnya</p>
+                                    <p class="text-xs text-gray-400">Semua plot yang sedang dipanen sudah tercatat di laporan hari ini</p>
+                                </div>
+                            </td>
                         </tr>
                         @endforelse
                     </tbody>
-                    @if($petakBaru->count() > 0)
-                    <tfoot class="bg-yellow-50 font-semibold border-t-2 border-gray-300">
-                        <tr>
-                            <td colspan="2" class="px-4 py-3 text-right text-gray-900 uppercase">Total Petak Baru:</td>
-                            <td class="px-4 py-3 text-right text-gray-900">{{ number_format($petakBaru->sum('batcharea'), 2) }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $petakBaru->count() }} Plot</td>
-                        </tr>
-                    </tfoot>
-                    @endif
                 </table>
             </div>
-        </div>
-
-        {{-- Section 4: TENAGA HARIAN --}}
-        <div class="mb-8">
-            <div class="bg-gray-800 text-white px-4 py-3 rounded-t-md">
-                <h3 class="font-bold text-sm uppercase tracking-wide">Tenaga Harian</h3>
-            </div>
-            
-            @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
-            <div class="overflow-x-auto border-x border-b border-gray-300 rounded-b-md">
-                <table class="w-full border-collapse bg-white text-xs">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-8">No</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-40">Nama Pekerja</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-32">NIK</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Masuk</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Selesai</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Kerja</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Overtime</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Premi</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Harian</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Lembur</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Total Upah</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($lkhWorkerDetails as $index => $worker)
-                        <tr class="hover:bg-gray-50">
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-medium">
-                                {{ $worker->tenagakerja->nama ?? $worker->tenagakerjaid ?? 'N/A' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono">
-                                {{ $worker->tenagakerja->nik ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
-                                {{ $worker->jammasuk ? \Carbon\Carbon::parse($worker->jammasuk)->format('H:i') : '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
-                                {{ $worker->jamselesai ? \Carbon\Carbon::parse($worker->jamselesai)->format('H:i') : '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm">
-                                {{ ($worker->totaljamkerja ?? 0) > 0 ? number_format($worker->totaljamkerja, 0) . ' jam' : '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm">
-                                {{ ($worker->overtimehours ?? 0) > 0 ? number_format($worker->overtimehours, 0) . ' jam' : '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
-                                Rp {{ number_format($worker->premi ?? 0, 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
-                                Rp {{ number_format($worker->upahharian ?? 0, 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
-                                Rp {{ number_format($worker->upahlembur ?? 0, 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
-                                Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm text-gray-600">
-                                {{ $worker->keterangan ?? '-' }}
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot class="bg-gray-100 font-semibold">
-                        <tr>
-                            <td colspan="9" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm">
-                                Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
-                                Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            @else
-            <div class="border-x border-b border-gray-300 rounded-b-md bg-gray-50 py-6">
-                <p class="text-center text-gray-500 text-sm">Tidak menggunakan tenaga harian</p>
-            </div>
-            @endif
         </div>
 
         <!-- Keterangan Section -->
@@ -495,10 +444,9 @@
         </div>
     </div>
 
-    {{-- ✅ MODAL SJ --}}
+    {{-- MODAL SJ (unchanged) --}}
     <div id="sjModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden items-center justify-center no-print">
         <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <!-- Modal Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
                 <h3 class="text-lg font-bold text-white" id="modalTitle">Daftar Surat Jalan</h3>
                 <button 
@@ -511,7 +459,6 @@
                 </button>
             </div>
 
-            <!-- Modal Body -->
             <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                 <div id="modalLoading" class="text-center py-8">
                     <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -543,7 +490,6 @@
                             </tr>
                         </thead>
                         <tbody id="sjTableBody" class="divide-y divide-gray-200 bg-white">
-                            <!-- Data will be inserted here via JavaScript -->
                         </tbody>
                     </table>
 
@@ -564,7 +510,6 @@
                 </div>
             </div>
 
-            <!-- Modal Footer -->
             <div class="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-200">
                 <button 
                     onclick="closeSJModal()"
@@ -636,16 +581,13 @@
             const content = document.getElementById('modalContent');
             const error = document.getElementById('modalError');
             
-            // Show modal
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             
-            // Reset states
             loading.classList.remove('hidden');
             content.classList.add('hidden');
             error.classList.add('hidden');
             
-            // Set plot and subkontraktor info
             document.getElementById('modalPlot').textContent = plot;
             
             try {
@@ -653,10 +595,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Update subkontraktor name
                     document.getElementById('modalSubkontraktor').textContent = data.subkontraktor_nama || subkontraktorId;
                     
-                    // Populate table
                     const tbody = document.getElementById('sjTableBody');
                     tbody.innerHTML = '';
                     
@@ -718,14 +658,12 @@
             modal.classList.remove('flex');
         }
 
-        // Close modal on backdrop click
         document.getElementById('sjModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeSJModal();
             }
         });
 
-        // Close modal on ESC key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeSJModal();

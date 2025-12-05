@@ -1,5 +1,7 @@
 <?php
 
+// routes\pabrik.php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Pabrik\TrashController;
 
