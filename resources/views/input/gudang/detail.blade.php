@@ -189,7 +189,8 @@ table th, table td {
                             {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha && $item->activitycode == $activitycode ? 'selected' : '' }}
                             data-dosage="{{$item->dosageperha}}" 
                             data-measure="{{ $item->measure }}" 
-                            data-itemname="{{ $item->itemname }}">
+                            data-itemname="{{ $item->itemname }}"
+                            data-rounddosage="{{ $item->rounddosage ?? 1 }}">
                         {{$item->activitycode}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
                     </option>
                 @endforeach
@@ -474,7 +475,15 @@ $(document).on('input', '.selected-dosage', function(){
           const dosage = parseFloat(String(row.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
           const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
           const qtyRaw    = dosage * luas;
-          const qty    = roundTo25(qtyRaw);
+          const opt         = row.find('.item-select option:selected');
+          const rounddosage = parseInt(opt.data('rounddosage')) || 0;
+
+            let qty;
+            if (rounddosage) {
+                qty = roundTo25(qtyRaw);     // dibulatkan
+            } else {
+                qty = qtyRaw;                // tidak dibulatkan
+            }
 
          console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
 

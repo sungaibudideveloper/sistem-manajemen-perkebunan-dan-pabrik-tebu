@@ -137,7 +137,8 @@ class GudangController extends Controller
                 'd.herbisidagroupid',
                 'hg.herbisidagroupname',
                 'hg.activitycode',
-                'hg.description'
+                'hg.description',
+                'hg.rounddosage'
             )
             ->orderBy('d.herbisidagroupid')
             ->orderBy('d.itemcode')
@@ -317,6 +318,10 @@ public function submit(Request $request)
     $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
     $first = $details->first();
 
+    $roundingByGroup = DB::table('herbisidagroup')
+    ->where('companycode', session('companycode'))
+    ->pluck('rounddosage', 'herbisidagroupid');
+
     if (strtoupper($first->flagstatus) != 'ACTIVE') {
         Cache::forget($lockKey);
         throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
@@ -373,7 +378,22 @@ public function submit(Request $request)
                 $unit = $request->unit[$lkhno][$itemcode][$key] ?? null;
                 $luas = $request->luas[$lkhno][$itemcode][$key] ?? 0;
                 $qtyraw = $luas * $dosage ?? 0;
-                $qty = $qtyraw > 0 ? max(0.25, round($qtyraw / 0.25) * 0.25) : 0;
+
+                // ambil group & flag rounding
+                $groupId     = $detail->herbisidagroupid ?? null;
+                $rounddosage = $groupId !== null ? ($roundingByGroup[$groupId] ?? 1) : 1; // default: masih rounded seperti lama
+
+                if ($qtyraw > 0) {
+                    if ($rounddosage) {
+                        // dibulatkan ke 0.25
+                        $qty = max(0.25, round($qtyraw / 0.25) * 0.25);
+                    } else {
+                        // tidak dibulatkan
+                        $qty = $qtyraw;
+                    }
+                } else {
+                    $qty = 0;
+                }
 
                 $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                 $existing = $existingData->get($existingKey);
