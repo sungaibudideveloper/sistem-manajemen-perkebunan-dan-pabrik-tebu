@@ -2812,11 +2812,14 @@ public function loadAbsenByDate(Request $request)
         $lastRkh = DB::table('rkhhdr')
             ->where('companycode', $companycode)
             ->whereDate('rkhdate', $targetDate)
-            ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
+            ->where('rkhno', 'like', "RKH{$day}{$month}%{$year}")
             ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
             ->first();
 
-        $newNumber = $lastRkh ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT) : '01';
+        $newNumber = $lastRkh 
+            ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT)
+            : '01';
+            
         return "RKH{$day}{$month}{$newNumber}{$year}";
     }
 
@@ -3276,22 +3279,54 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
 
         return DB::transaction(function () use ($carbonDate, $day, $month, $year, $companycode) {
+            // ✅ LOCK: Get last RKH for this SPECIFIC date
             $lastRkh = DB::table('rkhhdr')
                 ->where('companycode', $companycode)
-                ->whereDate('rkhdate', $carbonDate)
-                ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
-                ->lockForUpdate()
+                ->whereDate('rkhdate', $carbonDate->format('Y-m-d')) // ✅ Exact date match
+                ->where('rkhno', 'like', "RKH{$day}{$month}%{$year}")
+                ->lockForUpdate() // 🔒 CRITICAL: Lock untuk prevent race condition
                 ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
                 ->first();
 
             if ($lastRkh) {
+                // Extract sequence dari position 8-9 (0-indexed: position 7, length 2)
                 $lastNumber = (int)substr($lastRkh->rkhno, 7, 2);
                 $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+                
+                \Log::info("RKH sequence increment", [
+                    'date' => $carbonDate->format('Y-m-d'),
+                    'last_rkhno' => $lastRkh->rkhno,
+                    'last_sequence' => $lastNumber,
+                    'new_sequence' => $newNumber
+                ]);
             } else {
                 $newNumber = '01';
+                
+                \Log::info("RKH first sequence for date", [
+                    'date' => $carbonDate->format('Y-m-d'),
+                    'new_sequence' => $newNumber
+                ]);
             }
 
-            return "RKH{$day}{$month}{$newNumber}{$year}";
+            $rkhno = "RKH{$day}{$month}{$newNumber}{$year}";
+            
+            // ✅ EXTRA SAFETY: Check kalau rkhno sudah exist (seharusnya impossible dengan lock)
+            $exists = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->exists();
+                
+            if ($exists) {
+                \Log::error("DUPLICATE RKH NUMBER DETECTED!", [
+                    'rkhno' => $rkhno,
+                    'companycode' => $companycode,
+                    'date' => $carbonDate->format('Y-m-d')
+                ]);
+                
+                throw new \Exception("Duplicate RKH number: {$rkhno}. Please refresh and try again.");
+            }
+            
+            return $rkhno;
         });
     }
 

@@ -1262,13 +1262,22 @@ function initializeFormSubmit() {
 }
 
 function submitForm(form) {
-
-
-
+  const submitBtn = document.getElementById('submit-btn');
+  
+  // ✅ CRITICAL: Prevent double submission
+  if (submitBtn.disabled) {
+    console.warn('⚠️ Form already submitting, ignoring duplicate request');
+    return false;
+  }
+  
+  // ✅ Disable button IMMEDIATELY to prevent race condition
+  submitBtn.disabled = true;
+  submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  
   showLoadingState();
   const formData = new FormData(form);
 
-    console.log('=== FORM DATA DEBUG ===');
+  console.log('=== FORM DATA DEBUG ===');
   for (let [key, value] of formData.entries()) {
     if (key.includes('rows')) {
       console.log(key, '=', value);
@@ -1284,20 +1293,40 @@ function submitForm(form) {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     }
   })
-  .then(response => response.json())
+  .then(response => {
+    // ✅ Check if response is OK before parsing JSON
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.success) {
       showModal('success', data.message);
+      // ✅ Don't re-enable button on success (will redirect anyway)
+      // submitBtn will stay disabled to prevent accidental re-submit
     } else {
       const errors = data.errors ? Object.values(data.errors).flat() : [];
       showModal('error', data.message || 'Terjadi kesalahan saat menyimpan data', errors);
+      
+      // ✅ Re-enable button only on validation/business logic errors
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
   })
   .catch(error => {
-    console.error('Error:', error);
-    showModal('error', 'Terjadi kesalahan sistem');
+    console.error('❌ Submit Error:', error);
+    showModal('error', 'Terjadi kesalahan sistem: ' + error.message);
+    
+    // ✅ Re-enable button on network/system errors so user can retry
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
   })
-  .finally(() => hideLoadingState());
+  .finally(() => {
+    hideLoadingState();
+  });
+  
+  return false; // ✅ Prevent default form submission
 }
 
 // ============================================================
