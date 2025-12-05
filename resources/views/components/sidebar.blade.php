@@ -184,15 +184,6 @@ $item->name
         @foreach ($navigationMenus as $menu)
        
         @php
-        // DEBUG: Tambahkan console.log di sini (INSIDE LOOP)
-        if ($menu->slug === 'masterdata') {
-            $permissionName = $navComposer->getPermissionName('masterdata', 'tenagakerja');
-            echo "<script>console.log('Permission needed for tenagakerja: " . $permissionName . "');</script>";
-            
-            $hasAccess = $navComposer->hasPermission($permissionName);
-            echo "<script>console.log('User has permission: " . ($hasAccess ? 'YES' : 'NO') . "');</script>";
-        }
-
         // Check permission untuk menu utama
         if (!$hasPermission($menu->slug)) {
         continue; // Skip menu jika user tidak ada permission

@@ -152,7 +152,7 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
         }
 
-        // ✅ BACKEND VALIDATION: Double-check for outstanding RKH
+        // BACKEND VALIDATION: Double-check for outstanding RKH
         $companycode = Session::get('companycode');
         $outstandingRKH = DB::table('rkhhdr')
             ->where('companycode', $companycode)
@@ -183,13 +183,17 @@ class RencanaKerjaHarianController extends Controller
         // Load form data
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
+        $selectedMandor = DB::table('user')
+        ->where('userid', $mandorId)
+        ->first();
+
         return view('input.rencanakerjaharian.create', array_merge([
             'title' => 'Form RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
             'rkhno' => $previewRkhNo,
             'selectedDate' => $targetDate->format('Y-m-d'),
-            'selectedMandorId' => $mandorId, // ✅ NEW: Pass mandor_id
+            'selectedMandor' => $selectedMandor,
             'oldInput' => old(),
         ], $formData));
     }
@@ -2882,7 +2886,17 @@ public function loadAbsenByDate(Request $request)
                         AND lh2.approvalstatus = "1"
                         ORDER BY lh2.lkhdate DESC
                         LIMIT 1
-                    ) as last_activityname')
+                    ) as last_activityname'),
+                    DB::raw('(
+                        SELECT lh2.lkhdate
+                        FROM lkhdetailplot ldp2
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        WHERE ldp2.companycode = "' . $companycode . '"
+                        AND ldp2.plot = m.plot
+                        AND lh2.approvalstatus = "1"
+                        ORDER BY lh2.lkhdate DESC
+                        LIMIT 1
+                    ) as last_activity_date')
                 ])
                 ->orderBy('m.blok')
                 ->orderBy('m.plot')
@@ -2903,7 +2917,7 @@ public function loadAbsenByDate(Request $request)
                     $join->on('m.activebatchno', '=', 'b.batchno')
                         ->where('b.companycode', '=', $companycode);
                 })
-                ->where('m.companycode', $companycode) // Filter by company
+                ->where('m.companycode', $companycode)
                 ->where('m.isactive', 1)
                 ->select([
                     'm.companycode',

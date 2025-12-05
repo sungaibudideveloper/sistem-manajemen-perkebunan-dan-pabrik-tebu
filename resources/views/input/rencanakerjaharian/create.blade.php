@@ -96,27 +96,17 @@
           <input type="hidden" name="rkhno" value="{{ $rkhno }}">
 
           <!-- Mandor -->
-          <div x-data="mandorPicker()" x-init="
-            @if(old('mandor_id') || request('mandor_id'))
-                selected = {
-                    userid: '{{ old('mandor_id', request('mandor_id')) }}',
-                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id', request('mandor_id')))->name ?? '' }}'
-                }
-            @else
-                checkIfUserIsMandor()
-            @endif
-          ">
+          <div>
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
                 type="text"
                 name="mandor"
                 id="mandor"
                 readonly
-                placeholder="Mandor telah dipilih"
-                :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
+                value="{{ $selectedMandor->userid ?? '' }} - {{ $selectedMandor->name ?? '' }}"
                 class="w-full text-sm font-medium border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
             >
-            <input type="hidden" name="mandor_id" x-model="selected.userid">
+            <input type="hidden" name="mandor_id" value="{{ $selectedMandor->userid ?? '' }}">
           </div>
 
           <!-- Tanggal -->
@@ -853,6 +843,8 @@ window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
 window.vehiclesData = @json($vehiclesData ?? []);
 window.helpersData = @json($helpersData ?? []);
+
+window.rkhDate = '{{ $selectedDate }}';
 
 window.currentUser = {
   userid: '{{ Auth::user()->userid ?? '' }}',
@@ -1653,19 +1645,17 @@ function cleanupValidationListeners() {
 // ============================================================
 // ABSEN SUMMARY UPDATE
 // ============================================================
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-  if (!selectedMandorId || !window.absenData) {
+function updateAbsenSummary() {
+  const mandorId = document.querySelector('input[name="mandor_id"]')?.value;
+  
+  if (!mandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
     document.getElementById('summary-perempuan').textContent = '0';
     document.getElementById('summary-total').textContent = '0';
     return;
   }
 
-  if (selectedMandorCode && selectedMandorName) {
-    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName}`;
-  }
-
-  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === selectedMandorId);
+  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === mandorId);
   let lakiCount = 0, perempuanCount = 0;
 
   filteredAbsen.forEach(absen => {
@@ -1677,6 +1667,14 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-perempuan').textContent = perempuanCount;
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
+
+// ✅ Call on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateAbsenSummary(); // Auto-update absen summary
+  initializeRowValidation();
+  initializeValidationStyles();
+  initializeFormSubmit();
+});
 
 // ============================================================
 // PLOT AUTO-UPDATE (Updated - dari AJAX)
