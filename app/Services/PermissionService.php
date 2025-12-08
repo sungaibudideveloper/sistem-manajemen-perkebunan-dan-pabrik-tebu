@@ -49,6 +49,11 @@ class PermissionService
         // Use session company if not provided
         $companycode = $companycode ?? session('companycode');
         
+        // ✅ CRITICAL: Return false if no company selected (handle session lama/rusak)
+        if (!$companycode) {
+            return false;
+        }
+        
         // Request-level cache key
         $requestCacheKey = "{$user->userid}_{$user->idjabatan}_{$companycode}";
 
@@ -74,6 +79,11 @@ class PermissionService
     public static function getUserPermissions(User $user, ?string $companycode = null): array
     {
         $companycode = $companycode ?? session('companycode');
+        
+        // ✅ Return empty if no company
+        if (!$companycode) {
+            return [];
+        }
         
         // Cache key with APP_KEY hash to prevent encryption errors after key rotation
         $appKeyHash = substr(md5(config('app.key')), 0, 8);
@@ -106,10 +116,10 @@ class PermissionService
      * 3. Jabatan (role) permissions
      * 
      * @param User $user
-     * @param string $companycode
+     * @param string|null $companycode  ✅ UBAH: nullable
      * @return array
      */
-    private static function calculateUserPermissions(User $user, string $companycode): array
+    private static function calculateUserPermissions(User $user, ?string $companycode): array
     {
         $permissions = [];
 
@@ -131,28 +141,30 @@ class PermissionService
             $permissions[$key] = true;
         }
 
-        // STEP 2: Apply user-specific overrides
-        $userOverrides = DB::table('userpermission as up')
-            ->join('permission as p', 'up.permissionid', '=', 'p.id')
-            ->where('up.userid', $user->userid)
-            ->where('up.companycode', $companycode)
-            ->where('up.isactive', 1)
-            ->where('p.isactive', 1)
-            ->select(
-                'p.module',
-                'p.resource',
-                'p.action',
-                'up.permissiontype'
-            )
-            ->get();
+        // ✅ STEP 2: Apply user-specific overrides (only if companycode exists)
+        if ($companycode) {
+            $userOverrides = DB::table('userpermission as up')
+                ->join('permission as p', 'up.permissionid', '=', 'p.id')
+                ->where('up.userid', $user->userid)
+                ->where('up.companycode', $companycode)
+                ->where('up.isactive', 1)
+                ->where('p.isactive', 1)
+                ->select(
+                    'p.module',
+                    'p.resource',
+                    'p.action',
+                    'up.permissiontype'
+                )
+                ->get();
 
-        foreach ($userOverrides as $override) {
-            $key = "{$override->module}.{$override->resource}.{$override->action}";
-            
-            if ($override->permissiontype === 'GRANT') {
-                $permissions[$key] = true;
-            } elseif ($override->permissiontype === 'DENY') {
-                unset($permissions[$key]); // Remove permission
+            foreach ($userOverrides as $override) {
+                $key = "{$override->module}.{$override->resource}.{$override->action}";
+                
+                if ($override->permissiontype === 'GRANT') {
+                    $permissions[$key] = true;
+                } elseif ($override->permissiontype === 'DENY') {
+                    unset($permissions[$key]); // Remove permission
+                }
             }
         }
 
