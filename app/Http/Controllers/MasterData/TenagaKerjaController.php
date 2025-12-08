@@ -326,7 +326,7 @@ class TenagaKerjaController extends Controller
                     $errorCount++;
                     continue;
                 }
-                
+                    
                 // Check if NIK already exists
                 if (!empty($nik)) {
                     $nikExists = TenagaKerja::where('nik', $nik)->exists();
