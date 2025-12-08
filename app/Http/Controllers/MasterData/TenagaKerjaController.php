@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\TenagaKerja;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class TenagaKerjaController extends Controller
 {
@@ -107,6 +110,276 @@ class TenagaKerjaController extends Controller
     }
 
     /**
+     * Download template Excel untuk bulk upload
+     */
+    public function downloadTemplate()
+    {
+        $companycode = session('companycode');
+        
+        // Get data untuk dropdown
+        $mandor = User::where('idjabatan', 5)
+            ->where('isactive', 1)
+            ->where('companycode', $companycode)
+            ->orderBy('userid')
+            ->get();
+            
+        $jenistenagakerja = DB::table('jenistenagakerja')
+            ->orderBy('idjenistenagakerja')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        
+        // Sheet 1: Template untuk input data
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Data');
+        
+        // Keterangan/Instruksi di bagian atas
+        $sheet->setCellValue('A1', 'KETERANGAN:');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A1')->getFont()->getColor()->setRGB('FF0000');
+        
+        $sheet->setCellValue('A2', '- Untuk cek Mandor User ID, klik tab dibawah "Daftar Mandor"');
+        $sheet->setCellValue('A3', '- Sebelum mengisi Jenis Tenaga Kerja ID, harap melihat terlebih dahulu tab "Jenis Tenaga Kerja" untuk mencocokan ID nya');
+        $sheet->setCellValue('A4', '- Pastikan semua data diisi dengan benar sesuai format');
+        
+        $sheet->getStyle('A2:A4')->getFont()->setItalic(true)->setSize(10);
+        $sheet->getStyle('A2:A4')->getFont()->getColor()->setRGB('666666');
+        
+        // Merge cells untuk keterangan
+        $sheet->mergeCells('A2:E2');
+        $sheet->mergeCells('A3:E3');
+        $sheet->mergeCells('A4:E4');
+        
+        // Header tabel mulai dari row 6
+        $headers = ['Mandor User ID', 'Nama Tenaga Kerja', 'NIK', 'Gender (L/P)', 'Jenis Tenaga Kerja ID'];
+        $sheet->fromArray($headers, null, 'A6');
+        
+        // Style header
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ];
+        $sheet->getStyle('A6:E6')->applyFromArray($headerStyle);
+        
+        // Contoh data di row 7
+        $sheet->setCellValue('A7', $mandor->first()->userid ?? 'MDR001');
+        $sheet->setCellValue('B7', 'Contoh: Budi Santoso');
+        $sheet->setCellValue('C7', '3201234567890123');
+        $sheet->setCellValue('D7', 'L');
+        $sheet->setCellValue('E7', '1');
+        
+        // Style untuk contoh data
+        $exampleStyle = [
+            'font' => ['italic' => true, 'color' => ['rgb' => '999999']],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CCCCCC']
+                ]
+            ]
+        ];
+        $sheet->getStyle('A7:E7')->applyFromArray($exampleStyle);
+        
+        // Auto width
+        foreach(range('A','E') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        
+        // Set minimum width untuk kolom
+        $sheet->getColumnDimension('A')->setWidth(20);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        $sheet->getColumnDimension('C')->setWidth(20);
+        $sheet->getColumnDimension('D')->setWidth(15);
+        $sheet->getColumnDimension('E')->setWidth(25);
+        
+        // Sheet 2: Daftar Mandor
+        $mandorSheet = $spreadsheet->createSheet();
+        $mandorSheet->setTitle('Daftar Mandor');
+        $mandorSheet->fromArray(['User ID', 'Nama Mandor'], null, 'A1');
+        $mandorSheet->getStyle('A1:B1')->applyFromArray($headerStyle);
+        
+        $row = 2;
+        foreach($mandor as $m) {
+            $mandorSheet->setCellValue('A' . $row, $m->userid);
+            $mandorSheet->setCellValue('B' . $row, $m->name);
+            $row++;
+        }
+        $mandorSheet->getColumnDimension('A')->setAutoSize(true);
+        $mandorSheet->getColumnDimension('B')->setAutoSize(true);
+        
+        // Sheet 3: Daftar Jenis Tenaga Kerja
+        $jenisSheet = $spreadsheet->createSheet();
+        $jenisSheet->setTitle('Jenis Tenaga Kerja');
+        $jenisSheet->fromArray(['ID', 'Nama Jenis'], null, 'A1');
+        $jenisSheet->getStyle('A1:B1')->applyFromArray($headerStyle);
+        
+        $row = 2;
+        foreach($jenistenagakerja as $jenis) {
+            $jenisSheet->setCellValue('A' . $row, $jenis->idjenistenagakerja);
+            $jenisSheet->setCellValue('B' . $row, $jenis->nama);
+            $row++;
+        }
+        $jenisSheet->getColumnDimension('A')->setAutoSize(true);
+        $jenisSheet->getColumnDimension('B')->setAutoSize(true);
+        
+        // Set active sheet kembali ke template
+        $spreadsheet->setActiveSheetIndex(0);
+        
+        // Download file
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'Template_Upload_Tenaga_Kerja_' . date('Ymd_His') . '.xlsx';
+        
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Bulk upload tenaga kerja dari Excel
+     */
+    public function bulkUpload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls|max:2048'
+        ]);
+
+        $companycode = session('companycode');
+        $file = $request->file('file');
+        
+        try {
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+            
+            // Remove keterangan (row 1-6) dan header row (row 6)
+            // Data dimulai dari row 7, tapi karena array index 0, maka row 7 = index 6
+            $dataRows = array_slice($rows, 6); // Ambil dari index 6 ke bawah (row 7 dst)
+            
+            $successCount = 0;
+            $errorCount = 0;
+            $errors = [];
+            
+            DB::beginTransaction();
+            
+            foreach($dataRows as $index => $row) {
+                $rowNumber = $index + 7; // +7 karena data mulai row 7 di Excel
+                
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+                
+                $mandoruserid = trim($row[0] ?? '');
+                $nama = trim($row[1] ?? '');
+                $nik = trim($row[2] ?? '');
+                $gender = strtoupper(trim($row[3] ?? ''));
+                $jenistenagakerja = trim($row[4] ?? '');
+                
+                // Validation
+                if (empty($nama)) {
+                    $errors[] = "Baris $rowNumber: Nama tidak boleh kosong";
+                    $errorCount++;
+                    continue;
+                }
+                
+                if (empty($mandoruserid)) {
+                    $errors[] = "Baris $rowNumber: Mandor UserID tidak boleh kosong";
+                    $errorCount++;
+                    continue;
+                }
+                
+                if (!in_array($gender, ['L', 'P'])) {
+                    $errors[] = "Baris $rowNumber: Gender harus L atau P";
+                    $errorCount++;
+                    continue;
+                }
+                
+                // Check if mandor exists
+                $mandorExists = User::where('userid', $mandoruserid)
+                    ->where('idjabatan', 5)
+                    ->where('companycode', $companycode)
+                    ->exists();
+                    
+                if (!$mandorExists) {
+                    $errors[] = "Baris $rowNumber: Mandor dengan UserID '$mandoruserid' tidak ditemukan";
+                    $errorCount++;
+                    continue;
+                }
+                
+                // Check if jenis tenaga kerja exists
+                $jenisExists = DB::table('jenistenagakerja')
+                    ->where('idjenistenagakerja', $jenistenagakerja)
+                    ->exists();
+                    
+                if (!$jenisExists) {
+                    $errors[] = "Baris $rowNumber: Jenis Tenaga Kerja ID '$jenistenagakerja' tidak ditemukan";
+                    $errorCount++;
+                    continue;
+                }
+                
+                // Check if NIK already exists
+                if (!empty($nik)) {
+                    $nikExists = TenagaKerja::where('nik', $nik)->exists();
+                    if ($nikExists) {
+                        $errors[] = "Baris $rowNumber: NIK '$nik' sudah terdaftar";
+                        $errorCount++;
+                        continue;
+                    }
+                }
+                
+                // Generate next ID
+                $nextId = $this->generateNextId($companycode);
+                
+                // Insert data
+                TenagaKerja::create([
+                    'tenagakerjaid' => $nextId,
+                    'mandoruserid' => $mandoruserid,
+                    'companycode' => $companycode,
+                    'nama' => $nama,
+                    'nik' => $nik ?: null,
+                    'gender' => $gender,
+                    'jenistenagakerja' => $jenistenagakerja,
+                    'inputby' => Auth::user()->userid,
+                    'createdat' => now(),
+                    'isactive' => 1
+                ]);
+                
+                $successCount++;
+            }
+            
+            DB::commit();
+            
+            $message = "Upload selesai: $successCount data berhasil";
+            $errormessage = "Upload Tidak Berhasil";
+            if ($errorCount > 0) {
+                $message .= ", $errorCount data gagal";
+            }
+            
+            if (!empty($errors)) {
+                return redirect()->back()
+                    ->with('error', $errormessage)
+                    ->with('upload_errors', $errors);
+            }
+            
+            return redirect()->back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Store a newly created tenaga kerja in storage.
      */
     public function store(Request $request)
@@ -118,7 +391,6 @@ class TenagaKerjaController extends Controller
             'gender' => 'required|in:L,P',
             'jenis' => 'required|exists:jenistenagakerja,idjenistenagakerja',
         ]);
-
 
         $companycode = session('companycode');
         
@@ -134,6 +406,7 @@ class TenagaKerjaController extends Controller
                 ->withInput()
                 ->withErrors(['id' => 'Gagal mendapatkan ID unik']);
         }
+        
         TenagaKerja::create([
             'tenagakerjaid' => $nextId,
             'mandoruserid' => $request->mandor,

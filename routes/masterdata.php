@@ -250,8 +250,11 @@ Route::middleware(['auth', 'permission:Tenagakerja'])->group(function () {
     Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
     Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
     Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
+    
+    // Bulk upload routes
+    Route::get('masterdata/tenagakerja/download-template', [TenagaKerjaController::class, 'downloadTemplate'])->name('masterdata.tenagakerja.download-template');
+    Route::post('masterdata/tenagakerja/bulk-upload', [TenagaKerjaController::class, 'bulkUpload'])->name('masterdata.tenagakerja.bulk-upload');
 });
-
 // Menu management
 Route::middleware(['auth', 'permission:Menu'])->group(function () {
     Route::get('usermanagement/menu', [MenuController::class, 'index'])->name('usermanagement.menu.index');
