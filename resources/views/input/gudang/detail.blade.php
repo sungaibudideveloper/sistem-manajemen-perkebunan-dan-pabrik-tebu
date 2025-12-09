@@ -339,24 +339,28 @@ table th, table td {
 
         <!--@if(hasPermission('Menu Gudang'))-->
             <!-- Submit Button -->
-            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
-            <div class="flex justify-center mt-4">
-                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
-                    type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
-                >
-                    Penyerahan
-                </button>
+            <!-- DEBUG INFO (hapus setelah selesai) -->
+            <div class="text-center mb-2 p-2 bg-yellow-100">
+                <p>flagstatus: {{ $details[0]->flagstatus }}</p>
+                <p>Kondisi ACTIVE: {{ strtoupper($details[0]->flagstatus) == 'ACTIVE' ? 'TRUE' : 'FALSE' }}</p>
+                <p>Nouse count: {{ $details->whereNotNull('nouse')->count() }}</p>
+                <p>Kondisi < 1: {{ $details->whereNotNull('nouse')->count() < 1 ? 'TRUE' : 'FALSE' }}</p>
             </div>
+
+            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
+                @if($details->whereNotNull('nouse')->count() < 1)
+                <div class="flex justify-center mt-4">
+                    <button type="submit" class="bg-green-600...">
+                        Penyerahan
+                    </button>
+                </div>
+                @else
+                <p class="text-center text-red-600">Button tersembunyi karena ada NOUSE</p>
+                @endif
+            @else
+            <p class="text-center text-red-600">Button tersembunyi karena status bukan ACTIVE</p>
             @endif
-                        <div class="flex justify-center mt-4">
-                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
-                    type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
-                >
-                    Penyerahan
-                </button>
-            </div>
+            
         </form>
         <!--@endif-->
         
