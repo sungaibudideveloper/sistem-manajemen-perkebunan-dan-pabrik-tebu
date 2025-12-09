@@ -221,17 +221,17 @@ Route::middleware(['auth', 'permission:Split Merge Plot'])->group(function () {
         ->name('masterdata.split-merge-plot.getApprovalDetail');
     Route::get('masterdata/split-merge-plot/batch/{batchno}', [SplitMergePlotController::class, 'getBatchDetails'])
         ->name('masterdata.split-merge-plot.batch-details');
-    
+
     // Check plot name availability - TAMBAHKAN DI SINI
     Route::get('masterdata/split-merge-plot/check-plot', [SplitMergePlotController::class, 'checkPlotExists'])
         ->name('masterdata.split-merge-plot.check-plot');
-    
+
     // Create split/merge REQUEST (not execute)
     Route::post('masterdata/split-merge-plot/split', [SplitMergePlotController::class, 'split'])
         ->name('masterdata.split-merge-plot.split');
     Route::post('masterdata/split-merge-plot/merge', [SplitMergePlotController::class, 'merge'])
         ->name('masterdata.split-merge-plot.merge');
-    
+
     // Delete transaction (waiting approval only)
     Route::delete('masterdata/split-merge-plot/{transactionNumber}', [SplitMergePlotController::class, 'destroy'])
         ->name('masterdata.split-merge-plot.destroy');
@@ -250,11 +250,24 @@ Route::middleware(['auth', 'permission:Tenagakerja'])->group(function () {
     Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
     Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
     Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
-    
+
     // Bulk upload routes
     Route::get('masterdata/tenagakerja/download-template', [TenagaKerjaController::class, 'downloadTemplate'])->name('masterdata.tenagakerja.download-template');
     Route::post('masterdata/tenagakerja/bulk-upload', [TenagaKerjaController::class, 'bulkUpload'])->name('masterdata.tenagakerja.bulk-upload');
 });
+
+// Route::middleware(['auth', 'permission:Create Tenaga Kerja'])->group(function () {
+//     Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
+// });
+// Route::middleware(['auth', 'permission:Edit Tenaga Kerja'])->group(function () {
+// Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
+// });
+// Route::middleware(['auth', 'permission:Hapus Tenaga Kerja'])->group(function () {
+// Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
+// });
+
+
+
 // Menu management
 Route::middleware(['auth', 'permission:Menu'])->group(function () {
     Route::get('usermanagement/menu', [MenuController::class, 'index'])->name('usermanagement.menu.index');

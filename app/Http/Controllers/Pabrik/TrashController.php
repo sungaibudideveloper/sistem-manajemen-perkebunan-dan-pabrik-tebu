@@ -31,7 +31,7 @@ class TrashController extends Controller
         }
 
         // Order by suratjalanno aja, jangan created_at
-        $query->orderBy('suratjalanno', 'desc');
+        $query->orderBy('createddate', 'desc');
 
         $data = $query->paginate($perPage);
 
