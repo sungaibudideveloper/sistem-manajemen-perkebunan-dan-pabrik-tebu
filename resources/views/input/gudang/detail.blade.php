@@ -175,6 +175,7 @@ table th, table td {
                 } else {
                     $activitycode = $d->activitycode;
                 }
+                dd($details[0], strtoupper($details[0]->flagstatus) == 'ACTIVE');
             @endphp
         
             <select
