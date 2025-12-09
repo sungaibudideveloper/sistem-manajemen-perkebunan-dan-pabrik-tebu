@@ -1,4 +1,3 @@
-<!-- resources\views\usermanagement\user-activity\index.blade.php -->
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -32,10 +31,10 @@
         selectedUserName: '',
         selectedCompanycode: '',
         selectedActivities: [],
-        currentUserActivities: [],
         isLoadingActivities: false,
         availableUsers: @js($users->toArray()),
-        availableActivityGroups: @js(array_values($activitygroup->toArray())),
+        availableActivityGroups: @js($activitygroup->keys()->toArray()),
+        activityGroupNames: @js($activitygroup->toArray()),
         
         openActivityModal() {
             this.editMode = false;
@@ -43,7 +42,6 @@
             this.selectedUserName = '';
             this.selectedCompanycode = '';
             this.selectedActivities = [];
-            this.currentUserActivities = [];
             this.isLoadingActivities = false;
             this.activityModal = true;
         },
@@ -53,50 +51,37 @@
             this.selectedUser = userid;
             this.selectedUserName = username;
             this.selectedCompanycode = companycode;
-            
-            // Parse activities (comma-separated string to array)
             this.selectedActivities = activities ? activities.split(',').map(s => s.trim()) : [];
-            this.currentUserActivities = [...this.selectedActivities];
             this.isLoadingActivities = false;
             this.activityModal = true;
         },
         
-        loadCurrentUserActivities() {
+        async loadCurrentUserActivities() {
             if (!this.selectedUser) {
                 this.selectedActivities = [];
-                this.currentUserActivities = [];
                 return;
             }
             
-            // Find selected user name
             const user = this.availableUsers.find(u => u.userid === this.selectedUser);
             this.selectedUserName = user ? user.name : '';
             
             this.isLoadingActivities = true;
             
-            // Fetch current user activities via AJAX
-            fetch(`/usermanagement/user-activity-permission/${this.selectedUser}/{{ session('companycode') }}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Response berisi array of activities string (comma-separated)
-                        // Kita parse jadi array
-                        const activitiesStr = data.activities[0] || '';
-                        this.currentUserActivities = activitiesStr ? activitiesStr.split(',').map(s => s.trim()) : [];
-                        this.selectedActivities = [...this.currentUserActivities];
-                    } else {
-                        this.currentUserActivities = [];
-                        this.selectedActivities = [];
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading activities:', error);
-                    this.currentUserActivities = [];
+            try {
+                const response = await fetch(`{{ url('usermanagement/user-activities') }}/${this.selectedUser}/{{ $companycode }}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.selectedActivities = data.activities || [];
+                } else {
                     this.selectedActivities = [];
-                })
-                .finally(() => {
-                    this.isLoadingActivities = false;
-                });
+                }
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                this.selectedActivities = [];
+            } finally {
+                this.isLoadingActivities = false;
+            }
         },
         
         toggleActivity(activitygroup) {
@@ -118,6 +103,10 @@
         
         deselectAllActivities() {
             this.selectedActivities = [];
+        },
+        
+        getActivityName(code) {
+            return this.activityGroupNames[code] || code;
         }
     }" class="mx-auto py-4 bg-white rounded-md shadow-md">
 
@@ -144,7 +133,8 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span>Assign Activity Groups</span>
+                        <span class="hidden sm:inline">Assign Activity Groups</span>
+                        <span class="sm:hidden">Assign</span>
                     </button>
                 </div>
 
@@ -152,15 +142,15 @@
                 <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
 
                     <!-- Search Form -->
-                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                    <form method="GET" action="{{ route('usermanagement.user-activity.index') }}" class="flex items-center gap-2">
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
                         <input type="text" name="search" id="search"
                             value="{{ request('search') }}"
-                            placeholder="User ID, Nama, Activity..."
+                            placeholder="User ID, Nama..."
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                        <a href="{{ route('usermanagement.user-activity-permission.index') }}"
+                        <a href="{{ route('usermanagement.user-activity.index') }}"
                             class="text-gray-500 hover:text-gray-700 px-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -173,7 +163,7 @@
                     </form>
 
                     <!-- Per Page Form -->
-                    <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                    <form method="GET" action="{{ route('usermanagement.user-activity.index') }}" class="flex items-center gap-2">
                         <label for="perPage" class="text-xs font-medium text-gray-700 whitespace-nowrap">Per halaman:</label>
                         <select name="perPage" id="perPage" onchange="this.form.submit()"
                             class="text-xs w-20 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 py-2">
@@ -187,6 +177,16 @@
                         @endif
                     </form>
                 </div>
+            </div>
+        </div>
+
+        <!-- Info Banner -->
+        <div class="px-4 py-2.5 bg-blue-50 border-b border-blue-200">
+            <div class="flex items-center text-sm text-blue-800">
+                <svg class="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Activity Groups mengontrol akses user ke modul/fitur tertentu per company</span>
             </div>
         </div>
 
@@ -205,62 +205,50 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse ($result as $activity)
+                        @php
+                            $activityCodes = explode(',', $activity->activitygroups);
+                        @endphp
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="py-3 px-3 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div>
-                                        <div class="text-sm font-medium text-gray-900">
-                                            {{ $activity->user->name ?? 'N/A' }}
-                                        </div>
-                                        <div class="text-sm text-gray-500">{{ $activity->userid }}</div>
-                                    </div>
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-gray-900">{{ $activity->user->name ?? 'N/A' }}</span>
+                                    <span class="text-xs text-gray-500">{{ $activity->userid }}</span>
                                 </div>
                             </td>
                             <td class="py-3 px-3">
-                                <div class="text-sm text-gray-900">
-                                    <div class="font-medium">{{ $activity->companycode }}</div>
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-gray-900">{{ $activity->companycode }}</span>
                                     @if($activity->company)
-                                    <div class="text-xs text-gray-500">{{ $activity->company->name }}</div>
+                                        <span class="text-xs text-gray-500">{{ $activity->company->name }}</span>
                                     @endif
                                 </div>
                             </td>
                             <td class="py-3 px-3">
-                                @php
-                                // Parse comma-separated codes: "I,II,III"
-                                $codes = collect(explode(',', $activity->activitygroup))
-                                    ->map(fn($c) => trim($c))
-                                    ->filter();
-
-                                // Flip untuk mapping: ["IV" => "Pemanenan", ...]
-                                $codeToName = $activitygroup->flip();
-
-                                // Convert codes to names
-                                $names = $codes->map(fn($c) => $codeToName->get($c, $c));
-                                @endphp
-
                                 <div class="flex flex-wrap gap-1">
-                                    @foreach ($names as $name)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ $name }}
-                                    </span>
+                                    @foreach ($activityCodes as $code)
+                                        @php
+                                            $code = trim($code);
+                                            $name = $activitygroup->get($code, $code);
+                                        @endphp
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ $code }} - {{ $name }}
+                                        </span>
                                     @endforeach
                                 </div>
                             </td>
                             <td class="py-3 px-3">
-                                <div class="text-sm text-gray-500">
-                                    {{ $activity->grantedby ?? '-' }}
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-gray-700">{{ $activity->grantedby ?? '-' }}</span>
+                                    @if($activity->createdat)
+                                        <span class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($activity->createdat)->format('d/m/Y H:i') }}</span>
+                                    @endif
                                 </div>
-                                @if($activity->createdat)
-                                <div class="text-xs text-gray-400">
-                                    {{ $activity->createdat->format('d M Y H:i') }}
-                                </div>
-                                @endif
                             </td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
-                                    <button @click="openEditModal('{{ $activity->userid }}', '{{ addslashes($activity->user->name ?? 'N/A') }}', '{{ $activity->companycode }}', '{{ $activity->activitygroup }}')"
-                                        class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-1 transition-all duration-150"
+                                    <button @click="openEditModal('{{ $activity->userid }}', '{{ addslashes($activity->user->name ?? 'N/A') }}', '{{ $activity->companycode }}', '{{ $activity->activitygroups }}')"
+                                        class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
                                         title="Edit Activity Groups">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -268,13 +256,13 @@
                                     </button>
 
                                     <!-- Delete Button -->
-                                    <form action="{{ route('usermanagement.user-activity-permission.destroy', [$activity->userid, $activity->companycode, $activity->activitygroup]) }}"
+                                    <form action="{{ route('usermanagement.user-activity.destroy', [$activity->userid, $activity->companycode]) }}"
                                         method="POST"
-                                        onsubmit="return confirm('Hapus semua activity groups dari user ini?')">
+                                        onsubmit="return confirm('Hapus semua activity groups dari user {{ $activity->user->name ?? $activity->userid }}?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
-                                            class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-1 transition-all duration-150"
+                                            class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md p-2 transition-all duration-150"
                                             title="Hapus">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -292,7 +280,9 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                     </svg>
                                     <p class="text-lg font-medium">Tidak ada data activity assignment</p>
-                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada user yang di-assign activity groups untuk company ini' }}</p>
+                                    <p class="text-sm mt-1">
+                                        {{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada user yang di-assign activity groups untuk company ini' }}
+                                    </p>
                                 </div>
                             </td>
                         </tr>
@@ -317,140 +307,138 @@
         <div x-show="activityModal"
             x-cloak
             class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-            @click.self="activityModal = false">
+            @click.self="activityModal = false"
+            @keydown.escape.window="activityModal = false">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[80vh] overflow-y-auto">
-                <div class="mt-3">
-                    <!-- Modal Header -->
-                    <div class="flex justify-between items-center mb-4 pb-3 border-b">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900" x-text="editMode ? 'Edit Activity Groups' : 'Assign Activity Groups'">
-                            </h3>
-                            <p class="text-xs text-gray-500 mt-1">
-                                Company: <span class="font-medium text-blue-600" x-text="editMode ? selectedCompanycode : '{{ $companycode }}'"></span>
-                            </p>
+                
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-4 pb-3 border-b">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" x-text="editMode ? 'Edit Activity Groups' : 'Assign Activity Groups'"></h3>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Company: <span class="font-medium text-blue-600" x-text="editMode ? selectedCompanycode : '{{ $companycode }}'"></span>
+                        </p>
+                    </div>
+                    <button @click="activityModal = false"
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Form Content -->
+                <form method="POST" action="{{ route('usermanagement.user-activity.assign') }}">
+                    @csrf
+                    <input type="hidden" name="companycode" :value="editMode ? selectedCompanycode : '{{ $companycode }}'">
+
+                    <!-- User Selection (Create Mode Only) -->
+                    <div class="mb-4" x-show="!editMode">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Pilih User <span class="text-red-500">*</span>
+                        </label>
+                        <select name="userid"
+                            x-model="selectedUser"
+                            @change="loadCurrentUserActivities()"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :required="!editMode">
+                            <option value="">-- Pilih User --</option>
+                            @foreach($users as $user)
+                            <option value="{{ $user->userid }}">
+                                {{ $user->userid }} - {{ $user->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Hanya menampilkan user yang memiliki akses ke company ini
                         </div>
-                        <button @click="activityModal = false"
-                            class="text-gray-400 hover:text-gray-600 transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
                     </div>
 
-                    <!-- Form Content -->
-                    <form method="POST" action="{{ route('usermanagement.user-activity-permission.assign') }}">
-                        @csrf
-                        <input type="hidden" name="companycode" :value="editMode ? selectedCompanycode : '{{ $companycode }}'">
+                    <!-- User Info (Edit Mode) -->
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200" x-show="editMode">
+                        <input type="hidden" name="userid" :value="selectedUser">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            <div>
+                                <div class="text-sm font-medium text-blue-900" x-text="selectedUserName"></div>
+                                <div class="text-xs text-blue-600" x-text="selectedUser"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- User Selection (Create Mode Only) -->
-                        <div class="mb-4" x-show="!editMode">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Pilih User <span class="text-red-500">*</span>
+                    <!-- Loading State -->
+                    <div x-show="isLoadingActivities && !editMode" class="text-center py-4">
+                        <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <p class="mt-2 text-gray-600 text-sm">Loading current activities...</p>
+                    </div>
+
+                    <!-- Activity Groups Selection -->
+                    <div class="mb-4" x-show="(selectedUser && !isLoadingActivities) || editMode">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="block text-sm font-medium text-gray-700">
+                                Activity Groups
                             </label>
-                            <select name="userid"
-                                x-model="selectedUser"
-                                @change="loadCurrentUserActivities()"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                :required="!editMode">
-                                <option value="">-- Pilih User --</option>
-                                @foreach($users as $user)
-                                <option value="{{ $user->userid }}">
-                                    {{ $user->userid }} - {{ $user->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            <div class="text-xs text-gray-500 mt-1">
-                                Hanya menampilkan user yang memiliki akses ke company ini
+                            <div class="space-x-2">
+                                <button type="button"
+                                    @click="selectAllActivities()"
+                                    class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                    Select All
+                                </button>
+                                <span class="text-gray-300">|</span>
+                                <button type="button"
+                                    @click="deselectAllActivities()"
+                                    class="text-xs text-red-600 hover:text-red-800 font-medium">
+                                    Deselect All
+                                </button>
                             </div>
                         </div>
 
-                        <!-- User Info (Edit Mode) -->
-                        <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200" x-show="editMode">
-                            <input type="hidden" name="userid" :value="selectedUser">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        <!-- Activity Checkboxes -->
+                        <div class="max-h-64 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
+                            @foreach($activitygroup as $code => $name)
+                            <label class="flex items-center space-x-3 p-2 border rounded hover:bg-blue-50 cursor-pointer transition-colors">
+                                <input type="checkbox"
+                                    name="activitygroups[]"
+                                    value="{{ $code }}"
+                                    :checked="isActivitySelected('{{ $code }}')"
+                                    @change="toggleActivity('{{ $code }}')"
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm text-gray-900">{{ $code }} - {{ $name }}</div>
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+
+                        <!-- Selected Count -->
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg" x-show="selectedActivities.length > 0">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <div>
-                                    <div class="text-sm font-medium text-blue-900" x-text="selectedUserName"></div>
-                                    <div class="text-xs text-blue-600" x-text="selectedUser"></div>
-                                </div>
+                                <span class="text-sm font-medium text-blue-900">
+                                    <span x-text="selectedActivities.length"></span> activity groups dipilih
+                                </span>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Loading State -->
-                        <div x-show="isLoadingActivities && !editMode" class="text-center py-4">
-                            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                            <p class="mt-2 text-gray-600 text-sm">Loading current activities...</p>
-                        </div>
-
-                        <!-- Activity Groups Selection -->
-                        <div class="mb-4" x-show="(selectedUser && !isLoadingActivities) || editMode">
-                            <div class="flex justify-between items-center mb-3">
-                                <label class="block text-sm font-medium text-gray-700">
-                                    Activity Groups
-                                </label>
-                                <div class="space-x-2">
-                                    <button type="button"
-                                        @click="selectAllActivities()"
-                                        class="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                                        Select All
-                                    </button>
-                                    <span class="text-gray-300">|</span>
-                                    <button type="button"
-                                        @click="deselectAllActivities()"
-                                        class="text-xs text-red-600 hover:text-red-800 font-medium">
-                                        Deselect All
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Activity Checkboxes -->
-                            <div class="max-h-64 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
-                                @foreach($activitygroup as $groupname => $activityname)
-                                <label class="flex items-center space-x-3 p-2 border rounded hover:bg-blue-50 cursor-pointer transition-colors">
-                                    <input type="checkbox"
-                                        name="activitygroups[]"
-                                        value="{{ $activityname }}"
-                                        x-model="selectedActivities"
-                                        :checked="isActivitySelected('{{ $activityname }}')"
-                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-sm text-gray-900">{{ $activityname }}</div>
-                                        <div class="text-xs text-gray-500">{{ $groupname }}</div>
-                                    </div>
-                                </label>
-                                @endforeach
-                            </div>
-
-                            <!-- Selected Count -->
-                            <div class="mt-3 p-3 bg-blue-50 rounded-lg" x-show="selectedActivities.length > 0">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-blue-900">
-                                        <span x-text="selectedActivities.length"></span> activity groups dipilih
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Modal Actions -->
-                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 pt-4 border-t">
-                            <button type="button" @click="activityModal = false"
-                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
-                                Batal
-                            </button>
-                            <button type="submit"
-                                :disabled="!selectedUser && !editMode"
-                                :class="(!selectedUser && !editMode) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
-                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
-                                x-text="editMode ? 'Update Activity Groups' : 'Simpan Activity Groups'">
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Modal Actions -->
+                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 pt-4 border-t">
+                        <button type="button" @click="activityModal = false"
+                            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            :disabled="(!selectedUser && !editMode) || isLoadingActivities"
+                            :class="((!selectedUser && !editMode) || isLoadingActivities) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                            class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
+                            x-text="editMode ? 'Update Activity Groups' : 'Simpan Activity Groups'">
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
