@@ -359,6 +359,14 @@ table th, table td {
                     Penyerahan TEST
                 </button>
             </div>
+            @else
+                        <div class="flex justify-center mt-4">
+                <button 
+                    
+                >
+                    {{strtoupper($details[0]->flagstatus)}}
+                </button>
+            </div>
             @endif
         </form>
         <!--@endif-->
