@@ -83,7 +83,6 @@
                 // ✅ Extract permission IDs - support both 'id' and 'permissionid' keys
                 this.selectedPermissions = data.permissions.map(p => p.id || p.permissionid);
                 this.isLoadingPermissions = false;
-                console.log('Loaded permissions:', this.selectedPermissions); // Debug
             } catch (error) {
                 console.error('Error loading permissions:', error);
                 this.isLoadingPermissions = false;
