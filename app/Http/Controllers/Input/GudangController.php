@@ -49,66 +49,62 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
-        if (hasPermission('Menu Gudang')) {
-            $usematerialhdr = new usematerialhdr;
-            $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
+        $usematerialhdr = new usematerialhdr;
+        $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
-            // Validasi perPage
-            if ($request->isMethod('post')) {
-                $request->validate(['perPage' => 'required|integer|min:1']);
-                $request->session()->put('perPage', $request->input('perPage'));
-            }
-
-            $perPage = $request->session()->get('perPage', 10);
-
-            // Filter parameters
-            $search = $request->input('search');
-            $startDate = $request->input('start_date', now()->subMonths(2)->format('Y-m-d'));
-            $endDate = $request->input('end_date', now()->format('Y-m-d'));
-
-            // Query dengan filter
-            $usehdr = usematerialhdr::from('usematerialhdr as a')
-                ->join('rkhhdr as b', function ($join) {
-                    $join->on('a.rkhno', '=', 'b.rkhno')
-                        ->on('a.companycode', '=', 'b.companycode');
-                })
-                ->join('user as c', 'b.mandorid', '=', 'c.userid')
-                ->leftJoinSub(
-                    usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
-                        ->groupBy('rkhno'),
-                    'd',
-                    'a.rkhno',
-                    '=',
-                    'd.rkhno'
-                )
-                ->where('a.companycode', session('companycode'))
-                ->whereDate('a.createdat', '>=', $startDate)
-                ->whereDate('a.createdat', '<=', $endDate);
-
-            // Filter search
-            if ($search) {
-                $usehdr->where(function ($q) use ($search) {
-                    $q->where('a.rkhno', 'like', "%{$search}%")
-                        ->orWhere('c.name', 'like', "%{$search}%");
-                });
-            }
-
-            $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse')
-                ->orderBy('a.createdat', 'desc')
-                ->paginate($perPage)
-                ->appends($request->query());
-
-            return view('input.gudang.home')->with([
-                'title' => 'Gudang',
-                'usehdr' => $usehdr,
-                'perPage' => $perPage,
-                'search' => $search,
-                'startDate' => $startDate,
-                'endDate' => $endDate
-            ]);
-        } else {
-            return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
+        // Validasi perPage
+        if ($request->isMethod('post')) {
+            $request->validate(['perPage' => 'required|integer|min:1']);
+            $request->session()->put('perPage', $request->input('perPage'));
         }
+
+        $perPage = $request->session()->get('perPage', 10);
+
+        // Filter parameters
+        $search = $request->input('search');
+        $startDate = $request->input('start_date', now()->subMonths(2)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+
+        // Query dengan filter
+        $usehdr = usematerialhdr::from('usematerialhdr as a')
+            ->join('rkhhdr as b', function ($join) {
+                $join->on('a.rkhno', '=', 'b.rkhno')
+                    ->on('a.companycode', '=', 'b.companycode');
+            })
+            ->join('user as c', 'b.mandorid', '=', 'c.userid')
+            ->leftJoinSub(
+                usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
+                    ->groupBy('rkhno'),
+                'd',
+                'a.rkhno',
+                '=',
+                'd.rkhno'
+            )
+            ->where('a.companycode', session('companycode'))
+            ->whereDate('a.createdat', '>=', $startDate)
+            ->whereDate('a.createdat', '<=', $endDate);
+
+        // Filter search
+        if ($search) {
+            $usehdr->where(function ($q) use ($search) {
+                $q->where('a.rkhno', 'like', "%{$search}%")
+                    ->orWhere('c.name', 'like', "%{$search}%");
+            });
+        }
+
+        $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse')
+            ->orderBy('a.createdat', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        return view('input.gudang.home')->with([
+            'title' => 'Gudang',
+            'usehdr' => $usehdr,
+            'perPage' => $perPage,
+            'search' => $search,
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]);
     }
 
     public function detail(Request $request)

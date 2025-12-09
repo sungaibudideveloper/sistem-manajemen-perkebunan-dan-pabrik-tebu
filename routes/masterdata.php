@@ -7,7 +7,6 @@ use App\Http\Controllers\MasterData\BlokController;
 use App\Http\Controllers\MasterData\BatchController;
 use App\Http\Controllers\MasterData\CompanyController;
 use App\Http\Controllers\MasterData\MasterListController;
-use App\Http\Controllers\MasterData\PlottingController;
 use App\Http\Controllers\MasterData\HerbisidaController;
 use App\Http\Controllers\MasterData\HerbisidaGroupController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
@@ -17,409 +16,298 @@ use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
 use App\Http\Controllers\MasterData\TenagaKerjaController;
-use App\Http\Controllers\MasterData\Aplikasi\MenuController;
-use App\Http\Controllers\MasterData\Aplikasi\SubmenuController;
-use App\Http\Controllers\MasterData\Aplikasi\SubsubmenuController;
 use App\Http\Controllers\MasterData\UpahController;
 use App\Http\Controllers\MasterData\KendaraanController;
-use App\Http\Controllers\MasterData\UserManagementController;
 use App\Http\Controllers\MasterData\KontraktorController;
 use App\Http\Controllers\MasterData\SubkontraktorController;
 use App\Http\Controllers\MasterData\SplitMergePlotController;
 
-/*
-|--------------------------------------------------------------------------
-| Master Data Routes
-|--------------------------------------------------------------------------
-|
-| Routes for managing master data throughout the application.
-| Includes company, plot, worker, wage, and user management.
-|
-*/
-
-// Company management
-Route::middleware(['auth', 'permission:Company'])->group(function () {
-    Route::get('masterdata/company', [CompanyController::class, 'index'])->name('masterdata.company.index');
-    Route::post('masterdata/company', [CompanyController::class, 'handle'])->name('masterdata.company.handle');
-});
-
-Route::middleware('permission:Edit Company')->group(function () {
-    Route::put('masterdata/company/{companycode}', [CompanyController::class, 'update'])->name('masterdata.company.update');
-});
-
-Route::middleware('permission:Hapus Company')->group(function () {
-    Route::delete('masterdata/company/{companycode}', [CompanyController::class, 'destroy'])->name('masterdata.company.destroy');
-});
-
-// Blok management
-Route::middleware(['auth', 'permission:Blok'])->group(function () {
-    Route::get('masterdata/blok', [BlokController::class, 'index'])->name('masterdata.blok.index');
-    Route::post('masterdata/blok', [BlokController::class, 'handle'])->name('masterdata.blok.handle');
-});
-
-Route::middleware('permission:Edit Blok')->group(function () {
-    Route::put('masterdata/blok/{blok}/{companycode}', [BlokController::class, 'update'])->name('masterdata.blok.update');
-});
-
-Route::middleware('permission:Hapus Blok')->group(function () {
-    Route::delete('masterdata/blok/{blok}/{companycode}', [BlokController::class, 'destroy'])->name('masterdata.blok.destroy');
-});
-
-// Plotting management
-Route::middleware(['auth', 'permission:Plotting'])->group(function () {
-    Route::get('masterdata/plotting', [PlottingController::class, 'index'])->name('masterdata.plotting.index');
-    Route::post('masterdata/plotting', [PlottingController::class, 'handle'])->name('masterdata.plotting.handle');
-    Route::post('masterdata/plotting/add-to-masterlist', [PlottingController::class, 'addToMasterlist'])->name('masterdata.plotting.addToMasterlist');
-});
-
-Route::middleware('permission:Edit Plotting')->group(function () {
-    Route::put('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'update'])->name('masterdata.plotting.update');
-});
-
-Route::middleware('permission:Hapus Plotting')->group(function () {
-    Route::delete('masterdata/plotting/{plot}/{companycode}', [PlottingController::class, 'destroy'])->name('masterdata.plotting.destroy');
-});
-
-// Herbisida management
-Route::middleware(['auth', 'permission:Herbisida'])->group(function () {
-    Route::get('masterdata/herbisida', [HerbisidaController::class, 'index'])->name('masterdata.herbisida.index');
-    Route::post('masterdata/herbisida', [HerbisidaController::class, 'store'])->name('masterdata.herbisida.store');
-    Route::get('masterdata/herbisida/group', [HerbisidaController::class, 'group'])->name('masterdata.herbisida.group');
-    Route::get('masterdata/herbisida/items', function (\Illuminate\Http\Request $request) {
-        return \App\Models\Herbisida::where('companycode', $request->companycode)
-            ->select('itemcode', 'itemname')
-            ->orderBy('itemcode')
-            ->get();
-    })->name('masterdata.herbisida.items');
-});
-
-Route::middleware(['auth', 'permission:Edit Herbisida'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'update'])->name('masterdata.herbisida.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Herbisida'])->group(function () {
-    Route::delete('masterdata/herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'destroy'])->name('masterdata.herbisida.destroy');
-});
-
-// Herbisida group management
-Route::get('masterdata/herbisida-group', [HerbisidaGroupController::class, 'home'])->name('masterdata.herbisida-group.index');
-Route::post('masterdata/herbisida-group', [HerbisidaGroupController::class, 'insert']);
-Route::patch('masterdata/herbisida-group/{id}', [HerbisidaGroupController::class, 'edit']);
-Route::delete('masterdata/herbisida-group/{id}', [HerbisidaGroupController::class, 'delete']);
-
-// Herbisida dosage management
-Route::middleware(['auth', 'permission:Dosis Herbisida'])->group(function () {
-    Route::get('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('masterdata.herbisida-dosage.index');
-    Route::post('masterdata/herbisida-dosage', [HerbisidaDosageController::class, 'store'])->name('masterdata.herbisida-dosage.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Dosis Herbisida'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}', [HerbisidaDosageController::class, 'update'])->name('masterdata.herbisida-dosage.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Dosis Herbisida'])->group(function () {
-    Route::delete('masterdata/herbisida-dosage/{companycode}/{activitycode}/{itemcode}', [HerbisidaDosageController::class, 'destroy'])->name('masterdata.herbisida-dosage.destroy');
-});
-
-Route::resource('herbisida-dosage', HerbisidaDosageController::class);
-
-// Activity management
-Route::get('masterdata/aktivitas', [ActivityController::class, 'index'])->name('masterdata.aktivitas.index');
-Route::post('masterdata/aktivitas', [ActivityController::class, 'store'])->name('masterdata.aktivitas.store');
-Route::put('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'update'])->name('masterdata.aktivitas.update');
-Route::delete('masterdata/aktivitas/{aktivitas}', [ActivityController::class, 'destroy'])->name('masterdata.aktivitas.destroy');
-
-// Approval management
-Route::middleware(['auth', 'permission:Approval'])->group(function () {
-    Route::get('masterdata/approval', [ApprovalController::class, 'index'])->name('masterdata.approval.index');
-    Route::post('masterdata/approval', [ApprovalController::class, 'store'])->name('masterdata.approval.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Approval'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'update'])->name('masterdata.approval.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Approval'])->group(function () {
-    Route::delete('masterdata/approval/{companycode}/{category}', [ApprovalController::class, 'destroy'])->name('masterdata.approval.destroy');
-});
-
-// Kategori management
-Route::middleware(['auth', 'permission:Kategori'])->group(function () {
-    Route::get('masterdata/kategori', [KategoriController::class, 'index'])->name('masterdata.kategori.index');
-    Route::post('masterdata/kategori', [KategoriController::class, 'store'])->name('masterdata.kategori.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Kategori'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/kategori/{kodekategori}', [KategoriController::class, 'update'])->name('masterdata.kategori.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Kategori'])->group(function () {
-    Route::delete('masterdata/kategori/{kodekategori}', [KategoriController::class, 'destroy'])->name('masterdata.kategori.destroy');
-});
-
-// Varietas management
-Route::middleware(['auth', 'permission:Varietas'])->group(function () {
-    Route::get('masterdata/varietas', [VarietasController::class, 'index'])->name('masterdata.varietas.index');
-    Route::post('masterdata/varietas', [VarietasController::class, 'store'])->name('masterdata.varietas.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Varietas'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/varietas/{kodevarietas}', [VarietasController::class, 'update'])->name('masterdata.varietas.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Varietas'])->group(function () {
-    Route::delete('masterdata/varietas/{kodevarietas}', [VarietasController::class, 'destroy'])->name('masterdata.varietas.destroy');
-});
-
-// Accounting management
-Route::middleware(['auth', 'permission:Accounting'])->group(function () {
-    Route::get('masterdata/accounting', [AccountingController::class, 'index'])->name('masterdata.accounting.index');
-    Route::post('masterdata/accounting', [AccountingController::class, 'store'])->name('masterdata.accounting.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Accounting'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}', [AccountingController::class, 'update'])->name('masterdata.accounting.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Accounting'])->group(function () {
-    Route::delete('masterdata/accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}', [AccountingController::class, 'destroy'])->name('masterdata.accounting.destroy');
-});
-
-// Master list management
-Route::middleware(['auth', 'permission:MasterList'])->group(function () {
-    Route::get('masterdata/master-list', [MasterListController::class, 'index'])->name('masterdata.master-list.index');
-    Route::post('masterdata/master-list', [MasterListController::class, 'store'])->name('masterdata.master-list.store');
-});
-
-Route::middleware(['auth', 'permission:Edit MasterList'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/master-list/{companycode}/{plot}', [MasterListController::class, 'update'])->name('masterdata.master-list.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus MasterList'])->group(function () {
-    Route::delete('masterdata/master-list/{companycode}/{plot}', [MasterListController::class, 'destroy'])->name('masterdata.master-list.destroy');
-});
-
-// Batch management
-Route::middleware(['auth', 'permission:Batch'])->group(function () {
-    Route::get('masterdata/batch', [BatchController::class, 'index'])->name('masterdata.batch.index');
-    Route::post('masterdata/batch', [BatchController::class, 'store'])->name('masterdata.batch.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Batch'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/batch/{batchno}', [BatchController::class, 'update'])->name('masterdata.batch.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Batch'])->group(function () {
-    Route::delete('masterdata/batch/{batchno}', [BatchController::class, 'destroy'])->name('masterdata.batch.destroy');
-});
-
-// Split & Merge Plot management
-Route::middleware(['auth', 'permission:Split Merge Plot'])->group(function () {
-    Route::get('masterdata/split-merge-plot', [SplitMergePlotController::class, 'index'])
-        ->name('masterdata.split-merge-plot.index');
-    Route::get('masterdata/split-merge-plot/approval/{approvalno}', [SplitMergePlotController::class, 'getApprovalDetail'])
-        ->name('masterdata.split-merge-plot.getApprovalDetail');
-    Route::get('masterdata/split-merge-plot/batch/{batchno}', [SplitMergePlotController::class, 'getBatchDetails'])
-        ->name('masterdata.split-merge-plot.batch-details');
-    
-    // Check plot name availability - TAMBAHKAN DI SINI
-    Route::get('masterdata/split-merge-plot/check-plot', [SplitMergePlotController::class, 'checkPlotExists'])
-        ->name('masterdata.split-merge-plot.check-plot');
-    
-    // Create split/merge REQUEST (not execute)
-    Route::post('masterdata/split-merge-plot/split', [SplitMergePlotController::class, 'split'])
-        ->name('masterdata.split-merge-plot.split');
-    Route::post('masterdata/split-merge-plot/merge', [SplitMergePlotController::class, 'merge'])
-        ->name('masterdata.split-merge-plot.merge');
-    
-    // Delete transaction (waiting approval only)
-    Route::delete('masterdata/split-merge-plot/{transactionNumber}', [SplitMergePlotController::class, 'destroy'])
-        ->name('masterdata.split-merge-plot.destroy');
-});
-
-
-// Mandor management
-Route::get('masterdata/mandor', [MandorController::class, 'index'])->name('masterdata.mandor.index');
-Route::post('masterdata/mandor', [MandorController::class, 'store'])->name('masterdata.mandor.store');
-Route::match(['put', 'patch'], 'masterdata/mandor/{companycode}/{id}', [MandorController::class, 'update'])->name('masterdata.mandor.update');
-Route::delete('masterdata/mandor/{companycode}/{id}', [MandorController::class, 'destroy'])->name('masterdata.mandor.destroy');
-
-// Tenaga kerja management
-Route::middleware(['auth', 'permission:Tenagakerja'])->group(function () {
-    Route::get('masterdata/tenagakerja', [TenagaKerjaController::class, 'index'])->name('masterdata.tenagakerja.index');
-    Route::post('masterdata/tenagakerja', [TenagaKerjaController::class, 'store'])->name('masterdata.tenagakerja.store');
-    Route::match(['put', 'patch'], 'masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('masterdata.tenagakerja.update');
-    Route::delete('masterdata/tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('masterdata.tenagakerja.destroy');
-});
-
-// Menu management
-Route::middleware(['auth', 'permission:Menu'])->group(function () {
-    Route::get('usermanagement/menu', [MenuController::class, 'index'])->name('usermanagement.menu.index');
-    Route::post('usermanagement/menu', [MenuController::class, 'store'])->name('usermanagement.menu.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Menu'])->group(function () {
-    Route::put('usermanagement/menu/{menuid}', [MenuController::class, 'update'])->name('usermanagement.menu.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Menu'])->group(function () {
-    Route::delete('usermanagement/menu/{menuid}/{name}', [MenuController::class, 'destroy'])->name('usermanagement.menu.destroy');
-});
-
-// Submenu management
-Route::middleware(['auth', 'permission:Submenu'])->group(function () {
-    Route::get('usermanagement/submenu', [SubmenuController::class, 'index'])->name('usermanagement.submenu.index');
-    Route::post('usermanagement/submenu', [SubmenuController::class, 'store'])->name('usermanagement.submenu.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Submenu'])->group(function () {
-    Route::put('usermanagement/submenu/{submenuid}', [SubmenuController::class, 'update'])->name('usermanagement.submenu.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Submenu'])->group(function () {
-    Route::delete('usermanagement/submenu/{submenuid}/{name}', [SubmenuController::class, 'destroy'])->name('usermanagement.submenu.destroy');
-});
-
-// Subsubmenu management
-Route::middleware(['auth', 'permission:Subsubmenu'])->group(function () {
-    Route::get('usermanagement/subsubmenu', [SubsubmenuController::class, 'index'])->name('usermanagement.subsubmenu.index');
-    Route::post('usermanagement/subsubmenu', [SubsubmenuController::class, 'store'])->name('usermanagement.subsubmenu.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Subsubmenu'])->group(function () {
-    Route::put('usermanagement/subsubmenu/{subsubmenuid}', [SubsubmenuController::class, 'update'])->name('usermanagement.subsubmenu.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Subsubmenu'])->group(function () {
-    Route::delete('usermanagement/subsubmenu/{subsubmenuid}/{name}', [SubsubmenuController::class, 'destroy'])->name('usermanagement.subsubmenu.destroy');
-});
-
-// Upah management
-Route::middleware(['auth', 'permission:Upah'])->group(function () {
-    Route::get('masterdata/upah', [UpahController::class, 'index'])->name('masterdata.upah.index');
-    Route::post('masterdata/upah', [UpahController::class, 'store'])->name('masterdata.upah.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Upah'])->group(function () {
-    Route::put('masterdata/upah/{id}', [UpahController::class, 'update'])->name('masterdata.upah.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Upah'])->group(function () {
-    Route::delete('masterdata/upah/{id}', [UpahController::class, 'destroy'])->name('masterdata.upah.destroy');
-});
-
-// Kendaraan management
-Route::middleware(['auth', 'permission:Kendaraan'])->group(function () {
-    Route::get('masterdata/kendaraan', [KendaraanController::class, 'index'])->name('masterdata.kendaraan.index');
-    Route::post('masterdata/kendaraan', [KendaraanController::class, 'handle'])->name('masterdata.kendaraan.handle');
-});
-
-Route::middleware(['auth', 'permission:Edit Kendaraan'])->group(function () {
-    Route::put('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'update'])->name('masterdata.kendaraan.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Kendaraan'])->group(function () {
-    Route::delete('masterdata/kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'destroy'])->name('masterdata.kendaraan.destroy');
-});
-
-// Kontraktor management
-Route::middleware(['auth', 'permission:Kontraktor'])->group(function () {
-    Route::get('masterdata/kontraktor', [KontraktorController::class, 'index'])->name('masterdata.kontraktor.index');
-    Route::post('masterdata/kontraktor', [KontraktorController::class, 'store'])->name('masterdata.kontraktor.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Kontraktor'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/kontraktor/{companycode}/{id}', [KontraktorController::class, 'update'])->name('masterdata.kontraktor.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Kontraktor'])->group(function () {
-    Route::delete('masterdata/kontraktor/{companycode}/{id}', [KontraktorController::class, 'destroy'])->name('masterdata.kontraktor.destroy');
-});
-
-// Subkontraktor management
-Route::middleware(['auth', 'permission:Subkontraktor'])->group(function () {
-    Route::get('masterdata/subkontraktor', [SubkontraktorController::class, 'index'])->name('masterdata.subkontraktor.index');
-    Route::post('masterdata/subkontraktor', [SubkontraktorController::class, 'store'])->name('masterdata.subkontraktor.store');
-});
-
-Route::middleware(['auth', 'permission:Edit Subkontraktor'])->group(function () {
-    Route::match(['put', 'patch'], 'masterdata/subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'update'])->name('masterdata.subkontraktor.update');
-});
-
-Route::middleware(['auth', 'permission:Hapus Subkontraktor'])->group(function () {
-    Route::delete('masterdata/subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'destroy'])->name('masterdata.subkontraktor.destroy');
-});
-
-// User management
-Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
-    Route::get('usermanagement/user', [UserManagementController::class, 'userIndex'])->name('usermanagement.user.index');
-    Route::post('usermanagement/user', [UserManagementController::class, 'userStore'])->name('usermanagement.user.store');
-    Route::get('usermanagement/user/create', [UserManagementController::class, 'userCreate'])->name('usermanagement.user.create');
-
-    Route::get('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyIndex'])->name('usermanagement.user-company-permissions.index');
-    Route::post('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyStore'])->name('usermanagement.user-company-permissions.store');
-    Route::post('usermanagement/user-company-permissions/assign', [UserManagementController::class, 'userCompanyAssign'])->name('usermanagement.user-company-permissions.assign');
-
-    Route::get('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionIndex'])->name('usermanagement.user-permissions.index');
-    Route::post('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionStore'])->name('usermanagement.user-permissions.store');
-});
-
-Route::middleware(['auth', 'permission:Edit User'])->group(function () {
-    Route::get('usermanagement/user/{userid}/edit', [UserManagementController::class, 'userEdit'])->name('usermanagement.user.edit');
-    Route::put('usermanagement/user/{userid}', [UserManagementController::class, 'userUpdate'])->name('usermanagement.user.update');
-    Route::delete('usermanagement/user-company-permissions/{userid}/{companycode}', [UserManagementController::class, 'userCompanyDestroy'])->name('usermanagement.user-company-permissions.destroy');
-    Route::delete('usermanagement/user-permissions/{userid}/{companycode}/{permission}', [UserManagementController::class, 'userPermissionDestroy'])->name('usermanagement.user-permissions.destroy');
-});
-
-Route::middleware('permission:Hapus User')->group(function () {
-    Route::delete('usermanagement/user/{userid}', [UserManagementController::class, 'userDestroy'])->name('usermanagement.user.destroy');
-});
-
-// Permission master data management
-Route::middleware(['auth', 'permission:Master'])->group(function () {
-    Route::get('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionIndex'])->name('usermanagement.permissions-masterdata.index');
-    Route::post('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionStore'])->name('usermanagement.permissions-masterdata.store');
-    Route::put('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionUpdate'])->name('usermanagement.permissions-masterdata.update');
-    Route::delete('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionDestroy'])->name('usermanagement.permissions-masterdata.destroy');
-
-    Route::get('usermanagement/test-permission/{userid}/{permission}', [UserManagementController::class, 'testUserPermission'])->name('usermanagement.test-permission');
-});
-
-// Jabatan permission management
-Route::middleware(['auth', 'permission:Jabatan'])->group(function () {
-    Route::get('usermanagement/jabatan', [UserManagementController::class, 'jabatanPermissionIndex'])->name('usermanagement.jabatan.index');
-    Route::post('usermanagement/jabatan/assign-permission', [UserManagementController::class, 'jabatanPermissionStore'])->name('usermanagement.jabatan.assign-permission');
-    Route::delete('usermanagement/jabatan/remove-permission', [UserManagementController::class, 'jabatanPermissionDestroy'])->name('usermanagement.jabatan.remove-permission');
-    Route::post('usermanagement/jabatan', [UserManagementController::class, 'jabatanStore'])->name('usermanagement.jabatan.store');
-    Route::put('usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanUpdate'])->name('usermanagement.jabatan.update');
-    Route::delete('usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanDestroy'])->name('usermanagement.jabatan.destroy');
-});
-
-// Support ticket management
-Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
-    Route::get('usermanagement/support-ticket', [UserManagementController::class, 'ticketIndex'])->name('usermanagement.support-ticket.index');
-    Route::put('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketUpdate'])->name('usermanagement.support-ticket.update');
-    Route::delete('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketDestroy'])->name('usermanagement.support-ticket.destroy');
-
-    Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])->name('usermanagement.user-activity-permission.index');
-    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])->name('usermanagement.user-activity-permission.assign');
-    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])->name('usermanagement.user-activity-permission.destroy');
-    Route::get('usermanagement/user-activity-permission/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
-});
-
-Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
-    ->middleware('throttle:10,60')
-    ->name('support.ticket.submit');
-
-
-// User Management AJAX endpoints
-Route::middleware('auth')->prefix('usermanagement/ajax')->name('usermanagement.ajax.')->group(function () {
-
-    // Get jabatan permissions for modal/form dropdown
-    Route::get('/jabatan/{idjabatan}/permissions', [UserManagementController::class, 'getJabatanPermissions'])
-        ->name('jabatan-permissions');
-
-    // Get user permissions for display in modal
-    Route::get('/user/{userid}/permissions', [UserManagementController::class, 'getUserPermissionsSimple'])
-        ->name('user-permissions');
+Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(function () {
+
+    // ============================================================================
+    // COMPANY
+    // ============================================================================
+    Route::middleware('permission:masterdata.company.view')->group(function () {
+        Route::get('company', [CompanyController::class, 'index'])->name('company.index');
+        Route::post('company', [CompanyController::class, 'handle'])->name('company.handle');
+    });
+
+    Route::middleware('permission:masterdata.company.edit')->group(function () {
+        Route::put('company/{companycode}', [CompanyController::class, 'update'])->name('company.update');
+    });
+
+    Route::middleware('permission:masterdata.company.delete')->group(function () {
+        Route::delete('company/{companycode}', [CompanyController::class, 'destroy'])->name('company.destroy');
+    });
+
+    // ============================================================================
+    // BLOK
+    // ============================================================================
+    Route::middleware('permission:masterdata.blok.view')->group(function () {
+        Route::get('blok', [BlokController::class, 'index'])->name('blok.index');
+        Route::post('blok', [BlokController::class, 'handle'])->name('blok.handle');
+    });
+
+    Route::middleware('permission:masterdata.blok.edit')->group(function () {
+        Route::put('blok/{blok}/{companycode}', [BlokController::class, 'update'])->name('blok.update');
+    });
+
+    Route::middleware('permission:masterdata.blok.delete')->group(function () {
+        Route::delete('blok/{blok}/{companycode}', [BlokController::class, 'destroy'])->name('blok.destroy');
+    });
+
+    // ============================================================================
+    // HERBISIDA
+    // ============================================================================
+    Route::middleware('permission:masterdata.herbisida.view')->group(function () {
+        Route::get('herbisida', [HerbisidaController::class, 'index'])->name('herbisida.index');
+        Route::post('herbisida', [HerbisidaController::class, 'store'])->name('herbisida.store');
+        Route::get('herbisida/group', [HerbisidaController::class, 'group'])->name('herbisida.group');
+        Route::get('herbisida/items', function (\Illuminate\Http\Request $request) {
+            return \App\Models\Herbisida::where('companycode', $request->companycode)
+                ->select('itemcode', 'itemname')
+                ->orderBy('itemcode')
+                ->get();
+        })->name('herbisida.items');
+    });
+
+    Route::middleware('permission:masterdata.herbisida.edit')->group(function () {
+        Route::match(['put', 'patch'], 'herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'update'])->name('herbisida.update');
+    });
+
+    Route::middleware('permission:masterdata.herbisida.delete')->group(function () {
+        Route::delete('herbisida/{companycode}/{itemcode}', [HerbisidaController::class, 'destroy'])->name('herbisida.destroy');
+    });
+
+    // ============================================================================
+    // HERBISIDA GROUP
+    // ============================================================================
+    Route::middleware('permission:masterdata.herbisidagroup.view')->group(function () {
+        Route::get('herbisida-group', [HerbisidaGroupController::class, 'home'])->name('herbisida-group.index');
+        Route::post('herbisida-group', [HerbisidaGroupController::class, 'insert']);
+        Route::patch('herbisida-group/{id}', [HerbisidaGroupController::class, 'edit']);
+        Route::delete('herbisida-group/{id}', [HerbisidaGroupController::class, 'delete']);
+    });
+
+    // ============================================================================
+    // HERBISIDA DOSAGE
+    // ============================================================================
+    Route::middleware('permission:masterdata.herbisidadosage.view')->group(function () {
+        Route::get('herbisida-dosage', [HerbisidaDosageController::class, 'index'])->name('herbisida-dosage.index');
+        Route::post('herbisida-dosage', [HerbisidaDosageController::class, 'store'])->name('herbisida-dosage.store');
+    });
+
+    Route::middleware('permission:masterdata.herbisidadosage.edit')->group(function () {
+        Route::match(['put', 'patch'], 'herbisida-dosage/{companycode}/{activitycode}/{itemcode}', [HerbisidaDosageController::class, 'update'])->name('herbisida-dosage.update');
+    });
+
+    Route::middleware('permission:masterdata.herbisidadosage.delete')->group(function () {
+        Route::delete('herbisida-dosage/{companycode}/{activitycode}/{itemcode}', [HerbisidaDosageController::class, 'destroy'])->name('herbisida-dosage.destroy');
+    });
+
+    // ============================================================================
+    // AKTIVITAS
+    // ============================================================================
+    Route::middleware('permission:masterdata.aktivitas.view')->group(function () {
+        Route::get('aktivitas', [ActivityController::class, 'index'])->name('aktivitas.index');
+        Route::post('aktivitas', [ActivityController::class, 'store'])->name('aktivitas.store');
+        Route::put('aktivitas/{aktivitas}', [ActivityController::class, 'update'])->name('aktivitas.update');
+        Route::delete('aktivitas/{aktivitas}', [ActivityController::class, 'destroy'])->name('aktivitas.destroy');
+    });
+
+    // ============================================================================
+    // APPROVAL
+    // ============================================================================
+    Route::middleware('permission:masterdata.approval.view')->group(function () {
+        Route::get('approval', [ApprovalController::class, 'index'])->name('approval.index');
+        Route::post('approval', [ApprovalController::class, 'store'])->name('approval.store');
+    });
+
+    Route::middleware('permission:masterdata.approval.edit')->group(function () {
+        Route::match(['put', 'patch'], 'approval/{companycode}/{category}', [ApprovalController::class, 'update'])->name('approval.update');
+    });
+
+    Route::middleware('permission:masterdata.approval.delete')->group(function () {
+        Route::delete('approval/{companycode}/{category}', [ApprovalController::class, 'destroy'])->name('approval.destroy');
+    });
+
+    // ============================================================================
+    // KATEGORI
+    // ============================================================================
+    Route::middleware('permission:masterdata.kategori.view')->group(function () {
+        Route::get('kategori', [KategoriController::class, 'index'])->name('kategori.index');
+        Route::post('kategori', [KategoriController::class, 'store'])->name('kategori.store');
+    });
+
+    Route::middleware('permission:masterdata.kategori.edit')->group(function () {
+        Route::match(['put', 'patch'], 'kategori/{kodekategori}', [KategoriController::class, 'update'])->name('kategori.update');
+    });
+
+    Route::middleware('permission:masterdata.kategori.delete')->group(function () {
+        Route::delete('kategori/{kodekategori}', [KategoriController::class, 'destroy'])->name('kategori.destroy');
+    });
+
+    // ============================================================================
+    // VARIETAS
+    // ============================================================================
+    Route::middleware('permission:masterdata.varietas.view')->group(function () {
+        Route::get('varietas', [VarietasController::class, 'index'])->name('varietas.index');
+        Route::post('varietas', [VarietasController::class, 'store'])->name('varietas.store');
+    });
+
+    Route::middleware('permission:masterdata.varietas.edit')->group(function () {
+        Route::match(['put', 'patch'], 'varietas/{kodevarietas}', [VarietasController::class, 'update'])->name('varietas.update');
+    });
+
+    Route::middleware('permission:masterdata.varietas.delete')->group(function () {
+        Route::delete('varietas/{kodevarietas}', [VarietasController::class, 'destroy'])->name('varietas.destroy');
+    });
+
+    // ============================================================================
+    // ACCOUNTING
+    // ============================================================================
+    Route::middleware('permission:masterdata.accounting.view')->group(function () {
+        Route::get('accounting', [AccountingController::class, 'index'])->name('accounting.index');
+        Route::post('accounting', [AccountingController::class, 'store'])->name('accounting.store');
+    });
+
+    Route::middleware('permission:masterdata.accounting.edit')->group(function () {
+        Route::match(['put', 'patch'], 'accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}', [AccountingController::class, 'update'])->name('accounting.update');
+    });
+
+    Route::middleware('permission:masterdata.accounting.delete')->group(function () {
+        Route::delete('accounting/{activitycode}/{jurnalaccno}/{jurnalacctype}', [AccountingController::class, 'destroy'])->name('accounting.destroy');
+    });
+
+    // ============================================================================
+    // MASTER LIST
+    // ============================================================================
+    Route::middleware('permission:masterdata.masterlist.view')->group(function () {
+        Route::get('master-list', [MasterListController::class, 'index'])->name('master-list.index');
+        Route::post('master-list', [MasterListController::class, 'store'])->name('master-list.store');
+    });
+
+    Route::middleware('permission:masterdata.masterlist.edit')->group(function () {
+        Route::match(['put', 'patch'], 'master-list/{companycode}/{plot}', [MasterListController::class, 'update'])->name('master-list.update');
+    });
+
+    Route::middleware('permission:masterdata.masterlist.delete')->group(function () {
+        Route::delete('master-list/{companycode}/{plot}', [MasterListController::class, 'destroy'])->name('master-list.destroy');
+    });
+
+    // ============================================================================
+    // BATCH
+    // ============================================================================
+    Route::middleware('permission:masterdata.batch.view')->group(function () {
+        Route::get('batch', [BatchController::class, 'index'])->name('batch.index');
+        Route::post('batch', [BatchController::class, 'store'])->name('batch.store');
+    });
+
+    Route::middleware('permission:masterdata.batch.edit')->group(function () {
+        Route::match(['put', 'patch'], 'batch/{batchno}', [BatchController::class, 'update'])->name('batch.update');
+    });
+
+    Route::middleware('permission:masterdata.batch.delete')->group(function () {
+        Route::delete('batch/{batchno}', [BatchController::class, 'destroy'])->name('batch.destroy');
+    });
+
+    // ============================================================================
+    // SPLIT MERGE PLOT
+    // ============================================================================
+    Route::middleware('permission:masterdata.splitmergeplot.view')->group(function () {
+        Route::get('split-merge-plot', [SplitMergePlotController::class, 'index'])->name('split-merge-plot.index');
+        Route::get('split-merge-plot/approval/{approvalno}', [SplitMergePlotController::class, 'getApprovalDetail'])->name('split-merge-plot.getApprovalDetail');
+        Route::get('split-merge-plot/batch/{batchno}', [SplitMergePlotController::class, 'getBatchDetails'])->name('split-merge-plot.batch-details');
+        Route::get('split-merge-plot/check-plot', [SplitMergePlotController::class, 'checkPlotExists'])->name('split-merge-plot.check-plot');
+        Route::post('split-merge-plot/split', [SplitMergePlotController::class, 'split'])->name('split-merge-plot.split');
+        Route::post('split-merge-plot/merge', [SplitMergePlotController::class, 'merge'])->name('split-merge-plot.merge');
+        Route::delete('split-merge-plot/{transactionNumber}', [SplitMergePlotController::class, 'destroy'])->name('split-merge-plot.destroy');
+    });
+
+    // ============================================================================
+    // MANDOR
+    // ============================================================================
+    Route::middleware('permission:masterdata.mandor.view')->group(function () {
+        Route::get('mandor', [MandorController::class, 'index'])->name('mandor.index');
+        Route::post('mandor', [MandorController::class, 'store'])->name('mandor.store');
+        Route::match(['put', 'patch'], 'mandor/{companycode}/{id}', [MandorController::class, 'update'])->name('mandor.update');
+        Route::delete('mandor/{companycode}/{id}', [MandorController::class, 'destroy'])->name('mandor.destroy');
+    });
+
+    // ============================================================================
+    // TENAGA KERJA
+    // ============================================================================
+    Route::middleware('permission:masterdata.tenagakerja.view')->group(function () {
+        Route::get('tenagakerja', [TenagaKerjaController::class, 'index'])->name('tenagakerja.index');
+        Route::post('tenagakerja', [TenagaKerjaController::class, 'store'])->name('tenagakerja.store');
+        Route::match(['put', 'patch'], 'tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('tenagakerja.update');
+        Route::delete('tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('tenagakerja.destroy');
+        Route::get('tenagakerja/download-template', [TenagaKerjaController::class, 'downloadTemplate'])->name('tenagakerja.download-template');
+        Route::post('tenagakerja/bulk-upload', [TenagaKerjaController::class, 'bulkUpload'])->name('tenagakerja.bulk-upload');
+    });
+
+    // ============================================================================
+    // UPAH
+    // ============================================================================
+    Route::middleware('permission:masterdata.upah.view')->group(function () {
+        Route::get('upah', [UpahController::class, 'index'])->name('upah.index');
+        Route::post('upah', [UpahController::class, 'store'])->name('upah.store');
+    });
+
+    Route::middleware('permission:masterdata.upah.edit')->group(function () {
+        Route::put('upah/{id}', [UpahController::class, 'update'])->name('upah.update');
+    });
+
+    Route::middleware('permission:masterdata.upah.delete')->group(function () {
+        Route::delete('upah/{id}', [UpahController::class, 'destroy'])->name('upah.destroy');
+    });
+
+    // ============================================================================
+    // KENDARAAN
+    // ============================================================================
+    Route::middleware('permission:masterdata.kendaraan.view')->group(function () {
+        Route::get('kendaraan', [KendaraanController::class, 'index'])->name('kendaraan.index');
+        Route::post('kendaraan', [KendaraanController::class, 'handle'])->name('kendaraan.handle');
+    });
+
+    Route::middleware('permission:masterdata.kendaraan.edit')->group(function () {
+        Route::put('kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'update'])->name('kendaraan.update');
+    });
+
+    Route::middleware('permission:masterdata.kendaraan.delete')->group(function () {
+        Route::delete('kendaraan/{companycode}/{nokendaraan}', [KendaraanController::class, 'destroy'])->name('kendaraan.destroy');
+    });
+
+    // ============================================================================
+    // KONTRAKTOR
+    // ============================================================================
+    Route::middleware('permission:masterdata.kontraktor.view')->group(function () {
+        Route::get('kontraktor', [KontraktorController::class, 'index'])->name('kontraktor.index');
+        Route::post('kontraktor', [KontraktorController::class, 'store'])->name('kontraktor.store');
+    });
+
+    Route::middleware('permission:masterdata.kontraktor.edit')->group(function () {
+        Route::match(['put', 'patch'], 'kontraktor/{companycode}/{id}', [KontraktorController::class, 'update'])->name('kontraktor.update');
+    });
+
+    Route::middleware('permission:masterdata.kontraktor.delete')->group(function () {
+        Route::delete('kontraktor/{companycode}/{id}', [KontraktorController::class, 'destroy'])->name('kontraktor.destroy');
+    });
+
+    // ============================================================================
+    // SUBKONTRAKTOR
+    // ============================================================================
+    Route::middleware('permission:masterdata.subkontraktor.view')->group(function () {
+        Route::get('subkontraktor', [SubkontraktorController::class, 'index'])->name('subkontraktor.index');
+        Route::post('subkontraktor', [SubkontraktorController::class, 'store'])->name('subkontraktor.store');
+    });
+
+    Route::middleware('permission:masterdata.subkontraktor.edit')->group(function () {
+        Route::match(['put', 'patch'], 'subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'update'])->name('subkontraktor.update');
+    });
+
+    Route::middleware('permission:masterdata.subkontraktor.delete')->group(function () {
+        Route::delete('subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'destroy'])->name('subkontraktor.destroy');
+    });
+
 });

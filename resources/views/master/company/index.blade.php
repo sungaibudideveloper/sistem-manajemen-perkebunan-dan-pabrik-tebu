@@ -42,10 +42,10 @@
                             </th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Gudang
                             </th>
-                            @if(hasPermission('Edit Company'))
+                            @can('masterdata.company.edit')
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-32">Aksi
                                 </th>
-                            @endif
+                            @endcan
                         </tr>
                     </thead>
                     <tbody>
@@ -61,10 +61,10 @@
                                     {{ $item->companyperiod }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companyinventory }}</td>
-                                @if(hasPermission('Edit Company'))
+                                @can('masterdata.company.edit')
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-32">
                                         <div class="flex items-center justify-center">
-                                            @if(hasPermission('Edit Company'))
+                                            @can('masterdata.company.edit')
                                                 <button
                                                     onclick="openEditModal('{{ $item->companycode }}', '{{ $item->name }}', '{{ $item->companyperiod }}', '{{ $item->address }}', '{{ $item->companyinventory }}')"
                                                     class="group flex items-center edit-button"><svg
@@ -89,10 +89,10 @@
                                                     </svg>
                                                     <span class="w-0.5"></span>
                                                 </button>
-                                            @endif
+                                            @endcan
                                         </div>
                                     </td>
-                                @endif
+                                @endcan
                             </tr>
                         @endforeach
                     </tbody>
