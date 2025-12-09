@@ -28,7 +28,7 @@ class UserCompanyController extends Controller
         $users = $this->userCompanyService->getUsersWithoutAccess();
         $companies = Company::orderBy('name')->get();
 
-        return view('usermanagement.usercompany.index', [
+        return view('usermanagement.user-company.index', [
             'title' => 'User Company Access',
             'navbar' => 'User Management',
             'nav' => 'Company Access',
@@ -58,7 +58,7 @@ class UserCompanyController extends Controller
             auth()->user()->userid
         );
 
-        return redirect()->route('usermanagement.usercompany.index')
+        return redirect()->route('usermanagement.user-company.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
@@ -81,7 +81,7 @@ class UserCompanyController extends Controller
             auth()->user()->userid
         );
 
-        return redirect()->route('usermanagement.usercompany.index')
+        return redirect()->route('usermanagement.user-company.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
@@ -92,7 +92,7 @@ class UserCompanyController extends Controller
     {
         $result = $this->userCompanyService->removeCompanyAccess($userid, $companycode);
 
-        return redirect()->route('usermanagement.usercompany.index')
+        return redirect()->route('usermanagement.user-company.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }

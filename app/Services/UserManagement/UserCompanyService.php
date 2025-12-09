@@ -124,10 +124,8 @@ class UserCompanyService
                 ];
             }
 
-            // Deactivate all existing
-            $this->userCompanyRepository->deactivateAllForUser($userid);
+            $this->userCompanyRepository->deleteAllForUser($userid);
 
-            // Assign selected companies
             foreach ($companycodes as $companycode) {
                 $this->userCompanyRepository->assignCompany($userid, $companycode, $grantedBy);
             }
