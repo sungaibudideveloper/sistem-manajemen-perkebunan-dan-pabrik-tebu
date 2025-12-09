@@ -18,6 +18,15 @@ use App\Http\Controllers\UserManagement\{
 
 Route::prefix('usermanagement')->middleware('auth')->name('usermanagement.')->group(function () {
 
+    
+
+    // User AJAX Endpoints
+    Route::prefix('ajax/users')->name('ajax.user.')->group(function () {
+        Route::get('{userid}/permissions', [UserController::class, 'getPermissions'])->name('permissions');
+        Route::get('{userid}/companies', [UserController::class, 'getCompanies'])->name('companies');
+        Route::get('{userid}/activities', [UserController::class, 'getActivities'])->name('activities');
+    });
+    
     // ------------------------------------------------------------------------
     // USER MANAGEMENT
     // ------------------------------------------------------------------------
@@ -36,13 +45,6 @@ Route::prefix('usermanagement')->middleware('auth')->name('usermanagement.')->gr
 
     Route::middleware('permission:usermanagement.user.delete')->group(function () {
         Route::delete('users/{userid}', [UserController::class, 'destroy'])->name('user.destroy');
-    });
-
-    // User AJAX Endpoints
-    Route::prefix('ajax/users')->name('ajax.user.')->group(function () {
-        Route::get('{userid}/permissions', [UserController::class, 'getPermissions'])->name('permissions');
-        Route::get('{userid}/companies', [UserController::class, 'getCompanies'])->name('companies');
-        Route::get('{userid}/activities', [UserController::class, 'getActivities'])->name('activities');
     });
 
     // ------------------------------------------------------------------------

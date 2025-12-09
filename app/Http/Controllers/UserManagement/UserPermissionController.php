@@ -41,7 +41,7 @@ class UserPermissionController extends Controller
         $permissions = $this->permissionService->getAllGroupedByModule();
         $companies = Company::orderBy('name')->get();
 
-        return view('usermanagement.userpermission.index', [
+        return view('usermanagement.user-permission.index', [
             'title' => 'User Permission Overrides',
             'navbar' => 'User Management',
             'nav' => 'Permission Overrides',
@@ -74,7 +74,7 @@ class UserPermissionController extends Controller
         );
 
         if ($result['success']) {
-            return redirect()->route('usermanagement.userpermission.index')
+            return redirect()->route('usermanagement.user-permission.index')
                 ->with('success', $result['message']);
         }
 
@@ -90,7 +90,7 @@ class UserPermissionController extends Controller
     {
         $result = $this->userPermissionService->deletePermissionOverride($id);
 
-        return redirect()->route('usermanagement.userpermission.index')
+        return redirect()->route('usermanagement.user-permission.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }
