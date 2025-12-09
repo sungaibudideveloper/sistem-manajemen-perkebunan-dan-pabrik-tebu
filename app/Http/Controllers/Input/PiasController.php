@@ -34,7 +34,6 @@ class PiasController extends Controller
 
     public function home(Request $request)
     {   
-        if(hasPermission('Menu Pias')){
         $perPage = (int) $request->input('perPage', 15);
         
         // Default tanggal: 2 bulan ke belakang sampai hari ini
@@ -88,9 +87,6 @@ class PiasController extends Controller
             'endDate'   => $endDate,
             'search'    => $search,
         ]);
-        }else{
-            return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
-        }
     }
 
     public function detail(Request $request)
