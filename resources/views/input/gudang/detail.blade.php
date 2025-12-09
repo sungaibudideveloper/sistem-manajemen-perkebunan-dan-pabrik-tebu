@@ -84,7 +84,7 @@ table th, table td {
                         <th class="py-1 px-2 text-left border-0" colspan="5">
                             <div class="space-y-1 mb-3">
                                 <div class="grid grid-cols-3 gap-4">
-                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }}</span>
+                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }} {{$details[0]->flagstatus}} {{strtoupper($details[0]->flagstatus) == 'ACTIVE'}}</span>
                                     <span class="text-center"><b>RKH:</b> {{ $details[0]->rkhno }}</span>
                                     <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span>
                                 </div>
@@ -349,25 +349,14 @@ table th, table td {
                 </button>
             </div>
             @endif
-            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
-            <div class="flex justify-center mt-4">
-                <button 
+                        <div class="flex justify-center mt-4">
+                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
                     type="submit"
                     class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
-                    style="display: block !important; visibility: visible !important;"
                 >
-                    Penyerahan TEST
+                    Penyerahan
                 </button>
             </div>
-            @else
-                        <div class="flex justify-center mt-4">
-                <button 
-                    
-                >
-                    {{strtoupper($details[0]->flagstatus)}}
-                </button>
-            </div>
-            @endif
         </form>
         <!--@endif-->
         
@@ -375,7 +364,7 @@ table th, table td {
         <div class="flex justify-center mt-3">
             <a href="{{ url('input/gudang') }}" 
                class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
-                ← Kembalii
+                ← Kembali
             </a>&nbsp;
             @if(strtoupper($details[0]->flagstatus) != 'ACTIVE' )
             <button type="button"
