@@ -161,10 +161,11 @@ class GudangController extends Controller
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
             ->get('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/costcenter_api', [
-                'connection' => '172.17.1.39',
+                'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
                 'factory' => $first->factoryinv
             ]);
@@ -234,7 +235,7 @@ class GudangController extends Controller
             'vehiclenumber' => '',
             'flagstatus' => 'ACTIVE'
         ]);
-        //172.17.1.39
+        
         $companyinv = company::where('companycode', session('companycode'))->first();
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
@@ -489,13 +490,13 @@ public function submit(Request $request)
     // ✅ API Call - SETELAH COMMIT
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
-        
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
             ->timeout(30)
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
-                'connection' => '172.17.1.39',
+                'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
                 'factory' => $first->factoryinv,
                 'costcenter' => $request->costcenter,
