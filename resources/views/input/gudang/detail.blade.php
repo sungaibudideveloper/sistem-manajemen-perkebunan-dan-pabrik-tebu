@@ -336,10 +336,6 @@ table th, table td {
         </div>
 
 
-
-        <!--@if(hasPermission('Menu Gudang'))-->
-            <!-- Submit Button -->
-            <!-- DEBUG INFO (hapus setelah selesai) -->
             <div class="text-center mb-2 p-2 bg-yellow-100">
                 <p>flagstatus: {{ $details[0]->flagstatus }}</p>
                 <p>Kondisi ACTIVE: {{ strtoupper($details[0]->flagstatus) == 'ACTIVE' ? 'TRUE' : 'FALSE' }}</p>
@@ -362,7 +358,7 @@ table th, table td {
             @endif
             
         </form>
-        <!--@endif-->
+        
                     <div class="text-center mb-2 p-2 bg-yellow-100">
                 <p>flagstatus: {{ $details[0]->flagstatus }}</p>
                 <p>Kondisi ACTIVE: {{ strtoupper($details[0]->flagstatus) == 'ACTIVE' ? 'TRUE' : 'FALSE' }}</p>
