@@ -348,6 +348,7 @@ table th, table td {
                     Penyerahan
                 </button>
             </div>
+            @else {{dd($details[0])}}
             @endif
         </form>
         @endif
