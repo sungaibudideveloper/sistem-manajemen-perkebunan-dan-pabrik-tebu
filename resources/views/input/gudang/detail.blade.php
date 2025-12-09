@@ -349,6 +349,17 @@ table th, table td {
                 </button>
             </div>
             @endif
+            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
+            <div class="flex justify-center mt-4">
+                <button 
+                    type="submit"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+                    style="display: block !important; visibility: visible !important;"
+                >
+                    Penyerahan TEST
+                </button>
+            </div>
+            @endif
         </form>
         <!--@endif-->
         
@@ -356,7 +367,7 @@ table th, table td {
         <div class="flex justify-center mt-3">
             <a href="{{ url('input/gudang') }}" 
                class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
-                ← Kembali
+                ← Kembalii
             </a>&nbsp;
             @if(strtoupper($details[0]->flagstatus) != 'ACTIVE' )
             <button type="button"
