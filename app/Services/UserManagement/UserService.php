@@ -21,10 +21,6 @@ class UserService
 
     /**
      * Get paginated users
-     *
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getPaginatedUsers(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
@@ -33,10 +29,6 @@ class UserService
 
     /**
      * Get user with relations
-     *
-     * @param string $userid
-     * @param array $relations
-     * @return mixed
      */
     public function getUserWithRelations(string $userid, array $relations = [])
     {
@@ -45,10 +37,6 @@ class UserService
 
     /**
      * Create new user with company and activity assignments
-     *
-     * @param array $data
-     * @param string $createdBy
-     * @return array ['success' => bool, 'user' => User|null, 'message' => string]
      */
     public function createUser(array $data, string $createdBy): array
     {
@@ -80,17 +68,18 @@ class UserService
                 'createdat' => now()
             ]);
 
-            // Assign activity groups if provided
+            // Assign activity groups if provided (NORMALIZED - one row per activity)
             if (!empty($data['activitygroups'])) {
-                $activities = implode(',', array_filter($data['activitygroups']));
-                
-                UserActivity::create([
-                    'userid' => $data['userid'],
-                    'companycode' => $data['companycode'],
-                    'activitygroup' => $activities,
-                    'grantedby' => $createdBy,
-                    'createdat' => now()
-                ]);
+                foreach ($data['activitygroups'] as $activitygroup) {
+                    UserActivity::create([
+                        'userid' => $data['userid'],
+                        'companycode' => $data['companycode'],
+                        'activitygroup' => trim($activitygroup),
+                        'isactive' => 1,
+                        'grantedby' => $createdBy,
+                        'createdat' => now()
+                    ]);
+                }
             }
 
             DB::commit();
@@ -123,11 +112,6 @@ class UserService
 
     /**
      * Update existing user
-     *
-     * @param string $userid
-     * @param array $data
-     * @param string $updatedBy
-     * @return array ['success' => bool, 'message' => string]
      */
     public function updateUser(string $userid, array $data, string $updatedBy): array
     {
@@ -161,21 +145,29 @@ class UserService
             // Update user
             $this->userRepository->update($userid, $updateData);
 
-            // Update activity groups if provided
+            // Update activity groups if provided (NORMALIZED)
             if (isset($data['activitygroups'])) {
-                $activities = implode(',', array_filter($data['activitygroups']));
-                
-                UserActivity::updateOrCreate(
-                    [
-                        'userid' => $userid,
-                        'companycode' => $data['companycode']
-                    ],
-                    [
-                        'activitygroup' => $activities,
-                        'grantedby' => $updatedBy,
-                        'updatedat' => now()
-                    ]
-                );
+                // Deactivate all existing activities for this company
+                UserActivity::where('userid', $userid)
+                    ->where('companycode', $data['companycode'])
+                    ->update(['isactive' => 0, 'updatedat' => now()]);
+
+                // Insert or reactivate new activities
+                foreach ($data['activitygroups'] as $activitygroup) {
+                    UserActivity::updateOrCreate(
+                        [
+                            'userid' => $userid,
+                            'companycode' => $data['companycode'],
+                            'activitygroup' => trim($activitygroup)
+                        ],
+                        [
+                            'isactive' => 1,
+                            'grantedby' => $updatedBy,
+                            'createdat' => now(),
+                            'updatedat' => now()
+                        ]
+                    );
+                }
             }
 
             // Clear cache if jabatan changed
@@ -207,10 +199,6 @@ class UserService
 
     /**
      * Deactivate user (soft delete)
-     *
-     * @param string $userid
-     * @param string $deactivatedBy
-     * @return array ['success' => bool, 'message' => string]
      */
     public function deactivateUser(string $userid, string $deactivatedBy): array
     {
@@ -251,9 +239,6 @@ class UserService
 
     /**
      * Get user permissions summary
-     *
-     * @param string $userid
-     * @return array
      */
     public function getUserPermissionsSummary(string $userid): array
     {
@@ -309,19 +294,15 @@ class UserService
     }
 
     /**
-     * Get user activities for company
-     *
-     * @param string $userid
-     * @param string $companycode
-     * @return array
+     * Get user activities for company (NORMALIZED version)
      */
     public function getUserActivities(string $userid, string $companycode): array
     {
-        $activity = UserActivity::where('userid', $userid)
+        return UserActivity::where('userid', $userid)
             ->where('companycode', $companycode)
-            ->first();
-
-        return $activity ? [$activity->activitygroup] : [];
+            ->where('isactive', 1)
+            ->pluck('activitygroup')
+            ->toArray();
     }
 
     public function getMandorList(string $companyCode): Collection

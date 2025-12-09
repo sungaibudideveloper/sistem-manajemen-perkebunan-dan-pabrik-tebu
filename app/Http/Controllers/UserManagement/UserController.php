@@ -162,15 +162,49 @@ class UserController extends Controller
      */
     public function getCompanies($userid)
     {
-        $user = $this->userService->getUserWithRelations($userid, ['userCompanies.company']);
-        
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
+        try {
+            $user = $this->userService->getUserWithRelations($userid, ['jabatan', 'userCompanies.company']);
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak ditemukan'
+                ], 404);
+            }
 
-        return response()->json([
-            'companies' => $user->userCompanies->where('isactive', 1)
-        ]);
+            // Format companies as key-value pairs: companycode => name
+            $companies = $user->userCompanies
+                ->where('isactive', 1)
+                ->filter(fn($uc) => $uc->company !== null)
+                ->mapWithKeys(fn($uc) => [
+                    $uc->companycode => $uc->company->name
+                ])
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'user' => [
+                    'userid' => $user->userid,
+                    'name' => $user->name,
+                    'jabatan' => $user->jabatan ? [
+                        'idjabatan' => $user->jabatan->idjabatan,
+                        'namajabatan' => $user->jabatan->namajabatan
+                    ] : null
+                ],
+                'companies' => $companies
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching user companies', [
+                'userid' => $userid,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memuat data'
+            ], 500);
+        }
     }
 
     /**

@@ -31,8 +31,6 @@ class UserActivityController extends Controller
         $perPage = $request->get('perPage', 15);
         $result = $this->userActivityService->getPaginatedActivities($filters, $perPage);
 
-        $companies = Company::orderBy('name')->get();
-
         // Get users with access to current company
         $users = User::where('isactive', 1)
             ->whereHas('userCompanies', function ($q) use ($companycode) {
@@ -42,16 +40,15 @@ class UserActivityController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Activity group options
+        // Activity group options: activitygroup => groupname
         $activitygroup = ActivityGroup::orderBy('activitygroup')
-            ->pluck('activitygroup', 'groupname');
+            ->pluck('groupname', 'activitygroup');
 
-        return view('usermanagement.useractivity.index', [
+        return view('usermanagement.user-activity.index', [
             'title' => 'User Activity Permission',
             'navbar' => 'User Management',
             'nav' => 'User Activity Permission',
             'result' => $result,
-            'companies' => $companies,
             'users' => $users,
             'perPage' => $perPage,
             'companycode' => $companycode,
@@ -60,7 +57,7 @@ class UserActivityController extends Controller
     }
 
     /**
-     * Show user activity details
+     * AJAX: Get user activity for specific company
      */
     public function show($userid, $companycode)
     {
@@ -80,7 +77,7 @@ class UserActivityController extends Controller
         $validated = $request->validate([
             'userid' => 'required|string|exists:user,userid',
             'companycode' => 'required|string|exists:company,companycode',
-            'activitygroups' => 'array',
+            'activitygroups' => 'nullable|array',
             'activitygroups.*' => 'string'
         ]);
 
@@ -93,18 +90,18 @@ class UserActivityController extends Controller
             auth()->user()->userid
         );
 
-        return redirect()->route('usermanagement.useractivity.index')
+        return redirect()->route('usermanagement.user-activity.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     /**
-     * Delete user activity
+     * Delete all user activities for company
      */
     public function destroy($userid, $companycode)
     {
         $result = $this->userActivityService->deleteUserActivity($userid, $companycode);
 
-        return redirect()->route('usermanagement.useractivity.index')
+        return redirect()->route('usermanagement.user-activity.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }

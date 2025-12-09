@@ -24,10 +24,6 @@ class UserActivityService
 
     /**
      * Get paginated user activities
-     *
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getPaginatedActivities(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
@@ -35,11 +31,7 @@ class UserActivityService
     }
 
     /**
-     * Get user activity for company
-     *
-     * @param string $userid
-     * @param string $companycode
-     * @return array
+     * Get user activity for company (as array of activity codes)
      */
     public function getUserActivity(string $userid, string $companycode): array
     {
@@ -47,13 +39,7 @@ class UserActivityService
     }
 
     /**
-     * Assign activity groups to user
-     *
-     * @param string $userid
-     * @param string $companycode
-     * @param array $activitygroups
-     * @param string $grantedBy
-     * @return array ['success' => bool, 'message' => string]
+     * Assign activity groups to user (replaces all existing)
      */
     public function assignActivityGroups(string $userid, string $companycode, array $activitygroups, string $grantedBy): array
     {
@@ -75,12 +61,16 @@ class UserActivityService
                 ];
             }
 
-            // Clean and join activity groups
+            // Clean activity groups
             $cleanedActivities = array_filter(array_map('trim', $activitygroups));
-            $activityString = implode(',', $cleanedActivities);
 
-            // Assign activities
-            $this->userActivityRepository->assignActivities($userid, $companycode, $activityString, $grantedBy);
+            if (empty($cleanedActivities)) {
+                // If empty, delete all
+                $this->userActivityRepository->deleteAll($userid, $companycode);
+            } else {
+                // Sync activities
+                $this->userActivityRepository->syncActivities($userid, $companycode, $cleanedActivities, $grantedBy);
+            }
 
             Log::info('Activity groups assigned', [
                 'userid' => $userid,
@@ -108,11 +98,7 @@ class UserActivityService
     }
 
     /**
-     * Delete user activity
-     *
-     * @param string $userid
-     * @param string $companycode
-     * @return array ['success' => bool, 'message' => string]
+     * Delete all user activities for company
      */
     public function deleteUserActivity(string $userid, string $companycode): array
     {
@@ -124,19 +110,19 @@ class UserActivityService
                 ];
             }
 
-            $this->userActivityRepository->delete($userid, $companycode);
+            $this->userActivityRepository->deleteAll($userid, $companycode);
 
-            Log::info('User activity deleted', [
+            Log::info('User activities deleted', [
                 'userid' => $userid,
                 'companycode' => $companycode
             ]);
 
             return [
                 'success' => true,
-                'message' => 'Activity group berhasil dihapus'
+                'message' => 'Semua activity groups berhasil dihapus'
             ];
         } catch (\Exception $e) {
-            Log::error('Failed to delete user activity', [
+            Log::error('Failed to delete user activities', [
                 'userid' => $userid,
                 'companycode' => $companycode,
                 'error' => $e->getMessage()
@@ -144,27 +130,13 @@ class UserActivityService
 
             return [
                 'success' => false,
-                'message' => 'Gagal menghapus activity group'
+                'message' => 'Gagal menghapus activity groups'
             ];
         }
     }
 
     /**
-     * Get all activities for user
-     *
-     * @param string $userid
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getAllUserActivities(string $userid)
-    {
-        return $this->userActivityRepository->getAllForUser($userid);
-    }
-
-    /**
      * Count activities for user
-     *
-     * @param string $userid
-     * @return int
      */
     public function countForUser(string $userid): int
     {
