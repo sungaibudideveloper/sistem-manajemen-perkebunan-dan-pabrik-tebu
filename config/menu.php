@@ -341,52 +341,6 @@ return [
     ],
 
     // ============================================
-    // USER MANAGEMENT
-    // ============================================
-    [
-        'name' => 'User Management',
-        'icon' => 'users',
-        'permission' => 'usermanagement.menu.view',
-        'children' => [
-            [
-                'name' => 'User',
-                'route' => 'usermanagement.user.index',
-                'permission' => 'usermanagement.user.view',
-            ],
-            [
-                'name' => 'User Company Access',
-                'route' => 'usermanagement.user-company-permissions.index',
-                'permission' => 'usermanagement.usercompany.view',
-            ],
-            [
-                'name' => 'User Permissions',
-                'route' => 'usermanagement.user-permissions.index',
-                'permission' => 'usermanagement.userpermission.view',
-            ],
-            [
-                'name' => 'User Activity Permission',
-                'route' => 'usermanagement.user-activity-permission.index',
-                'permission' => 'usermanagement.useractivity.view',
-            ],
-            [
-                'name' => 'Master Permissions',
-                'route' => 'usermanagement.permissions-masterdata.index',
-                'permission' => 'usermanagement.permission.view',
-            ],
-            [
-                'name' => 'Jabatan Management',
-                'route' => 'usermanagement.jabatan.index',
-                'permission' => 'usermanagement.jabatan.view',
-            ],
-            [
-                'name' => 'Support Ticket',
-                'route' => 'usermanagement.support-ticket.index',
-                'permission' => 'usermanagement.supportticket.view',
-            ],
-        ],
-    ],
-
-    // ============================================
     // PABRIK
     // ============================================
     [
@@ -406,5 +360,54 @@ return [
             ],
         ],
     ],
+
+
+    
+    // ============================================
+    // USER MANAGEMENT
+    // ============================================
+    [
+        'name' => 'User Management',
+        'icon' => 'users',
+        'permission' => 'usermanagement.menu.view',
+        'children' => [
+            [
+                'name' => 'User',
+                'route' => 'usermanagement.user.index',
+                'permission' => 'usermanagement.user.view',
+            ],
+            [
+                'name' => 'User Company Access',
+                'route' => 'usermanagement.user-company.index',
+                'permission' => 'usermanagement.user-company.view',
+            ],
+            [
+                'name' => 'User Permissions',
+                'route' => 'usermanagement.user-permission.index',
+                'permission' => 'usermanagement.user-permission.view',
+            ],
+            [
+                'name' => 'User Activity Permission',
+                'route' => 'usermanagement.user-activity.index',
+                'permission' => 'usermanagement.user-activity.view',
+            ],
+            [
+                'name' => 'Master Permissions',
+                'route' => 'usermanagement.permission.index',
+                'permission' => 'usermanagement.permission.view',
+            ],
+            [
+                'name' => 'Jabatan Management',
+                'route' => 'usermanagement.jabatan.index',
+                'permission' => 'usermanagement.jabatan.view',
+            ],
+            [
+                'name' => 'Support Ticket',
+                'route' => 'usermanagement.support-ticket.index',
+                'permission' => 'usermanagement.support-ticket.view',
+            ],
+        ],
+    ],
+
     
 ];

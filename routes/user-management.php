@@ -1,80 +1,161 @@
 <?php
 
-// routes\user-management.php
-use App\Http\Controllers\MasterData\UserManagementController;
+// routes/user-management.php
 
+use App\Http\Controllers\UserManagement\{
+    UserController,
+    JabatanController,
+    PermissionController,
+    UserCompanyController,
+    UserPermissionController,
+    UserActivityController,
+    SupportTicketController
+};
 
+// ============================================================================
+// USER MANAGEMENT ROUTES
+// ============================================================================
 
-// User management
-Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
-    Route::get('usermanagement/user', [UserManagementController::class, 'userIndex'])->name('usermanagement.user.index');
-    Route::post('usermanagement/user', [UserManagementController::class, 'userStore'])->name('usermanagement.user.store');
-    Route::get('usermanagement/user/create', [UserManagementController::class, 'userCreate'])->name('usermanagement.user.create');
+Route::prefix('usermanagement')->middleware('auth')->name('usermanagement.')->group(function () {
 
-    Route::get('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyIndex'])->name('usermanagement.user-company-permissions.index');
-    Route::post('usermanagement/user-company-permissions', [UserManagementController::class, 'userCompanyStore'])->name('usermanagement.user-company-permissions.store');
-    Route::post('usermanagement/user-company-permissions/assign', [UserManagementController::class, 'userCompanyAssign'])->name('usermanagement.user-company-permissions.assign');
+    // ------------------------------------------------------------------------
+    // USER MANAGEMENT
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.user.view')->group(function () {
+        Route::get('users', [UserController::class, 'index'])->name('user.index');
+        Route::get('users/{userid}', [UserController::class, 'show'])->name('user.show');
+    });
 
-    Route::get('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionIndex'])->name('usermanagement.user-permissions.index');
-    Route::post('usermanagement/user-permissions', [UserManagementController::class, 'userPermissionStore'])->name('usermanagement.user-permissions.store');
+    Route::middleware('permission:usermanagement.user.create')->group(function () {
+        Route::post('users', [UserController::class, 'store'])->name('user.store');
+    });
+
+    Route::middleware('permission:usermanagement.user.edit')->group(function () {
+        Route::put('users/{userid}', [UserController::class, 'update'])->name('user.update');
+    });
+
+    Route::middleware('permission:usermanagement.user.delete')->group(function () {
+        Route::delete('users/{userid}', [UserController::class, 'destroy'])->name('user.destroy');
+    });
+
+    // User AJAX Endpoints
+    Route::prefix('ajax/users')->name('ajax.user.')->group(function () {
+        Route::get('{userid}/permissions', [UserController::class, 'getPermissions'])->name('permissions');
+        Route::get('{userid}/companies', [UserController::class, 'getCompanies'])->name('companies');
+        Route::get('{userid}/activities', [UserController::class, 'getActivities'])->name('activities');
+    });
+
+    // ------------------------------------------------------------------------
+    // JABATAN (ROLE) MANAGEMENT
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.jabatan.view')->group(function () {
+        Route::get('jabatan', [JabatanController::class, 'index'])->name('jabatan.index');
+    });
+
+    Route::middleware('permission:usermanagement.jabatan.create')->group(function () {
+        Route::post('jabatan', [JabatanController::class, 'store'])->name('jabatan.store');
+    });
+
+    Route::middleware('permission:usermanagement.jabatan.edit')->group(function () {
+        Route::put('jabatan/{idjabatan}', [JabatanController::class, 'update'])->name('jabatan.update');
+    });
+
+    Route::middleware('permission:usermanagement.jabatan.delete')->group(function () {
+        Route::delete('jabatan/{idjabatan}', [JabatanController::class, 'destroy'])->name('jabatan.destroy');
+    });
+
+    Route::middleware('permission:usermanagement.jabatan.assign-permission')->group(function () {
+        Route::post('jabatan/assign-permissions', [JabatanController::class, 'assignPermissions'])
+            ->name('jabatan.assign-permissions');
+        // AJAX Endpoints
+        Route::get('ajax/jabatan/{idjabatan}/permissions', [JabatanController::class, 'getPermissions'])
+            ->name('ajax.jabatan.permissions');
+    });
+
+    // ------------------------------------------------------------------------
+    // PERMISSION MASTER DATA
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.permission.view')->group(function () {
+        Route::get('permissions', [PermissionController::class, 'index'])->name('permission.index');
+    });
+
+    Route::middleware('permission:usermanagement.permission.create')->group(function () {
+        Route::post('permissions', [PermissionController::class, 'store'])->name('permission.store');
+    });
+
+    Route::middleware('permission:usermanagement.permission.edit')->group(function () {
+        Route::put('permissions/{id}', [PermissionController::class, 'update'])->name('permission.update');
+    });
+
+    Route::middleware('permission:usermanagement.permission.delete')->group(function () {
+        Route::delete('permissions/{id}', [PermissionController::class, 'destroy'])->name('permission.destroy');
+    });
+
+    // ------------------------------------------------------------------------
+    // USER COMPANY ACCESS
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.user-company.view')->group(function () {
+        Route::get('user-companies', [UserCompanyController::class, 'index'])->name('user-company.index');
+    });
+
+    Route::middleware('permission:usermanagement.user-company.assign')->group(function () {
+        Route::post('user-companies', [UserCompanyController::class, 'store'])->name('user-company.store');
+        Route::post('user-companies/assign', [UserCompanyController::class, 'assign'])->name('user-company.assign');
+    });
+
+    Route::middleware('permission:usermanagement.user-company.delete')->group(function () {
+        Route::delete('user-companies/{userid}/{companycode}', [UserCompanyController::class, 'destroy'])->name('user-company.destroy');
+    });
+
+    // ------------------------------------------------------------------------
+    // USER PERMISSION OVERRIDES
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.user-permission.view')->group(function () {
+        Route::get('user-permissions', [UserPermissionController::class, 'index'])->name('user-permission.index');
+    });
+
+    Route::middleware('permission:usermanagement.user-permission.create')->group(function () {
+        Route::post('user-permissions', [UserPermissionController::class, 'store'])->name('user-permission.store');
+    });
+
+    Route::middleware('permission:usermanagement.user-permission.delete')->group(function () {
+        Route::delete('user-permissions/{id}', [UserPermissionController::class, 'destroy'])->name('user-permission.destroy');
+    });
+
+    // ------------------------------------------------------------------------
+    // USER ACTIVITY PERMISSIONS
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.user-activity.view')->group(function () {
+        Route::get('user-activities', [UserActivityController::class, 'index'])->name('user-activity.index');
+        Route::get('user-activities/{userid}/{companycode}', [UserActivityController::class, 'show'])->name('user-activity.show');
+    });
+
+    Route::middleware('permission:usermanagement.user-activity.assign')->group(function () {
+        Route::post('user-activities/assign', [UserActivityController::class, 'assign'])->name('user-activity.assign');
+    });
+
+    Route::middleware('permission:usermanagement.user-activity.delete')->group(function () {
+        Route::delete('user-activities/{userid}/{companycode}', [UserActivityController::class, 'destroy'])->name('user-activity.destroy');
+    });
+
+    // ------------------------------------------------------------------------
+    // SUPPORT TICKET
+    // ------------------------------------------------------------------------
+    Route::middleware('permission:usermanagement.support-ticket.view')->group(function () {
+        Route::get('support-tickets', [SupportTicketController::class, 'index'])->name('support-ticket.index');
+        Route::get('support-tickets/{id}', [SupportTicketController::class, 'show'])->name('support-ticket.show');
+    });
+
+    Route::middleware('permission:usermanagement.support-ticket.edit')->group(function () {
+        Route::put('support-tickets/{id}', [SupportTicketController::class, 'update'])->name('support-ticket.update');
+    });
+
+    Route::middleware('permission:usermanagement.support-ticket.delete')->group(function () {
+        Route::delete('support-tickets/{id}', [SupportTicketController::class, 'destroy'])->name('support-ticket.destroy');
+    });
 });
 
-Route::middleware(['auth', 'permission:Edit User'])->group(function () {
-    Route::get('usermanagement/user/{userid}/edit', [UserManagementController::class, 'userEdit'])->name('usermanagement.user.edit');
-    Route::put('usermanagement/user/{userid}', [UserManagementController::class, 'userUpdate'])->name('usermanagement.user.update');
-    Route::delete('usermanagement/user-company-permissions/{userid}/{companycode}', [UserManagementController::class, 'userCompanyDestroy'])->name('usermanagement.user-company-permissions.destroy');
-    Route::delete('usermanagement/user-permissions/{userid}/{companycode}/{permission}', [UserManagementController::class, 'userPermissionDestroy'])->name('usermanagement.user-permissions.destroy');
-});
-
-Route::middleware('permission:Hapus User')->group(function () {
-    Route::delete('usermanagement/user/{userid}', [UserManagementController::class, 'userDestroy'])->name('usermanagement.user.destroy');
-});
-
-// Permission master data management
-Route::middleware(['auth', 'permission:Master'])->group(function () {
-    Route::get('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionIndex'])->name('usermanagement.permissions-masterdata.index');
-    Route::post('usermanagement/permissions-masterdata', [UserManagementController::class, 'permissionStore'])->name('usermanagement.permissions-masterdata.store');
-    Route::put('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionUpdate'])->name('usermanagement.permissions-masterdata.update');
-    Route::delete('usermanagement/permissions-masterdata/{permissionid}', [UserManagementController::class, 'permissionDestroy'])->name('usermanagement.permissions-masterdata.destroy');
-
-    Route::get('usermanagement/test-permission/{userid}/{permission}', [UserManagementController::class, 'testUserPermission'])->name('usermanagement.test-permission');
-});
-
-// Jabatan permission management
-Route::middleware(['auth', 'permission:Jabatan'])->group(function () {
-    Route::get('usermanagement/jabatan', [UserManagementController::class, 'jabatanPermissionIndex'])->name('usermanagement.jabatan.index');
-    Route::post('usermanagement/jabatan/assign-permission', [UserManagementController::class, 'jabatanPermissionStore'])->name('usermanagement.jabatan.assign-permission');
-    Route::delete('usermanagement/jabatan/remove-permission', [UserManagementController::class, 'jabatanPermissionDestroy'])->name('usermanagement.jabatan.remove-permission');
-    Route::post('usermanagement/jabatan', [UserManagementController::class, 'jabatanStore'])->name('usermanagement.jabatan.store');
-    Route::put('usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanUpdate'])->name('usermanagement.jabatan.update');
-    Route::delete('usermanagement/jabatan/{idjabatan}', [UserManagementController::class, 'jabatanDestroy'])->name('usermanagement.jabatan.destroy');
-});
-
-// Support ticket management
-Route::middleware(['auth', 'permission:Kelola User'])->group(function () {
-    Route::get('usermanagement/support-ticket', [UserManagementController::class, 'ticketIndex'])->name('usermanagement.support-ticket.index');
-    Route::put('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketUpdate'])->name('usermanagement.support-ticket.update');
-    Route::delete('usermanagement/support-ticket/{ticket_id}', [UserManagementController::class, 'ticketDestroy'])->name('usermanagement.support-ticket.destroy');
-
-    Route::get('usermanagement/user-activity-permission', [UserManagementController::class, 'UserActivityPermission'])->name('usermanagement.user-activity-permission.index');
-    Route::post('usermanagement/user-activity-permission/assign', [UserManagementController::class, 'userActivityAssign'])->name('usermanagement.user-activity-permission.assign');
-    Route::delete('usermanagement/user-activity-permission/{userid}/{companycode}/{activitygroup}', [UserManagementController::class, 'userActivityDestroy'])->name('usermanagement.user-activity-permission.destroy');
-    Route::get('usermanagement/user-activity-permission/{userid}/{companycode?}', [UserManagementController::class, 'getUserActivitiesForCurrentCompany']);
-});
-
-Route::post('support-ticket/submit', [UserManagementController::class, 'ticketStore'])
+// Public Support Ticket Submission (No auth required)
+Route::post('support-ticket/submit', [SupportTicketController::class, 'publicStore'])
     ->middleware('throttle:10,60')
     ->name('support.ticket.submit');
-
-
-// User Management AJAX endpoints
-Route::middleware('auth')->prefix('usermanagement/ajax')->name('usermanagement.ajax.')->group(function () {
-
-    // Get jabatan permissions for modal/form dropdown
-    Route::get('/jabatan/{idjabatan}/permissions', [UserManagementController::class, 'getJabatanPermissions'])
-        ->name('jabatan-permissions');
-
-    // Get user permissions for display in modal
-    Route::get('/user/{userid}/permissions', [UserManagementController::class, 'getUserPermissionsSimple'])
-        ->name('user-permissions');
-});

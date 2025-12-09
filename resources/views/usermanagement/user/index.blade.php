@@ -1,4 +1,4 @@
-{{-- resources/views/master/usermanagement/user/index.blade.php --}}
+<!-- resources\views\usermanagement\user\index.blade.php -->
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -90,7 +90,7 @@
             
             try {
                 const baseUrl = '{{ url("/") }}';
-                const response = await fetch(baseUrl + '/usermanagement/ajax/user/' + userid + '/permissions');
+                const response = await fetch(baseUrl + '/usermanagement/ajax/users/' + userid + '/permissions');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }

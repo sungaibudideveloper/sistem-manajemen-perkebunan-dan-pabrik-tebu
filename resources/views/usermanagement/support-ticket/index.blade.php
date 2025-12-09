@@ -1,4 +1,4 @@
-{{-- resources/views/master/usermanagement/support-ticket/index.blade.php --}}
+<!-- resources\views\usermanagement\support-ticket\index.blade.php -->
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
