@@ -339,9 +339,9 @@ table th, table td {
 
         <!--@if(hasPermission('Menu Gudang'))-->
             <!-- Submit Button -->
-            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' && $details->whereNotNull('nouse')->count() < 1)
+            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
-                <button 
+                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
                     type="submit"
                     class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
                 >
@@ -349,6 +349,18 @@ table th, table td {
                 </button>
             </div>
             @endif
+            @if(strtoupper($details[0]->flagstatus) == 'ACTIVE')
+            <div class="flex justify-center mt-4">
+                <button 
+                    type="submit"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+                    style="display: block !important; visibility: visible !important;"
+                >
+                    Penyerahan TEST
+                </button>
+            </div>
+            @endif
+        </form>
         <!--@endif-->
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
