@@ -1,4 +1,4 @@
-<!-- resources\views\usermanagement\user-company-permission\index.blade.php -->
+<!-- resources\views\usermanagement\user-company\index.blade.php -->
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -26,9 +26,9 @@
     @endif
 
     <div x-data="{
-        open: false,
+        createModal: false,
         companyModal: false,
-        viewCompaniesModal: false,
+        viewModal: false,
         selectedUser: null,
         selectedUserName: '',
         selectedCompanies: [],
@@ -40,27 +40,27 @@
         },
         availableCompanies: @js($companies->toArray()),
         
-        resetForm() {
+        openCreateModal() {
             this.form = {
                 userid: '',
                 companycodes: []
             };
-            this.open = true;
+            this.createModal = true;
         },
         
-        showCompaniesModal(data) {
-            this.selectedUser = data.userid;
-            this.selectedUserName = data.name;
-            this.viewCompanies = data.companies || [];
-            this.viewCompaniesModal = true;
-        },
-        
-        editCompanies(user) {
+        openCompanyModal(user) {
             this.selectedUser = user.userid;
             this.selectedUserName = user.name;
             this.selectedCompanies = user.userCompanies.map(uc => uc.companycode);
             this.isLoadingCompanies = false;
             this.companyModal = true;
+        },
+        
+        openViewModal(user) {
+            this.selectedUser = user.userid;
+            this.selectedUserName = user.name;
+            this.viewCompanies = user.companies || [];
+            this.viewModal = true;
         },
         
         toggleCompany(companycode) {
@@ -77,7 +77,7 @@
         },
         
         selectAllCompanies() {
-            this.selectedCompanies = this.availableCompanies.map(company => company.companycode);
+            this.selectedCompanies = this.availableCompanies.map(c => c.companycode);
         },
         
         deselectAllCompanies() {
@@ -89,31 +89,33 @@
         <div class="px-4 py-4 border-b border-gray-200">
             <div class="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                 
-                <!-- Tambah Data Button -->
-                <div class="flex justify-start">
-                    <button @click="resetForm()"
-                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
+                <!-- Title -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">User Company Access Management</h2>
+                    <p class="text-sm text-gray-600">Kelola akses user ke berbagai company</p>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+                    @can('usermanagement.user-company.assign')
+                    <button @click="openCreateModal()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span class="hidden sm:inline">Tambah Company Access</span>
-                        <span class="sm:hidden">Tambah</span>
+                        Tambah Company Access
                     </button>
-                </div>
-
-                <!-- Search and Controls -->
-                <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+                    @endcan
                     
-                    <!-- Search Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
                         <input type="text" name="search" id="search"
                             value="{{ request('search') }}"
-                            placeholder="User ID, Nama User, Company..."
+                            placeholder="User ID, Nama..."
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('usermanagement.user-company-permissions.index') }}" 
+                            <a href="{{ route('usermanagement.user-company.index') }}" 
                                class="text-gray-500 hover:text-gray-700 px-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -125,7 +127,6 @@
                         @endif
                     </form>
 
-                    <!-- Per Page Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                         <label for="perPage" class="text-xs font-medium text-gray-700 whitespace-nowrap">Per halaman:</label>
                         <select name="perPage" id="perPage" onchange="this.form.submit()"
@@ -133,7 +134,6 @@
                             <option value="15" {{ ($perPage ?? 15) == 15 ? 'selected' : '' }}>15</option>
                             <option value="25" {{ ($perPage ?? 15) == 25 ? 'selected' : '' }}>25</option>
                             <option value="50" {{ ($perPage ?? 15) == 50 ? 'selected' : '' }}>50</option>
-                            <option value="100" {{ ($perPage ?? 15) == 100 ? 'selected' : '' }}>100</option>
                         </select>
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
@@ -173,29 +173,27 @@
                                 @endif
                             </td>
                             <td class="py-3 px-3 text-center text-sm text-gray-700">
-                                <button @click="showCompaniesModal({ userid: '{{ $user->userid }}', name: '{{ addslashes($user->name) }}', companies: {{ json_encode($user->userCompanies->toArray()) }} })"
+                                <button @click="openViewModal({ userid: '{{ $user->userid }}', name: '{{ addslashes($user->name) }}', companies: {{ json_encode($user->userCompanies->toArray()) }} })"
                                     class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $user->userCompanies->count() > 0 ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-800 hover:bg-gray-200' }} transition-colors cursor-pointer">
-                                    <span>{{ $user->userCompanies->count() }} companies</span>
-                                    <svg class="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
+                                    {{ $user->userCompanies->count() }} companies
                                 </button>
                             </td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <!-- Edit Companies Button -->
-                                    <button @click='editCompanies({
+                                    <!-- Manage Companies -->
+                                    @can('usermanagement.user-company.assign')
+                                    <button @click='openCompanyModal({
                                             userid: "{{ $user->userid }}",
-                                            name: "{{ $user->name }}",
+                                            name: "{{ addslashes($user->name) }}",
                                             userCompanies: @json($user->userCompanies->toArray())
                                         })'
                                         class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md p-2 transition-all duration-150"
-                                        title="Edit Companies">
+                                        title="Kelola Companies">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                     </button>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>
@@ -206,8 +204,8 @@
                                     <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h6m-6 4h6m-6 4h6"></path>
                                     </svg>
-                                    <p class="text-lg font-medium">Tidak ada data company access</p>
-                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada user yang memiliki company access' }}</p>
+                                    <p class="text-lg font-medium">Tidak ada data</p>
+                                    <p class="text-sm">{{ request('search') ? 'Tidak ada hasil untuk pencarian "'.request('search').'"' : 'Belum ada user dengan company access' }}</p>
                                 </div>
                             </td>
                         </tr>
@@ -229,14 +227,13 @@
         </div>
 
         <!-- Create Modal -->
-        <div x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
-            @keydown.window.escape="open = false">
-            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div x-show="createModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
+            @keydown.window.escape="createModal = false">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
                 
-                <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-900">Tambah Company Access</h3>
-                    <button @click="open = false"
+                    <button @click="createModal = false"
                         class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -244,54 +241,44 @@
                     </button>
                 </div>
 
-                <!-- Modal Body -->
                 <div class="p-6">
-                    <form action="{{ route('usermanagement.user-company-permissions.store') }}" method="POST">
+                    <form action="{{ route('usermanagement.user-company.store') }}" method="POST">
                         @csrf
 
                         <!-- User Selection -->
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">User <span class="text-red-500">*</span></label>
                             <select name="userid" x-model="form.userid" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                                 <option value="">-- Pilih User --</option>
                                 @foreach($users as $user)
                                 <option value="{{ $user->userid }}">
-                                    {{ $user->userid }} - {{ $user->name }} 
-                                    @if($user->jabatan)
-                                        ({{ $user->jabatan->namajabatan }})
-                                    @endif
+                                    {{ $user->userid }} - {{ $user->name }}
+                                    @if($user->jabatan) ({{ $user->jabatan->namajabatan }}) @endif
                                 </option>
                                 @endforeach
                             </select>
-                            <div class="text-xs text-gray-500 mt-1">Hanya menampilkan user yang belum memiliki company access</div>
                         </div>
 
-                        <!-- Company Selection -->
+                        <!-- Companies -->
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Companies <span class="text-red-500">*</span></label>
                             
-                            <!-- Bulk Selection Controls -->
                             <div class="flex space-x-2 mb-3">
-                                <button type="button" 
-                                    @click="form.companycodes = availableCompanies.map(company => company.companycode)"
-                                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
+                                <button type="button" @click="form.companycodes = availableCompanies.map(c => c.companycode)"
+                                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
                                     Select All
                                 </button>
-                                <button type="button" 
-                                    @click="form.companycodes = []"
-                                    class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition-colors">
-                                    Deselect All
+                                <button type="button" @click="form.companycodes = []"
+                                    class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">
+                                    Clear All
                                 </button>
                             </div>
 
-                            <!-- Company Checkboxes -->
-                            <div class="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
+                            <div class="max-h-64 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
                                 @foreach($companies as $company)
-                                <label class="flex items-center space-x-3 p-2 border rounded hover:bg-gray-50 cursor-pointer transition-colors">
-                                    <input type="checkbox" 
-                                           name="companycodes[]" 
-                                           value="{{ $company->companycode }}"
+                                <label class="flex items-center space-x-3 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="companycodes[]" value="{{ $company->companycode }}"
                                            x-model="form.companycodes"
                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                     <div class="flex-1">
@@ -303,29 +290,14 @@
                             </div>
                         </div>
 
-                        <!-- Selected Count -->
-                        <div class="mb-4 p-3 bg-blue-50 rounded-lg" x-show="form.companycodes.length > 0">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <span class="text-sm font-medium text-blue-900">
-                                    <span x-text="form.companycodes.length + ' companies dipilih'"></span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Modal Actions -->
                         <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
-                            <button type="button" @click="open = false"
-                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                            <button type="button" @click="createModal = false"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                 Batal
                             </button>
                             <button type="submit"
-                                :disabled="!form.userid || form.companycodes.length === 0"
-                                :class="(!form.userid || form.companycodes.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
-                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
-                                Simpan Company Access
+                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                                Simpan
                             </button>
                         </div>
                     </form>
@@ -333,43 +305,33 @@
             </div>
         </div>
 
-        <!-- View Companies Modal (Simple Read-only) -->
-        <div x-show="viewCompaniesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
-            @keydown.window.escape="viewCompaniesModal = false">
-            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        <!-- View Modal -->
+        <div x-show="viewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
+            @keydown.window.escape="viewModal = false">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
                 
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+                <div class="flex-shrink-0 flex items-center justify-between p-6 border-b border-gray-200 bg-white">
                     <div>
                         <h3 class="text-xl font-semibold text-gray-900">Company Access</h3>
                         <p class="text-sm text-gray-600" x-text="`User: ${selectedUserName} (${selectedUser})`"></p>
                     </div>
-                    <button @click="viewCompaniesModal = false"
-                        class="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                    <button @click="viewModal = false"
+                        class="text-gray-400 hover:text-gray-600 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
 
-                <!-- Modal Body -->
-                <div class="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+                <div class="flex-1 overflow-y-auto p-6">
                     <template x-if="viewCompanies.length > 0">
                         <div class="space-y-3">
                             <template x-for="company in viewCompanies" :key="company.companycode">
                                 <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                                     <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="flex-shrink-0">
-                                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h6m-6 4h6m-6 4h6"></path>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <h6 class="font-medium text-gray-900" x-text="company.companycode"></h6>
-                                                <div class="text-xs text-gray-500 mt-1" x-text="'Granted by: ' + (company.grantedby || 'System')"></div>
-                                                <div class="text-xs text-gray-500" x-text="'Created: ' + (company.createdat ? new Date(company.createdat).toLocaleDateString('id-ID') : '-')"></div>
-                                            </div>
+                                        <div>
+                                            <h6 class="font-medium text-gray-900" x-text="company.companycode"></h6>
+                                            <div class="text-xs text-gray-500 mt-1" x-text="'Granted by: ' + (company.grantedby || '-')"></div>
                                         </div>
                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Active
@@ -382,118 +344,83 @@
 
                     <template x-if="viewCompanies.length === 0">
                         <div class="text-center py-8">
-                            <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h6m-6 4h6m-6 4h6"></path>
-                            </svg>
-                            <p class="text-gray-600 font-medium">No Company Access</p>
-                            <p class="text-sm text-gray-500">This user has no company access assigned</p>
+                            <p class="text-gray-600">No company access</p>
                         </div>
                     </template>
                 </div>
 
-                <!-- Modal Footer -->
-                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                    <div class="flex justify-end">
-                        <button @click="viewCompaniesModal = false"
-                            class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
-                            Close
-                        </button>
-                    </div>
+                <div class="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                    <button @click="viewModal = false"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Company Access Modal -->
+        <!-- Edit Company Modal -->
         <div x-show="companyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
             @keydown.window.escape="companyModal = false">
-            <div class="relative bg-white rounded-lg shadow-xl w-[80vw] h-[80vh] flex flex-col">
+            <div class="relative bg-white rounded-lg shadow-xl w-[90vw] max-w-5xl h-[85vh] flex flex-col">
                 
-                <!-- Modal Header -->
                 <div class="flex-shrink-0 flex items-center justify-between p-6 border-b border-gray-200 bg-white">
                     <div>
                         <h3 class="text-xl font-semibold text-gray-900">Kelola Company Access</h3>
                         <p class="text-sm text-gray-600" x-text="`User: ${selectedUserName} (${selectedUser})`"></p>
-                        <p class="text-xs text-blue-600 mt-1">Total companies available: {{ $companies->count() }}</p>
                     </div>
                     <button @click="companyModal = false"
-                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                        class="text-gray-400 hover:text-gray-600 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
 
-                <!-- Modal Body -->
-                <div class="flex-1 overflow-hidden">
-                    <!-- Loading State -->
-                    <div x-show="isLoadingCompanies" class="h-full flex items-center justify-center">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto mb-4"></div>
-                            <p class="text-gray-600">Loading companies...</p>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <form action="{{ route('usermanagement.user-company.assign') }}" method="POST" id="companyForm">
+                        @csrf
+                        <input type="hidden" name="userid" x-model="selectedUser">
+
+                        <div class="flex space-x-2 mb-4">
+                            <button type="button" @click="selectAllCompanies()"
+                                class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                                Select All
+                            </button>
+                            <button type="button" @click="deselectAllCompanies()"
+                                class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">
+                                Clear All
+                            </button>
                         </div>
-                    </div>
 
-                    <!-- Content -->
-                    <div x-show="!isLoadingCompanies" class="h-full overflow-y-auto p-6">
-                        <form action="{{ route('usermanagement.user-company-permissions.assign') }}" method="POST" id="companyForm">
-                            @csrf
-                            <input type="hidden" name="userid" x-model="selectedUser">
-
-                            <!-- Bulk Selection Controls -->
-                            <div class="flex space-x-2 mb-4">
-                                <button type="button" 
-                                    @click="selectAllCompanies()"
-                                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
-                                    Select All
-                                </button>
-                                <button type="button" 
-                                    @click="deselectAllCompanies()"
-                                    class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition-colors">
-                                    Deselect All
-                                </button>
-                            </div>
-
-                            <!-- Companies Grid -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                @foreach($companies as $company)
-                                <label class="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
-                                    <input type="checkbox" 
-                                           name="companycodes[]" 
-                                           value="{{ $company->companycode }}"
-                                           x-model="selectedCompanies"
-                                           :checked="isCompanySelected('{{ $company->companycode }}')"
-                                           class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-medium text-sm text-gray-900">{{ $company->companycode }}</div>
-                                        <div class="text-xs text-gray-500 mt-1">{{ $company->name }}</div>
-                                    </div>
-                                </label>
-                                @endforeach
-                            </div>
-
-                            <!-- Selected Count -->
-                            <div class="mt-6 p-3 bg-blue-50 rounded-lg">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-blue-900">
-                                        <span x-text="selectedCompanies.length + ' companies dipilih'"></span>
-                                    </span>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            @foreach($companies as $company)
+                            <label class="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="companycodes[]" value="{{ $company->companycode }}"
+                                       x-model="selectedCompanies"
+                                       class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">{{ $company->companycode }}</div>
+                                    <div class="text-xs text-gray-500">{{ $company->name }}</div>
                                 </div>
-                            </div>
-                        </form>
-                    </div>
+                            </label>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-6 p-3 bg-blue-50 rounded-lg">
+                            <span class="text-sm font-medium text-blue-900">
+                                <span x-text="selectedCompanies.length + ' companies terpilih'"></span>
+                            </span>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Modal Footer -->
                 <div class="flex-shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 p-6 bg-gray-50 border-t">
                     <button type="button" @click="companyModal = false"
-                        class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors duration-150">
+                        class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                         Batal
                     </button>
                     <button type="submit" form="companyForm"
-                        class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors duration-150">
+                        class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-slate-600 hover:bg-slate-700">
                         Simpan Companies
                     </button>
                 </div>

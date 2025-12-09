@@ -100,15 +100,11 @@ class UserCompanyRepository
     }
 
     /**
-     * Deactivate all companies for user
-     *
-     * @param string $userid
-     * @return bool
+     * Delete all companies for user
      */
-    public function deactivateAllForUser(string $userid): bool
+    public function deleteAllForUser(string $userid): bool
     {
-        return UserCompany::where('userid', $userid)
-            ->update(['isactive' => 0]);
+        return UserCompany::where('userid', $userid)->delete();
     }
 
     /**
