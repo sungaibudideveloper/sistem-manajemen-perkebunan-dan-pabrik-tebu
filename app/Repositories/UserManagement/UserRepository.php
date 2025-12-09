@@ -178,4 +178,24 @@ class UserRepository
             ->where('isactive', 1)
             ->count();
     }
+
+    public function getMandorByCompany(string $companyCode): Collection
+    {
+        return User::select(['userid', 'name', 'companycode', 'idjabatan'])
+            ->where('companycode', $companyCode)
+            ->where('idjabatan', 5)
+            ->where('isactive', 1)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function getOperatorsByCompany(string $companyCode): Collection
+    {
+        return User::select(['userid', 'name', 'companycode', 'idjabatan'])
+            ->where('companycode', $companyCode)
+            ->whereIn('idjabatan', [3, 4])
+            ->where('isactive', 1)
+            ->orderBy('name')
+            ->get();
+    }
 }
