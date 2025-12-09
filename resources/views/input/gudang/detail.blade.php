@@ -350,6 +350,16 @@ table th, table td {
             </div>
             @endif
         </form>
+                    @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
+            <div class="flex justify-center mt-4">
+                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
+                    type="submit"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
+                >
+                    Penyerahan
+                </button>
+            </div>
+            @endif
         <!--@endif-->
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
