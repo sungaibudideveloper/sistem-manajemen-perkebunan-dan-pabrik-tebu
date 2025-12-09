@@ -2,6 +2,7 @@
 
 namespace App\Services\UserManagement;
 
+use Illuminate\Database\Eloquent\Collection;
 use App\Repositories\UserManagement\UserRepository;
 use App\Models\{UserCompany, UserActivity};
 use Illuminate\Support\Facades\{DB, Hash, Log};
@@ -321,5 +322,20 @@ class UserService
             ->first();
 
         return $activity ? [$activity->activitygroup] : [];
+    }
+
+    public function getMandorList(string $companyCode): Collection
+    {
+        return $this->userRepository->getMandorByCompany($companyCode);
+    }
+
+    public function getOperatorList(string $companyCode): Collection
+    {
+        return $this->userRepository->getOperatorsByCompany($companyCode);
+    }
+
+    public function getUsersByRole(string $companyCode, int $jabatanId): Collection
+    {
+        return $this->userRepository->getByJabatan($jabatanId, true);
     }
 }

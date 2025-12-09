@@ -27,6 +27,7 @@ use App\Models\Kendaraan;
 use App\Models\TenagaKerja;
 
 // Services
+use App\Services\UserManagement\UserService;
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
 use App\Services\GenerateNewBatchService;
@@ -42,6 +43,14 @@ use App\Services\GenerateNewBatchService;
  */
 class RencanaKerjaHarianController extends Controller
 {
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+
     // =====================================
     // SECTION 1: RKH CRUD OPERATIONS
     // =====================================
@@ -129,7 +138,7 @@ class RencanaKerjaHarianController extends Controller
             'allDate' => $allDate,
             'rkhData' => $rkhData,
             'absentenagakerja' => $absenData,
-            'mandors' => User::getMandorByCompany($companycode),
+            'mandors' => $this->userService->getMandorList($companycode),
         ]);
     }
 
@@ -146,35 +155,7 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Silakan pilih tanggal dan mandor terlebih dahulu');
         }
 
-        // Validate date range
-        if (!$this->validateDateRange($selectedDate)) {
-            return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
-        }
-
-        // BACKEND VALIDATION: Double-check for outstanding RKH
         $companycode = Session::get('companycode');
-        $outstandingRKH = DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('mandorid', $mandorId)
-            ->where(function($query) {
-                $query->where('status', '!=', 'Completed')
-                      ->orWhereNull('status');
-            })
-            ->orderBy('rkhdate', 'desc')
-            ->first();
-
-        if ($outstandingRKH) {
-            $mandor = DB::table('user')->where('userid', $mandorId)->first();
-            return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', sprintf(
-                    'Mandor %s masih memiliki RKH outstanding (No: %s, Tanggal: %s). Selesaikan terlebih dahulu.',
-                    $mandor->name ?? $mandorId,
-                    $outstandingRKH->rkhno,
-                    Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y')
-                ));
-        }
-
         $targetDate = Carbon::parse($selectedDate);
 
         // Generate preview RKH number
@@ -184,8 +165,8 @@ class RencanaKerjaHarianController extends Controller
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
         $selectedMandor = DB::table('user')
-        ->where('userid', $mandorId)
-        ->first();
+            ->where('userid', $mandorId)
+            ->first();
 
         return view('input.rencanakerjaharian.create', array_merge([
             'title' => 'Form RKH',
@@ -2832,9 +2813,16 @@ public function loadAbsenByDate(Request $request)
         $absenModel = new AbsenHdr;
 
         return [
-            'mandors' => User::getMandorByCompany($companycode),
-            'activities' => Activity::with(['group', 'jenistenagakerja'])->where('active', 1)->orderBy('activitycode')->get(),
-            'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
+            'mandors' => $this->userService->getMandorList($companycode),
+            
+            'activities' => Activity::with(['group', 'jenistenagakerja'])
+                ->where('active', 1)
+                ->orderBy('activitycode')
+                ->get(),
+                
+            'bloks' => Blok::where('companycode', $companycode)
+                ->orderBy('blok')
+                ->get(),
 
             'masterlist' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
@@ -2914,7 +2902,6 @@ public function loadAbsenByDate(Request $request)
             'herbisidagroups' => $herbisidadosages->getFullHerbisidaGroupData($companycode),
             'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
-            // masterlistData untuk JavaScript - filter by company
             'masterlistData' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
                     $join->on('m.activebatchno', '=', 'b.batchno')
@@ -2941,12 +2928,7 @@ public function loadAbsenByDate(Request $request)
                 ->get(),
             
             'vehiclesData' => $this->getVehiclesWithOperators($companycode),
-            'helpersData' => TenagaKerja::where('companycode', $companycode)
-                ->where('jenistenagakerja', 4)
-                ->where('isactive', 1)
-                ->select(['tenagakerjaid', 'nama', 'nik'])
-                ->orderBy('nama')
-                ->get(),
+            'helpersData' => $this->userService->getUsersByRole($companycode, 4),
                 
             'kontraktorData' => DB::table('kontraktor')
                 ->where('companycode', $companycode)
