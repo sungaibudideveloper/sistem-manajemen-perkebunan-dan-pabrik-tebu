@@ -359,14 +359,6 @@ table th, table td {
             </div>
         </form>
         <!--@endif-->
-                    <div class="flex justify-center mt-4">
-                <button @if($details->whereNotNull('nouse')->count()<1 == false) @endif 
-                    type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow transition"
-                >
-                    Penyerahan
-                </button>
-            </div>
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
