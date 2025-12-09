@@ -363,6 +363,12 @@ table th, table td {
             
         </form>
         <!--@endif-->
+                    <div class="text-center mb-2 p-2 bg-yellow-100">
+                <p>flagstatus: {{ $details[0]->flagstatus }}</p>
+                <p>Kondisi ACTIVE: {{ strtoupper($details[0]->flagstatus) == 'ACTIVE' ? 'TRUE' : 'FALSE' }}</p>
+                <p>Nouse count: {{ $details->whereNotNull('nouse')->count() }}</p>
+                <p>Kondisi < 1: {{ $details->whereNotNull('nouse')->count() < 1 ? 'TRUE' : 'FALSE' }}</p>
+            </div>
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
