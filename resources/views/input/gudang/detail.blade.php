@@ -337,7 +337,7 @@ table th, table td {
 
 
 
-        @if(hasPermission('Menu Gudang'))
+        <!--@if(hasPermission('Menu Gudang'))-->
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
@@ -348,10 +348,9 @@ table th, table td {
                     Penyerahan
                 </button>
             </div>
-            @else {{dd($details[0])}}
             @endif
         </form>
-        @endif
+        <!--@endif-->
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
