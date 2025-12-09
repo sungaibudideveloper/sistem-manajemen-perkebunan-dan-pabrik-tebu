@@ -258,23 +258,88 @@
     </div>
   
     <script>
-        const plotHeaders = @json($plotHeadersForMap ?? []);
-        const plotData = @json($plotData ?? []);
-        const plotActivityDetails = @json($plotActivityDetails ?? []);
+    const plotHeaders = @json($plotHeadersForMap ?? []);
+    const plotData = @json($plotData ?? []);
+    const plotActivityDetails = @json($plotActivityDetails ?? []);
         
-        let map, markers = [], polygons = [];
-        
-        function initMapIfNeeded() {
-            if (window.mapInitialized) return;
-            
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: parseFloat(plotHeaders[0]?.centerlatitude || -4.12893), lng: parseFloat(plotHeaders[0]?.centerlongitude || 105.2971) },
-                zoom: 13
-            });
-            
-            createMapContent();
-            window.mapInitialized = true;
+    let map, markers = [], polygons = [];
+
+    // 🔑 Tentukan warna plot berdasarkan umur, ZPK, dan panen
+    function getPlotColor(d) {
+        const umurHari  = d.umur_hari || 0;
+        const umurBulan = umurHari / 30;
+
+        // status panen dari backend (batch aktif + tanggalpanen)
+        const isPanen = d.is_panen === 1 || d.is_panen === true;
+
+        // cari activity ZPK (4.2.1)
+        let hasZpk = false;
+        let daysSinceZpk = null;
+
+        if (Array.isArray(d.activities)) {
+            const zpkAct = d.activities.find(a => a.code === '4.2.1');
+            if (zpkAct && zpkAct.tanggal) {
+                hasZpk = true;
+                const zpkDate = new Date(zpkAct.tanggal);
+                const today   = new Date();
+                const diffMs  = today - zpkDate;
+                daysSinceZpk  = diffMs / (1000 * 60 * 60 * 24); // dalam hari
+            }
         }
+
+        // Aturan warna:
+        // - Hijau muda       : umur 0–6 bulan
+        // - Hijau lebih tua  : umur 6–9 bulan
+        // - Orange           : umur ≥ 9 bln & belum ZPK
+        // - Kuning muda      : sudah ZPK, < 25 hari
+        // - Merah            : sudah ZPK, > 35 hari
+        // - Hijau tua        : sedang panen (is_panen = 1)
+
+        // 1) Hijau tua → sedang panen
+        if (isPanen) {
+            return '#14532d';
+        }
+
+        // 2) Merah → sudah ZPK > 35 hari
+        if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) {
+            return '#dc2626';
+        }
+
+        // 3) Kuning muda → sudah ZPK < 25 hari
+        if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) {
+            return '#facc15';
+        }
+
+        // 4) Orange → umur ≥ 9 bulan & belum ZPK
+        if (!hasZpk && umurBulan >= 9) {
+            return '#f97316';
+        }
+
+        // 5) Hijau lebih tua → umur 6–9 bulan
+        if (umurBulan >= 6 && umurBulan < 9) {
+            return '#16a34a';
+        }
+
+        // 6) Hijau muda → umur 0–6 bulan
+        if (umurBulan >= 0 && umurBulan < 6) {
+            return '#32f175ff';
+        }
+
+        return '#6b7280'; // fallback abu
+    }
+        
+    function initMapIfNeeded() {
+        if (window.mapInitialized) return;
+            
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: parseFloat(plotHeaders[0]?.centerlatitude || -4.12893), lng: parseFloat(plotHeaders[0]?.centerlongitude || 105.2971) },
+            zoom: 13
+        });
+            
+        createMapContent();
+        window.mapInitialized = true;
+    }
+
         
         function createMapContent() {
             // Markers
@@ -286,14 +351,25 @@
                     luas_rkh:0, 
                     total_luas_hasil:0,
                     lifecyclestatus: '-',
-                    umur_hari: 0
+                    umur_hari: 0,
+                    is_panen: 0,
+                    tanggal_panen_terakhir: null
                 };
-                const color = d.marker_color === 'green' ? '#22c55e' : d.marker_color === 'orange' ? '#f97316' : '#000';
-                
+
+                // 🔑 warna marker berdasarkan umur, ZPK, panen
+                const color = getPlotColor(d);
+                        
                 const marker = new google.maps.Marker({
                     position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
                     map: map,
-                    icon: {path: google.maps.SymbolPath.CIRCLE, scale: 25, fillColor: color, fillOpacity: 0.8, strokeColor: '#fff', strokeWeight: 3},
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 25,
+                        fillColor: color,
+                        fillOpacity: 0.8,
+                        strokeColor: '#fff',
+                        strokeWeight: 3
+                    },
                     label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
                 });
 
@@ -374,14 +450,27 @@
             plotHeaders.forEach(h => {
                 const pts = plotData.filter(p => p.plot === h.plot);
                 if (pts.length < 3) return;
-                
-                const colors = {'A':'#2C3E50','B':'#16A085','C':'#D35400','D':'#8E44AD','E':'#27AE60','F':'#2980B9','G':'#C0392B','H':'#F39C12','I':'#34495E','J':'#7F8C8D','K':'#1ABC9C'};
-                const color = colors[h.plot.charAt(0)] || '#000';
-                
+
+                const d = plotActivityDetails[h.plot] || {
+                    avg_percentage:0, 
+                    activities:[], 
+                    luas_rkh:0, 
+                    total_luas_hasil:0,
+                    lifecyclestatus: '-',
+                    umur_hari: 0,
+                    is_panen: 0
+                };
+
+                const color = getPlotColor(d);
+                            
                 polygons.push(new google.maps.Polygon({
                     paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
-                    strokeColor: color, strokeOpacity: 0.8, strokeWeight: 2,
-                    fillColor: color, fillOpacity: 0.12, map: map
+                    strokeColor: color,
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: color,
+                    fillOpacity: 0.18,
+                    map: map
                 }));
             });
             
