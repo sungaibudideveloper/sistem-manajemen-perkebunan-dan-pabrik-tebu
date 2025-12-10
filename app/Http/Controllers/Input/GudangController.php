@@ -49,7 +49,7 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
-        if (hasPermission('Menu Gudang')) {
+        // if (hasPermission('Menu Gudang')) {
             $usematerialhdr = new usematerialhdr;
             $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
@@ -106,9 +106,9 @@ class GudangController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate
             ]);
-        } else {
-            return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
-        }
+        // } else {
+        //     return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
+        // }
     }
 
     public function detail(Request $request)
@@ -320,7 +320,6 @@ public function submit(Request $request)
     $first = $details->first();
 
     $roundingByGroup = DB::table('herbisidagroup')
-    ->where('companycode', session('companycode'))
     ->pluck('rounddosage', 'herbisidagroupid');
 
     if (strtoupper($first->flagstatus) != 'ACTIVE') {
