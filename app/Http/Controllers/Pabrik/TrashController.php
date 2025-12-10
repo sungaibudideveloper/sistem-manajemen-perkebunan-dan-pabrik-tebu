@@ -210,7 +210,7 @@ class TrashController extends Controller
                     ->with('error', 'Data trash untuk nomor surat jalan ini dengan jenis yang sama sudah ada!')
                     ->withInput();
             }
-
+            
             // Convert comma format to decimal for calculation
             $beratBersih = $this->parseDecimal($request->berat_bersih);
             $toleransi = $this->parseDecimal($request->toleransi);
