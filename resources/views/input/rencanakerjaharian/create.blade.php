@@ -96,27 +96,17 @@
           <input type="hidden" name="rkhno" value="{{ $rkhno }}">
 
           <!-- Mandor -->
-          <div x-data="mandorPicker()" x-init="
-            @if(old('mandor_id') || request('mandor_id'))
-                selected = {
-                    userid: '{{ old('mandor_id', request('mandor_id')) }}',
-                    name: '{{ collect($mandors)->firstWhere('userid', old('mandor_id', request('mandor_id')))->name ?? '' }}'
-                }
-            @else
-                checkIfUserIsMandor()
-            @endif
-          ">
+          <div>
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
                 type="text"
                 name="mandor"
                 id="mandor"
                 readonly
-                placeholder="Mandor telah dipilih"
-                :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
+                value="{{ $selectedMandor->userid ?? '' }} - {{ $selectedMandor->name ?? '' }}"
                 class="w-full text-sm font-medium border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
             >
-            <input type="hidden" name="mandor_id" x-model="selected.userid">
+            <input type="hidden" name="mandor_id" value="{{ $selectedMandor->userid ?? '' }}">
           </div>
 
           <!-- Tanggal -->
@@ -518,6 +508,19 @@
                                   <span class="font-semibold" x-text="plotInfo.batchno ? 'Tgl Panen:' : 'Tgl Activity:'"></span>
                                   <span x-text="plotInfo.tanggal || '-'"></span>
                               </div>
+
+                              <!-- Tanggal ZPK (kalau ada) -->
+                              <div x-show="plotInfo.zpk_date" class="text-gray-700">
+                                  <span class="font-semibold">ZPK:</span>
+                                  <span x-text="plotInfo.zpk_date"></span>
+                                  <span class="text-xs ml-1" 
+                                        :class="{
+                                            'text-green-600': plotInfo.zpk_status === 'ideal',
+                                            'text-red-600': plotInfo.zpk_status === 'too_early',
+                                            'text-red-600': plotInfo.zpk_status === 'too_late'
+                                        }"
+                                        x-text="`(${plotInfo.zpk_days_gap}d)`"></span>
+                              </div>
                           </div>
                       </div>
 
@@ -841,6 +844,8 @@ window.activitiesData = @json($activities ?? []);
 window.vehiclesData = @json($vehiclesData ?? []);
 window.helpersData = @json($helpersData ?? []);
 
+window.rkhDate = '{{ $selectedDate }}';
+
 window.currentUser = {
   userid: '{{ Auth::user()->userid ?? '' }}',
   name: '{{ Auth::user()->name ?? '' }}',
@@ -984,7 +989,10 @@ function plotInfoPicker(rowIndex) {
       batchno: '',
       kodestatus: '',
       tanggal: '',
-      luassisa_batch: ''
+      luassisa_batch: '',
+      zpk_date: '',
+      zpk_days_gap: 0,
+      zpk_status: ''
     },
 
     init() {
@@ -1051,7 +1059,10 @@ function plotInfoPicker(rowIndex) {
             batchno: data.batchinfo?.batchno || '',
             kodestatus: data.batchinfo?.lifecyclestatus || '',
             tanggal: data.tanggal || '',
-            luassisa_batch: data.batchinfo?.luassisa_batch || ''
+            luassisa_batch: data.batchinfo?.luassisa_batch || '',
+            zpk_date: data.batchinfo?.zpk_date || '',
+            zpk_days_gap: data.batchinfo?.zpk_days_gap || 0,
+            zpk_status: data.batchinfo?.zpk_status || ''
           };
           
           // Auto-fill luas sisa
@@ -1251,13 +1262,22 @@ function initializeFormSubmit() {
 }
 
 function submitForm(form) {
-
-
-
+  const submitBtn = document.getElementById('submit-btn');
+  
+  // ✅ CRITICAL: Prevent double submission
+  if (submitBtn.disabled) {
+    console.warn('⚠️ Form already submitting, ignoring duplicate request');
+    return false;
+  }
+  
+  // ✅ Disable button IMMEDIATELY to prevent race condition
+  submitBtn.disabled = true;
+  submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  
   showLoadingState();
   const formData = new FormData(form);
 
-    console.log('=== FORM DATA DEBUG ===');
+  console.log('=== FORM DATA DEBUG ===');
   for (let [key, value] of formData.entries()) {
     if (key.includes('rows')) {
       console.log(key, '=', value);
@@ -1273,20 +1293,40 @@ function submitForm(form) {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     }
   })
-  .then(response => response.json())
+  .then(response => {
+    // ✅ Check if response is OK before parsing JSON
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.success) {
       showModal('success', data.message);
+      // ✅ Don't re-enable button on success (will redirect anyway)
+      // submitBtn will stay disabled to prevent accidental re-submit
     } else {
       const errors = data.errors ? Object.values(data.errors).flat() : [];
       showModal('error', data.message || 'Terjadi kesalahan saat menyimpan data', errors);
+      
+      // ✅ Re-enable button only on validation/business logic errors
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
   })
   .catch(error => {
-    console.error('Error:', error);
-    showModal('error', 'Terjadi kesalahan sistem');
+    console.error('❌ Submit Error:', error);
+    showModal('error', 'Terjadi kesalahan sistem: ' + error.message);
+    
+    // ✅ Re-enable button on network/system errors so user can retry
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
   })
-  .finally(() => hideLoadingState());
+  .finally(() => {
+    hideLoadingState();
+  });
+  
+  return false; // ✅ Prevent default form submission
 }
 
 // ============================================================
@@ -1634,19 +1674,17 @@ function cleanupValidationListeners() {
 // ============================================================
 // ABSEN SUMMARY UPDATE
 // ============================================================
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-  if (!selectedMandorId || !window.absenData) {
+function updateAbsenSummary() {
+  const mandorId = document.querySelector('input[name="mandor_id"]')?.value;
+  
+  if (!mandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
     document.getElementById('summary-perempuan').textContent = '0';
     document.getElementById('summary-total').textContent = '0';
     return;
   }
 
-  if (selectedMandorCode && selectedMandorName) {
-    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName}`;
-  }
-
-  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === selectedMandorId);
+  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === mandorId);
   let lakiCount = 0, perempuanCount = 0;
 
   filteredAbsen.forEach(absen => {
@@ -1658,6 +1696,14 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-perempuan').textContent = perempuanCount;
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
+
+// ✅ Call on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateAbsenSummary(); // Auto-update absen summary
+  initializeRowValidation();
+  initializeValidationStyles();
+  initializeFormSubmit();
+});
 
 // ============================================================
 // PLOT AUTO-UPDATE (Updated - dari AJAX)

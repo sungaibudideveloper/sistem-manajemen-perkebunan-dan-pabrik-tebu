@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityGroup extends Model
 {
-    public $incrementing = false;
     protected $table = 'activitygroup';
-    protected $primaryKey = ['activitygroup'];
+    protected $primaryKey = 'activitygroup';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = false;
+
     protected $fillable = [
         'activitygroup',
-        'groupname',
+        'groupname'
     ];
-
 }

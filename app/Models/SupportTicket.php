@@ -6,67 +6,43 @@ use Illuminate\Database\Eloquent\Model;
 
 class SupportTicket extends Model
 {
-    protected $table = 'support_tickets';
+    protected $table = 'supporttickets';
     protected $primaryKey = 'ticket_id';
-    
-    const CREATED_AT = 'createdat';
-    const UPDATED_AT = 'updatedat';
+    public $timestamps = false;
 
     protected $fillable = [
         'ticket_number',
         'category',
         'status',
+        'inprogress_by',
+        'inprogress_at',
         'priority',
         'fullname',
         'username',
         'companycode',
         'description',
         'resolution_notes',
-        'inprogress_by',
-        'inprogress_at',
         'resolved_by',
-        'resolved_at'
+        'resolved_at',
+        'createdat',
+        'updatedat'
     ];
 
     protected $casts = [
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
         'inprogress_at' => 'datetime',
-        'resolved_at' => 'datetime',
+        'resolved_at' => 'datetime'
     ];
 
-    // Relationship dengan Company
+    // Relationships
     public function company()
     {
         return $this->belongsTo(Company::class, 'companycode', 'companycode');
     }
 
-    // Generate ticket number
-    public static function generateTicketNumber($companycode)
+    public function user()
     {
-        $year = date('Y');
-        $lastTicket = self::where('ticket_number', 'like', "TKT-{$companycode}-{$year}-%")
-                        ->orderBy('ticket_id', 'desc')
-                        ->first();
-        
-        if ($lastTicket) {
-            $lastNumber = (int) substr($lastTicket->ticket_number, -4);
-            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '0001';
-        }
-        
-        return "TKT-{$companycode}-{$year}-{$newNumber}";
-    }
-
-    // Scope untuk filter
-    public function scopeOpen($query)
-    {
-        return $query->where('status', 'open');
-    }
-
-    public function scopeCategory($query, $category)
-    {
-        return $query->where('category', $category);
+        return $this->belongsTo(User::class, 'username', 'userid');
     }
 }

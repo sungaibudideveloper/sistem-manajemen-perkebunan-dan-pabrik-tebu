@@ -587,7 +587,8 @@
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-2">Company</label>
                                                 <select x-model="searchForm.company"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="mode === 'create' && activeTab === 'tanggal'">
                                                     <option value="">Pilih Company</option>
                                                     @foreach ($companies as $c)
                                                     <option value="{{ $c->companycode }}">{{ $c->name }}</option>
@@ -597,7 +598,8 @@
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
                                                 <input type="date" x-model="searchForm.date"
-                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2" required>
+                                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 px-3 py-2"
+                                                    :required="mode === 'create' && activeTab === 'tanggal'">
                                             </div>
                                         </div>
 
@@ -759,8 +761,9 @@
 
                         <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                             <button type="submit"
-                                x-show="(mode === 'create' && activeTab === 'suratjalan' && suratJalanFound) || (mode === 'create' && activeTab === 'tanggal' && selectedSuratJalan !== null) || mode === 'edit'"
-                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                x-show="mode === 'edit' || suratJalanFound || selectedSuratJalan !== null"
+                                :disabled="mode === 'create' && activeTab === 'suratjalan' && !suratJalanFound && selectedSuratJalan === null"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200">
                                 <span x-text="mode === 'create' ? 'Simpan' : 'Update'"></span>
                             </button>
                             <button type="button" @click="closeModal()"

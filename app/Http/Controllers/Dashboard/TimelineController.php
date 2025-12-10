@@ -47,15 +47,18 @@ class TimelineController extends Controller
     ->leftJoin('batch as b', function($join) {
         $join->on('m.activebatchno', '=', 'b.batchno')
             ->on('m.companycode', '=', 'b.companycode')
+            ->where('b.isactive', 1);
             ;
     })
     ->where('p.companycode', $companyCode)
     ->select(
         'p.plot', 
         'p.luasarea',
-        'b.batcharea',        // ✅ TAMBAH INI
+        'b.batcharea',        
         'b.lifecyclestatus',
         'b.batchdate',
+        'b.tanggalpanen',         // ⬅️ tambahkan ini
+        'b.isactive',
         DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
     )
     ->orderBy('p.plot')
@@ -299,6 +302,9 @@ $luasRkh = $plotInfo->batcharea ?? 0;  // ✅ GANTI: Pakai batcharea (bukan luas
 $lifecycleStatus = $plotInfo->lifecyclestatus ?? '-';
 $umurHari = $plotInfo->umur_hari ?? 0;
 
+$hasPanen  = !empty($plotInfo->tanggalpanen);
+$lastPanen = $plotInfo->tanggalpanen ?? null;
+
 if ($activities && $luasRkh > 0) {
     $activityList = [];
     $totalPercentage = 0;
@@ -346,8 +352,10 @@ if ($activities && $luasRkh > 0) {
         'marker_color' => $markerColor,
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => $totalLuasHasil,
-        'lifecyclestatus' => $lifecycleStatus,  // ✅ Dari variable
-        'umur_hari' => $umurHari                // ✅ Dari variable
+        'lifecyclestatus' => $lifecycleStatus,  
+        'umur_hari' => $umurHari,                
+        'is_panen'                 => $hasPanen ? 1 : 0,          
+        'tanggal_panen_terakhir'   => $lastPanen
     ];
 } else {
     $plotActivityDetails[$plotCode] = [
@@ -356,8 +364,10 @@ if ($activities && $luasRkh > 0) {
         'marker_color' => 'black',
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => 0,
-        'lifecyclestatus' => $lifecycleStatus,  // ✅ Dari variable
-        'umur_hari' => $umurHari                // ✅ Dari variable
+        'lifecyclestatus' => $lifecycleStatus,  
+        'umur_hari' => $umurHari,               
+        'is_panen'                 => $hasPanen ? 1 : 0,          
+        'tanggal_panen_terakhir'   => $lastPanen
     ];
 }
 }

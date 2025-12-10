@@ -24,8 +24,24 @@
     </div>
     @endif
 
+    <!-- Upload Errors -->
+    @if (session('upload_errors'))
+    <div x-data="{ show: true }" x-show="show" x-transition
+        class="mb-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative">
+        <strong class="font-bold">Peringatan Upload!</strong>
+        <ul class="mt-2 list-disc list-inside text-sm">
+            @foreach(session('upload_errors') as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-yellow-200 rounded"
+            @click="show = false">&times;</span>
+    </div>
+    @endif
+
     <div x-data="{
         open: false,
+        openUpload: false,
         mode: 'create',
         editUrl: '',
         form: {
@@ -71,8 +87,8 @@
         <div class="px-4 py-4 border-b border-gray-200">
             <div class="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                 
-                <!-- Tambah Data Button -->
-                <div class="flex justify-start">
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-2">
                     <button @click="resetForm()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,6 +96,15 @@
                         </svg>
                         <span class="hidden sm:inline">Tambah Tenaga Kerja</span>
                         <span class="sm:hidden">Tambah</span>
+                    </button>
+
+                    <button @click="openUpload = true"
+                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 transition-colors duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Upload Excel</span>
+                        <span class="sm:hidden">Upload</span>
                     </button>
                 </div>
 
@@ -234,7 +259,99 @@
             @endif
         </div>
 
-        <!-- Modal -->
+        <!-- Modal Upload Excel -->
+        <div x-show="openUpload" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
+            @keydown.window.escape="openUpload = false">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-900">Upload Data Tenaga Kerja</h3>
+                    <button @click="openUpload = false"
+                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6">
+                    <!-- Download Template Section -->
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-blue-900 mb-1">Langkah 1: Download Template</h4>
+                                <p class="text-xs text-blue-700 mb-3">Download template Excel terlebih dahulu dan isi data sesuai format yang tersedia</p>
+                                <a href="{{ route('masterdata.tenagakerja.download-template') }}" 
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Download Template Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Form Section -->
+                    <form action="{{ route('masterdata.tenagakerja.bulk-upload') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Langkah 2: Upload File Excel <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="file" name="file" accept=".xlsx,.xls" required
+                                    class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            </div>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Format: .xlsx atau .xls (Max: 2MB)
+                            </p>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div class="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex gap-2">
+                                <svg class="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div class="text-xs text-yellow-800">
+                                    <p class="font-semibold mb-1">Perhatian:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li>Pastikan format data sesuai template</li>
+                                        <li>Mandor UserID dan Jenis TK ID harus valid</li>
+                                        <li>NIK tidak boleh duplikat</li>
+                                        <li>Gender hanya L atau P</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+                            <button type="button" @click="openUpload = false"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                class="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                                Upload Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Add/Edit -->
         <div x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
             @keydown.window.escape="open = false">
             <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">

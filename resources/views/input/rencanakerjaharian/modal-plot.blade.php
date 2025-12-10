@@ -89,8 +89,15 @@
                 <div x-show="item.last_activitycode" class="text-xs">
                   <div class="font-medium text-gray-900" x-text="item.last_activitycode"></div>
                   <div class="text-gray-500 truncate max-w-[150px]" 
-                       x-text="item.last_activityname"
-                       :title="item.last_activityname"></div>
+                      x-text="item.last_activityname"
+                      :title="item.last_activityname"></div>
+                  
+                  <!-- Tanggal & Jarak Hari -->
+                  <div x-show="item.last_activity_date" class="mt-0.5 text-gray-600">
+                    <span x-text="formatDate(item.last_activity_date)"></span>
+                    <span class="text-gray-400 mx-1">•</span>
+                    <span x-text="getDaysGap(item.last_activity_date) + 'd'"></span>
+                  </div>
                 </div>
                 <span x-show="!item.last_activitycode" class="text-xs text-gray-400">Belum ada aktivitas</span>
               </td>
@@ -164,10 +171,31 @@ function plotPicker(rowIndex) {
       return filtered;
     },
 
+    // ✅ NEW: Format date helper (dd-mm-yy)
+    formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    },
+
+    // ✅ NEW: Calculate days gap
+    getDaysGap(lastActivityDate) {
+      if (!lastActivityDate || !window.rkhDate) return 0;
+      
+      const lastDate = new Date(lastActivityDate);
+      const rkhDate = new Date(window.rkhDate);
+      const diffTime = rkhDate - lastDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays;
+    },
+
     selectPlot(item) {
       if (!this.isBlokSelected) return;
       
-      // ✅ FIX: Check duplicate SEBELUM select
       const currentActivity = Alpine.store('activityPerRow').getActivity(this.rowIndex);
       const currentBlok = this.selectedBlok;
       
@@ -181,11 +209,10 @@ function plotPicker(rowIndex) {
         
         if (isDuplicate) {
           showToast('Kombinasi Blok + Plot + Activity sudah digunakan di baris lain. Silakan pilih plot lain.', 'error', 4000);
-          return; // ❌ BATALKAN selection
+          return;
         }
       }
       
-      // ✅ Kalau tidak duplikat, baru select
       this.selected = item;
       this.open = false;
       

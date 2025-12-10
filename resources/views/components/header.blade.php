@@ -31,7 +31,7 @@
                     class="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors group">
                 <div class="flex items-center space-x-2">
                     <div class="h-2 w-2 bg-green-500 rounded-full"></div>
-                    <span class="font-medium">{{ session('companycode') }}</span>
+                    <div class="font-medium">{{ formatCompanyCode(session('companycode')) }}</div>
                     <span class="text-gray-400">•</span>
                     <span>{{ session('companyname') }}</span>
                 </div>
@@ -217,13 +217,13 @@
                     <div class="px-4 py-2 border-b border-gray-100">
                         <div class="text-sm font-medium text-gray-900">{{ Auth::user()->name }}</div>
                     </div>
-
+                    
                     <!-- Company Info (Mobile) -->
                     <div class="md:hidden border-b border-gray-100">
                         <button @click="$dispatch('open-company-modal')" 
                                 class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">
                             <div class="text-xs text-gray-600">
-                                <div class="font-medium">{{ session('companycode') }}</div>
+                                <div class="font-medium">{{ formatCompanyCode(session('companycode')) }}</div>
                                 <div class="text-gray-500">{{ session('companyname') }}</div>
                             </div>
                         </button>

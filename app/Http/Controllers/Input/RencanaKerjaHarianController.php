@@ -27,6 +27,7 @@ use App\Models\Kendaraan;
 use App\Models\TenagaKerja;
 
 // Services
+use App\Services\UserManagement\UserService;
 use App\Services\LkhGeneratorService;
 use App\Services\MaterialUsageGeneratorService;
 use App\Services\GenerateNewBatchService;
@@ -42,6 +43,14 @@ use App\Services\GenerateNewBatchService;
  */
 class RencanaKerjaHarianController extends Controller
 {
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+
     // =====================================
     // SECTION 1: RKH CRUD OPERATIONS
     // =====================================
@@ -129,7 +138,7 @@ class RencanaKerjaHarianController extends Controller
             'allDate' => $allDate,
             'rkhData' => $rkhData,
             'absentenagakerja' => $absenData,
-            'mandors' => User::getMandorByCompany($companycode),
+            'mandors' => $this->userService->getMandorList($companycode),
         ]);
     }
 
@@ -146,35 +155,7 @@ class RencanaKerjaHarianController extends Controller
                 ->with('error', 'Silakan pilih tanggal dan mandor terlebih dahulu');
         }
 
-        // Validate date range
-        if (!$this->validateDateRange($selectedDate)) {
-            return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', 'Tanggal harus dalam rentang hari ini sampai 7 hari ke depan');
-        }
-
-        // ✅ BACKEND VALIDATION: Double-check for outstanding RKH
         $companycode = Session::get('companycode');
-        $outstandingRKH = DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('mandorid', $mandorId)
-            ->where(function($query) {
-                $query->where('status', '!=', 'Completed')
-                      ->orWhereNull('status');
-            })
-            ->orderBy('rkhdate', 'desc')
-            ->first();
-
-        if ($outstandingRKH) {
-            $mandor = DB::table('user')->where('userid', $mandorId)->first();
-            return redirect()->route('input.rencanakerjaharian.index')
-                ->with('error', sprintf(
-                    'Mandor %s masih memiliki RKH outstanding (No: %s, Tanggal: %s). Selesaikan terlebih dahulu.',
-                    $mandor->name ?? $mandorId,
-                    $outstandingRKH->rkhno,
-                    Carbon::parse($outstandingRKH->rkhdate)->format('d/m/Y')
-                ));
-        }
-
         $targetDate = Carbon::parse($selectedDate);
 
         // Generate preview RKH number
@@ -183,13 +164,17 @@ class RencanaKerjaHarianController extends Controller
         // Load form data
         $formData = $this->loadCreateFormData($companycode, $targetDate);
 
+        $selectedMandor = DB::table('user')
+            ->where('userid', $mandorId)
+            ->first();
+
         return view('input.rencanakerjaharian.create', array_merge([
             'title' => 'Form RKH',
             'navbar' => 'Input',
             'nav' => 'Rencana Kerja Harian',
             'rkhno' => $previewRkhNo,
             'selectedDate' => $targetDate->format('Y-m-d'),
-            'selectedMandorId' => $mandorId, // ✅ NEW: Pass mandor_id
+            'selectedMandor' => $selectedMandor,
             'oldInput' => old(),
         ], $formData));
     }
@@ -737,11 +722,11 @@ class RencanaKerjaHarianController extends Controller
             if ($isPanenActivity) {
                 $lkhPanenDetails = $this->getLkhPanenDetailsForShow($companycode, $lkhno);
                 $approvals = $this->getLkhApprovalsData($lkhData);
-
                 $kontraktorSummary = $this->getKontraktorSummaryForLkh($companycode, $lkhno);
                 $subkontraktorDetail = $this->getSubkontraktorDetailForLkh($companycode, $lkhno);
                 
-                $lkhWorkerDetails = $this->getLkhWorkerDetailsForShow($companycode, $lkhno);
+                // ✅ NEW: Get ongoing plots (not in current LKH but still being harvested by this mandor)
+                $ongoingPlots = $this->getOngoingPlotsForMandor($companycode, $lkhno, $lkhData->mandorid);
 
                 return view('input.rencanakerjaharian.lkh-report-panen', [
                     'title' => 'Laporan Kegiatan Harian (LKH) - Panen',
@@ -749,10 +734,10 @@ class RencanaKerjaHarianController extends Controller
                     'nav' => 'Rencana Kerja Harian',
                     'lkhData' => $lkhData,
                     'lkhPanenDetails' => $lkhPanenDetails,
-                    'lkhWorkerDetails' => $lkhWorkerDetails,
                     'approvals' => $approvals,
                     'kontraktorSummary' => $kontraktorSummary,
-                    'subkontraktorDetail' => $subkontraktorDetail 
+                    'subkontraktorDetail' => $subkontraktorDetail,
+                    'ongoingPlots' => $ongoingPlots  // ✅ NEW
                 ]);
             }
             
@@ -2808,11 +2793,14 @@ public function loadAbsenByDate(Request $request)
         $lastRkh = DB::table('rkhhdr')
             ->where('companycode', $companycode)
             ->whereDate('rkhdate', $targetDate)
-            ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
+            ->where('rkhno', 'like', "RKH{$day}{$month}%{$year}")
             ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
             ->first();
 
-        $newNumber = $lastRkh ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT) : '01';
+        $newNumber = $lastRkh 
+            ? str_pad(((int)substr($lastRkh->rkhno, 7, 2)) + 1, 2, '0', STR_PAD_LEFT)
+            : '01';
+            
         return "RKH{$day}{$month}{$newNumber}{$year}";
     }
 
@@ -2825,9 +2813,16 @@ public function loadAbsenByDate(Request $request)
         $absenModel = new AbsenHdr;
 
         return [
-            'mandors' => User::getMandorByCompany($companycode),
-            'activities' => Activity::with(['group', 'jenistenagakerja'])->where('active', 1)->orderBy('activitycode')->get(),
-            'bloks' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
+            'mandors' => $this->userService->getMandorList($companycode),
+            
+            'activities' => Activity::with(['group', 'jenistenagakerja'])
+                ->where('active', 1)
+                ->orderBy('activitycode')
+                ->get(),
+                
+            'bloks' => Blok::where('companycode', $companycode)
+                ->orderBy('blok')
+                ->get(),
 
             'masterlist' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
@@ -2882,7 +2877,17 @@ public function loadAbsenByDate(Request $request)
                         AND lh2.approvalstatus = "1"
                         ORDER BY lh2.lkhdate DESC
                         LIMIT 1
-                    ) as last_activityname')
+                    ) as last_activityname'),
+                    DB::raw('(
+                        SELECT lh2.lkhdate
+                        FROM lkhdetailplot ldp2
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno AND ldp2.companycode = lh2.companycode
+                        WHERE ldp2.companycode = "' . $companycode . '"
+                        AND ldp2.plot = m.plot
+                        AND lh2.approvalstatus = "1"
+                        ORDER BY lh2.lkhdate DESC
+                        LIMIT 1
+                    ) as last_activity_date')
                 ])
                 ->orderBy('m.blok')
                 ->orderBy('m.plot')
@@ -2897,13 +2902,12 @@ public function loadAbsenByDate(Request $request)
             'herbisidagroups' => $herbisidadosages->getFullHerbisidaGroupData($companycode),
             'bloksData' => Blok::where('companycode', $companycode)->orderBy('blok')->get(),
 
-            // masterlistData untuk JavaScript - filter by company
             'masterlistData' => DB::table('masterlist as m')
                 ->leftJoin('batch as b', function($join) use ($companycode) {
                     $join->on('m.activebatchno', '=', 'b.batchno')
                         ->where('b.companycode', '=', $companycode);
                 })
-                ->where('m.companycode', $companycode) // Filter by company
+                ->where('m.companycode', $companycode)
                 ->where('m.isactive', 1)
                 ->select([
                     'm.companycode',
@@ -2924,12 +2928,7 @@ public function loadAbsenByDate(Request $request)
                 ->get(),
             
             'vehiclesData' => $this->getVehiclesWithOperators($companycode),
-            'helpersData' => TenagaKerja::where('companycode', $companycode)
-                ->where('jenistenagakerja', 4)
-                ->where('isactive', 1)
-                ->select(['tenagakerjaid', 'nama', 'nik'])
-                ->orderBy('nama')
-                ->get(),
+            'helpersData' => $this->userService->getUsersByRole($companycode, 4),
                 
             'kontraktorData' => DB::table('kontraktor')
                 ->where('companycode', $companycode)
@@ -3262,22 +3261,54 @@ public function loadAbsenByDate(Request $request)
         $companycode = Session::get('companycode');
 
         return DB::transaction(function () use ($carbonDate, $day, $month, $year, $companycode) {
+            // ✅ LOCK: Get last RKH for this SPECIFIC date
             $lastRkh = DB::table('rkhhdr')
                 ->where('companycode', $companycode)
-                ->whereDate('rkhdate', $carbonDate)
-                ->where('rkhno', 'like', "RKH{$day}{$month}%" . $year)
-                ->lockForUpdate()
+                ->whereDate('rkhdate', $carbonDate->format('Y-m-d')) // ✅ Exact date match
+                ->where('rkhno', 'like', "RKH{$day}{$month}%{$year}")
+                ->lockForUpdate() // 🔒 CRITICAL: Lock untuk prevent race condition
                 ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
                 ->first();
 
             if ($lastRkh) {
+                // Extract sequence dari position 8-9 (0-indexed: position 7, length 2)
                 $lastNumber = (int)substr($lastRkh->rkhno, 7, 2);
                 $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+                
+                \Log::info("RKH sequence increment", [
+                    'date' => $carbonDate->format('Y-m-d'),
+                    'last_rkhno' => $lastRkh->rkhno,
+                    'last_sequence' => $lastNumber,
+                    'new_sequence' => $newNumber
+                ]);
             } else {
                 $newNumber = '01';
+                
+                \Log::info("RKH first sequence for date", [
+                    'date' => $carbonDate->format('Y-m-d'),
+                    'new_sequence' => $newNumber
+                ]);
             }
 
-            return "RKH{$day}{$month}{$newNumber}{$year}";
+            $rkhno = "RKH{$day}{$month}{$newNumber}{$year}";
+            
+            // ✅ EXTRA SAFETY: Check kalau rkhno sudah exist (seharusnya impossible dengan lock)
+            $exists = DB::table('rkhhdr')
+                ->where('companycode', $companycode)
+                ->where('rkhno', $rkhno)
+                ->exists();
+                
+            if ($exists) {
+                \Log::error("DUPLICATE RKH NUMBER DETECTED!", [
+                    'rkhno' => $rkhno,
+                    'companycode' => $companycode,
+                    'date' => $carbonDate->format('Y-m-d')
+                ]);
+                
+                throw new \Exception("Duplicate RKH number: {$rkhno}. Please refresh and try again.");
+            }
+            
+            return $rkhno;
         });
     }
 
@@ -4706,6 +4737,34 @@ public function loadAbsenByDate(Request $request)
                     'totalsudahpanen' => number_format($totalSudahPanen, 2),
                     'luassisa_batch'  => number_format($batchSisa, 2),
                 ];
+
+                $lastZpkDate = DB::table('lkhdetailplot as ldp')
+                    ->join('lkhhdr as lh', function($join) {
+                        $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                            ->on('ldp.companycode', '=', 'lh.companycode');
+                    })
+                    ->where('ldp.companycode', $companycode)
+                    ->where('ldp.plot', $plot)
+                    ->where('lh.activitycode', '4.2.2')
+                    ->where('lh.approvalstatus', '1')
+                    ->orderBy('lh.lkhdate', 'desc')
+                    ->value('lh.lkhdate');
+
+                if ($lastZpkDate) {
+                    $zpkDate = Carbon::parse($lastZpkDate);
+                    $today = Carbon::now();
+                    $daysGap = (int) $zpkDate->diffInDays($today);
+                    
+                    $batchInfo['zpk_date'] = $zpkDate->format('d/m/Y');
+                    $batchInfo['zpk_days_gap'] = $daysGap;
+                    if ($daysGap >= 25 && $daysGap <= 35) {
+                        $batchInfo['zpk_status'] = 'ideal';
+                    } elseif ($daysGap < 25) {
+                        $batchInfo['zpk_status'] = 'too_early';
+                    } else {
+                        $batchInfo['zpk_status'] = 'too_late';
+                    }
+                }
             }
 
             // 5. Tanggal terakhir activity (untuk non panen, tetap seperti sebelumnya)
@@ -5260,5 +5319,91 @@ public function loadAbsenByDate(Request $request)
                 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * ✅ NEW METHOD: Get ongoing plots for mandor (not in current LKH)
+     * Location: Add to SECTION 3: LKH MANAGEMENT in RencanaKerjaHarianController
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param string $mandorid
+     * @return \Illuminate\Support\Collection
+     */
+    private function getOngoingPlotsForMandor($companycode, $lkhno, $mandorid)
+    {
+        // Get LKH date for reference
+        $lkhDate = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->value('lkhdate');
+        
+        // Get plots in current LKH (to exclude) - ✅ FIXED: Better exclusion
+        $currentLkhPlots = DB::table('lkhdetailplot')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->pluck('plot')
+            ->toArray();
+        
+        // Query ongoing plots for this mandor
+        $ongoingPlots = DB::table('masterlist as m')
+            ->join('batch as b', function($join) use ($companycode) {
+                $join->on('m.activebatchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode);
+            })
+            ->leftJoin(DB::raw('(
+                SELECT 
+                    ldp.plot,
+                    ldp.batchno,
+                    SUM(ldp.luashasil) as total_dipanen,
+                    MAX(lh.lkhdate) as last_harvest_date
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
+                WHERE ldp.companycode = "' . $companycode . '"
+                    AND lh.mandorid = "' . $mandorid . '"
+                    AND lh.approvalstatus = "1"
+                GROUP BY ldp.plot, ldp.batchno
+            ) as harvest_summary'), function($join) {
+                $join->on('m.plot', '=', 'harvest_summary.plot')
+                    ->on('b.batchno', '=', 'harvest_summary.batchno');
+            })
+            ->where('m.companycode', $companycode)
+            ->where('m.isactive', 1)
+            ->where('b.isactive', 1)
+            ->whereNotNull('b.tanggalpanen')
+            ->whereNotNull('harvest_summary.total_dipanen') // ✅ FIXED: Must have harvested before
+            ->whereNotIn('m.plot', $currentLkhPlots) // ✅ FIXED: Explicit exclude current LKH plots
+            ->select([
+                'm.plot',
+                'm.blok',
+                'b.batchno',
+                'b.batcharea',
+                'b.tanggalpanen',
+                'b.lifecyclestatus as kodestatus',
+                DB::raw('COALESCE(harvest_summary.total_dipanen, 0) as total_dipanen'),
+                DB::raw('(b.batcharea - COALESCE(harvest_summary.total_dipanen, 0)) as sisa'),
+                'harvest_summary.last_harvest_date',
+                // ✅ FIXED: Proper days calculation
+                DB::raw('DATEDIFF("' . $lkhDate . '", harvest_summary.last_harvest_date) as days_since_harvest')
+            ])
+            ->havingRaw('sisa > 0')
+            ->orderBy('m.blok')
+            ->orderBy('m.plot')
+            ->get();
+        
+        return $ongoingPlots->map(function($plot) {
+            return (object)[
+                'plot' => $plot->plot,
+                'blok' => $plot->blok,
+                'batchno' => $plot->batchno,
+                'batcharea' => number_format((float)$plot->batcharea, 2),
+                'tanggalpanen' => $plot->tanggalpanen ? Carbon::parse($plot->tanggalpanen)->format('d/m/Y') : '-',
+                'kodestatus' => $plot->kodestatus,
+                'total_dipanen' => number_format((float)$plot->total_dipanen, 2),
+                'sisa' => number_format((float)$plot->sisa, 2),
+                'last_harvest_date' => $plot->last_harvest_date ? Carbon::parse($plot->last_harvest_date)->format('d/m/Y') : '-',
+                'days_since_harvest' => (int)$plot->days_since_harvest
+            ];
+        });
     }
 }

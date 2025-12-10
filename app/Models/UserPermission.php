@@ -1,5 +1,5 @@
 <?php
-// app/Models/UserPermission.php  
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -7,34 +7,36 @@ use Illuminate\Database\Eloquent\Model;
 class UserPermission extends Model
 {
     protected $table = 'userpermission';
-    public $incrementing = false;
-    public $timestamps = true;
-
-    const CREATED_AT = 'createdat';
-    const UPDATED_AT = 'updatedat';
+    protected $primaryKey = 'id';
+    public $timestamps = false;
 
     protected $fillable = [
         'userid',
         'companycode',
-        'permission',
         'permissionid',
         'permissiontype',
         'isactive',
         'reason',
-        'grantedby'
+        'grantedby',
+        'createdat',
+        'updatedat'
     ];
 
     protected $casts = [
-        'isactive' => 'boolean'
+        'permissionid' => 'integer',
+        'isactive' => 'boolean',
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime'
     ];
 
+    // Relationships
     public function user()
     {
-        return $this->belongsTo(User::class, 'userid');
+        return $this->belongsTo(User::class, 'userid', 'userid');
     }
 
-    public function permissionModel()
+    public function permission()
     {
-        return $this->belongsTo(Permission::class, 'permissionid');
+        return $this->belongsTo(Permission::class, 'permissionid', 'id');
     }
 }

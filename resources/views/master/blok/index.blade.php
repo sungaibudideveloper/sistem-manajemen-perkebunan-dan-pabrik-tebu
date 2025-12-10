@@ -51,9 +51,9 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Blok</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Company</th>
-                            @if (hasPermission('Edit Blok') || hasPermission('Hapus Blok'))
+                            @canany(['masterdata.blok.edit', 'masterdata.blok.delete'])
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-36">Aksi</th>
-                            @endif
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody>
@@ -65,10 +65,10 @@
                                     {{ $item->blok }}</td>
                                 <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                     {{ $item->companycode }}</td>
-                                @if (hasPermission('Edit Blok') || hasPermission('Hapus Blok'))
+                                @canany(['masterdata.blok.edit', 'masterdata.blok.delete'])
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
                                         <div class="flex items-center justify-center">
-                                            @if (hasPermission('Edit Blok'))
+                                            @can('masterdata.blok.edit')
                                                 <button
                                                     @click="
                                                         mode = 'edit';
@@ -98,8 +98,8 @@
                                                     </svg>
                                                     <span class="w-0.5"></span>
                                                 </button>
-                                            @endif
-                                            @if (hasPermission('Hapus Blok'))
+                                            @endcan
+                                            @can('masterdata.blok.delete')
                                                 <form 
                                                     action="{{ route('masterdata.blok.destroy', ['blok' => $item->blok, 'companycode' => $item->companycode]) }}" 
                                                     method="POST"
@@ -124,10 +124,10 @@
                                                         </svg>
                                                     </button>
                                                 </form>
-                                            @endif
+                                            @endcan
                                         </div>
                                     </td>
-                                @endif
+                                @endcanany
                             </tr>
                         @endforeach
                     </tbody>

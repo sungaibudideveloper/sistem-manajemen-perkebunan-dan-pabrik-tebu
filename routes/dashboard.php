@@ -1,35 +1,55 @@
 <?php
+
+// routes\dashboard.php
+
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\TimelineController;
 use App\Http\Controllers\Dashboard\MapsController;
+use App\Http\Controllers\Pabrik\DashboardPanenPabrikController;
 
+Route::middleware('auth')->prefix('dashboard')->name('dashboard.')->group(function () {
 
+    // ============================================================================
+    // AGRONOMI DASHBOARD
+    // ============================================================================
+    Route::middleware('permission:dashboard.agronomi.view')->group(function () {
+        Route::match(['GET', 'POST'], 'agronomi', [DashboardController::class, 'agronomi'])->name('agronomi');
+    });
 
-// Option 2: Gunakan permission yang lebih spesifik
-Route::match(['POST', 'GET'], 'dashboard/agronomi', [DashboardController::class, 'agronomi'])
-    ->name('dashboard.agronomi')
-    ->middleware('permission:Agronomi');
+    // ============================================================================
+    // HPT DASHBOARD
+    // ============================================================================
+    Route::middleware('permission:dashboard.hpt.view')->group(function () {
+        Route::match(['GET', 'POST'], 'hpt', [DashboardController::class, 'hpt'])->name('hpt');
+    });
 
-Route::match(['POST', 'GET'], 'dashboard/hpt', [DashboardController::class, 'hpt'])
-    ->name('dashboard.hpt')
-    ->middleware('permission:HPT');
+    // ============================================================================
+    // TIMELINE DASHBOARD
+    // ============================================================================
+    Route::middleware('permission:dashboard.timeline.view')->group(function () {
+        Route::match(['GET', 'POST'], 'timeline', [TimelineController::class, 'index'])->name('timeline');
+    });
 
-Route::match(['POST', 'GET'], 'dashboard/agronomi',  [DashboardController::class, 'agronomi'])
-    ->name('dashboard.agronomi');//->middleware('permission:Dashboard Agronomi');
-Route::match(['POST', 'GET'], 'dashboard/hpt',  [DashboardController::class, 'hpt'])
-    ->name('dashboard.hpt');//->middleware('permission:Dashboard HPT');
+    Route::middleware('permission:dashboard.timelineplot.view')->group(function () {
+        Route::match(['GET', 'POST'], 'timeline-plot', [TimelineController::class, 'plot'])->name('timeline-plot');
+    });
 
-Route::match(['POST', 'GET'], 'dashboard/timeline',  [TimelineController::class, 'index'])
-    ->name('dashboard.timeline');//->middleware('permission:Dashboard HPT');
-Route::match(['POST', 'GET'], 'dashboard/timeline-plot',  [TimelineController::class, 'plot'])
-    ->name('dashboard.timeline-plot');//->middleware('permission:Dashboard HPT');
+    // ============================================================================
+    // MAPS DASHBOARD
+    // ============================================================================
+    Route::middleware('permission:dashboard.maps.view')->group(function () {
+        Route::match(['GET', 'POST'], 'maps', [MapsController::class, 'index'])->name('maps');
+        Route::match(['GET', 'POST'], 'mapsapi', [MapsController::class, 'indexapi'])->name('mapsapi');
+        Route::match(['GET', 'POST'], 'callmapsapi', [MapsController::class, 'callmapsapi'])->name('callmapsapi');
+        Route::match(['GET', 'POST'], 'maps/upload', [MapsController::class, 'upload'])->name('maps.upload');
+    });
 
-    Route::match(['POST', 'GET'], 'dashboard/maps',  [MapsController::class, 'index'])
-    ->name('dashboard.maps');
-    Route::match(['POST', 'GET'], 'dashboard/mapsapi',  [MapsController::class, 'indexapi'])
-    ->name('dashboard.mapsapi');
-    Route::match(['POST', 'GET'], 'dashboard/callmapsapi', [MapsController::class, 'callmapsapi'])
-    ->name('dashboard.callmapsapi');
+});
 
-        Route::match(['POST', 'GET'], 'dashboard/maps/upload',  [MapsController::class, 'upload'])
-            ->name('dashboard.maps.upload');
+// ============================================================================
+// PABRIK - DASHBOARD PANEN PABRIK (Outside dashboard prefix)
+// ============================================================================
+Route::middleware(['auth', 'permission:pabrik.panenpabrik.view'])->group(function () {
+    Route::get('pabrik/panen-pabrik', [DashboardPanenPabrikController::class, 'index'])->name('pabrik.panen-pabrik.index');
+    Route::get('pabrik/panen-pabrik/data', [DashboardPanenPabrikController::class, 'getData'])->name('pabrik.panen-pabrik.data');
+});

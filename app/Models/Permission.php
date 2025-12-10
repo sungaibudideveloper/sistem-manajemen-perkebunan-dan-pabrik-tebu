@@ -1,34 +1,46 @@
 <?php
 
-// app/Models/Permission.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Permission extends Model
 {
-    protected $table = 'permissions';
-    protected $primaryKey = 'permissionid';
+    protected $table = 'permission';
+    protected $primaryKey = 'id';
     public $timestamps = false;
 
     protected $fillable = [
-        'permissionname',
-        'category', 
+        'module',
+        'resource',
+        'action',
+        'displayname',
         'description',
-        'isactive'
+        'isactive',
+        'createdat',
+        'updatedat'
     ];
 
     protected $casts = [
-        'isactive' => 'boolean'
+        'isactive' => 'boolean',
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime'
     ];
 
+    // Relationships
     public function jabatanPermissions()
     {
-        return $this->hasMany(JabatanPermission::class, 'permissionid');
+        return $this->hasMany(JabatanPermission::class, 'permissionid', 'id');
     }
 
     public function userPermissions()
     {
-        return $this->hasMany(UserPermission::class, 'permissionid');
+        return $this->hasMany(UserPermission::class, 'permissionid', 'id');
+    }
+
+    // Accessor for full permission name (module.resource.action)
+    public function getFullNameAttribute(): string
+    {
+        return "{$this->module}.{$this->resource}.{$this->action}";
     }
 }

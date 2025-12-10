@@ -31,7 +31,7 @@ class TrashController extends Controller
         }
 
         // Order by suratjalanno aja, jangan created_at
-        $query->orderBy('suratjalanno', 'desc');
+        $query->orderBy('createddate', 'desc');
 
         $data = $query->paginate($perPage);
 
@@ -231,8 +231,8 @@ class TrashController extends Controller
             $tanahEtcRounded = round($tanahEtc, 2); // 2 desimal
 
             // Calculate totals dengan 3 desimal
-            $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3); // 3 desimal
-            $nettoTrash = round($totalTrash - $toleransi, 3); // 3 desimal menggunakan toleransi dari request
+            $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 2); // 3 desimal
+            $nettoTrash = round($totalTrash - $toleransi, 2); // 3 desimal menggunakan toleransi dari request
 
             // Pastikan netto trash tidak kurang dari 0
             if ($nettoTrash < 0) {
@@ -329,8 +329,8 @@ class TrashController extends Controller
             $tanahEtcRounded = round($tanahEtc, 2);
 
             // Calculate totals dengan 3 desimal (SAMA SEPERTI STORE)
-            $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 3);
-            $nettoTrash = round($totalTrash - $toleransi, 3); // Menggunakan toleransi dari request
+            $totalTrash = round($tebumatiPct + $daunPct + $pucukPct + $sogolanPct + $siwlanPct + $tanahEtcRounded, 2);
+            $nettoTrash = round($totalTrash - $toleransi, 2); // Menggunakan toleransi dari request
 
             // Pastikan netto trash tidak kurang dari 0
             if ($nettoTrash < 0) {

@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="user-id" content="{{ auth()->user()->userid }}">
-    <meta name="current-username" content="{{ Auth::user()->usernm }}">
+    <meta name="user-id" content="{{ auth()->user()->userid ?? '' }}">
+    <meta name="current-username" content="{{ Auth::user()->name ?? '' }}">
     <meta name="theme-color" content="#3b82f6">
 
     <!-- Preload font awesome untuk prevent icon flash -->
@@ -59,7 +59,6 @@
             margin-left: 0;
             max-width: calc(100%-4rem);
             min-width: 0;
-            /* overflow-x: clip; */
         }
 
         /* Show body after state determined */
@@ -144,7 +143,11 @@
     <div class="layout-container" x-data="mainLayoutData()" x-init="init()">
         <!-- Sidebar -->
         <aside class="sidebar-wrapper" x-cloak>
-            <x-sidebar></x-sidebar>
+            {{-- ✅ FIXED: Keep variable name as 'company' --}}
+            <x-sidebar 
+                :navigationMenus="$navigationMenus ?? collect([])" 
+                :companyName="$companyName ?? session('companyname', 'Default Company')"
+            />
         </aside>
 
         <!-- Main Content Area -->
@@ -183,8 +186,7 @@
                 {{ $hero ?? null }}
                 <div class="px-2 py-3 sm:px-3 lg:px-4">
                     @error('duplicateClosing')
-                        <div
-                            class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
+                        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
                             {{ $message }}
                         </div>
                     @enderror
@@ -223,7 +225,8 @@
     </div>
 
     <!-- Global Company Modal -->
-    @if (isset($company) && $company)
+    {{-- ✅ FIXED: Keep as $company for backward compatibility --}}
+    @if (isset($company) && count($company) > 0)
         <x-company-modal :companies="$company" />
     @endif
 
@@ -304,31 +307,28 @@
                             (cookieState === 'true');
                     }
 
-                    // ============================================
-                    // FIX: RESPONSIVE RESIZE HANDLER
-                    // Reset state saat switch mobile/desktop
-                    // ============================================
+                    // Responsive resize handler
                     window.addEventListener('resize', () => {
                         if (window.innerWidth < 1024) {
-                            // Masuk mobile view: Reset minimized state
+                            // Mobile: Reset minimized state
                             this.isMinimized = false;
                             document.documentElement.classList.remove('sidebar-minimized');
                         } else {
-                            // Masuk desktop view: Restore state dari storage
+                            // Desktop: Restore state from storage
                             const localState = localStorage.getItem('sidebar-minimized');
                             const cookieState = getCookie('sidebar_minimized');
                             this.isMinimized = localState !== null ?
                                 localState === 'true' :
                                 (cookieState === 'true');
 
-                            // Apply ke HTML
+                            // Apply to HTML
                             if (this.isMinimized) {
                                 document.documentElement.classList.add('sidebar-minimized');
                             } else {
                                 document.documentElement.classList.remove('sidebar-minimized');
                             }
 
-                            // Close mobile sidebar jika kebetulan terbuka
+                            // Close mobile sidebar if open
                             this.mobileOpen = false;
                         }
                     });
@@ -457,8 +457,7 @@
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker
-                                    .controller) {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     console.log('New service worker available');
                                     // Optionally show update notification
                                     if (confirm('Update tersedia! Refresh halaman?')) {

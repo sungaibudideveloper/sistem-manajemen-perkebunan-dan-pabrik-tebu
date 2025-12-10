@@ -84,7 +84,7 @@ table th, table td {
                         <th class="py-1 px-2 text-left border-0" colspan="5">
                             <div class="space-y-1 mb-3">
                                 <div class="grid grid-cols-3 gap-4">
-                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }}</span>
+                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }} {{session('companycode')}} </span>
                                     <span class="text-center"><b>RKH:</b> {{ $details[0]->rkhno }}</span>
                                     <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span>
                                 </div>
@@ -189,7 +189,8 @@ table th, table td {
                             {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha && $item->activitycode == $activitycode ? 'selected' : '' }}
                             data-dosage="{{$item->dosageperha}}" 
                             data-measure="{{ $item->measure }}" 
-                            data-itemname="{{ $item->itemname }}">
+                            data-itemname="{{ $item->itemname }}"
+                            data-rounddosage="{{ $item->rounddosage ?? 1 }}">
                         {{$item->activitycode}} • {{ $item->itemcode }} • {{ $item->itemname }} • {{$item->dosageperha}} ({{$item->measure}})
                     </option>
                 @endforeach
@@ -336,7 +337,7 @@ table th, table td {
 
 
 
-        @if(hasPermission('Menu Gudang'))
+        <!-- if(hasPermission('Menu Gudang')) -->
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
@@ -349,7 +350,7 @@ table th, table td {
             </div>
             @endif
         </form>
-        @endif
+        <!-- endif -->
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">
@@ -394,24 +395,35 @@ function recalcTotals(){
   const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
 
   $('.item-select').each(function(){
-    const $tr      = $(this).closest('tr');
-    const $opt     = $(this).find('option:selected');
+    const $tr  = $(this).closest('tr');
+    const $opt = $(this).find('option:selected');
 
-    const code     = $tr.find('.selected-itemcode').val() || $(this).val();
-    const name     = $opt.data('itemname') || '';
-    const unit     = $tr.find('.selected-unit').val() || $opt.data('measure') || '';
+    const code = $tr.find('.selected-itemcode').val() || $(this).val();
+    const name = $opt.data('itemname') || '';
+    const unit = $tr.find('.selected-unit').val() || $opt.data('measure') || '';
 
-    const dosage    = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
-    const luas      = parseFloat($tr.find('.selected-luas').val()) || 0;
-    const qtyRaw    = dosage * luas;
-    const qty       = roundTo25(qtyRaw);
+    const dosage = parseFloat(String($tr.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
+    const luas   = parseFloat($tr.find('.selected-luas').val()) || 0;
+    const qtyRaw = dosage * luas;
+
+    // 🔑 baca flag rounddosage dari option (0 / 1)
+    const rounddosage = parseInt($opt.data('rounddosage')) || 0;
+
+    let qty;
+    if (rounddosage) {
+      // group ini pakai rounding (0.25)
+      qty = roundTo25(qtyRaw);
+    } else {
+      // group ini TANPA rounding
+      qty = qtyRaw;
+    }
 
     (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
     totals[code].qty   += qty;
     totals[code].parts.push(fmt2(qty));
   });
 
-  // render ulang tbody totals (pakai id yg ditambah di atas)
+  // render ulang tbody totals
   $('#totals-body').html(
     Object.entries(totals).map(([code, r]) => `
       <tr class="hover:bg-gray-50 align-top">
@@ -424,6 +436,7 @@ function recalcTotals(){
     `).join('')
   );
 }
+
 
 // panggil sekali saat load
 $(document).ready(function(){
@@ -474,7 +487,15 @@ $(document).on('input', '.selected-dosage', function(){
           const dosage = parseFloat(String(row.find('.selected-dosage').val()).replace(/,/g,'')) || 0;
           const luas   = parseFloat(row.find('.selected-luas').val()) || 0;
           const qtyRaw    = dosage * luas;
-          const qty    = roundTo25(qtyRaw);
+          const opt         = row.find('.item-select option:selected');
+          const rounddosage = parseInt(opt.data('rounddosage')) || 0;
+
+            let qty;
+            if (rounddosage) {
+                qty = roundTo25(qtyRaw);     // dibulatkan
+            } else {
+                qty = qtyRaw;                // tidak dibulatkan
+            }
 
          console.log('recalcRowQty:', {dosage, luas, qtyRaw, qty});
 
