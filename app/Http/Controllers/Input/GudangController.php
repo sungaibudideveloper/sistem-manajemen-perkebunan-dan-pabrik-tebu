@@ -161,11 +161,11 @@ class GudangController extends Controller
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        
         $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
             ->get('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/costcenter_api', [
-                'connection' => $koneksi,
+                'connection' => '172.17.1.39',
                 'company' => $companyinv->companyinventory,
                 'factory' => $first->factoryinv
             ]);
@@ -237,11 +237,12 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-                'connection' => '172.17.1.39',
+                'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,
