@@ -320,7 +320,6 @@ public function submit(Request $request)
     $first = $details->first();
 
     $roundingByGroup = DB::table('herbisidagroup')
-    ->where('companycode', session('companycode'))
     ->pluck('rounddosage', 'herbisidagroupid');
 
     if (strtoupper($first->flagstatus) != 'ACTIVE') {
