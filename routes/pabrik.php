@@ -2,38 +2,41 @@
 
 // routes\pabrik.php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Pabrik\TrashController;
+use App\Http\Controllers\Pabrik\DashboardPanenPabrikController;
 
-// =============================================================================
-// PABRIK TRASH ROUTES
-// =============================================================================
+Route::middleware('auth')->prefix('pabrik')->name('pabrik.')->group(function () {
 
+    // ============================================================================
+    // TRASH
+    // ============================================================================
+    Route::middleware('permission:pabrik.trash.view')->group(function () {
+        Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
+        Route::post('trash', [TrashController::class, 'store'])->name('trash.store');
+        
+        Route::post('trash/update/{suratjalanno}/{companycode}/{jenis}', [TrashController::class, 'update'])
+            ->where('suratjalanno', '.*')
+            ->where('companycode', '.*')
+            ->where('jenis', '.*')
+            ->name('trash.update');
+        
+        Route::post('trash/delete/{suratjalanno}/{companycode}/{jenis}', [TrashController::class, 'destroy'])
+            ->where('suratjalanno', '.*')
+            ->where('companycode', '.*')
+            ->where('jenis', '.*')
+            ->name('trash.destroy');
+        
+        Route::get('trash/surat-jalan/check', [TrashController::class, 'checkSuratJalan'])->name('trash.surat-jalan.check');
+        Route::post('trash/report', [TrashController::class, 'generateReport'])->name('trash.report');
+        Route::any('trash/report/preview', [TrashController::class, 'reportPreview'])->name('trash.report.preview');
+        Route::get('trash/surat-jalan/search-by-date', [TrashController::class, 'searchSuratJalanByDate'])->name('trash.surat-jalan.search-by-date');
+    });
 
-Route::group(['middleware' => ['auth', 'permission:Trash']], function () {
-     Route::get('/pabrik/trash', [TrashController::class, 'index'])->name('pabrik.trash.index');
-     Route::post('/pabrik/trash', [TrashController::class, 'store'])->name('pabrik.trash.store');
+    // ============================================================================
+    // PANEN PABRIK DASHBOARD
+    // ============================================================================
+    Route::middleware('permission:pabrik.panenpabrik.view')->group(function () {
+        Route::get('panen-pabrik', [DashboardPanenPabrikController::class, 'index'])->name('panen-pabrik.index');
+    });
 
-     // Tambah where constraint buat handle karakter special
-     Route::post('/pabrik/trash/update/{suratjalanno}/{companycode}/{jenis}', [TrashController::class, 'update'])
-          ->where('suratjalanno', '.*')  // Accept any character including dash
-          ->where('companycode', '.*')
-          ->where('jenis', '.*')
-          ->name('pabrik.trash.update');
-
-     Route::post('/pabrik/trash/delete/{suratjalanno}/{companycode}/{jenis}', [TrashController::class, 'destroy'])
-          ->where('suratjalanno', '.*')
-          ->where('companycode', '.*')
-          ->where('jenis', '.*')
-          ->name('pabrik.trash.destroy');
-
-     Route::get('/pabrik/trash/surat-jalan/check', [TrashController::class, 'checkSuratJalan'])
-          ->name('pabrik.trash.surat-jalan.check');
-
-     Route::post('/pabrik/trash/report', [TrashController::class, 'generateReport'])
-          ->name('pabrik.trash.report');
-
-     Route::any('/pabrik/trash/report/preview', [TrashController::class, 'reportPreview'])->name('pabrik.trash.report.preview');
-
-     Route::get('/pabrik/trash/surat-jalan/search-by-date', [TrashController::class, 'searchSuratJalanByDate'])->name('pabrik.trash.surat-jalan.search-by-date');
 });

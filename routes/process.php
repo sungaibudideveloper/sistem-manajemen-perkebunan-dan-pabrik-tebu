@@ -6,18 +6,31 @@ use App\Http\Controllers\Process\PostController;
 use App\Http\Controllers\Process\ClosingController;
 use App\Http\Controllers\Process\UnpostController;
 
-Route::group(['middleware' => ['auth', 'permission:Posting']], function () {
-    Route::match(['POST', 'GET'], 'process/posting', [PostController::class, 'index'])->name('process.posting');
-    Route::post('process/posting/submit', [PostController::class, 'posting'])->name('process.posting.submit');
-    Route::post('process/post-session', [PostController::class, 'postSession'])->name('postSession');
-});
+Route::middleware('auth')->prefix('process')->name('process.')->group(function () {
 
-Route::group(['middleware' => ['auth', 'permission:Unposting']], function () {
-    // FIX: Ubah dari '/unposting' menjadi 'process/unposting'
-    Route::match(['POST', 'GET'], 'process/unposting', [UnpostController::class, 'index'])->name('process.unposting');
-    Route::post('process/unposting/submit', [UnpostController::class, 'unposting'])->name('process.unposting.submit');
-    Route::post('process/unpost-session', [UnpostController::class, 'unpostSession'])->name('unpostSession');
-});
+    // ============================================================================
+    // POSTING
+    // ============================================================================
+    Route::middleware('permission:process.posting.view')->group(function () {
+        Route::match(['GET', 'POST'], 'posting', [PostController::class, 'index'])->name('posting');
+        Route::post('posting/submit', [PostController::class, 'posting'])->name('posting.submit');
+        Route::post('post-session', [PostController::class, 'postSession'])->name('postSession');
+    });
 
-Route::get('process/closing', [ClosingController::class, 'closing'])->name('closing')
-    ->middleware('permission:Closing');
+    // ============================================================================
+    // UNPOSTING
+    // ============================================================================
+    Route::middleware('permission:process.unposting.view')->group(function () {
+        Route::match(['GET', 'POST'], 'unposting', [UnpostController::class, 'index'])->name('unposting');
+        Route::post('unposting/submit', [UnpostController::class, 'unposting'])->name('unposting.submit');
+        Route::post('unpost-session', [UnpostController::class, 'unpostSession'])->name('unpostSession');
+    });
+
+    // ============================================================================
+    // CLOSING
+    // ============================================================================
+    Route::middleware('permission:process.closing.view')->group(function () {
+        Route::get('closing', [ClosingController::class, 'closing'])->name('closing');
+    });
+
+});

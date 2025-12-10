@@ -2,95 +2,120 @@
 
 // routes\report.php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Input\HPTController;
-use App\Http\Controllers\Report\PivotController;
-
-use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\Input\AgronomiController;
+use App\Http\Controllers\Report\PivotController;
+use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\Report\PanenTebuController;
 use App\Http\Controllers\Report\MasterLahanReportController;
 use App\Http\Controllers\Report\RekapUpahMingguanController;
+use App\Http\Controllers\Report\SuratJalanReportController;
 use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
 use App\Http\Controllers\Report\PanenTrackPlotReportController;
+use App\Http\Controllers\Report\SaldoPanenReportController;
 
+Route::middleware('auth')->prefix('report')->name('report.')->group(function () {
 
-Route::group(['middleware' => ['auth', 'permission:Report Agronomi']], function () {
-    Route::match(['GET', 'POST'], '/report/agronomi', [ReportController::class, 'agronomi'])->name('report.agronomi.index');
-    Route::get('report/agronomi/excel', [AgronomiController::class, 'excel'])->name('report.agronomi.exportExcel');
+    // ============================================================================
+    // AGRONOMI
+    // ============================================================================
+    Route::middleware('permission:report.agronomi.view')->group(function () {
+        Route::match(['GET', 'POST'], 'agronomi', [ReportController::class, 'agronomi'])->name('agronomi.index');
+        Route::get('agronomi/excel', [AgronomiController::class, 'excel'])->name('agronomi.exportExcel');
+    });
+
+    // ============================================================================
+    // HPT
+    // ============================================================================
+    Route::middleware('permission:report.hpt.view')->group(function () {
+        Route::match(['GET', 'POST'], 'hpt', [ReportController::class, 'hpt'])->name('hpt.index');
+        Route::get('hpt/excel', [HPTController::class, 'excel'])->name('hpt.exportExcel');
+    });
+
+    // ============================================================================
+    // ZPK
+    // ============================================================================
+    Route::middleware('permission:report.zpk.view')->group(function () {
+        Route::match(['GET', 'POST'], 'report-zpk', [ReportController::class, 'zpk'])->name('report-zpk.index');
+        Route::get('report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report-zpk.exportExcel');
+    });
+
+    // ============================================================================
+    // TRASH
+    // ============================================================================
+    Route::middleware('permission:report.trash.view')->group(function () {
+        Route::match(['GET', 'POST'], 'trash-report', [ReportController::class, 'trash'])->name('trash-report.index');
+    });
+
+    // ============================================================================
+    // MANAJEMEN LAHAN
+    // ============================================================================
+    Route::middleware('permission:report.manajemenlahan.view')->group(function () {
+        Route::get('manajemen-lahan', [MasterLahanReportController::class, 'index'])->name('report-manajemen-lahan.index');
+        Route::get('manajemen-lahan/data', [MasterLahanReportController::class, 'getData'])->name('report-manajemen-lahan.data');
+    });
+
+    // ============================================================================
+    // PANEN TEBU
+    // ============================================================================
+    Route::middleware('permission:report.panentebu.view')->group(function () {
+        Route::match(['GET', 'POST'], 'panen-tebu-report', [PanenTebuController::class, 'index'])->name('panen-tebu-report.index');
+        Route::post('panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('panen-tebu-report.proses');
+    });
+
+    // ============================================================================
+    // SURAT JALAN (tanpa timbangan)
+    // ============================================================================
+    Route::middleware('permission:report.suratjalan.view')->group(function () {
+        Route::get('surat-jalan', [SuratJalanReportController::class, 'index'])->name('report-surat-jalan.index');
+        Route::get('surat-jalan/data', [SuratJalanReportController::class, 'getData'])->name('report-surat-jalan.data');
+    });
+
+    // ============================================================================
+    // SURAT JALAN & TIMBANGAN
+    // ============================================================================
+    Route::middleware('permission:report.suratjalantimbangan.view')->group(function () {
+        Route::get('surat-jalan-timbangan', [SuratJalanTimbanganReportController::class, 'index'])->name('report-surat-jalan-timbangan.index');
+        Route::get('surat-jalan-timbangan/data', [SuratJalanTimbanganReportController::class, 'getData'])->name('report-surat-jalan-timbangan.data');
+        Route::get('surat-jalan-timbangan/{suratjalanno}', [SuratJalanTimbanganReportController::class, 'show'])->name('report-surat-jalan-timbangan.show');
+        Route::get('surat-jalan-timbangan/{suratjalanno}/detail', [SuratJalanTimbanganReportController::class, 'getDetail'])->name('report-surat-jalan-timbangan.detail');
+    });
+
+    // ============================================================================
+    // PANEN TRACK PLOT
+    // ============================================================================
+    Route::middleware('permission:report.panentrackplot.view')->group(function () {
+        Route::get('panen-track-plot', [PanenTrackPlotReportController::class, 'index'])->name('panen-track-plot.index');
+        Route::get('panen-track-plot/batches', [PanenTrackPlotReportController::class, 'getBatches'])->name('panen-track-plot.batches');
+        Route::get('panen-track-plot/data', [PanenTrackPlotReportController::class, 'getData'])->name('panen-track-plot.data');
+    });
+
+    // ============================================================================
+    // SALDO PANEN
+    // ============================================================================
+    Route::middleware('permission:report.saldopanen.view')->group(function () {
+        Route::get('saldo-panen', [SaldoPanenReportController::class, 'index'])->name('saldo-panen.index');
+        Route::get('saldo-panen/data', [SaldoPanenReportController::class, 'getData'])->name('saldo-panen.data');
+    });
+
+    // ============================================================================
+    // REKAP UPAH MINGGUAN
+    // ============================================================================
+    Route::middleware('permission:report.rekapupahminggu.view')->group(function () {
+        Route::match(['GET', 'POST'], 'rekap-upah-mingguan', [RekapUpahMingguanController::class, 'index'])->name('rekap-upah-mingguan.index');
+        Route::get('rekap-upah-mingguan/excel', [RekapUpahMingguanController::class, 'excelRUM'])->name('rekap-upah-mingguan.exportExcel');
+        Route::get('rekap-upah-mingguan/show/{lkhno}', [RekapUpahMingguanController::class, 'show'])->name('rekap-upah-mingguan.show');
+        Route::match(['GET', 'POST'], 'rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('rekap-upah-mingguan.preview');
+        Route::get('rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('rekap-upah-mingguan.export-excel');
+        Route::get('rekap-upah-mingguan/print-bp', [RekapUpahMingguanController::class, 'printBp'])->name('rekap-upah-mingguan.print-bp');
+    });
+
+    // ============================================================================
+    // PIVOT TABLES
+    // ============================================================================
+    Route::middleware('permission:report.pivot.view')->group(function () {
+        Route::get('agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi');
+        Route::get('hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT');
+    });
+
 });
-Route::group(['middleware' => ['auth', 'permission:Report HPT']], function () {
-    Route::match(['GET', 'POST'], 'report/hpt', [ReportController::class, 'hpt'])->name('report.hpt.index');
-    Route::get('report/hpt/excel', [HPTController::class, 'excel'])->name('report.hpt.exportExcel');
-});
-
-Route::group(['middleware' => ['auth', 'permission:Trash Report']], function () {
-    Route::match(['GET', 'POST'], 'report/trash-report', [ReportController::class, 'trash'])->name('report.trash-report.index');
-});
-
-
-Route::group(['middleware' => ['auth', 'permission:Report Zpk']], function () {
-    Route::match(['GET', 'POST'], 'report/report-zpk', [ReportController::class, 'zpk'])->name('report.report-zpk.index');
-    Route::get('report/report-zpk/excel', [ReportController::class, 'excelZPK'])->name('report.report-zpk.exportExcel');
-});
-
-Route::group(['middleware' => ['auth', 'permission:Panen Tebu Report']], function () {
-    Route::match(['GET', 'POST'], 'report/panen-tebu-report', [PanenTebuController::class, 'index'])->name('report.panen-tebu-report.index');
-    Route::post('report/panen-tebu-report/proses', [PanenTebuController::class, 'proses'])->name('report.panen-tebu-report.proses');
-});
-
-Route::get('report/agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi')
-    ->middleware('permission:Pivot Agronomi');
-Route::get('report/hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT')
-    ->middleware('permission:Pivot HPT');
-
-// Report Master Lahan
-Route::group(['middleware' => ['auth', 'permission:Report Manajemen Lahan']], function () {
-    Route::get('report/manajemen-lahan', [App\Http\Controllers\Report\MasterLahanReportController::class, 'index'])->name('report.report-manajemen-lahan.index');
-    Route::get('report/manajemen-lahan/data', [App\Http\Controllers\Report\MasterLahanReportController::class, 'getData'])->name('report.report-manajemen-lahan.data');
-});
-
-// Report Surat Jalan & Timbangan
-Route::group(['middleware' => ['auth', 'permission:Report Surat Jalan Timbangan']], function () {
-    Route::get('report/surat-jalan-timbangan', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'index'])->name('report.report-surat-jalan-timbangan.index');
-    Route::get('report/surat-jalan-timbangan/data', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'getData'])->name('report.report-surat-jalan-timbangan.data');
-
-    // Detail page routes
-    Route::get('report/surat-jalan-timbangan/{suratjalanno}', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'show'])->name('report.report-surat-jalan-timbangan.show');
-    Route::get('report/surat-jalan-timbangan/{suratjalanno}/detail', [App\Http\Controllers\Report\SuratJalanTimbanganReportController::class, 'getDetail'])->name('report.report-surat-jalan-timbangan.detail');
-});
-
-// Report Surat Jalan (tanpa timbangan)
-Route::group(['middleware' => ['auth', 'permission:Report Surat Jalan']], function () {
-    Route::get('report/surat-jalan', [App\Http\Controllers\Report\SuratJalanReportController::class, 'index'])->name('report.report-surat-jalan.index');
-    Route::get('report/surat-jalan/data', [App\Http\Controllers\Report\SuratJalanReportController::class, 'getData'])->name('report.report-surat-jalan.data');
-});
-
-// Report Tracking Panen per Plot
-Route::group(['middleware' => ['auth', 'permission:Panen Track Plot']], function () {
-    Route::get('report/panen-track-plot', [PanenTrackPlotReportController::class, 'index'])
-        ->name('report.panen-track-plot.index');
-    Route::get('report/panen-track-plot/batches', [PanenTrackPlotReportController::class, 'getBatches'])
-        ->name('report.panen-track-plot.batches');
-    Route::get('report/panen-track-plot/data', [PanenTrackPlotReportController::class, 'getData'])
-        ->name('report.panen-track-plot.data');
-});
-
-// Report Saldo Panen
-Route::group(['middleware' => ['auth', 'permission:Saldo Panen']], function () {
-    Route::get('report/saldo-panen', [App\Http\Controllers\Report\SaldoPanenReportController::class, 'index'])
-        ->name('report.saldo-panen.index');
-    Route::get('report/saldo-panen/data', [App\Http\Controllers\Report\SaldoPanenReportController::class, 'getData'])
-        ->name('report.saldo-panen.data');
-});
-
-// Report Rekap Upah Mingguan
-Route::group(['middleware' => ['auth', 'permission:Rekap Upah Mingguan']], function () {
-    Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan', [RekapUpahMingguanController::class, 'index'])->name('report.rekap-upah-mingguan.index');
-    Route::get('report/rekap-upah-mingguan/excel', [RekapUpahMingguanController::class, 'excelRUM'])->name('report.rekap-upah-mingguan.exportExcel');
-    Route::get('report/rekap-upah-mingguan/show/{lkhno}', [RekapUpahMingguanController::class, 'show'])->name('report.rekap-upah-mingguan.show');
-    Route::match(['GET', 'POST'], 'report/rekap-upah-mingguan/preview', [RekapUpahMingguanController::class, 'previewReport'])->name('report.rekap-upah-mingguan.preview');
-    Route::get('report/rekap-upah-mingguan/export-excel', [RekapUpahMingguanController::class, 'exportExcel'])->name('report.rekap-upah-mingguan.export-excel');
-    Route::get('report/rekap-upah-mingguan/print-bp', [RekapUpahMingguanController::class, 'printBp'])->name('report.rekap-upah-mingguan.print-bp');
-});
-

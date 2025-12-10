@@ -4,13 +4,6 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     
     <div class="flex min-h-screen bg-gray-200">
-        <x-sidebar 
-            :navigationMenus="$navigationMenus"
-            :allSubmenus="$allSubmenus" 
-            :userPermissions="$userPermissions"
-            :companyName="$companyName"
-        />
-
         <main class="flex-1 transition-all duration-300" 
               x-data="homeData()"
               x-init="init()">
@@ -39,14 +32,16 @@
                                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400">{{ $user }}</span>
                             </h1>
                             
-                            <!-- ✅ UPDATED: Hide on mobile (hidden md:block) -->
+                            <!-- ✅ Hide on mobile (hidden md:block) -->
                             <p class="hidden md:block text-xl text-emerald-100 mb-8 max-w-3xl leading-relaxed">
                                 Comprehensive sugarcane plantation management system for Sungai Budi. 
                                 Monitor growth, analyze data, and optimize operations with intelligent insights.
                             </p>
                             
-                            <!-- ✅ UPDATED: Changed from 2 to 3 buttons -->
+                            <!-- ✅ Action Buttons with Permission Checks -->
                             <div class="flex flex-col sm:flex-row gap-4">
+                                {{-- Planning Button - Check permission --}}
+                                @can('input.rencanakerjaharian.view')
                                 <a href="{{ route('input.rencanakerjaharian.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,8 +49,10 @@
                                     </svg>
                                     Planning
                                 </a>
+                                @endcan
                                 
-                                <!-- ✅ NEW: Approval button -->
+                                {{-- Approval Button - Check permission --}}
+                                @can('input.approval.view')
                                 <a href="{{ route('input.approval.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,15 +60,19 @@
                                     </svg>
                                     Approval
                                 </a>
+                                @endcan
                                 
+                                {{-- Reports Button - Check ANY report permission --}}
+                                @canany(['report.agronomi.view', 'report.hpt.view', 'report.zpk.view', 'report.manajemenlahan.view', 'report.suratjalantimbangan.view'])
                                 <button type="button"
-                                @click="$dispatch('open-reports-modal')"
-                                class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
+                                    @click="$dispatch('open-reports-modal')"
+                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
                                     Reports
                                 </button>
+                                @endcanany
                             </div>
                         </div>
                     </div>
@@ -178,7 +179,8 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Agronomi Card -->
+                        {{-- Agronomi Card - Only show if has permission --}}
+                        @can('input.agronomi.view')
                         <a href="{{ route('input.agronomi.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
@@ -207,8 +209,10 @@
                                 </div>
                             </div>
                         </a>
+                        @endcan
 
-                        <!-- HPT Card -->
+                        {{-- HPT Card - Only show if has permission --}}
+                        @can('input.hpt.view')
                         <a href="{{ route('input.hpt.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
@@ -237,8 +241,10 @@
                                 </div>
                             </div>
                         </a>
+                        @endcan
 
-                        <!-- Rencana Kerja Harian Card -->
+                        {{-- Rencana Kerja Harian Card - Only show if has permission --}}
+                        @can('input.rencanakerjaharian.view')
                         <a href="{{ route('input.rencanakerjaharian.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
@@ -267,6 +273,7 @@
                                 </div>
                             </div>
                         </a>
+                        @endcan
                     </div>
                 </section>
 
@@ -310,8 +317,176 @@
         </main>
     </div>
 
-    <!-- Include Company Modal (Now Auto-shows on first load if needed) -->
+    <!-- Include Company Modal -->
     <x-company-modal :companies="$company" />
+
+    <!-- Live Chat Component -->
+    <x-live-chat />
+
+    <!-- ✅ REPORTS MODAL - Updated with Permission Checks -->
+    <div x-data="{ reportsModalOpen: false }" 
+         @open-reports-modal.window="reportsModalOpen = true"
+         @keydown.escape.window="reportsModalOpen = false">
+        
+        <div x-show="reportsModalOpen" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+             x-cloak>
+            
+            <div @click.away="reportsModalOpen = false"
+                 x-show="reportsModalOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-90"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-90"
+                 class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+                
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold text-white">Reports</h3>
+                        <button @click="reportsModalOpen = false" class="text-white hover:bg-white/20 rounded-lg p-1">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content - Only show reports user has permission to -->
+                <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    {{-- Surat Jalan & Timbangan --}}
+                    @can('report.suratjalantimbangan.view')
+                    <a href="{{ route('report.report-surat-jalan-timbangan.index') }}" 
+                       class="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 hover:border-emerald-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-emerald-700">Surat Jalan & Timbangan</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-emerald-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                    {{-- Manajemen Lahan --}}
+                    @can('report.manajemenlahan.view')
+                    <a href="{{ route('report.report-manajemen-lahan.index') }}" 
+                       class="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 hover:border-blue-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-blue-700">Manajemen Lahan</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-blue-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                    {{-- Trash Report --}}
+                    @can('report.trash.view')
+                    <a href="{{ route('report.trash-report.index') }}" 
+                       class="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 hover:border-amber-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-amber-700">Biaya Panen & Trash</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                    {{-- Agronomi Report --}}
+                    @can('report.agronomi.view')
+                    <a href="{{ route('report.agronomi.index') }}" 
+                       class="p-4 bg-green-50 hover:bg-green-100 rounded-xl border border-green-200 hover:border-green-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-green-700">Agronomi</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-green-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                    {{-- HPT Report --}}
+                    @can('report.hpt.view')
+                    <a href="{{ route('report.hpt.index') }}" 
+                       class="p-4 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 hover:border-red-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-red-700">HPT</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-red-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                    {{-- ZPK Report --}}
+                    @can('report.zpk.view')
+                    <a href="{{ route('report.report-zpk.index') }}" 
+                       class="p-4 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 hover:border-purple-400 transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 group-hover:text-purple-700">ZPK</h4>
+                            </div>
+                            <svg class="w-5 h-5 text-purple-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    @endcan
+
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Home page Alpine.js component
@@ -320,17 +495,17 @@
                 sidebarMinimized: false,
                 
                 init() {
-                    // Listen untuk sidebar toggle event
+                    // Listen for sidebar toggle event
                     window.addEventListener('sidebar-toggle', (e) => {
                         this.sidebarMinimized = e.detail.minimized;
                     });
                     
-                    // Set initial state dari store
+                    // Set initial state from store
                     if (Alpine.store('sidebar')) {
                         this.sidebarMinimized = Alpine.store('sidebar').isMinimized;
                     }
                     
-                    // Auto-open modal jika showPopup true
+                    // Auto-open modal if showPopup true
                     if ({{ $showPopup ? 'true' : 'false' }}) {
                         this.$nextTick(() => {
                             this.$dispatch('open-company-modal');
@@ -348,129 +523,5 @@
             }
         }
     </script>
-    <!-- Live Chat Component -->
-<x-live-chat />
-
-
-<!-- Reports Modal -->
-<div x-data="{ reportsModalOpen: false }" 
-     @open-reports-modal.window="reportsModalOpen = true"
-     @keydown.escape.window="reportsModalOpen = false">
-    
-    <div x-show="reportsModalOpen" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
-         x-cloak>
-        
-        <div @click.away="reportsModalOpen = false"
-             x-show="reportsModalOpen"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 scale-90"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-90"
-             class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-            
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 rounded-t-2xl">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold text-white">Reports</h3>
-                    <button @click="reportsModalOpen = false" class="text-white hover:bg-white/20 rounded-lg p-1">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                @if(in_array('Report Surat Jalan Timbangan', $userPermissions))
-                <a href="{{ route('report.report-surat-jalan-timbangan.index') }}" 
-                   class="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 hover:border-emerald-400 transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900 group-hover:text-emerald-700">Surat Jalan & Timbangan</h4>
-                        </div>
-                        <svg class="w-5 h-5 text-emerald-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </div>
-                </a>
-                @endif
-
-                @if(in_array('Report Manajemen Lahan', $userPermissions))
-                <a href="{{ route('report.report-manajemen-lahan.index') }}" 
-                   class="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 hover:border-blue-400 transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900 group-hover:text-blue-700">Manajemen Lahan</h4>
-                        </div>
-                        <svg class="w-5 h-5 text-blue-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </div>
-                </a>
-                @endif
-
-                @if(in_array('Trash Report', $userPermissions))
-                <a href="{{ route('report.trash-report.index') }}" 
-                   class="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 hover:border-amber-400 transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900 group-hover:text-amber-700">Biaya Panen & Trash</h4>
-                        </div>
-                        <svg class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </div>
-                </a>
-                @endif
-
-                @if(in_array('Report Agronomi', $userPermissions))
-                <a href="{{ route('report.agronomi.index') }}" 
-                   class="p-4 bg-green-50 hover:bg-green-100 rounded-xl border border-green-200 hover:border-green-400 transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900 group-hover:text-green-700">Agronomi</h4>
-                        </div>
-                        <svg class="w-5 h-5 text-green-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </div>
-                </a>
-                @endif
-
-            </div>
-        </div>
-    </div>
-</div>
 
 </x-layout>

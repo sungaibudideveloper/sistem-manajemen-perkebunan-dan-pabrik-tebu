@@ -49,7 +49,7 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
-        if (hasPermission('Menu Gudang')) {
+        // if (hasPermission('Menu Gudang')) {
             $usematerialhdr = new usematerialhdr;
             $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
@@ -106,9 +106,9 @@ class GudangController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate
             ]);
-        } else {
-            return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
-        }
+        // } else {
+        //     return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
+        // }
     }
 
     public function detail(Request $request)
@@ -161,7 +161,7 @@ class GudangController extends Controller
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        
         $response = Http::withoutVerifying()->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
             ->get('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/costcenter_api', [
@@ -237,11 +237,12 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
-                'connection' => '172.17.1.39',
+                'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,

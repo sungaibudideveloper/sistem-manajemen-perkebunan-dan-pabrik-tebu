@@ -2,30 +2,23 @@
 
 namespace App\View\Composers;
 
-use Carbon\Carbon;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use App\Http\Middleware\CheckPermission;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\PermissionService;
 
+/**
+ * Navigation Composer
+ * 
+ * BEST PRACTICE: View composer for sidebar navigation
+ * Reads menu from config/menu.php (not database)
+ * Filters menu items based on user permissions
+ */
 class NavigationComposer
 {
     /**
-     * Cache duration in seconds (1 day)
-     */
-    const CACHE_TTL = 86400;
-
-    /**
-     * Request-level cache untuk permission array (in-memory)
-     * Prevents repeated cache queries dalam single request
-     */
-    private static $requestPermissionCache = [];
-
-    /**
      * Bind data to the view
-     * 
-     * ✅ IMPROVED: Added try-catch untuk handle cache corruption
      *
      * @param View $view
      * @return void
@@ -35,286 +28,93 @@ class NavigationComposer
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Generate unique cache key with APP_KEY version to prevent encryption errors
-            $appKeyHash = substr(md5(config('app.key')), 0, 8);
-            $cacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_" . session('companycode') . "_{$appKeyHash}";
-
             try {
-                // Cache all navigation data to prevent repeated queries
-                $navigationData = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
-                    return [
-                        'navigationMenus' => $this->getNavigationMenus(),
-                        'allSubmenus' => $this->getAllSubmenus(),
-                        'userPermissions' => $this->getUserPermissions(),
-                        'companyName' => $this->getCompanyName(),
-                        'user' => $this->getCurrentUserName(),
-                        'userCompanies' => $this->getUserCompanies(),
-                        'company' => $this->getUserCompanies(),
-                        'period' => $this->getMonitoringPeriod()
-                    ];
-                });
+                // Get menu structure from config file
+                $menuConfig = config('menu', []);
 
-                // ✅ STORE permission array in request-level memory cache
-                $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-                self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
+                // Filter menu based on permissions
+                $navigationMenus = $this->filterMenuByPermissions($menuConfig, $user);
 
-                $view->with($navigationData);
+                $view->with([
+                    'navigationMenus' => collect($navigationMenus),
+                    'companyName' => $this->getCompanyName(),
+                    'user' => $this->getCurrentUserName(),
+                    'company' => $this->getUserCompanies(), // ✅ FIXED: Keep as 'company' for backward compatibility
+                    'period' => $this->getMonitoringPeriod(),
+                ]);
 
             } catch (\Exception $e) {
-                // ✅ Handle cache corruption atau encryption errors
-                \Log::warning('Navigation cache error, rebuilding...', [
+                Log::error('Navigation composer error', [
                     'error' => $e->getMessage(),
                     'user' => $user->userid
                 ]);
 
-                // Clear corrupted cache
-                Cache::forget($cacheKey);
-
-                // Rebuild tanpa cache
-                $navigationData = [
-                    'navigationMenus' => $this->getNavigationMenus(),
-                    'allSubmenus' => $this->getAllSubmenus(),
-                    'userPermissions' => $this->getUserPermissions(),
+                // Fallback: empty menu
+                $view->with([
+                    'navigationMenus' => collect([]),
                     'companyName' => $this->getCompanyName(),
                     'user' => $this->getCurrentUserName(),
-                    'userCompanies' => $this->getUserCompanies(),
-                    'company' => $this->getUserCompanies(),
-                    'period' => $this->getMonitoringPeriod()
-                ];
-
-                // Store in request cache
-                $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-                self::$requestPermissionCache[$requestCacheKey] = $navigationData['userPermissions'];
-
-                $view->with($navigationData);
+                    'company' => $this->getUserCompanies(), // ✅ FIXED
+                    'period' => $this->getMonitoringPeriod(),
+                ]);
             }
         }
     }
 
     /**
-     * Get navigation menus for sidebar
-     *
-     * @return \Illuminate\Support\Collection
-     */
-    private function getNavigationMenus()
-    {
-        try {
-            return DB::table('menu')
-                ->orderBy('menuid')
-                ->get();
-        } catch (\Exception $e) {
-            \Log::error('Error getting navigation menus: ' . $e->getMessage());
-            return collect([]);
-        }
-    }
-
-    /**
-     * Get all submenus for sidebar
-     *
-     * @return \Illuminate\Support\Collection
-     */
-    private function getAllSubmenus()
-    {
-        try {
-            return DB::table('submenu')
-                ->orderBy('menuid')
-                ->orderBy('submenuid')
-                ->get();
-        } catch (\Exception $e) {
-            \Log::error('Error getting submenus: ' . $e->getMessage());
-            return collect([]);
-        }
-    }
-
-    /**
-     * Get user permissions with additional caching layer
-     * Returns array of granted permission names
+     * Filter menu items based on user permissions (recursive)
      * 
-     * ✅ IMPROVED: Added APP_KEY hash to cache key + error handling
-     *
+     * @param array $menuItems
+     * @param \App\Models\User $user
      * @return array
      */
-    private function getUserPermissions()
+    private function filterMenuByPermissions(array $menuItems, $user): array
     {
-        try {
-            if (!Auth::check()) {
-                return [];
+        $filtered = [];
+
+        foreach ($menuItems as $item) {
+            // Check if user has permission for this menu item
+            if (isset($item['permission'])) {
+                if (!PermissionService::check($user, $item['permission'])) {
+                    continue; // Skip this item
+                }
             }
 
-            $user = Auth::user();
-
-            // Additional cache layer for permission array with APP_KEY version
-            $appKeyHash = substr(md5(config('app.key')), 0, 8);
-            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
-
-            return Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
-                $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
-
-                // Extract only granted permission names
-                $grantedPermissions = [];
-                foreach ($effectivePermissions as $permissionName => $details) {
-                    if ($details['granted']) {
-                        $grantedPermissions[] = $permissionName;
-                    }
+            // Process children recursively
+            if (isset($item['children']) && is_array($item['children'])) {
+                $filteredChildren = $this->filterMenuByPermissions($item['children'], $user);
+                
+                // Only include parent if it has visible children OR has a route itself
+                if (!empty($filteredChildren)) {
+                    $item['children'] = $filteredChildren;
+                    $filtered[] = $item;
+                } elseif (isset($item['route'])) {
+                    // Parent has route and user has permission
+                    unset($item['children']); // Remove empty children
+                    $filtered[] = $item;
                 }
-
-                return $grantedPermissions;
-            });
-        } catch (\Exception $e) {
-            \Log::error('Error getting user permissions: ' . $e->getMessage());
-            return [];
+            } else {
+                // Leaf node (no children)
+                $filtered[] = $item;
+            }
         }
+
+        return $filtered;
     }
 
     /**
-     * Check if user has specific permission
-     * Uses REQUEST-LEVEL in-memory cache to prevent repeated cache queries
+     * Check if user has permission (for backward compatibility)
      * 
-     * ✅ IMPROVED: Added error handling + APP_KEY versioning
-     *
-     * @param string $permissionName
+     * @param string $permissionKey
      * @return bool
      */
-    public function hasPermission($permissionName)
+    public function hasPermission(string $permissionKey): bool
     {
-        try {
-            if (!Auth::check()) {
-                return false;
-            }
-
-            $user = Auth::user();
-            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-
-            // ✅ PRIORITY 1: Check request-level memory cache (NO DB QUERY)
-            if (isset(self::$requestPermissionCache[$requestCacheKey])) {
-                return in_array($permissionName, self::$requestPermissionCache[$requestCacheKey]);
-            }
-
-            // ✅ PRIORITY 2: Load from Laravel cache (1 DB query)
-            $appKeyHash = substr(md5(config('app.key')), 0, 8);
-            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
-
-            $grantedPermissions = Cache::remember($permCacheKey, self::CACHE_TTL, function () use ($user) {
-                $effectivePermissions = CheckPermission::getUserEffectivePermissions($user);
-
-                $grantedPermissions = [];
-                foreach ($effectivePermissions as $permName => $details) {
-                    if ($details['granted']) {
-                        $grantedPermissions[] = $permName;
-                    }
-                }
-
-                return $grantedPermissions;
-            });
-
-            // ✅ Store in request cache untuk calls berikutnya
-            self::$requestPermissionCache[$requestCacheKey] = $grantedPermissions;
-
-            return in_array($permissionName, $grantedPermissions);
-        } catch (\Exception $e) {
-            \Log::error('Error checking permission: ' . $e->getMessage());
+        if (!Auth::check()) {
             return false;
         }
-    }
 
-    /**
-     * Convention-based permission mapping
-     * Maps submenu slug to permission name
-     * 
-     * DEFAULT BEHAVIOR:
-     * - Returns titleized slug as permission name
-     * - Example: 'support-ticket' becomes 'Support Ticket'
-     * 
-     * OVERRIDE for special cases that don't follow convention
-     *
-     * @param string $menuSlug
-     * @param string|null $submenuSlug
-     * @return string
-     */
-    public function getPermissionName($menuSlug, $submenuSlug = null)
-    {
-        // Menu-level permissions
-        $menuPermissions = [
-            'masterdata' => 'Master',
-            'input' => 'Input Data',
-            'report' => 'Report',
-            'dashboard' => 'Dashboard',
-            'process' => 'Process',
-            'usermanagement' => 'Kelola User',
-        ];
-        
-        // Submenu-level permission overrides
-        // Only for cases that don't follow the convention
-        $submenuPermissionOverrides = [
-            // Master Data - non-standard permissions
-            'master-list' => 'MasterList',
-            'herbisida-dosage' => 'Dosis Herbisida',
-
-            // Input Data - non-standard permissions
-            'rencanakerjaharian' => 'Rencana Kerja Harian',
-            'gudang-bbm' => 'Menu Gudang',
-            'kendaraan-workshop' => 'Kendaraan',
-            'pias' => 'Menu Pias',
-
-            // Dashboard - non-standard permissions
-            'agronomi-dashboard' => 'Dashboard Agronomi',
-            'hpt-dashboard' => 'Dashboard HPT',
-
-            // Report - non-standard permissions
-            'agronomi-report' => 'Report Agronomi',
-            'hpt-report' => 'Report HPT',
-
-            // Process - non-standard permissions
-            'upload-gpx-file' => 'Upload GPX File',
-            'export-kml-file' => 'Export KML File',
-
-            // User Management - non-standard permissions
-            'user' => 'Kelola User',
-            'user-company-permissions' => 'Kelola User',
-            'user-activity-permission' => 'Kelola User',
-            'user-permissions' => 'Kelola User',
-            'permissions-masterdata' => 'Master',
-            'jabatan' => 'Jabatan',
-            'support-ticket' => 'Kelola User',
-            'menu' => 'Menu',
-            'submenu' => 'Submenu',
-            'subsubmenu' => 'Subsubmenu',
-        ];
-
-        // Logic: Convention over configuration
-        if ($submenuSlug) {
-            // Check if there's an override for this slug
-            if (isset($submenuPermissionOverrides[$submenuSlug])) {
-                return $submenuPermissionOverrides[$submenuSlug];
-            }
-
-            // Convention: Titleize slug to get permission name
-            // Example: 'support-ticket' becomes 'Support Ticket'
-            return $this->slugToPermissionName($submenuSlug);
-        }
-
-        // Return menu-level permission
-        return $menuPermissions[$menuSlug] ?? $this->slugToPermissionName($menuSlug);
-    }
-
-    /**
-     * Convert slug to Permission Name (Title Case)
-     * 
-     * Examples:
-     * - 'support-ticket' becomes 'Support Ticket'
-     * - 'user' becomes 'User'
-     * - 'company' becomes 'Company'
-     *
-     * @param string $slug
-     * @return string
-     */
-    private function slugToPermissionName($slug)
-    {
-        // Replace hyphens/underscores with spaces
-        $name = str_replace(['-', '_'], ' ', $slug);
-
-        // Convert to title case
-        return ucwords($name);
+        return PermissionService::check(Auth::user(), $permissionKey);
     }
 
     /**
@@ -322,7 +122,7 @@ class NavigationComposer
      *
      * @return string
      */
-    private function getCompanyName()
+    private function getCompanyName(): string
     {
         try {
             if (session('companycode')) {
@@ -339,7 +139,7 @@ class NavigationComposer
             }
             return 'Default Company';
         } catch (\Exception $e) {
-            \Log::error('Error getting company name: ' . $e->getMessage());
+            Log::error('Error getting company name: ' . $e->getMessage());
             return 'Default Company';
         }
     }
@@ -349,7 +149,7 @@ class NavigationComposer
      *
      * @return string|null
      */
-    private function getMonitoringPeriod()
+    private function getMonitoringPeriod(): ?string
     {
         try {
             if (session('companycode')) {
@@ -358,12 +158,12 @@ class NavigationComposer
                     ->value('companyperiod');
 
                 if ($period) {
-                    return Carbon::parse($period)->format('F Y');
+                    return \Carbon\Carbon::parse($period)->format('F Y');
                 }
             }
             return null;
         } catch (\Exception $e) {
-            \Log::error('Error getting monitoring period: ' . $e->getMessage());
+            Log::error('Error getting monitoring period: ' . $e->getMessage());
             return null;
         }
     }
@@ -373,7 +173,7 @@ class NavigationComposer
      *
      * @return string
      */
-    private function getCurrentUserName()
+    private function getCurrentUserName(): string
     {
         try {
             if (Auth::check()) {
@@ -383,7 +183,7 @@ class NavigationComposer
             }
             return 'Guest';
         } catch (\Exception $e) {
-            \Log::error('Error getting current user name: ' . $e->getMessage());
+            Log::error('Error getting current user name: ' . $e->getMessage());
             return 'Guest';
         }
     }
@@ -393,7 +193,7 @@ class NavigationComposer
      *
      * @return array
      */
-    private function getUserCompanies()
+    private function getUserCompanies(): array
     {
         try {
             if (Auth::check()) {
@@ -408,104 +208,52 @@ class NavigationComposer
             }
             return [];
         } catch (\Exception $e) {
-            \Log::error('Error getting user companies: ' . $e->getMessage());
+            Log::error('Error getting user companies: ' . $e->getMessage());
             return [];
         }
     }
 
     /**
-     * Clear navigation and permission caches for a user
-     * Should be called when user permissions, jabatan, or company access changes
+     * Clear navigation cache for a user
+     * (Now just clears permission cache since menu is config-based)
      * 
-     * ✅ IMPROVED: Clear all possible cache keys with wildcard pattern
-     *
      * @param \App\Models\User $user
      * @return void
      */
-    public static function clearNavigationCache($user)
+    public static function clearNavigationCache($user): void
     {
-        try {
-            $companies = DB::table('usercompany')
-                ->where('userid', $user->userid)
-                ->where('isactive', 1)
-                ->pluck('companycode');
-
-            // Get current APP_KEY hash
-            $appKeyHash = substr(md5(config('app.key')), 0, 8);
-
-            // Clear navigation cache for all companies user has access to
-            foreach ($companies as $companycode) {
-                $navCacheKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}_{$appKeyHash}";
-                Cache::forget($navCacheKey);
-            }
-
-            // Clear permission array cache
-            $permCacheKey = "user_perms_array_{$user->userid}_{$user->idjabatan}_{$appKeyHash}";
-            Cache::forget($permCacheKey);
-
-            // ✅ Clear request-level cache
-            $requestCacheKey = $user->userid . '_' . $user->idjabatan;
-            unset(self::$requestPermissionCache[$requestCacheKey]);
-
-            // ✅ Also clear old caches (without APP_KEY hash) for cleanup
-            foreach ($companies as $companycode) {
-                $oldNavKey = "nav_data_{$user->userid}_{$user->idjabatan}_{$companycode}";
-                Cache::forget($oldNavKey);
-            }
-            $oldPermKey = "user_perms_array_{$user->userid}_{$user->idjabatan}";
-            Cache::forget($oldPermKey);
-
-            \Log::info('Navigation and permission cache cleared', [
-                'userid' => $user->userid,
-                'jabatan' => $user->idjabatan,
-                'companies_count' => $companies->count(),
-                'app_key_hash' => $appKeyHash
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error clearing navigation cache: ' . $e->getMessage(), [
-                'userid' => $user->userid ?? 'unknown',
-                'error' => $e->getMessage()
-            ]);
-        }
+        PermissionService::clearUserCache($user);
     }
 
     /**
-     * Clear ALL navigation caches (for maintenance/deployment)
-     * Use this after deployment or APP_KEY regeneration
+     * Clear all navigation caches
+     * (Now just clears all permission caches)
      * 
      * @return void
      */
-    public static function clearAllNavigationCaches()
+    public static function clearAllNavigationCaches(): void
     {
         try {
-            // If using Redis, clear by pattern
+            // Clear all permission caches
             if (config('cache.default') === 'redis') {
-                $redis = Cache::getRedis();
+                $redis = \Illuminate\Support\Facades\Cache::getRedis();
                 
-                // Clear all nav_data_* keys
-                $navKeys = $redis->keys('*nav_data_*');
-                foreach ($navKeys as $key) {
-                    Cache::forget(str_replace(config('cache.prefix') . ':', '', $key));
-                }
-                
-                // Clear all user_perms_array_* keys
-                $permKeys = $redis->keys('*user_perms_array_*');
+                $permKeys = $redis->keys('*user_permissions_*');
                 foreach ($permKeys as $key) {
-                    Cache::forget(str_replace(config('cache.prefix') . ':', '', $key));
+                    \Illuminate\Support\Facades\Cache::forget(
+                        str_replace(config('cache.prefix') . ':', '', $key)
+                    );
                 }
                 
-                \Log::info('All navigation caches cleared via Redis pattern');
+                Log::info('All permission caches cleared via Redis');
             } else {
-                // Fallback: just clear all cache
-                Cache::flush();
-                \Log::info('All caches cleared (including navigation)');
+                // Fallback: clear all cache
+                \Illuminate\Support\Facades\Cache::flush();
+                Log::info('All caches cleared (including permissions)');
             }
 
-            // Clear request-level cache
-            self::$requestPermissionCache = [];
-
         } catch (\Exception $e) {
-            \Log::error('Error clearing all navigation caches: ' . $e->getMessage());
+            Log::error('Error clearing all caches: ' . $e->getMessage());
         }
     }
 }

@@ -4,33 +4,46 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class company extends Model
+class Company extends Model
 {
-    public $incrementing = false;
-    // public $timestamps = false;
     protected $table = 'company';
     protected $primaryKey = 'companycode';
-    protected $keyType = 'char';
-    protected $fillable = ['companycode', 'nama', 'alamat', 'companyperiod', 'inputby', 'companyinventory', 'createdat', 'updatedat'];
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = false;
 
-    public function setCreatedAt($value)
+    protected $fillable = [
+        'companycode',
+        'name',
+        'address',
+        'companyinventory',
+        'inputby',
+        'createdat',
+        'updatedat',
+        'companyperiod',
+        'companygl',
+        'companygroup'
+    ];
+
+    protected $casts = [
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime',
+        'companyperiod' => 'date'
+    ];
+
+    // Relationships
+    public function users()
     {
-        $this->attributes['createdat'] = $value;
+        return $this->hasMany(User::class, 'companycode', 'companycode');
     }
 
-    // Getter untuk mendapatkan nilai createdat dari createdat
-    public function getCreatedAtAttribute()
+    public function userCompanies()
     {
-        return $this->attributes['createdat'];
+        return $this->hasMany(UserCompany::class, 'companycode', 'companycode');
     }
 
-    public function mapping()
+    public function userActivities()
     {
-        return $this->hasMany(Mapping::class, 'companycode', 'companycode');
-    }
-
-    public function usercomp()
-    {
-        return $this->belongsTo(UserCompany::class, 'companycode', 'companycode');
+        return $this->hasMany(UserActivity::class, 'companycode', 'companycode');
     }
 }
