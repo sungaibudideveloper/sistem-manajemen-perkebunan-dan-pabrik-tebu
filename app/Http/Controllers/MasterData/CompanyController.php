@@ -155,34 +155,4 @@ class CompanyController extends Controller
         return redirect()->route('masterdata.company.index')
             ->with('success1', 'Data updated successfully.');
     }
-
-    // public function destroy($companycode)
-    // {
-    //     // Check permission
-    //     if (!$this->hasPermission('Hapus Company')) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Tidak memiliki akses untuk menghapus company.'
-    //         ], 403);
-    //     }
-    //
-    //     DB::transaction(function () use ($companycode) {
-    //         $company = DB::table('company')->where('companycode', $companycode)->first();
-    //         if (!$company) {
-    //             throw new \Exception('Company not found');
-    //         }
-    //
-    //         DB::table('company')->where('companycode', $companycode)->delete();
-    //
-    //         // Remove company access from all users
-    //         DB::table('usercompany')->where('companycode', $companycode)->delete();
-    //     });
-    //
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Data berhasil dihapus',
-    //     ]);
-    // }
-
-
 }
