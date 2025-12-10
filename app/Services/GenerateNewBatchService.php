@@ -23,7 +23,7 @@ class GenerateNewBatchService
     const PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
     const PLANTING_ACTIVITY = '2.2.7';
     const TRASH_MUCHLER_ACTIVITY = '3.2.1';
-    const TOLERANCE = 1.0;
+    const TOLERANCE = 0.0;
     
     /**
      * Main entry point - check LKH and trigger appropriate batch generation
