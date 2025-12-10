@@ -205,4 +205,8 @@ Route::middleware('auth')->group(function () {
 Route::group(['middleware' => ['auth', 'permission:Mapping Bsm']], function () {
     Route::match(['GET', 'POST'], 'input/mapping-bsm', [MappingBsmController::class, 'index'])->name('input.mapping-bsm.index');
     Route::get('input/mapping-bsm/get-bsm-detail', [MappingBsmController::class, 'getBsmDetail'])->name('input.mapping-bsm.get-bsm-detail');
+    Route::post('input/update-bsm', [MappingBsmController::class, 'updateBsm'])->name('input.mapping-bsm.update-bsm');
+    Route::post('input/update-bsm-bulk', [MappingBsmController::class, 'updateBsmBulk'])->name('input.mapping-bsm.update-bsm-bulk');
+    Route::get('input/get-bsm-for-copy', [MappingBsmController::class, 'getBsmForCopy'])->name('input.mapping-bsm.get-bsm-for-copy');
+        Route::post('input/copy-bsm', [MappingBsmController::class, 'copyBsm'])->name('input.mapping-bsm.copy-bsm');
 });

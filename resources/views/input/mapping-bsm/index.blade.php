@@ -3,6 +3,9 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
+    <!-- Add meta token for CSRF -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <div class="mx-auto py-4 bg-white rounded-md shadow-md w-full">
         <!-- Header Form -->
         <div class="px-4 py-3 border-b border-gray-200">
@@ -62,7 +65,7 @@
             </form>
         </div>
 
-        <!-- Information Card -->
+        <!-- Information Card - UPDATED TEXT -->
         <div class="mx-4 mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-md">
             <div class="flex">
                 <div class="flex-shrink-0">
@@ -72,7 +75,8 @@
                 </div>
                 <div class="ml-3">
                     <p class="text-sm text-blue-700">
-                        <strong>Informasi:</strong> Menampilkan ringkasan data RKH beserta jumlah LKH dan BSM yang terkait. Pilih rentang tanggal untuk melihat data ringkasan mapping BSM.
+                        <strong>Informasi Copy BSM:</strong> BSM yang kosong (belum ada nilai) dapat mengcopy data dari BSM lain yang sudah lengkap dalam plot yang sama. 
+                        Klik "Detail" untuk melihat data BSM, lalu klik tombol "Copy" pada BSM kosong untuk memilih sumber data.
                     </p>
                 </div>
             </div>
@@ -111,7 +115,7 @@
                 </div>
 
                 @if(count($data) > 0)
-                <!-- Summary Cards -->
+                <!-- Summary Cards - UPDATED -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-blue-50 p-4 rounded-lg">
                         <div class="flex items-center">
@@ -127,36 +131,36 @@
                         </div>
                     </div>
                     
-                    <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="bg-purple-50 p-4 rounded-lg">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2m-2 4a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                             </div>
                             <div class="ml-4">
-                                <dt class="text-sm font-medium text-green-600">Total LKH</dt>
-                                <dd class="text-2xl font-bold text-green-900">{{ $data->sum('jumlah_lkh') }}</dd>
+                                <dt class="text-sm font-medium text-purple-600">Total Surat Jalan</dt>
+                                <dd class="text-2xl font-bold text-purple-900">{{ $data->sum('jumlah_sj') ?: $data->sum('jumlah_lkh') }}</dd>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-yellow-50 p-4 rounded-lg">
+                    <div class="bg-green-50 p-4 rounded-lg">
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <svg class="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                                 </svg>
                             </div>
                             <div class="ml-4">
-                                <dt class="text-sm font-medium text-yellow-600">Total BSM</dt>
-                                <dd class="text-2xl font-bold text-yellow-900">{{ $data->sum('jumlah_bsm') }}</dd>
+                                <dt class="text-sm font-medium text-green-600">Total BSM</dt>
+                                <dd class="text-2xl font-bold text-green-900">{{ $data->sum('total_bsm') ?: $data->sum('jumlah_bsm') }}</dd>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- DataTable -->
+                <!-- DataTable - UPDATED -->
                 <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
                     <div class="overflow-x-auto">
                         <table id="mapping-bsm-table" class="min-w-full divide-y divide-gray-300">
@@ -165,8 +169,8 @@
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No RKH</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal RKH</th>
-                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah LKH</th>
-                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah BSM</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Surat Jalan</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total BSM</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
@@ -181,13 +185,13 @@
                                         {{ \Carbon\Carbon::parse($item->rkhdate)->format('d/m/Y') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $item->jumlah_lkh > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                            {{ $item->jumlah_lkh }}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ ($item->jumlah_sj ?? $item->jumlah_lkh) > 0 ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800' }}" title="Jumlah Surat Jalan">
+                                            {{ $item->jumlah_sj ?? $item->jumlah_lkh }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $item->jumlah_bsm > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800' }}">
-                                            {{ $item->jumlah_bsm }}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ ($item->total_bsm ?? $item->jumlah_bsm) > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}" title="Total BSM">
+                                            {{ $item->total_bsm ?? $item->jumlah_bsm }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -234,45 +238,41 @@
     <!-- Detail BSM Modal -->
     <div id="detail_modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Background overlay -->
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeDetailModal()"></div>
             
-            <!-- Modal panel -->
             <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-7xl sm:w-full">
-                <!-- Modal header -->
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-lg leading-6 font-bold text-gray-900 mb-1">
-                                Detail BSM per Surat Jalan
-                            </h3>
-                            <p class="text-sm text-gray-600" id="modal_detail_subtitle">
-                                <!-- Detail subtitle will be filled by JavaScript -->
-                            </p>
+                            <h3 class="text-lg leading-6 font-bold text-gray-900 mb-1">Detail BSM per Surat Jalan</h3>
+                            <p class="text-sm text-gray-600" id="modal_detail_subtitle"></p>
                         </div>
-                        <button type="button" onclick="closeDetailModal()" class="rounded-md bg-white text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <span class="sr-only">Close</span>
-                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="bulk-save-btn" onclick="saveBulkChanges()" class="hidden inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Simpan Semua Perubahan
+                            </button>
+                            <button type="button" onclick="closeDetailModal()" class="rounded-md bg-white text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Loading indicator -->
                     <div id="modal_loading" class="flex justify-center items-center py-8 hidden">
                         <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <span class="text-gray-600">Memuat data...</span>
                     </div>
 
-                    <!-- Detail content -->
-                    <div class="overflow-x-auto" id="modal_detail_content">
-                        <!-- Content will be filled by JavaScript -->
-                    </div>
+                    <div class="overflow-x-auto" id="modal_detail_content"></div>
 
-                    <!-- Error message -->
                     <div id="modal_error" class="text-center py-8 hidden">
                         <svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -282,10 +282,59 @@
                     </div>
                 </div>
 
-                <!-- Modal footer -->
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="button" onclick="closeDetailModal()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
                         Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BSM Copy Modal - ENHANCED with higher z-index -->
+    <div id="copy_bsm_modal" class="fixed inset-0 z-[60] overflow-y-auto hidden" aria-labelledby="copy-modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-90 transition-opacity z-[61]" aria-hidden="true"></div>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full z-[62] relative">
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">📋 Copy Data BSM</h3>
+                            <p class="text-purple-100 text-sm" id="copy_modal_subtitle"></p>
+                        </div>
+                        <button type="button" onclick="closeCopyModal()" class="rounded-md bg-white bg-opacity-20 text-white hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
+                            <span class="sr-only">Close</span>
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4">
+                    <div id="copy_modal_loading" class="flex justify-center items-center py-8 hidden">
+                        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-gray-600">Mencari BSM yang bisa dicopy...</span>
+                    </div>
+
+                    <div id="copy_modal_content"></div>
+
+                    <div id="copy_modal_error" class="text-center py-8 hidden">
+                        <svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-red-900">Tidak dapat copy</h3>
+                        <p class="mt-1 text-sm text-red-600" id="copy_error_message">Tidak ada BSM yang dapat dicopy.</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-3 flex justify-end">
+                    <button type="button" onclick="closeCopyModal()" class="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Batal
                     </button>
                 </div>
             </div>
@@ -306,334 +355,24 @@
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
+    <!-- Configuration variables for the script -->
     <script>
-        $(document).ready(function() {
-            // Initialize date inputs
-            initializeDateInputs();
-
-            // Initialize DataTable if data exists
-            @if(request('tanggalawal') && request('tanggalakhir') && isset($data) && count($data) > 0)
-            initializeDataTable();
-            @endif
-
-            // Export buttons handlers
-            $('#export-excel-btn').on('click', function() {
-                if ($.fn.DataTable.isDataTable('#mapping-bsm-table')) {
-                    $('#mapping-bsm-table').DataTable().button('.buttons-excel').trigger();
-                }
-            });
-
-            $('#print-btn').on('click', function() {
-                if ($.fn.DataTable.isDataTable('#mapping-bsm-table')) {
-                    $('#mapping-bsm-table').DataTable().button('.buttons-print').trigger();
-                }
-            });
-        });
-
-        function initializeDateInputs() {
-            const today = new Date().toISOString().split('T')[0];
-            const tanggalAwal = document.getElementById('tanggalawal');
-            const tanggalAkhir = document.getElementById('tanggalakhir');
-
-            // Set max date to today
-            tanggalAwal.setAttribute('max', today);
-            tanggalAkhir.setAttribute('max', today);
-
-            // Date validation
-            function validateDateRange() {
-                const startDate = new Date(tanggalAwal.value);
-                const endDate = new Date(tanggalAkhir.value);
-
-                if (startDate && endDate && startDate > endDate) {
-                    tanggalAkhir.setCustomValidity('Tanggal akhir harus setelah tanggal awal');
-                } else {
-                    tanggalAkhir.setCustomValidity('');
-                }
-            }
-
-            tanggalAwal.addEventListener('change', validateDateRange);
-            tanggalAkhir.addEventListener('change', validateDateRange);
-        }
-
-        function initializeDataTable() {
-            // Initialize DataTable
-            $('#mapping-bsm-table').DataTable({
-                responsive: true,
-                pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]],
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        extend: 'excel',
-                        text: 'Export Excel',
-                        title: 'Ringkasan RKH - {{ request("tanggalawal") ?? "" }} s/d {{ request("tanggalakhir") ?? "" }}',
-                        className: 'hidden'
-                    },
-                    {
-                        extend: 'print',
-                        text: 'Print',
-                        title: 'Ringkasan Data RKH',
-                        messageTop: 'Periode: {{ request("tanggalawal") ?? "" }} s/d {{ request("tanggalakhir") ?? "" }}',
-                        className: 'hidden'
-                    }
-                ],
-                columnDefs: [
-                    {
-                        targets: [0, 3, 4, 5], // No, Jumlah LKH, Jumlah BSM, Aksi
-                        className: 'text-center'
-                    },
-                    {
-                        targets: [5], // Aksi column
-                        orderable: false
-                    }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
-                },
-                drawCallback: function() {
-                    // Custom styling after each draw
-                    $('.dataTables_wrapper .dataTables_paginate .paginate_button').addClass('px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700');
-                }
-            });
-        }
-
-        function showDetailModal(rkhno) {
-            // Show modal
-            document.getElementById('detail_modal').classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-            
-            // Update modal subtitle
-            document.getElementById('modal_detail_subtitle').textContent = `RKH No: ${rkhno}`;
-            
-            // Show loading state
-            document.getElementById('modal_loading').classList.remove('hidden');
-            document.getElementById('modal_detail_content').innerHTML = '';
-            document.getElementById('modal_error').classList.add('hidden');
-            
-            // Fetch BSM detail data via AJAX
-            fetch(`{{ route('input.mapping-bsm.get-bsm-detail') }}?rkhno=${encodeURIComponent(rkhno)}`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Hide loading
-                document.getElementById('modal_loading').classList.add('hidden');
-                
-                if (data.success && data.data && data.data.length > 0) {
-                    // Build table content
-                    const tableHTML = `
-                        <div class="mb-4">
-                            <div class="flex justify-between items-center">
-                                <div class="text-sm text-gray-600">
-                                    Total: <span class="font-medium text-indigo-600">${data.total}</span> surat jalan ditemukan
-                                </div>
-                                <div class="text-sm text-gray-500">
-                                    Data BSM untuk RKH: <span class="font-medium">${rkhno}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                            <table class="min-w-full divide-y divide-gray-300">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
-                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No Surat Jalan</th>
-                                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plot</th>
-                                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Bersih</th>
-                                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Segar</th>
-                                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Manis</th>
-                                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Average Score</th>
-                                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    ${data.data.map((item, index) => `
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">${index + 1}</td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                ${item.suratjalanno || '-'}
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                                ${item.plot || '-'}
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
-                                                ${parseFloat(item.nilaibersih || 0).toFixed(2)}
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
-                                                ${parseFloat(item.nilaisegar || 0).toFixed(2)}
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
-                                                ${parseFloat(item.nilaimanis || 0).toFixed(2)}
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(item.averagescore)}">
-                                                    ${parseFloat(item.averagescore || 0).toFixed(2)}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor(item.grade)}">
-                                                    ${item.grade || '-'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        ${data.data.length > 0 ? `
-                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div class="text-center">
-                                        <div class="font-medium text-gray-500">Rata-rata Nilai Bersih</div>
-                                        <div class="text-lg font-bold text-gray-900">
-                                            ${(data.data.reduce((sum, item) => sum + parseFloat(item.nilaibersih || 0), 0) / data.data.length).toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium text-gray-500">Rata-rata Nilai Segar</div>
-                                        <div class="text-lg font-bold text-gray-900">
-                                            ${(data.data.reduce((sum, item) => sum + parseFloat(item.nilaisegar || 0), 0) / data.data.length).toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium text-gray-500">Rata-rata Nilai Manis</div>
-                                        <div class="text-lg font-bold text-gray-900">
-                                            ${(data.data.reduce((sum, item) => sum + parseFloat(item.nilaimanis || 0), 0) / data.data.length).toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium text-gray-500">Rata-rata Score</div>
-                                        <div class="text-lg font-bold text-gray-900">
-                                            ${(data.data.reduce((sum, item) => sum + parseFloat(item.averagescore || 0), 0) / data.data.length).toFixed(2)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    `;
-                    
-                    document.getElementById('modal_detail_content').innerHTML = tableHTML;
-                } else {
-                    // Show no data message
-                    document.getElementById('modal_detail_content').innerHTML = `
-                        <div class="text-center py-12">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v10z" />
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada data BSM</h3>
-                            <p class="mt-1 text-sm text-gray-500">Tidak ditemukan data BSM untuk RKH: ${rkhno}</p>
-                        </div>
-                    `;
-                }
-            })
-            .catch(error => {
-                // Hide loading
-                document.getElementById('modal_loading').classList.add('hidden');
-                
-                // Show error
-                document.getElementById('modal_error').classList.remove('hidden');
-                document.getElementById('error_message').textContent = error.message || 'Terjadi kesalahan saat memuat data BSM';
-                
-                console.error('Error fetching BSM detail:', error);
-            });
-        }
-
-        function getGradeColor(grade) {
-            if (!grade) return 'bg-gray-100 text-gray-800';
-            
-            switch(grade.toUpperCase()) {
-                case 'A':
-                    return 'bg-green-100 text-green-800';
-                case 'B':
-                    return 'bg-yellow-100 text-yellow-800';
-                case 'C':
-                    return 'bg-red-100 text-red-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        }
-
-        function getScoreColor(score) {
-            const numScore = parseFloat(score || 0);
-            if (numScore >= 80) {
-                return 'bg-green-100 text-green-800';
-            } else if (numScore >= 60) {
-                return 'bg-yellow-100 text-yellow-800';
-            } else if (numScore > 0) {
-                return 'bg-red-100 text-red-800';
-            } else {
-                return 'bg-gray-100 text-gray-800';
-            }
-        }
-
-        function closeDetailModal() {
-            document.getElementById('detail_modal').classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-            
-            // Clear modal content
-            document.getElementById('modal_detail_content').innerHTML = '';
-            document.getElementById('modal_loading').classList.add('hidden');
-            document.getElementById('modal_error').classList.add('hidden');
-        }
-
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeDetailModal();
-            }
-        });
-
-        // Form validation before submit
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const tanggalAwal = document.getElementById('tanggalawal').value;
-            const tanggalAkhir = document.getElementById('tanggalakhir').value;
-
-            if (!tanggalAwal || !tanggalAkhir) {
-                e.preventDefault();
-                alert('Mohon lengkapi tanggal awal dan tanggal akhir');
-                return false;
-            }
-
-            if (new Date(tanggalAwal) > new Date(tanggalAkhir)) {
-                e.preventDefault();
-                alert('Tanggal awal tidak boleh lebih besar dari tanggal akhir');
-                return false;
-            }
-
-            // Show loading state on submit button
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalHTML = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Mencari...
-            `;
-
-            // Reset button after some time if form doesn't submit
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalHTML;
-            }, 10000);
-        });
+        // Global configuration variables
+        window.hasData = @if(request('tanggalawal') && request('tanggalakhir') && isset($data) && count($data) > 0) true @else false @endif;
+        window.csrfToken = '{{ csrf_token() }}';
+        window.getBsmDetailUrl = '{{ route('input.mapping-bsm.get-bsm-detail') }}';
+        window.getBsmForCopyUrl = '{{ route('input.mapping-bsm.get-bsm-for-copy') }}';
+        window.copyBsmUrl = '{{ route('input.mapping-bsm.copy-bsm') }}';
+        window.updateBsmUrl = '{{ route('input.mapping-bsm.update-bsm') }}';
+        window.updateBsmBulkUrl = '{{ route('input.mapping-bsm.update-bsm-bulk') }}';
+        window.exportTitle = 'Ringkasan RKH - {{ request("tanggalawal") ?? "" }} s/d {{ request("tanggalakhir") ?? "" }}';
+        window.exportMessageTop = 'Periode: {{ request("tanggalawal") ?? "" }} s/d {{ request("tanggalakhir") ?? "" }}';
     </script>
 
+    <!-- Include the main BSM script -->
+    <script src="{{ asset('js/mapping-bsm-script.js') }}"></script>
+
     <style>
-        /* Custom styles to match the original design */
         .transition {
             transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
         }
@@ -642,23 +381,19 @@
             cursor: pointer;
         }
         
-        /* Focus states for inputs */
         input:focus, select:focus {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
-        /* Button hover effects */
         button:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         
-        /* Required field indicator */
         .text-red-500 {
             color: #ef4444;
         }
         
-        /* Form spacing */
         .space-y-6 > * + * {
             margin-top: 1.5rem;
         }
@@ -667,7 +402,6 @@
             margin-top: 0.5rem;
         }
 
-        /* DataTables custom styling */
         .dataTables_wrapper {
             font-family: inherit;
         }
@@ -681,7 +415,6 @@
             margin-top: 1rem;
         }
 
-        /* Table styling improvements */
         #mapping-bsm-table thead th {
             position: sticky;
             top: 0;
@@ -689,12 +422,10 @@
             z-index: 10;
         }
 
-        /* Modal animation */
         .fixed {
             backdrop-filter: blur(4px);
         }
 
-        /* Scroll styling for modal */
         .overflow-x-auto::-webkit-scrollbar {
             height: 6px;
         }
@@ -713,7 +444,6 @@
             background: #a8a8a8;
         }
 
-        /* Loading animation */
         .animate-spin {
             animation: spin 1s linear infinite;
         }
@@ -727,7 +457,6 @@
             }
         }
 
-        /* Modal content responsive */
         @media (max-width: 768px) {
             .modal table {
                 font-size: 0.8rem;
@@ -736,6 +465,119 @@
             .modal th, .modal td {
                 padding: 0.5rem 0.25rem;
             }
+        }
+
+        .editable-input {
+            transition: all 0.2s ease;
+        }
+        
+        .editable-input:focus {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Enhanced styling for copy functionality */
+        .bg-yellow-50 {
+            background-color: #fefce8;
+        }
+
+        .hover\:bg-yellow-100:hover {
+            background-color: #fef3c7;
+        }
+        
+        .bg-amber-400 {
+            background-color: #fbbf24;
+        }
+
+        .bg-purple-400 {
+            background-color: #a855f7;
+        }
+
+        .bg-purple-50 {
+            background-color: #faf5ff;
+        }
+
+        .text-purple-600 {
+            color: #9333ea;
+        }
+
+        .text-purple-700 {
+            color: #7c3aed;
+        }
+
+        .text-purple-800 {
+            color: #6b21a8;
+        }
+
+        .border-purple-200 {
+            border-color: #e9d5ff;
+        }
+
+        .bg-purple-100 {
+            background-color: #f3e8ff;
+        }
+
+        .hover\:bg-purple-200:hover {
+            background-color: #e9d5ff;
+        }
+
+        /* Visual indicators for BSM states */
+        .bsm-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .bsm-indicator.empty {
+            background-color: #f59e0b; /* amber for empty/editable */
+        }
+
+        .bsm-indicator.copied {
+            background-color: #a855f7; /* purple for copied */
+        }
+
+        .bsm-indicator.completed {
+            background-color: #10b981; /* green for completed/graded */
+        }
+
+        /* Z-index fix for modal layering */
+        #detail_modal {
+            z-index: 50;
+        }
+
+        #copy_bsm_modal {
+            z-index: 60 !important;
+        }
+
+        /* Ensure copy modal appears above detail modal */
+        .z-\[60\] {
+            z-index: 60 !important;
+        }
+
+        .z-\[61\] {
+            z-index: 61 !important;
+        }
+
+        .z-\[62\] {
+            z-index: 62 !important;
+        }
+
+        /* Copy button styling fix */
+        #execute-copy-btn:disabled {
+            background-color: #d1d5db !important;
+            color: #6b7280 !important;
+            cursor: not-allowed !important;
+        }
+
+        #execute-copy-btn:not(:disabled) {
+            background-color: #9333ea !important;
+            color: white !important;
+        }
+
+        #execute-copy-btn:not(:disabled):hover {
+            background-color: #7c3aed !important;
         }
     </style>
 

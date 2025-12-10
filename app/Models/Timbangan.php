@@ -13,7 +13,7 @@ class Timbangan extends Model
     'flag', 'usr1', 'usr2'];
 
     public function getData($companycode, $idkontraktor, $startdate, $enddate){
-        // Query dengan subquery untuk mengatasi duplicate dari BSM join
+        // Query dengan JOIN langsung ke lkhdetailbsm berdasarkan suratjalanno dan companycode
         $data = \DB::select("
             SELECT
                 a.suratjalanno,
@@ -36,8 +36,8 @@ class Timbangan extends Model
                 b.tebusulit,
                 b.langsir,
                 t.nettotrash AS trash_percentage,
-                bsm_data.averagescore,
-                bsm_data.grade
+                bsm.averagescore,
+                bsm.grade
             FROM timbanganpayload a
             LEFT JOIN suratjalanpos b ON BINARY a.companycode = BINARY b.companycode
                 AND BINARY a.suratjalanno = BINARY b.suratjalanno
@@ -47,21 +47,8 @@ class Timbangan extends Model
                 AND BINARY c.companycode = BINARY d.companycode
             LEFT JOIN trash t ON BINARY a.suratjalanno = BINARY t.suratjalanno
                 AND BINARY a.companycode = BINARY t.companycode
-            LEFT JOIN (
-                -- Subquery untuk mengatasi duplicate dari BSM
-                SELECT DISTINCT
-                    bsm.companycode,
-                    lkh.lkhdate,
-                    bsm.plot,
-                    AVG(bsm.averagescore) as averagescore,
-                    MIN(bsm.grade) as grade  -- atau bisa MAX/MIN sesuai kebutuhan
-                FROM lkhhdr lkh
-                INNER JOIN lkhdetailbsm bsm ON BINARY lkh.companycode = BINARY bsm.companycode
-                    AND BINARY lkh.lkhno = BINARY bsm.lkhno
-                GROUP BY bsm.companycode, lkh.lkhdate, bsm.plot
-            ) bsm_data ON BINARY b.companycode = BINARY bsm_data.companycode
-                AND DATE(b.tanggalangkut) = bsm_data.lkhdate
-                AND BINARY b.plot = BINARY bsm_data.plot
+            LEFT JOIN lkhdetailbsm bsm ON BINARY a.companycode = BINARY bsm.companycode
+                AND BINARY a.suratjalanno = BINARY bsm.suratjalanno
             WHERE a.companycode = ?
                 AND DATE(b.tanggalangkut) BETWEEN ? AND ?
                 AND b.namakontraktor = ?
@@ -89,32 +76,8 @@ class Timbangan extends Model
             }
         }
 
-        // Logika fallback BSM: sama seperti trash, berdasarkan plot dan tanggal yang sama
-        $bsmCache = [];
-
-        // Pass pertama: kumpulkan BSM yang ada per plot per tanggal
-        foreach ($data as $row) {
-            if (!empty($row->averagescore) && $row->averagescore > 0) {
-                $tanggal = date('Y-m-d', strtotime($row->tanggalangkut));
-                $key = $row->plot . '_' . $tanggal;
-                $bsmCache[$key] = [
-                    'averagescore' => $row->averagescore,
-                    'grade' => $row->grade
-                ];
-            }
-        }
-
-        // Pass kedua: terapkan fallback BSM untuk yang tidak ada data
-        foreach ($data as $row) {
-            if (empty($row->averagescore) || $row->averagescore == 0) {
-                $tanggal = date('Y-m-d', strtotime($row->tanggalangkut));
-                $key = $row->plot . '_' . $tanggal;
-                if (isset($bsmCache[$key])) {
-                    $row->averagescore = $bsmCache[$key]['averagescore'];
-                    $row->grade = $bsmCache[$key]['grade'];
-                }
-            }
-        }
+        // TIDAK ADA LAGI FALLBACK BSM - karena sekarang based on suratjalanno
+        // Jika tidak ada data BSM untuk suratjalanno tersebut, maka akan kosong
 
         return $data;
     }
@@ -154,11 +117,8 @@ class Timbangan extends Model
                 AND BINARY c.companycode = BINARY d.companycode
             LEFT JOIN trash t ON BINARY a.suratjalanno = BINARY t.suratjalanno
                 AND BINARY a.companycode = BINARY t.companycode
-            LEFT JOIN lkhhdr lkh ON BINARY b.companycode = BINARY lkh.companycode
-                AND DATE(b.tanggalangkut) = lkh.lkhdate
-            LEFT JOIN lkhdetailbsm bsm ON BINARY lkh.companycode = BINARY bsm.companycode
-                AND BINARY lkh.lkhno = BINARY bsm.lkhno
-                AND BINARY b.plot = BINARY bsm.plot
+            LEFT JOIN lkhdetailbsm bsm ON BINARY a.companycode = BINARY bsm.companycode
+                AND BINARY a.suratjalanno = BINARY bsm.suratjalanno
             WHERE a.companycode = ?
                 AND DATE(b.tanggalangkut) BETWEEN ? AND ?
                 AND b.namakontraktor = ?
@@ -171,8 +131,26 @@ class Timbangan extends Model
         // Convert back to array untuk consistency dengan method sebelumnya
         $data = $dataCollection->toArray();
 
-        // Apply trash dan BSM fallback logic (sama seperti sebelumnya)
-        // ... rest of the fallback logic remains the same ...
+        // Apply trash fallback logic (sama seperti sebelumnya)
+        $trashCache = [];
+
+        // Pass pertama: kumpulkan trash yang ada per subkontraktor per tanggal
+        foreach ($data as $row) {
+            if (!empty($row->trash_percentage) && $row->trash_percentage > 0) {
+                $tanggal = date('Y-m-d', strtotime($row->tanggalangkut));
+                $key = $row->namasubkontraktor . '_' . $tanggal;
+                $trashCache[$key] = $row->trash_percentage;
+            }
+        }
+
+        // Pass kedua: terapkan fallback untuk yang tidak ada trash
+        foreach ($data as $row) {
+            if (empty($row->trash_percentage) || $row->trash_percentage == 0) {
+                $tanggal = date('Y-m-d', strtotime($row->tanggalangkut));
+                $key = $row->namasubkontraktor . '_' . $tanggal;
+                $row->trash_percentage = $trashCache[$key] ?? 0;
+            }
+        }
 
         return $data;
     }
@@ -192,11 +170,8 @@ class Timbangan extends Model
                 AND BINARY c.companycode = BINARY d.companycode
             LEFT JOIN trash t ON BINARY a.suratjalanno = BINARY t.suratjalanno
                 AND BINARY a.companycode = BINARY t.companycode
-            LEFT JOIN lkhhdr lkh ON BINARY b.companycode = BINARY lkh.companycode
-                AND DATE(b.tanggalangkut) = lkh.lkhdate
-            LEFT JOIN lkhdetailbsm bsm ON BINARY lkh.companycode = BINARY bsm.companycode
-                AND BINARY lkh.lkhno = BINARY bsm.lkhno
-                AND BINARY b.plot = BINARY bsm.plot
+            LEFT JOIN lkhdetailbsm bsm ON BINARY a.companycode = BINARY bsm.companycode
+                AND BINARY a.suratjalanno = BINARY bsm.suratjalanno
             WHERE a.companycode = ?
                 AND DATE(b.tanggalangkut) BETWEEN ? AND ?
                 AND b.namakontraktor = ?
@@ -204,6 +179,35 @@ class Timbangan extends Model
             HAVING COUNT(*) > 1
             ORDER BY duplicate_count DESC
         ", [$companycode, $startdate, $enddate, $idkontraktor]);
+
+        return $data;
+    }
+
+    // Method tambahan untuk debug BSM data berdasarkan suratjalanno
+    public function checkBsmBySuratJalan($companycode, $suratjalanno = null){
+        $whereClause = "WHERE bsm.companycode = ?";
+        $params = [$companycode];
+        
+        if ($suratjalanno) {
+            $whereClause .= " AND bsm.suratjalanno = ?";
+            $params[] = $suratjalanno;
+        }
+        
+        $data = \DB::select("
+            SELECT
+                bsm.suratjalanno,
+                bsm.plot,
+                bsm.kodetebang,
+                bsm.averagescore,
+                bsm.grade,
+                bsm.nilaibersih,
+                bsm.nilaisegar,
+                bsm.nilaimanis,
+                bsm.keterangan
+            FROM lkhdetailbsm bsm
+            {$whereClause}
+            ORDER BY bsm.suratjalanno ASC
+        ", $params);
 
         return $data;
     }

@@ -26,7 +26,8 @@ class LkhDetailBsm extends Model
         'inputby',
         'createdat',
         'updateby',
-        'updatedat'
+        'updatedat',
+        'parentbsm'
     ];
 
     protected $casts = [
