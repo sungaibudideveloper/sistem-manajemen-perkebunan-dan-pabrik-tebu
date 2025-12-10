@@ -198,10 +198,10 @@ Route::middleware('auth')->prefix('input')->name('input.')->group(function () {
     Route::middleware('permission:input.mappingbsm.view')->group(function () {
         Route::match(['GET', 'POST'], 'mapping-bsm', [MappingBsmController::class, 'index'])->name('mapping-bsm.index');
         Route::get('mapping-bsm/get-bsm-detail', [MappingBsmController::class, 'getBsmDetail'])->name('mapping-bsm.get-bsm-detail');
-        Route::post('update-bsm', [MappingBsmController::class, 'updateBsm'])->name('input.mapping-bsm.update-bsm');
-        Route::post('update-bsm-bulk', [MappingBsmController::class, 'updateBsmBulk'])->name('input.mapping-bsm.update-bsm-bulk');
-        Route::get('get-bsm-for-copy', [MappingBsmController::class, 'getBsmForCopy'])->name('input.mapping-bsm.get-bsm-for-copy');
-        Route::post('copy-bsm', [MappingBsmController::class, 'copyBsm'])->name('input.mapping-bsm.copy-bsm');
+        Route::post('update-bsm', [MappingBsmController::class, 'updateBsm'])->name('mapping-bsm.update-bsm');
+        Route::post('update-bsm-bulk', [MappingBsmController::class, 'updateBsmBulk'])->name('mapping-bsm.update-bsm-bulk');
+        Route::get('get-bsm-for-copy', [MappingBsmController::class, 'getBsmForCopy'])->name('mapping-bsm.get-bsm-for-copy');
+        Route::post('copy-bsm', [MappingBsmController::class, 'copyBsm'])->name('mapping-bsm.copy-bsm');
     });
 
     
