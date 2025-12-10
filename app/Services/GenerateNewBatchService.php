@@ -8,15 +8,18 @@ use App\Models\LkhDetailPlot;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 /**
- * GenerateNewBatchService - REVISED VERSION
+ * GenerateNewBatchService - FIXED VERSION
  * 
  * Auto-generate new batch based on LKH approval:
  * 1. Panen completed (4.3.3/4.4.3/4.5.2) → PC→RC1, RC1→RC2, RC2→RC3, RC3→PC (ALL with tanggalulangtahun=NULL)
  * 2. Planting completed (2.2.7) → UPDATE PC batch (set tanggalulangtahun & plantinglkhno)
  * 3. Trash Muchler completed (3.2.1) → UPDATE RC1/RC2/RC3 batch (set tanggalulangtahun)
  * 4. Set tanggalpanen on first panen LKH approval
+ * 
+ * FIXED: batchdate now uses lkhdate instead of approval date
  */
 class GenerateNewBatchService
 {
@@ -46,7 +49,7 @@ class GenerateNewBatchService
                 $this->setTanggalPanen($lkhno, $companycode, $lkh);
                 
                 // Then check for batch transition
-                return $this->generateFromPanen($lkhno, $companycode);
+                return $this->generateFromPanen($lkhno, $companycode, $lkh);
             }
             
             // Route 2: Planting activity - UPDATE existing PC batch
@@ -140,8 +143,14 @@ class GenerateNewBatchService
     /**
      * Generate next batch from panen completion (PC→RC1, RC1→RC2, RC2→RC3, RC3→PC)
      * ALL new batches created with tanggalulangtahun=NULL
+     * FIXED: Now accepts $lkh parameter to use lkhdate for batchdate
+     * 
+     * @param string $lkhno
+     * @param string $companycode
+     * @param Lkhhdr $lkh
+     * @return array
      */
-    private function generateFromPanen($lkhno, $companycode)
+    private function generateFromPanen($lkhno, $companycode, $lkh)
     {
         try {
             // Get all batches from this panen LKH
@@ -159,7 +168,8 @@ class GenerateNewBatchService
             
             foreach ($batchNumbers as $batchno) {
                 if ($this->isPanenCompleted($batchno, $companycode)) {
-                    $result = $this->createNextBatchFromPanen($batchno, $companycode);
+                    // Pass $lkh to use lkhdate
+                    $result = $this->createNextBatchFromPanen($batchno, $companycode, $lkh);
                     $results[] = $result;
                 }
             }
@@ -183,6 +193,11 @@ class GenerateNewBatchService
     /**
      * UPDATE existing PC batch from planting activity
      * Set tanggalulangtahun & plantinglkhno
+     * 
+     * @param string $lkhno
+     * @param string $companycode
+     * @param Lkhhdr $lkh
+     * @return array
      */
     private function updatePCBatchFromPlanting($lkhno, $companycode, $lkh)
     {
@@ -254,8 +269,13 @@ class GenerateNewBatchService
     }
     
     /**
-     * NEW METHOD: UPDATE existing RC batch from trash muchler activity
+     * UPDATE existing RC batch from trash muchler activity
      * Set tanggalulangtahun when trash muchler completed
+     * 
+     * @param string $lkhno
+     * @param string $companycode
+     * @param Lkhhdr $lkh
+     * @return array
      */
     private function updateRCBatchFromTrashMuchler($lkhno, $companycode, $lkh)
     {
@@ -327,6 +347,10 @@ class GenerateNewBatchService
     
     /**
      * Check if panen completed (approved LKH only)
+     * 
+     * @param string $batchno
+     * @param string $companycode
+     * @return bool
      */
     private function isPanenCompleted($batchno, $companycode)
     {
@@ -336,7 +360,8 @@ class GenerateNewBatchService
         
         if (!$batch) return false;
         
-        $totalPanen = DB::table('lkhdetailplot as ldp')
+        // Query with detail per LKH for debugging
+        $panenDetails = DB::table('lkhdetailplot as ldp')
             ->join('lkhhdr as lh', function($join) {
                 $join->on('ldp.lkhno', '=', 'lh.lkhno')
                     ->on('ldp.companycode', '=', 'lh.companycode');
@@ -345,21 +370,39 @@ class GenerateNewBatchService
             ->where('ldp.batchno', $batchno)
             ->where('lh.approvalstatus', '1')
             ->whereIn('lh.activitycode', self::PANEN_ACTIVITIES)
-            ->sum('ldp.luashasil') ?? 0;
+            ->select('ldp.lkhno', 'ldp.luashasil', 'lh.lkhdate', 'lh.activitycode')
+            ->get();
         
-        Log::info("Check panen completion", [
+        $totalPanen = $panenDetails->sum('luashasil') ?? 0;
+        $sisaArea = $batch->batcharea - $totalPanen;
+        $threshold = $batch->batcharea - self::TOLERANCE;
+        $isCompleted = $totalPanen >= $threshold;
+        
+        Log::info("🔍 Panen Completion Check", [
             'batchno' => $batchno,
-            'companycode' => $companycode,
             'batcharea' => $batch->batcharea,
             'total_panen' => $totalPanen,
-            'is_completed' => $totalPanen >= ($batch->batcharea - self::TOLERANCE)
+            'sisa_area' => $sisaArea,
+            'tolerance' => self::TOLERANCE,
+            'threshold' => $threshold,
+            'is_completed' => $isCompleted,
+            'detail_lkh' => $panenDetails->map(fn($d) => [
+                'lkhno' => $d->lkhno,
+                'date' => $d->lkhdate,
+                'activity' => $d->activitycode,
+                'luas' => $d->luashasil
+            ])->toArray()
         ]);
         
-        return $totalPanen >= ($batch->batcharea - self::TOLERANCE);
+        return $isCompleted;
     }
     
     /**
      * Check if trash muchler completed (approved LKH only)
+     * 
+     * @param string $batchno
+     * @param string $companycode
+     * @return bool
      */
     private function isTrashMuchlerCompleted($batchno, $companycode)
     {
@@ -380,22 +423,32 @@ class GenerateNewBatchService
             ->where('lh.activitycode', self::TRASH_MUCHLER_ACTIVITY)
             ->sum('ldp.luashasil') ?? 0;
         
+        $threshold = $batch->batcharea - self::TOLERANCE;
+        $isCompleted = $totalTrashMuchler >= $threshold;
+        
         Log::info("Check trash muchler completion", [
             'batchno' => $batchno,
             'companycode' => $companycode,
             'batcharea' => $batch->batcharea,
             'total_trash_muchler' => $totalTrashMuchler,
-            'is_completed' => $totalTrashMuchler >= ($batch->batcharea - self::TOLERANCE)
+            'threshold' => $threshold,
+            'is_completed' => $isCompleted
         ]);
         
-        return $totalTrashMuchler >= ($batch->batcharea - self::TOLERANCE);
+        return $isCompleted;
     }
     
     /**
      * Create next batch from panen
      * ALL lifecycles: tanggalulangtahun = NULL
+     * FIXED: Now uses lkhdate for batchdate instead of approval date
+     * 
+     * @param string $currentBatchNo
+     * @param string $companycode
+     * @param Lkhhdr $lkh
+     * @return array
      */
-    private function createNextBatchFromPanen($currentBatchNo, $companycode)
+    private function createNextBatchFromPanen($currentBatchNo, $companycode, $lkh)
     {
         DB::beginTransaction();
         
@@ -416,9 +469,10 @@ class GenerateNewBatchService
                 'closedat' => now()
             ]);
             
-            // STEP 2: Generate new batch
+            // STEP 2: Generate new batch - USE LKHDATE!
             $nextLifecycle = $this->getNextLifecycle($currentBatch->lifecyclestatus);
-            $newBatchNo = $this->generateBatchNo($companycode, now());
+            $batchDate = Carbon::parse($lkh->lkhdate); // ← Use LKH work date
+            $newBatchNo = $this->generateBatchNo($companycode, $batchDate);
             
             // STEP 3: Create new batch - ALL with tanggalulangtahun = NULL
             $batchData = [
@@ -426,7 +480,7 @@ class GenerateNewBatchService
                 'companycode' => $companycode,
                 'plot' => $currentBatch->plot,
                 'batcharea' => $currentBatch->batcharea,
-                'batchdate' => now()->format('Y-m-d'),
+                'batchdate' => $batchDate->format('Y-m-d'), // ← Use lkhdate
                 'lifecyclestatus' => $nextLifecycle,
                 'previousbatchno' => $currentBatchNo,
                 'tanggalpanen' => null,
@@ -438,7 +492,7 @@ class GenerateNewBatchService
                 'plottype' => $currentBatch->plottype,
                 'isactive' => 1,
                 'inputby' => Auth::user()->userid ?? 'SYSTEM',
-                'createdat' => now()
+                'createdat' => now() // Audit timestamp - can use current time
             ];
             
             $newBatch = Batch::create($batchData);
@@ -451,12 +505,15 @@ class GenerateNewBatchService
             
             DB::commit();
             
-            Log::info("Batch transitioned from panen", [
+            Log::info("✅ Batch transitioned from panen", [
                 'old_batch' => $currentBatchNo,
                 'old_lifecycle' => $currentBatch->lifecyclestatus,
                 'new_batch' => $newBatchNo,
                 'new_lifecycle' => $nextLifecycle,
-                'tanggalulangtahun' => 'NULL (will be filled later)'
+                'batchdate' => $batchDate->format('Y-m-d'),
+                'lkhno' => $lkh->lkhno,
+                'lkhdate' => $lkh->lkhdate,
+                'plot' => $currentBatch->plot
             ]);
             
             return [
@@ -464,7 +521,8 @@ class GenerateNewBatchService
                 'old_batchno' => $currentBatchNo,
                 'new_batchno' => $newBatchNo,
                 'lifecycle' => $nextLifecycle,
-                'plot' => $currentBatch->plot
+                'plot' => $currentBatch->plot,
+                'batchdate' => $batchDate->format('Y-m-d')
             ];
             
         } catch (\Exception $e) {
@@ -476,6 +534,9 @@ class GenerateNewBatchService
     
     /**
      * Get next lifecycle (PC→RC1→RC2→RC3→PC)
+     * 
+     * @param string $current
+     * @return string
      */
     private function getNextLifecycle($current)
     {
@@ -490,6 +551,11 @@ class GenerateNewBatchService
     
     /**
      * Generate unique batch number
+     * Format: BATCHyymmddNNN
+     * 
+     * @param string $companycode
+     * @param Carbon $date
+     * @return string
      */
     private function generateBatchNo($companycode, $date)
     {
