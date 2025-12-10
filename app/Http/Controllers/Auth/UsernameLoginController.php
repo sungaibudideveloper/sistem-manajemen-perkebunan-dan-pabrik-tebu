@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
-
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\CheckPermission;
+use App\Models\User;
 
 class UsernameLoginController extends Controller
 {
@@ -26,6 +26,23 @@ class UsernameLoginController extends Controller
 
         $credentials = $request->only('userid', 'password');
         
+        // Check if user exists and get isactive status
+        $user = User::where('userid', $credentials['userid'])->first();
+        
+        // Check if user exists
+        if (!$user) {
+            return back()->withInput()->withErrors([
+                'login_error' => 'Username atau password salah.',
+            ]);
+        }
+        
+        // Check if user is active
+        if ($user->isactive != 1) {
+            return back()->withInput()->withErrors([
+                'login_error' => 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.',
+            ]);
+        }
+        
         // Check session SEBELUM login
         $existingSession = DB::table('sessions')
             ->where('user_id', $credentials['userid'])
@@ -35,6 +52,7 @@ class UsernameLoginController extends Controller
             return back()->withErrors(['error' => 'Akun ini sedang digunakan di perangkat lain.']);
         }
 
+        // Attempt login (password will be verified here)
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             
