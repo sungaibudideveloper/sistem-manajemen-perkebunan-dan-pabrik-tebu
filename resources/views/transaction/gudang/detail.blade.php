@@ -297,6 +297,8 @@ table th, table td {
                     <th class="py-2 px-3 border-b">Unit</th>
                     <th class="py-2 px-3 border-b">Total Qty</th>
                     <th class="py-2 px-3 border-b">Perhitungan</th>
+                    <th class="py-2 px-3 border-b bg-red-50">Total Retur</th>
+                    <th class="py-2 px-3 border-b bg-green-50">Total Pemakaian</th>
                 </tr>
             </thead>
             <tbody id="totals-body" class="divide-y divide-gray-200 text-gray-700">
@@ -392,7 +394,7 @@ table th, table td {
         
 
 function recalcTotals(){
-  const totals = {}; // { itemcode: { itemname, unit, qty, parts:[] } }
+  const totals = {};
 
   $('.item-select').each(function(){
     const $tr  = $(this).closest('tr');
@@ -406,24 +408,42 @@ function recalcTotals(){
     const luas   = parseFloat($tr.find('.selected-luas').val()) || 0;
     const qtyRaw = dosage * luas;
 
-    // 🔑 baca flag rounddosage dari option (0 / 1)
     const rounddosage = parseInt($opt.data('rounddosage')) || 0;
 
     let qty;
     if (rounddosage) {
-      // group ini pakai rounding (0.25)
       qty = roundTo25(qtyRaw);
     } else {
-      // group ini TANPA rounding
       qty = qtyRaw;
     }
 
-    (totals[code] ??= { itemname: name, unit, qty: 0, parts: [] });
+    // ✅ BACA RETUR dari kolom "Qty Retur" (kolom index 5)
+    const returText = $tr.find('td').eq(5).text().trim();
+    const retur = parseFloat(returText) || 0;
+
+    // ✅ INIT dengan retur & pemakaian
+    if (!totals[code]) {
+      totals[code] = {
+        itemname: name,
+        unit: unit,
+        qty: 0,
+        retur: 0,
+        pemakaian: 0,
+        parts: []
+      };
+    }
+
     totals[code].qty   += qty;
+    totals[code].retur += retur;
     totals[code].parts.push(fmt2(qty));
   });
 
-  // render ulang tbody totals
+  // ✅ HITUNG PEMAKAIAN
+  Object.keys(totals).forEach(code => {
+    totals[code].pemakaian = totals[code].qty - totals[code].retur;
+  });
+
+  // ✅ RENDER 7 KOLOM
   $('#totals-body').html(
     Object.entries(totals).map(([code, r]) => `
       <tr class="hover:bg-gray-50 align-top">
@@ -432,10 +452,13 @@ function recalcTotals(){
         <td class="py-2 px-3">${r.unit || '-'}</td>
         <td class="py-2 px-3 text-right">${fmt2(r.qty)}</td>
         <td class="py-2 px-3 text-center text-gray-500">${r.parts.join(' + ')}</td>
+        <td class="py-2 px-3 text-right bg-red-50 font-semibold text-red-700">${fmt2(r.retur)}</td>
+        <td class="py-2 px-3 text-right bg-green-50 font-semibold text-green-700">${fmt2(r.pemakaian)}</td>
       </tr>
     `).join('')
   );
 }
+
 
 
 // panggil sekali saat load
