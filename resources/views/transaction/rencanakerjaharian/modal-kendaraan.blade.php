@@ -22,7 +22,7 @@
           </div>
           <h2 class="text-lg font-semibold text-gray-900">Pilih Kendaraan & Operator</h2>
         </div>
-        <button @click="open = false" type="button"
+        <button @click="closeModal()" type="button"
           class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -43,8 +43,8 @@
             class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
             <option value="">-- Pilih Aktivitas --</option>
-            <template x-for="activityCode in availableActivityCodes" :key="activityCode">
-              <option :value="activityCode" x-text="activityCode"></option>
+            <template x-for="(activityCode, index) in uniqueActivityCodes" :key="`activity-option-${activityCode}-${index}`">
+              <option :value="activityCode" x-text="getActivityLabel(activityCode)"></option>
             </template>
           </select>
         </div>
@@ -120,7 +120,7 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
-                <template x-for="vehicle in filteredVehicles" :key="vehicle.nokendaraan">
+                <template x-for="(vehicle, vIndex) in filteredVehicles" :key="`vehicle-${vehicle.nokendaraan}-${vIndex}`">
                   <tr
                     @click="selectVehicle(vehicle)"
                     class="cursor-pointer transition-colors duration-150"
@@ -178,7 +178,7 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
-                <template x-for="helper in filteredHelpers" :key="helper.tenagakerjaid">
+                <template x-for="(helper, hIndex) in filteredHelpers" :key="`helper-${helper.tenagakerjaid}-${hIndex}`">
                   <tr
                     @click="selectHelper(helper)"
                     class="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
@@ -191,7 +191,7 @@
                       <div class="text-sm text-gray-900" x-text="helper.nama"></div>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap">
-                      <span class="text-sm text-gray-700" x-text="helper.nik"></span>
+                      <span class="text-sm text-gray-700" x-text="helper.nik || '-'"></span>
                     </td>
                   </tr>
                 </template>
@@ -266,19 +266,73 @@
 
 <script>
 /**
- * ✅ NEW: Kendaraan Modal Component
- * UPDATED for new database structure: 1 operator = many vehicles
+ * ✅ FIXED: Kendaraan Modal Component with Proper Reactivity
  */
 function kendaraanModalComponent() {
   return {
     open: false,
-    availableActivityCodes: [],
+    availableActivityCodes: [], // ← Keep original array
     selectedActivityCode: '',
     searchVehicleQuery: '',
     searchHelperQuery: '',
     selectedVehicle: null,
     selectedHelper: null,
     useHelper: false,
+    
+    _vehiclesCache: null,
+    _helpersCache: null,
+    _kendaraanCardCache: null,
+
+    init() {
+      this._vehiclesCache = window.vehiclesData || [];
+      this._helpersCache = window.helpersData || [];
+      
+      
+      this.$watch('selectedActivityCode', (newVal) => {
+        if (newVal) {
+          console.log('📋 Activity changed to:', newVal);
+          this.refreshVehicleStates();
+        }
+      });
+    },
+
+    // ✅ NEW: Get unique activity codes
+    get uniqueActivityCodes() {
+      if (!this.availableActivityCodes || this.availableActivityCodes.length === 0) {
+        return [];
+      }
+      
+      // Remove duplicates using Set
+      const unique = [...new Set(this.availableActivityCodes)];
+      console.log('📋 Unique activities:', unique);
+      return unique;
+    },
+
+    // ✅ NEW: Get activity label with count
+    getActivityLabel(activityCode) {
+      const count = this.availableActivityCodes.filter(code => code === activityCode).length;
+      
+      // Get activity name from global data
+      const activity = window.activitiesData?.find(a => a.activitycode === activityCode);
+      const activityName = activity ? activity.activityname : '';
+      
+      if (count > 1) {
+        return `${activityCode} - ${activityName} (${count} plot)`;
+      }
+      
+      return `${activityCode} - ${activityName}`;
+    },
+
+    refreshVehicleStates() {
+      this.$nextTick(() => {
+        const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+        if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+          this._kendaraanCardCache = kendaraanCardElement._x_dataStack[0];
+        } else {
+          console.warn('⚠️ Kendaraan card not found');
+        }
+      });
+    },
 
     get canConfirm() {
       return this.selectedActivityCode && 
@@ -287,65 +341,96 @@ function kendaraanModalComponent() {
     },
 
     get availableVehicles() {
-      if (!window.vehiclesData) return [];
-      return window.vehiclesData;
+      return this._vehiclesCache || [];
     },
 
     get availableHelpers() {
-      if (!window.helpersData) return [];
-      return window.helpersData;
+      return this._helpersCache || [];
     },
 
     get filteredVehicles() {
-      if (!this.searchVehicleQuery) return this.availableVehicles;
+      const vehicles = this.availableVehicles;
+      
+      if (!this.searchVehicleQuery) {
+        return vehicles;
+      }
+      
       const q = this.searchVehicleQuery.toString().toUpperCase();
-      return this.availableVehicles.filter(v =>
-        v.nokendaraan.toUpperCase().includes(q) ||
-        (v.vehicle_type && v.vehicle_type.toUpperCase().includes(q)) ||
-        (v.operator_name && v.operator_name.toUpperCase().includes(q)) ||
-        (v.operator_id && v.operator_id.toString().toUpperCase().includes(q))
-      );
+      return vehicles.filter(v => {
+        const nokendaraan = (v.nokendaraan || '').toString().toUpperCase();
+        const vehicleType = (v.vehicle_type || '').toString().toUpperCase();
+        const operatorName = (v.operator_name || '').toString().toUpperCase();
+        const operatorId = (v.operator_id || '').toString().toUpperCase();
+        
+        return nokendaraan.includes(q) ||
+               vehicleType.includes(q) ||
+               operatorName.includes(q) ||
+               operatorId.includes(q);
+      });
     },
 
     get filteredHelpers() {
-      if (!this.searchHelperQuery) return this.availableHelpers;
+      const helpers = this.availableHelpers;
+      
+      if (!this.searchHelperQuery) {
+        return helpers;
+      }
+      
       const q = this.searchHelperQuery.toString().toUpperCase();
-      return this.availableHelpers.filter(helper =>
-        helper.nama.toUpperCase().includes(q) ||
-        helper.tenagakerjaid.toString().toUpperCase().includes(q) ||
-        (helper.nik && helper.nik.toString().toUpperCase().includes(q))
-      );
+      return helpers.filter(helper => {
+        const nama = (helper.nama || '').toString().toUpperCase();
+        const id = (helper.tenagakerjaid || '').toString().toUpperCase();
+        const nik = (helper.nik || '').toString().toUpperCase();
+        
+        return nama.includes(q) || id.includes(q) || nik.includes(q);
+      });
     },
 
     isVehicleDisabled(vehicle) {
       if (!this.selectedActivityCode || !vehicle) return false;
       
-      // Check if THIS vehicle (nokendaraan) is already selected for this activity
-      const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
-      if (!kendaraanCardElement || !kendaraanCardElement._x_dataStack || !kendaraanCardElement._x_dataStack[0]) {
-        return false;
-      }
-
-      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
-      const activityKendaraan = kendaraanCard.kendaraan[this.selectedActivityCode];
+      let kendaraanCard = this._kendaraanCardCache;
       
+      if (!kendaraanCard) {
+        const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+        if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+          kendaraanCard = kendaraanCardElement._x_dataStack[0];
+          this._kendaraanCardCache = kendaraanCard;
+        }
+      }
+      
+      if (!kendaraanCard) return false;
+
+      const activityKendaraan = kendaraanCard.kendaraan[this.selectedActivityCode];
       if (!activityKendaraan) return false;
 
-      // ✅ CRITICAL: Check by nokendaraan (not operator)
       return Object.values(activityKendaraan).some(
         item => item.nokendaraan === vehicle.nokendaraan
       );
     },
 
     handleOpen(detail) {
+      
       if (!detail || !detail.activityCodes || detail.activityCodes.length === 0) {
         showToast('Tidak ada aktivitas yang menggunakan kendaraan', 'warning', 3000);
         return;
       }
 
+      this._vehiclesCache = window.vehiclesData || [];
+      this._helpersCache = window.helpersData || [];
+      this._kendaraanCardCache = null;
+
+      // ✅ Store original array (dengan duplicates untuk counting)
       this.availableActivityCodes = detail.activityCodes;
-      this.selectedActivityCode = detail.activityCodes[0];
-      this.open = true;
+      
+      // ✅ Set first unique activity as selected
+      const uniqueCodes = [...new Set(detail.activityCodes)];
+      this.selectedActivityCode = uniqueCodes[0];
+      
+      this.$nextTick(() => {
+        this.refreshVehicleStates();
+        this.open = true;
+      });
     },
 
     selectVehicle(vehicle) {
@@ -376,21 +461,32 @@ function kendaraanModalComponent() {
         showToast('Pilih aktivitas dan kendaraan terlebih dahulu', 'warning', 2000);
         return;
       }
-
+      
       const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
-      if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
-        const kendaraanCard = kendaraanCardElement._x_dataStack[0];
-        
-        const success = kendaraanCard.addKendaraan(
-          this.selectedActivityCode,
-          this.selectedVehicle,
-          this.useHelper ? this.selectedHelper : null
-        );
+      if (!kendaraanCardElement || !kendaraanCardElement._x_dataStack || !kendaraanCardElement._x_dataStack[0]) {
+        showToast('Error: Kendaraan card tidak ditemukan', 'error', 3000);
+        console.error('❌ Kendaraan card element not found');
+        return;
+      }
 
-        if (success) {
-          showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
-          this.clearSelection();
-        }
+      const kendaraanCard = kendaraanCardElement._x_dataStack[0];
+      
+      const success = kendaraanCard.addKendaraan(
+        this.selectedActivityCode,
+        this.selectedVehicle,
+        this.useHelper ? this.selectedHelper : null
+      );
+
+      if (success) {
+        showToast('Kendaraan berhasil ditambahkan', 'success', 2000);
+        console.log('✅ Vehicle added successfully');
+        
+        this.clearSelection();
+        this.$nextTick(() => {
+          this.refreshVehicleStates();
+        });
+      } else {
+        console.error('❌ Failed to add vehicle');
       }
     },
 
@@ -407,7 +503,34 @@ function kendaraanModalComponent() {
       this.clearSelection();
       this.selectedActivityCode = '';
       this.availableActivityCodes = [];
+      this._kendaraanCardCache = null;
     }
   };
 }
+
+window.debugKendaraanModal = function() {
+  console.log('=== KENDARAAN MODAL DEBUG ===');
+  console.log('vehiclesData:', window.vehiclesData?.length || 0, window.vehiclesData);
+  console.log('helpersData:', window.helpersData?.length || 0, window.helpersData);
+  
+  const kendaraanCardElement = document.querySelector('[x-data*="kendaraanInfoCard"]');
+  if (kendaraanCardElement && kendaraanCardElement._x_dataStack && kendaraanCardElement._x_dataStack[0]) {
+    console.log('Kendaraan Card State:', kendaraanCardElement._x_dataStack[0].kendaraan);
+  } else {
+    console.warn('Kendaraan card not found');
+  }
+  
+  const modalElement = document.querySelector('[x-data*="kendaraanModalComponent"]');
+  if (modalElement && modalElement._x_dataStack && modalElement._x_dataStack[0]) {
+    console.log('Modal State:', {
+      open: modalElement._x_dataStack[0].open,
+      selectedActivityCode: modalElement._x_dataStack[0].selectedActivityCode,
+      availableActivityCodes: modalElement._x_dataStack[0].availableActivityCodes,
+      uniqueActivityCodes: modalElement._x_dataStack[0].uniqueActivityCodes
+    });
+  } else {
+    console.warn('Modal component not found');
+  }
+  console.log('============================');
+};
 </script>
