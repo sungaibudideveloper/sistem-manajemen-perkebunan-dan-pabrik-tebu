@@ -5,12 +5,11 @@
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
   <!-- VALIDATION ERROR MODAL -->
-  <div x-data="{ showValidationModal: false, validationErrors: [] }"
-       x-show="showValidationModal"
-       x-cloak
-       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
-       style="display: none;"
-       @validation-error.window="showValidationModal = true; validationErrors = $event.detail.errors">
+  <div x-data="validationErrorModal()"
+      x-show="showValidationModal"
+      x-cloak
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+      style="display: none;">
     <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
       <div class="p-6 text-center">
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -23,13 +22,13 @@
 
         <div class="text-left bg-red-50 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
           <ul class="text-sm text-red-700 space-y-1">
-            <template x-for="error in validationErrors" :key="error">
+            <template x-for="(error, index) in validationErrors" :key="index">
               <li x-text="error"></li>
             </template>
           </ul>
         </div>
 
-        <button @click="showValidationModal = false"
+        <button @click="closeModal()"
                 class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
           OK, Saya Mengerti
         </button>
@@ -1148,6 +1147,29 @@ function workerInfoCard() {
       } else {
         this.workers[activityCode].total = '';
       }
+    }
+  };
+}
+
+/**
+ * Validation Error Modal Component
+ */
+function validationErrorModal() {
+  return {
+    showValidationModal: false,
+    validationErrors: [],
+
+    init() {
+      // Listen for validation error events
+      window.addEventListener('validation-error', (event) => {
+        this.validationErrors = event.detail.errors || [];
+        this.showValidationModal = true;
+      });
+    },
+
+    closeModal() {
+      this.showValidationModal = false;
+      this.validationErrors = [];
     }
   };
 }
