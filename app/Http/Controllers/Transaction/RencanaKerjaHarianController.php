@@ -2769,19 +2769,6 @@ public function loadAbsenByDate(Request $request)
     }
 
     /**
-     * Validate date range for RKH creation
-     */
-    private function validateDateRange($selectedDate)
-    {
-        $targetDate = Carbon::parse($selectedDate);
-        // $today = Carbon::today();
-        $maxDate = Carbon::today()->addDays(7);
-        
-        // return $targetDate->gte($today) && $targetDate->lte($maxDate);
-        return $targetDate->lte($maxDate);
-    }
-
-    /**
      * Generate preview RKH number
      */
     private function generatePreviewRkhNo($targetDate, $companycode)
@@ -2893,8 +2880,10 @@ public function loadAbsenByDate(Request $request)
                 ->orderBy('m.plot')
                 ->get(),
 
-            'plots' => DB::table('plot')
+            'plots' => DB::table('masterlist')
                 ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->select('plot', 'blok')
                 ->orderBy('plot')
                 ->get(),
 
@@ -2922,8 +2911,10 @@ public function loadAbsenByDate(Request $request)
                 ->orderBy('m.plot')
                 ->get(),
 
-            'plotsData' => DB::table('plot')
+            'plotsData' => DB::table('masterlist')
                 ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->select('plot', 'blok')
                 ->orderBy('plot')
                 ->get(),
             
@@ -3432,7 +3423,6 @@ public function loadAbsenByDate(Request $request)
 
     /**
      * Get RKH details for display
-     * UPDATED: Include batch data for panen activities
      */
     private function getRkhDetails($companycode, $rkhno)
     {
@@ -3456,6 +3446,10 @@ public function loadAbsenByDate(Request $request)
                 $join->on('r.batchno', '=', 'b.batchno')
                     ->where('b.companycode', '=', $companycode);
             })
+            ->leftJoin('masterlist as m', function($join) use ($companycode) {
+                $join->on('r.plot', '=', 'm.plot')
+                    ->where('m.companycode', '=', $companycode);
+            })
             ->where('r.companycode', $companycode)
             ->where('r.rkhno', $rkhno)
             ->select([
@@ -3471,11 +3465,12 @@ public function loadAbsenByDate(Request $request)
                 'b.lifecyclestatus as batch_lifecycle',
                 'b.batcharea',
                 'b.tanggalpanen',
+                'm.blok as masterlist_blok', // Get blok from masterlist
                 
                 DB::raw("CASE 
                     WHEN r.blok = 'ALL' THEN 'Semua Blok'
                     WHEN r.plot IS NULL THEN CONCAT('Blok: ', r.blok)
-                    ELSE CONCAT(r.blok, '-', r.plot)
+                    ELSE CONCAT(COALESCE(m.blok, r.blok), '-', r.plot)
                 END as location_display"),
                 
                 DB::raw("(
@@ -4117,7 +4112,7 @@ public function loadAbsenByDate(Request $request)
             ->join('rkhlst as l', function($join) {
                 $join->on('h.rkhno', '=', 'l.rkhno')
                     ->on('h.companycode', '=', 'l.companycode')
-                    ->on('rk.activitycode', '=', 'l.activitycode'); // Match activity
+                    ->on('rk.activitycode', '=', 'l.activitycode');
             })
             ->leftJoin('user as u', 'h.mandorid', '=', 'u.userid')
             ->leftJoin('activity as a', 'l.activitycode', '=', 'a.activitycode')
