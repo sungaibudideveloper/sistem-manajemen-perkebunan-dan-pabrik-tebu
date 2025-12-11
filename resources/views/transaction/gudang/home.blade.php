@@ -104,7 +104,7 @@
             @foreach($usehdr as $u) 
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border border-gray-300">
-                  <a href="{{ url('transaction/gudang/detail?rkhno='.$u->rkhno) }}" class="text-blue-600 hover:underline">
+                  <a href="{{ route('transaction.gudang.detail', ['rkhno' => $u->rkhno]) }}" class="text-blue-600 hover:underline">
                     {{ $u->rkhno }} @if($u->nouse)
                                       <span class="inline-block px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">
                                         Generated
