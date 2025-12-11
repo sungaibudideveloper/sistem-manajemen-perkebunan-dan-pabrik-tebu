@@ -493,7 +493,7 @@
                 this.lkhData = [];
                 
                 try {
-                    const response = await fetch(`{{ url('input/kerjaharian/rencanakerjaharian') }}/${rkhno}/lkh`);
+                    const response = await fetch(`{{ url('transaction/kerjaharian/rencanakerjaharian') }}/${rkhno}/lkh`);
                     const data = await response.json();
                     
                     if (data.success) {

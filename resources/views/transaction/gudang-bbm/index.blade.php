@@ -1,4 +1,4 @@
-{{-- resources/views/input/gudang/gudang-bbm.blade.php --}}
+{{-- resources/views/transaction/gudang/gudang-bbm.blade.php --}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -157,7 +157,7 @@ function gudangBbmData() {
             try {
                 const btn = event?.currentTarget;
                 if (btn) { btn.disabled = true; btn.classList.add('opacity-75'); }
-                const response = await fetch(`{{ url('input/gudang-bbm') }}/${ordernumber}/confirm`, {
+                const response = await fetch(`{{ url('transaction/gudang-bbm') }}/${ordernumber}/confirm`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

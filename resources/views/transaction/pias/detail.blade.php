@@ -219,7 +219,7 @@
         @endif
 
         <div class="flex justify-center mt-2 mb-4">
-          <a href="{{ url('input/pias') }}" 
+          <a href="{{ url('transaction/pias') }}" 
           class="bg-white inline-block bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold py-2 px-4 rounded shadow transition no-print">
            ← Kembali
           </a> &nbsp;

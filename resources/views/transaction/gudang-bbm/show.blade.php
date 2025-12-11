@@ -1,4 +1,4 @@
-{{-- resources/views/input/gudang/gudang-bbm-show.blade.php --}}
+{{-- resources/views/transaction/gudang/gudang-bbm-show.blade.php --}}
 <x-layout>
     <x-slot:title>Konfirmasi Pengeluaran BBM - {{ $lkhData->lkhno }}</x-slot:title>
     <x-slot:navbar>Konfirmasi Pengeluaran BBM</x-slot:navbar>
@@ -221,7 +221,7 @@
             }
 
             try {
-                const response = await fetch(`{{ url('input/gudang-bbm') }}/${ordernumber}/confirm`, {
+                const response = await fetch(`{{ url('transaction/gudang-bbm') }}/${ordernumber}/confirm`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

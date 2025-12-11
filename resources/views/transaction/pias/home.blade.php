@@ -126,7 +126,7 @@
               <tr> 
                 <td class="py-2 px-4 border border-gray-300 text-lg text-center">{{ $loop->iteration }}</td>
                 <td class="py-2 px-4 border border-gray-300">
-                  <a href="#" onclick="location.href='{{ url('input/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
+                  <a href="#" onclick="location.href='{{ url('transaction/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
                     {{ $item->rkhno }}  
                     @if($item->is_generated)
                     <span class="inline-block px-2 py-1 text-xs font-semibold text-white rounded-full bg-green-600">

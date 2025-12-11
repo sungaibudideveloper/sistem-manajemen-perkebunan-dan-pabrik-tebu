@@ -853,7 +853,7 @@ window.currentUser = {
 };
 
 window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
-window.PLOT_INFO_BASE_URL = "{{ url('input/kerjaharian/rencanakerjaharian/plot-info') }}";
+window.PLOT_INFO_BASE_URL = "{{ url('transaction/kerjaharian/rencanakerjaharian/plot-info') }}";
 
 // ============================================================
 // ALPINE.JS COMPONENTS

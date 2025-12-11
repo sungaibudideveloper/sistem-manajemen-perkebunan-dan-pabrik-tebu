@@ -1,4 +1,4 @@
-{{-- resources/views/input/kerjaharian/rencanakerjaharian/modal-aktivitas.blade.php --}}
+{{-- resources/views/transaction/kerjaharian/rencanakerjaharian/modal-aktivitas.blade.php --}}
 
 <div
   x-show="open"
