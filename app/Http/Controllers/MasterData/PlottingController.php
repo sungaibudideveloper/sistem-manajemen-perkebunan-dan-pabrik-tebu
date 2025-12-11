@@ -82,7 +82,7 @@ class PlottingController extends Controller
             'KBD' => 'Kebun Dewasa'
         ];
 
-        return view('master.plotting.index', compact('plotting', 'perPage', 'title', 'statusOptions'));
+        return view('masterdata.plotting.index', compact('plotting', 'perPage', 'title', 'statusOptions'));
     }
 
     public function handle(Request $request)

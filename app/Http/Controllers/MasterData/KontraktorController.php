@@ -34,7 +34,7 @@ class KontraktorController extends Controller
                 'search'  => $search,
             ]);
     
-        return view('master.kontraktor.index', [
+        return view('masterdata.kontraktor.index', [
             'kontraktor' => $kontraktor,
             'title'     => 'Data Kontraktor',
             'navbar'    => 'Master',

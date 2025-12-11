@@ -26,7 +26,7 @@ class AccountingController extends Controller
         ->select('accounting.*','activity.activitycode','activity.activityname')
         ->paginate($perPage)->appends(compact('perPage', 'search'));
 
-        return view('master.accounting.index', [
+        return view('masterdata.accounting.index', [
             'accounting' => $accounting,
             'title'      => 'Data Accounting',
             'navbar'     => 'Master',

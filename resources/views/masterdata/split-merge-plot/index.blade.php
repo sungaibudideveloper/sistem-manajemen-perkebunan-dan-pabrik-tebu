@@ -1,4 +1,4 @@
-{{-- resources/views/master/split-merge-plot/index.blade.php --}}
+{{-- resources/views/masterdata/split-merge-plot/index.blade.php --}}
 <x-layout>
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>

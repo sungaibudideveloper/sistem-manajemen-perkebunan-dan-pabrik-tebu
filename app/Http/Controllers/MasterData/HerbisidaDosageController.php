@@ -42,7 +42,7 @@ class HerbisidaDosageController extends Controller
             ->paginate($perPage)
             ->appends(compact('perPage','search'));
 
-        return view('master.herbisidadosage.index', [
+        return view('masterdata.herbisidadosage.index', [
             'herbisidaDosages' => $herbisidaDosages,
             'perPage'          => $perPage,
             'search'           => $search,

@@ -73,7 +73,7 @@ class TenagaKerjaController extends Controller
             ->orderBy('idjenistenagakerja')
             ->get();
 
-        return view('master.tenagakerja.index', [
+        return view('masterdata.tenagakerja.index', [
             'result' => $result,
             'title' => 'Data Tenaga Kerja',
             'navbar' => 'Master',

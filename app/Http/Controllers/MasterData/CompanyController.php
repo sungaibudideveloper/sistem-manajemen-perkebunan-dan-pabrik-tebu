@@ -63,7 +63,7 @@ class CompanyController extends Controller
             $item->no = ($companies->currentPage() - 1) * $companies->perPage() + $index + 1;
         }
 
-        return view('master.company.index', compact('companies', 'perPage', 'title'));
+        return view('masterdata.company.index', compact('companies', 'perPage', 'title'));
     }
 
     public function handle(Request $request)

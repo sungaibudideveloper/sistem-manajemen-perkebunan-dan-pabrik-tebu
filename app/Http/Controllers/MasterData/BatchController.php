@@ -40,7 +40,7 @@ class BatchController extends Controller
                 'search'  => $search,
             ]);
     
-        return view('master.batch.index', [
+        return view('masterdata.batch.index', [
             'batch' => $batch,
             'title'     => 'Data Batch',
             'navbar'    => 'Master',

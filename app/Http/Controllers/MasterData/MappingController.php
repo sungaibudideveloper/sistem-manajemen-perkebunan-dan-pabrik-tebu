@@ -44,7 +44,7 @@ class MappingController extends Controller
         foreach ($mapping as $index => $item) {
             $item->no = ($mapping->currentPage() - 1) * $mapping->perPage() + $index + 1;
         }
-        return view('master.mapping.index', compact('mapping', 'bloks', 'plotting', 'perPage', 'title'));
+        return view('masterdata.mapping.index', compact('mapping', 'bloks', 'plotting', 'perPage', 'title'));
     }
 
     public function handle(Request $request)

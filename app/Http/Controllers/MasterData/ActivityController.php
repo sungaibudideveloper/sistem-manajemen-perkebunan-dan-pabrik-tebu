@@ -39,7 +39,7 @@ class ActivityController extends Controller
         foreach ($activities as $index => $item) {
             $item->no = ($activities->currentPage() - 1) * $activities->perPage() + $index + 1;
         }
-        return view('master.activity.index')->with([
+        return view('masterdata.activity.index')->with([
             'title'         => 'Daftar Aktivitas',
             'perPage'       => $perPage,
             'activities'    => $activities,

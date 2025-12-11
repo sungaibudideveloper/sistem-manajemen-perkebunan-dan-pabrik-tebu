@@ -53,7 +53,7 @@ class UpahController extends Controller
             'PER_KG' => 'Per Kilogram'
         ];
 
-        return view('master.upah.index', [
+        return view('masterdata.upah.index', [
             'title' => 'Menu',
             'navbar' => 'Aplikasi', 
             'nav' => 'Menu',

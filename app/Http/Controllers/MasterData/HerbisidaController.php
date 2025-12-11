@@ -37,7 +37,7 @@ class HerbisidaController extends Controller
                 'search'  => $search,
             ]);
 
-        return view('master.herbisida.index', [
+        return view('masterdata.herbisida.index', [
             'herbisida' => $herbisida,
             'title'     => 'Data Herbisida',
             'navbar'    => 'Master',

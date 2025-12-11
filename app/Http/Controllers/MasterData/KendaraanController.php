@@ -86,7 +86,7 @@ class KendaraanController extends Controller
             ->orderBy('nama')
             ->get();
 
-        return view('master.kendaraan.index', [
+        return view('masterdata.kendaraan.index', [
             'result' => $result,
             'title' => 'Data Kendaraan',
             'perPage' => $perPage,

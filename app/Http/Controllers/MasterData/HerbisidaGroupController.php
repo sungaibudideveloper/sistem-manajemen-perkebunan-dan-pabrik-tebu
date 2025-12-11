@@ -92,7 +92,7 @@ class HerbisidaGroupController extends Controller
         ['path' => $request->url(), 'query' => $request->query()]
     );
 
-    return view('master.herbisidagroup.index', [
+    return view('masterdata.herbisidagroup.index', [
         'title'           => 'Data Herbisida Group',
         'navbar'          => 'Master',
         'nav'             => 'Herbisida Group',

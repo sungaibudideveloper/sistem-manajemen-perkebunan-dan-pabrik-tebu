@@ -37,7 +37,7 @@ class MandorController extends Controller
                 'search'  => $search,
             ]);
 
-        return view('master.mandor.index', [
+        return view('masterdata.mandor.index', [
             'mandor'  => $mandor,
             'title'    => 'Data Mandor',
             'navbar'   => 'Master',

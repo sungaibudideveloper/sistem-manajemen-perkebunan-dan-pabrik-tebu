@@ -27,7 +27,7 @@ class KategoriController extends Controller
             ->paginate($perPage)
             ->appends(compact('perPage', 'search'));
 
-        return view('master.kategori.index', [
+        return view('masterdata.kategori.index', [
             'kategori' => $kategori,
             'title'    => 'Data Kategori',
             'navbar'   => 'Master',

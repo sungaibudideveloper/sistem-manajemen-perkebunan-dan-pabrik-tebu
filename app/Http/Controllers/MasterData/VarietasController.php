@@ -27,7 +27,7 @@ class VarietasController extends Controller
             ->paginate($perPage)
             ->appends(compact('perPage', 'search'));
 
-        return view('master.varietas.index', [
+        return view('masterdata.varietas.index', [
             'varietas' => $varietas,
             'title'    => 'Data Varietas',
             'navbar'   => 'Master',

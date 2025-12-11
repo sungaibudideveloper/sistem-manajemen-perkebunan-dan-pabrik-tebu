@@ -37,7 +37,7 @@ class ApprovalController extends Controller
             ]);
         $jabatan = Jabatan::orderBy('namajabatan','asc')->get();
 
-        return view('master.approval.index', [
+        return view('masterdata.approval.index', [
             'approval'   => $approval,
             'title'      => 'Data Approval',
             'navbar'     => 'Master',

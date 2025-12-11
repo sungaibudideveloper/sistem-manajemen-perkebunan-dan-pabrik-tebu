@@ -38,7 +38,7 @@ class BlokController extends Controller
             $item->no = ($blok->currentPage() - 1) * $blok->perPage() + $index + 1;
         }
 
-        return view('master.blok.index', compact('blok', 'perPage', 'title'));
+        return view('masterdata.blok.index', compact('blok', 'perPage', 'title'));
     }
 
 

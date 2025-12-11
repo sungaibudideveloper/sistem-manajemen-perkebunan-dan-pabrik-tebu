@@ -51,7 +51,7 @@ class SubkontraktorController extends Controller
             ->orderBy('id')
             ->get();
 
-        return view('master.subkontraktor.index', [
+        return view('masterdata.subkontraktor.index', [
             'subkontraktor' => $subkontraktor,
             'kontraktorList' => $kontraktorList,
             'title'      => 'Data Subkontraktor',

@@ -38,7 +38,7 @@ class MasterListController extends Controller
                 'search'  => $search,
             ]);
     
-        return view('master.masterlist.index', [
+        return view('masterdata.masterlist.index', [
             'masterlist' => $masterlist,
             'title'     => 'Data Master List',
             'navbar'    => 'Master',
