@@ -1,4 +1,4 @@
-{{-- resources/views/notifications/index.blade.php --}}
+{{-- resources/views/info-updates/notifications/index.blade.php --}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $title }}</x-slot:navbar>
@@ -24,8 +24,8 @@
                         Mark all as read
                     </button>
                     @endif
-                    @if(hasPermission('Admin'))
-                    <a href="{{ route('notifications.admin.index') }}" 
+                    @if(hasPermission('infoupdates.notification.view'))
+                    <a href="{{ route('info-updates.notifications.admin.index') }}" 
                        class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors">
                         Manage Notifications
                     </a>
@@ -130,7 +130,7 @@
             async handleNotificationClick(notificationId, actionUrl) {
                 // Mark as read
                 try {
-                    await fetch(`/notifications/${notificationId}/read`, {
+                    await fetch(`/info-updates/notifications/${notificationId}/read`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -158,7 +158,7 @@
                 }
 
                 try {
-                    const response = await fetch('/notifications/mark-all-read', {
+                    const response = await fetch('/info-updates/notifications/mark-all-read', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

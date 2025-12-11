@@ -46,38 +46,6 @@ Route::middleware(['auth', 'mandor.access'])->group(function () {
     });
 
     // ============================================================================
-    // NOTIFICATIONS (User)
-    // ============================================================================
-    Route::prefix('notifications')->name('notifications.')->group(function () {
-        Route::get('/', [NotificationController::class, 'index'])->name('index');
-        Route::get('/dropdown-data', [NotificationController::class, 'getDropdownData'])->name('dropdown-data');
-        Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
-        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
-        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
-    });
-
-    // ============================================================================
-    // NOTIFICATIONS (Admin Management)
-    // ============================================================================
-    Route::middleware('permission:usermanagement.notification.view')->group(function () {
-        Route::get('/notifications/admin', [NotificationController::class, 'adminIndex'])->name('notifications.admin.index');
-    });
-
-    Route::middleware('permission:usermanagement.notification.create')->group(function () {
-        Route::get('/notifications/create', [NotificationController::class, 'create'])->name('notifications.create');
-        Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
-    });
-
-    Route::middleware('permission:usermanagement.notification.edit')->group(function () {
-        Route::get('/notifications/{id}/edit', [NotificationController::class, 'edit'])->name('notifications.edit');
-        Route::put('/notifications/{id}', [NotificationController::class, 'update'])->name('notifications.update');
-    });
-
-    Route::middleware('permission:usermanagement.notification.delete')->group(function () {
-        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
-    });
-
-    // ============================================================================
     // GPX/KML FILE MANAGEMENT
     // ============================================================================
     Route::middleware('permission:process.uploadgpx.view')->group(function () {

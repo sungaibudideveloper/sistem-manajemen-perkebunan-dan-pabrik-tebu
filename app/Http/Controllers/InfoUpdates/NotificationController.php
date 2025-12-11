@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\InfoUpdates;
 
+use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Company;
 use Illuminate\Http\Request;
@@ -15,10 +16,14 @@ class NotificationController extends Controller
     public function __construct()
     {
         View::share([
-            'navbar' => 'Notification',
-            'routeName' => route('notifications.index'),
+            'navbar' => 'Info & Updates',
+            'routeName' => route('info-updates.notifications.index'),
         ]);
     }
+
+    // ============================================================================
+    // USER VIEWS
+    // ============================================================================
 
     public function index()
     {
@@ -29,7 +34,7 @@ class NotificationController extends Controller
         $notifCount = $notifications->count();
         $unreadCount = $notifications->where('is_read', false)->count();
 
-        return view('notifications.index', compact(
+        return view('info-updates.notifications.index', compact(
             'title',
             'notifications',
             'notifCount',
@@ -41,20 +46,47 @@ class NotificationController extends Controller
     {
         try {
             $userId = auth()->id();
+            $user = auth()->user();
             
+            // Get user's companies
+            $userCompanies = $user->userCompanies;
+            if ($userCompanies->isEmpty()) {
+                $userCompanyArray = $user->companycode ? explode(',', $user->companycode) : [];
+            } else {
+                $userCompanyArray = $userCompanies->pluck('companycode')->toArray();
+            }
+            $userCompanyArray = array_filter($userCompanyArray);
+            
+            // Get user's jabatan
+            $idjabatan = $user->idjabatan;
+            
+            // Query notifications
             $notifications = DB::table('notification')
-                ->where(function($query) use ($userId) {
-                    $query->where('userid', $userId)
-                        ->orWhere('target_type', 'all');
+                ->where('status', 'active')
+                ->where(function($query) use ($userCompanyArray) {
+                    // Check if user's company is in notification's companycode (comma-separated)
+                    foreach ($userCompanyArray as $companycode) {
+                        $query->orWhere('companycode', 'like', "%{$companycode}%");
+                    }
+                })
+                ->where(function($query) use ($idjabatan) {
+                    // Check target_jabatan: NULL = all jabatan, or specific jabatan
+                    $query->whereNull('target_jabatan')
+                        ->orWhere('target_jabatan', '')
+                        ->orWhere('target_jabatan', 'like', "%{$idjabatan}%");
                 })
                 ->orderBy('createdat', 'desc')
                 ->limit(10)
-                ->get();
+                ->get()
+                ->map(function($notif) use ($userId) {
+                    // Check if already read
+                    $readBy = json_decode($notif->readby, true) ?? [];
+                    $notif->is_read = in_array($userId, $readBy);
+                    return $notif;
+                });
             
-            $unreadCount = DB::table('notification')
-                ->where('userid', $userId)
-                ->where('is_read', 0)
-                ->count();
+            // Count unread
+            $unreadCount = $notifications->where('is_read', false)->count();
             
             return response()->json([
                 'notifications' => $notifications,
@@ -64,14 +96,12 @@ class NotificationController extends Controller
         } catch (\Exception $e) {
             \Log::error('Notification dropdown error: ' . $e->getMessage());
             
-            // Return empty data instead of error
             return response()->json([
                 'notifications' => [],
                 'unread_count' => 0
             ]);
         }
     }
-
 
     public function getUnreadCount()
     {
@@ -88,7 +118,7 @@ class NotificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Notification count error: ' . $e->getMessage());
+            Log::error('Notification count error: ' . $e->getMessage());
             
             return response()->json([
                 'unread_count' => 0
@@ -171,9 +201,13 @@ class NotificationController extends Controller
         }
     }
 
+    // ============================================================================
+    // ADMIN MANAGEMENT
+    // ============================================================================
+
     public function adminIndex()
     {
-        if (!hasPermission('Admin')) {
+        if (!hasPermission('infoupdates.notification.view')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -194,12 +228,12 @@ class NotificationController extends Controller
         $result = $query->orderBy('createdat', 'desc')->paginate($perPage);
         $companies = Company::orderBy('name')->get();
 
-        return view('notifications.admin.index', compact('title', 'result', 'companies', 'perPage'));
+        return view('info-updates.notifications.admin-index', compact('title', 'result', 'companies', 'perPage'));
     }
 
     public function create()
     {
-        if (!hasPermission('Create Notifikasi')) {
+        if (!hasPermission('infoupdates.notification.create')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -207,12 +241,12 @@ class NotificationController extends Controller
         $companies = Company::orderBy('name')->get();
         $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
 
-        return view('notifications.create', compact('title', 'companies', 'jabatan'));
+        return view('info-updates.notifications.create', compact('title', 'companies', 'jabatan'));
     }
 
     public function store(Request $request)
     {
-        if (!hasPermission('Create Notifikasi')) {
+        if (!hasPermission('infoupdates.notification.create')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -243,7 +277,7 @@ class NotificationController extends Controller
 
             Notification::createManualNotification($notificationData);
 
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('success', 'Notification berhasil dibuat dan dikirim');
 
         } catch (\Exception $e) {
@@ -259,14 +293,14 @@ class NotificationController extends Controller
 
     public function edit($id)
     {
-        if (!hasPermission('Edit Notifikasi')) {
+        if (!hasPermission('infoupdates.notification.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
         $notification = Notification::findOrFail($id);
         
         if ($notification->notification_type !== 'manual') {
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('error', 'Hanya manual notification yang bisa diedit');
         }
 
@@ -274,19 +308,19 @@ class NotificationController extends Controller
         $companies = Company::orderBy('name')->get();
         $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
 
-        return view('notifications.edit', compact('title', 'notification', 'companies', 'jabatan'));
+        return view('info-updates.notifications.edit', compact('title', 'notification', 'companies', 'jabatan'));
     }
 
     public function update(Request $request, $id)
     {
-        if (!hasPermission('Edit Notifikasi')) {
+        if (!hasPermission('infoupdates.notification.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
         $notification = Notification::findOrFail($id);
 
         if ($notification->notification_type !== 'manual') {
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('error', 'Hanya manual notification yang bisa diedit');
         }
 
@@ -319,7 +353,7 @@ class NotificationController extends Controller
 
             $notification->update($updateData);
 
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('success', 'Notification berhasil diperbarui');
 
         } catch (\Exception $e) {
@@ -336,7 +370,7 @@ class NotificationController extends Controller
 
     public function destroy($id)
     {
-        if (!hasPermission('Hapus Notifikasi')) {
+        if (!hasPermission('infoupdates.notification.delete')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -348,7 +382,7 @@ class NotificationController extends Controller
                 'updatedat' => now()
             ]);
 
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('success', 'Notification berhasil dihapus');
 
         } catch (\Exception $e) {
@@ -357,10 +391,14 @@ class NotificationController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->route('notifications.admin.index')
+            return redirect()->route('info-updates.notifications.admin.index')
                            ->with('error', 'Gagal menghapus notification: ' . $e->getMessage());
         }
     }
+
+    // ============================================================================
+    // SYSTEM NOTIFICATION HELPER
+    // ============================================================================
 
     public static function notifyNewSupportTicket($ticket)
     {

@@ -5,7 +5,7 @@
     });
 
     function updateNavbarDot() {
-        const url = '{{ route('notifications.unread-count') }}';
+        const url = '{{ route('info-updates.notifications.unread-count') }}';
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const navbarDots = [
             document.getElementById('notification-dot'),
@@ -22,7 +22,7 @@
             .then(response => response.json())
             .then(data => {
                 const unreadCount = data.unread_count || 0;
-                const isNotificationPage = window.location.pathname.includes('{{ route('notifications.index') }}');
+                const isNotificationPage = window.location.pathname.includes('{{ route('info-updates.notifications.index') }}');
                 const dialog = document.getElementById('unread-notification-dialog');
 
                 if (dialog) {

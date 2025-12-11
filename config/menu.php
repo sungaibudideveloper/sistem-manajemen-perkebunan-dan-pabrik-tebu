@@ -409,5 +409,25 @@ return [
         ],
     ],
 
+    // INFO & UPDATES
+    // ============================================
+    [
+        'name' => 'Info & Updates',
+        'icon' => 'megaphone',
+        'permission' => 'infoupdates.menu.view',
+        'children' => [
+            [
+                'name' => 'Notifications',
+                'route' => 'info-updates.notifications.admin.index',
+                'permission' => 'infoupdates.notification.view',
+            ],
+            [
+                'name' => 'Announcements',
+                'route' => 'info-updates.announcements.admin.index',
+                'permission' => 'infoupdates.announcement.view',
+            ],
+        ],
+    ],
+
     
 ];

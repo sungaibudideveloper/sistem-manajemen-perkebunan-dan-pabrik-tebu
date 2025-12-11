@@ -1,12 +1,12 @@
-{{-- resources/views/notifications/create.blade.php --}}
+{{-- resources/views/info-updates/notifications/create.blade.php --}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
-    <x-slot:navbar>Notification</x-slot:navbar>
-    <x-slot:nav>Create</x-slot:nav>
+    <x-slot:navbar>Info & Updates</x-slot:navbar>
+    <x-slot:nav>Create Notification</x-slot:nav>
 
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="px-6 py-4">
-            <form action="{{ route('notifications.store') }}" method="POST" x-data="notificationForm()">
+            <form action="{{ route('info-updates.notifications.admin.store') }}" method="POST" x-data="notificationForm()">
                 @csrf
 
                 <!-- Target Companies -->
@@ -139,7 +139,7 @@
                         class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                         Create Notification
                     </button>
-                    <a href="{{ route('notifications.admin.index') }}"
+                    <a href="{{ route('info-updates.notifications.admin.index') }}"
                         class="px-6 py-2 bg-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
                         Cancel
                     </a>
@@ -171,7 +171,7 @@
                     return 'All jabatan (optional)';
                 }
                 if (this.selectedJabatan.length === 1) {
-                    return 'satu jabatan dipilih';
+                    return '1 jabatan dipilih';
                 }
                 return `${this.selectedJabatan.length} jabatan dipilih`;
             }
