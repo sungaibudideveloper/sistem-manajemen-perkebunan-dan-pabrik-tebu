@@ -41,8 +41,8 @@
                             <!-- ✅ Action Buttons with Permission Checks -->
                             <div class="flex flex-col sm:flex-row gap-4">
                                 {{-- Planning Button - Check permission --}}
-                                @can('input.rencanakerjaharian.view')
-                                <a href="{{ route('input.rencanakerjaharian.index') }}" 
+                                @can('transaction.rencanakerjaharian.view')
+                                <a href="{{ route('transaction.rencanakerjaharian.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -52,8 +52,8 @@
                                 @endcan
                                 
                                 {{-- Approval Button - Check permission --}}
-                                @can('input.approval.view')
-                                <a href="{{ route('input.approval.index') }}" 
+                                @can('transaction.approval.view')
+                                <a href="{{ route('transaction.approval.index') }}" 
                                    class="inline-flex items-center px-8 py-4 text-base font-semibold rounded-xl text-emerald-200 bg-emerald-800/50 hover:bg-emerald-700/50 transition-all duration-200 border border-emerald-600 hover:border-emerald-500 backdrop-blur-sm group">
                                     <svg class="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -180,8 +180,8 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {{-- Agronomi Card - Only show if has permission --}}
-                        @can('input.agronomi.view')
-                        <a href="{{ route('input.agronomi.index') }}" class="group">
+                        @can('transaction.agronomi.view')
+                        <a href="{{ route('transaction.agronomi.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
                                     <div class="flex items-center justify-between mb-6">
@@ -212,8 +212,8 @@
                         @endcan
 
                         {{-- HPT Card - Only show if has permission --}}
-                        @can('input.hpt.view')
-                        <a href="{{ route('input.hpt.index') }}" class="group">
+                        @can('transaction.hpt.view')
+                        <a href="{{ route('transaction.hpt.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
                                     <div class="flex items-center justify-between mb-6">
@@ -244,8 +244,8 @@
                         @endcan
 
                         {{-- Rencana Kerja Harian Card - Only show if has permission --}}
-                        @can('input.rencanakerjaharian.view')
-                        <a href="{{ route('input.rencanakerjaharian.index') }}" class="group">
+                        @can('transaction.rencanakerjaharian.view')
+                        <a href="{{ route('transaction.rencanakerjaharian.index') }}" class="group">
                             <div class="relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group-hover:scale-[1.02] border border-gray-200 hover:border-emerald-300 h-64">
                                 <div class="p-8 h-full flex flex-col">
                                     <div class="flex items-center justify-between mb-6">

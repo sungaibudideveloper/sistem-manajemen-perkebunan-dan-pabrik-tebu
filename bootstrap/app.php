@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/web.php'));
             Route::middleware('web')->group(base_path('routes/react.php'));
             Route::middleware('web')->group(base_path('routes/masterdata.php'));
-            Route::middleware('web')->group(base_path('routes/input.php'));
+            Route::middleware('web')->group(base_path('routes/transaction.php'));
             Route::middleware('web')->group(base_path('routes/report.php'));
             Route::middleware('web')->group(base_path('routes/dashboard.php'));
             Route::middleware('web')->group(base_path('routes/process.php'));

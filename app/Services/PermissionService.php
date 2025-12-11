@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
  * Permission Format: module.resource.action
  * Examples:
  * - masterdata.company.view
- * - input.agronomi.create
+ * - transaction.agronomi.create
  * - report.zpk.export
  */
 class PermissionService

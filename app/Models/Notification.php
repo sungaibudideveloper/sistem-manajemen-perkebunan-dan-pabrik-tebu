@@ -185,7 +185,7 @@ class Notification extends Model
             'target_jabatan' => '7,10', // Admin/Supervisor
             'title' => "Agronomi Alert - Plot #{$data['plot']}",
             'body' => "Perhatian: " . implode(', ', $alerts) . ". Mohon segera ditindaklanjuti.",
-            'action_url' => route('input.agronomi.index'),
+            'action_url' => route('transaction.agronomi.index'),
             'icon' => 'bell',
             'priority' => $priority,
             'inputby' => Auth::user()->userid ?? 'system'
@@ -230,7 +230,7 @@ class Notification extends Model
             'target_jabatan' => '7,10', // Admin/Supervisor
             'title' => "HPT Alert - Plot #{$data['plot']}",
             'body' => "Perhatian: " . implode(', ', $alerts) . ". Mohon segera ditindaklanjuti.",
-            'action_url' => route('input.hpt.index'),
+            'action_url' => route('transaction.hpt.index'),
             'icon' => 'bell',
             'priority' => $priority,
             'inputby' => Auth::user()->userid ?? 'system'

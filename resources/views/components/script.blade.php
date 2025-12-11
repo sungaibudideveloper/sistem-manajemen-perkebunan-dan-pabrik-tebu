@@ -111,11 +111,11 @@
         // Config untuk multiple export URLs
         const exportConfigs = {
             'hpt-export': {
-                baseUrl: '{{ route('input.hpt.exportExcel') }}',
+                baseUrl: '{{ route('transaction.hpt.exportExcel') }}',
                 buttonSelector: '[data-export="hpt"]'
             },
             'agronomi-export': {
-                baseUrl: '{{ route('input.agronomi.exportExcel') }}',
+                baseUrl: '{{ route('transaction.agronomi.exportExcel') }}',
                 buttonSelector: '[data-export="agronomi"]'
             }
             // Tambahkan config lainnya di sini

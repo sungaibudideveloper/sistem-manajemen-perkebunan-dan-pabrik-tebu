@@ -2,8 +2,8 @@
 
 // routes\report.php
 
-use App\Http\Controllers\Input\HPTController;
-use App\Http\Controllers\Input\AgronomiController;
+use App\Http\Controllers\Transaction\HPTController;
+use App\Http\Controllers\Transaction\AgronomiController;
 use App\Http\Controllers\Report\PivotController;
 use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\Report\PanenTebuController;

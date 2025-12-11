@@ -36,8 +36,8 @@ Route::middleware(['auth', 'mandor.access'])->group(function () {
     // ============================================================================
     // APPROVAL (Mobile View - Traditional Blade)
     // ============================================================================
-    Route::middleware('permission:input.approval.view')->group(function () {
-        Route::prefix('input/approval')->name('input.approval.')->controller(\App\Http\Controllers\Input\ApprovalController::class)->group(function () {
+    Route::middleware('permission:transaction.approval.view')->group(function () {
+        Route::prefix('input/approval')->name('transaction.approval.')->controller(\App\Http\Controllers\Transaction\ApprovalController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/process-rkh', 'processRKHApproval')->name('processRKH');
             Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
