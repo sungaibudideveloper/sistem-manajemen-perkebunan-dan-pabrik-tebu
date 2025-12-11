@@ -39,26 +39,61 @@ class NotificationController extends Controller
 
     public function getDropdownData()
     {
-        $userid = Auth::user()->userid;
-        $notifications = Notification::getForUser($userid, 5, false);
-        $unreadCount = Notification::getUnreadCountForUser($userid);
-
-        return response()->json([
-            'success' => true,
-            'notifications' => $notifications,
-            'unread_count' => $unreadCount
-        ]);
+        try {
+            $userId = auth()->id();
+            
+            $notifications = DB::table('notification')
+                ->where(function($query) use ($userId) {
+                    $query->where('userid', $userId)
+                        ->orWhere('target_type', 'all');
+                })
+                ->orderBy('createdat', 'desc')
+                ->limit(10)
+                ->get();
+            
+            $unreadCount = DB::table('notification')
+                ->where('userid', $userId)
+                ->where('is_read', 0)
+                ->count();
+            
+            return response()->json([
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Notification dropdown error: ' . $e->getMessage());
+            
+            // Return empty data instead of error
+            return response()->json([
+                'notifications' => [],
+                'unread_count' => 0
+            ]);
+        }
     }
+
 
     public function getUnreadCount()
     {
-        $userid = Auth::user()->userid;
-        $unreadCount = Notification::getUnreadCountForUser($userid);
-
-        return response()->json([
-            'success' => true,
-            'unread_count' => $unreadCount
-        ]);
+        try {
+            $userId = auth()->id();
+            
+            $unreadCount = DB::table('notification')
+                ->where('userid', $userId)
+                ->where('is_read', 0)
+                ->count();
+            
+            return response()->json([
+                'unread_count' => $unreadCount
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Notification count error: ' . $e->getMessage());
+            
+            return response()->json([
+                'unread_count' => 0
+            ]);
+        }
     }
 
     public function markAsRead($id)
