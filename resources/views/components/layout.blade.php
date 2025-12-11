@@ -185,27 +185,7 @@
             <main class="bg-gray-200 flex-1">
                 {{ $hero ?? null }}
                 <div class="px-2 py-3 sm:px-3 lg:px-4">
-                    @error('duplicateClosing')
-                        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 dark:bg-gray-800 dark:text-red-400 w-fit">
-                            {{ $message }}
-                        </div>
-                    @enderror
-
-                    @if (session('success1'))
-                        <script>
-                            document.addEventListener("DOMContentLoaded", function() {
-                                alert("{{ session('success1') }}");
-                            });
-                        </script>
-                    @endif
-
-                    @if (session('error'))
-                        <script>
-                            document.addEventListener("DOMContentLoaded", function() {
-                                alert("{{ session('error') }}");
-                            });
-                        </script>
-                    @endif
+                    @include('errorfile')
 
                     {{ $slot }}
                 </div>

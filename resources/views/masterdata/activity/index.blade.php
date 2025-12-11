@@ -4,7 +4,7 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
     <div class="mx-auto py-4 bg-white shadow-md rounded-md">
-        @include('errorfile')
+        
         <div class="flex items-center justify-between mx-4 gap-2">
                 <button onclick="openCreateModal()"
                     class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">

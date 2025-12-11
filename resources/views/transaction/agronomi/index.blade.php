@@ -2,7 +2,7 @@
     <x-slot:title>{{ $title }}</x-slot>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
-    @include('errorfile')
+    
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="flex lg:justify-between items-end mx-4 gap-2 flex-wrap justify-center">
             @if (hasPermission('Create Agronomi'))

@@ -88,7 +88,7 @@
                     id="modal-title"
                     x-text="mode === 'edit' ? 'Edit Mandor' : 'Create Mandor'"
                   ></h3>
-                  @include('errorfile')
+                  
                   <div class="mt-4 space-y-4">
                   <template x-if="mode === 'edit'">
                     <div>

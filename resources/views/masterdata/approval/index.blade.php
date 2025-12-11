@@ -85,7 +85,7 @@
                 <h3 class="text-lg font-medium text-gray-900" id="modal-title"
                     x-text="mode==='edit' ? 'Edit Approval' : 'Create Approval'"></h3>
                 <div class="mt-4 space-y-4">
-                  @include('errorfile')
+                  
                   <div>
                     <label for="companycode" class="block text-sm font-medium text-gray-700">Company Code</label>
                     <select name="companycode" id="companycode" x-model="form.companycode" x-init="form.companycode = '{{ old('companycode') }}'"

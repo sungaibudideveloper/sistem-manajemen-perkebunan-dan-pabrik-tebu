@@ -3,7 +3,7 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
     <x-slot:navnav>{{ $title }}</x-slot:navnav>
-    @include('errorfile')
+    
     @if (session('error'))
         <div class="bg-red-500 text-white p-4 rounded mb-4">
             <p>{{ session('error') }}</p>
