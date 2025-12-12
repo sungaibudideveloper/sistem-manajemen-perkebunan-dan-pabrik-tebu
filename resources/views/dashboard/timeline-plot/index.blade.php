@@ -67,6 +67,7 @@
                 🗺️ Tampilan Map
                 </button>
             
+                
                 <div class="ml-auto flex items-center gap-3">
                     <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
                     <select 
@@ -251,9 +252,131 @@
         </div>
   
         <div x-show="activeTab==='map'" x-transition class="bg-white shadow-md rounded-lg p-6">
+            <!-- MAP SECTION (EXISTING) -->
             <h3 class="text-xl font-bold mb-4">Peta Lokasi Plot</h3>
             <div id="map" class="border border-gray-300 rounded-lg"></div>
+            
+
+
+            <!-- DATATABLE SECTION (BARU) -->
+            <div class="mt-8 border-t-2 border-gray-300 pt-8">
+                <h3 class="text-xl font-bold mb-4">📋 Detail Activities & LKH per Plot</h3>
+                
+                <!-- SECTION 1: Plot yang Ada di Map -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold mb-2 text-green-700">Plot yang Tampil di Map ({{ count($plotHeadersForMap) }} plot)</h4>
+                    <div style="overflow-x: auto;">
+                        <table class="w-full text-xs border-collapse border">
+                            <thead class="bg-green-700 text-white">
+                                <tr>
+                                    <th class="border p-2">Plot</th>
+                                    <th class="border p-2">Status</th>
+                                    <th class="border p-2">Umur</th>
+                                    <th class="border p-2">Luas RKH</th>
+                                    <th class="border p-2">Total Hasil</th>
+                                    <th class="border p-2">Progress</th>
+                                    <th class="border p-2">Activities</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php
+                                    // Hanya loop plot yang ada di map
+                                    $plotsInMap = collect($plotHeadersForMap)->pluck('plot')->toArray();
+                                @endphp
+                                
+                                @foreach($plotsInMap as $plotCode)
+                                    @php
+                                        $detail = $plotActivityDetails[$plotCode] ?? null;
+                                        if (!$detail) continue; // Skip kalau tidak ada data
+                                        
+                                        $umurText = ($detail['umur_hari'] ?? 0) > 0 ? ($detail['umur_hari'] . ' hari') : '-';
+                                        $avgPct = $detail['avg_percentage'] ?? 0;
+                                        $pctColor = $avgPct >= 100 ? 'text-green-600' : ($avgPct > 0 ? 'text-orange-600' : 'text-gray-500');
+                                    @endphp
+                                    
+                                    <tr class="hover:bg-green-50">
+                                        <td class="border p-2 font-bold">{{ $plotCode }}</td>
+                                        <td class="border p-2">
+                                            <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                                                {{ $detail['lifecyclestatus'] ?? '-' }}
+                                            </span>
+                                        </td>
+                                        <td class="border p-2">{{ $umurText }}</td>
+                                        <td class="border p-2 text-right">{{ number_format($detail['luas_rkh'] ?? 0, 2) }} HA</td>
+                                        <td class="border p-2 text-right">{{ number_format($detail['total_luas_hasil'] ?? 0, 2) }} HA</td>
+                                        <td class="border p-2 text-right font-bold {{ $pctColor }}">
+                                            {{ number_format($avgPct, 1) }}%
+                                        </td>
+                                        <td class="border p-2">
+                                            @if(count($detail['activities'] ?? []) > 0)
+                                                <details class="text-xs">
+                                                    <summary class="cursor-pointer text-blue-600 hover:text-blue-800">
+                                                        {{ count($detail['activities']) }} activities
+                                                    </summary>
+                                                    <div class="mt-2 space-y-1 pl-2">
+                                                        @foreach($detail['activities'] as $act)
+                                                            @php
+                                                                $actPct = $act['percentage'] ?? 0;
+                                                                $actColor = $actPct >= 100 ? 'text-green-600' : ($actPct > 0 ? 'text-orange-600' : 'text-gray-500');
+                                                            @endphp
+                                                            <div class="flex justify-between gap-2 py-1 border-b">
+                                                                <span class="text-gray-700">{{ $act['code'] }}</span>
+                                                                <span class="font-semibold {{ $actColor }}">{{ number_format($actPct, 1) }}%</span>
+                                                            </div>
+                                                            @if(count($act['lkh_details'] ?? []) > 0)
+                                                                <div class="pl-3 text-gray-500 space-y-0.5">
+                                                                    @foreach($act['lkh_details'] as $lkh)
+                                                                        <div class="flex justify-between text-xs">
+                                                                            <span>📄 {{ $lkh['lkhno'] }}</span>
+                                                                            <span>{{ number_format($lkh['luas_hasil'], 2) }} HA</span>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                </details>
+                                            @else
+                                                <span class="text-gray-400 italic">Tidak ada</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- SECTION 2: Plot yang Tidak di Map -->
+                @php
+                    // Ambil plot yang ada di plotHeaders tapi tidak ada di plotHeadersForMap
+                    $plotsInMap = collect($plotHeadersForMap)->pluck('plot')->toArray();
+                    $plotsNotInMap = $plotHeaders->whereNotIn('plot', $plotsInMap);
+                    $plotsNotInMapGrouped = $plotsNotInMap->groupBy(fn($item) => substr($item->plot, 0, 1));
+                @endphp
+                
+                @if($plotsNotInMap->count() > 0)
+                    <div class="mt-6 bg-gray-50 p-4 rounded border border-gray-300">
+                        <h4 class="text-sm font-semibold mb-3 text-gray-700">
+                            Plot Tidak Tampil di Map ({{ $plotsNotInMap->count() }} plot)
+                        </h4>
+                        <div class="space-y-2">
+                            @foreach($plotsNotInMapGrouped as $blok => $plots)
+                                <div class="text-xs">
+                                    <span class="font-bold text-gray-600">Blok {{ $blok }}:</span>
+                                    <span class="text-gray-500">
+                                        {{ $plots->pluck('plot')->implode(', ') }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+
         </div>
+        
   
     </div>
   
