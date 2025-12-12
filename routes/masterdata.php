@@ -239,11 +239,17 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
     // ============================================================================
     Route::middleware('permission:masterdata.tenagakerja.view')->group(function () {
         Route::get('tenagakerja', [TenagaKerjaController::class, 'index'])->name('tenagakerja.index');
+    });
+    Route::middleware('permission:masterdata.tenagakerja.create')->group(function () {
         Route::post('tenagakerja', [TenagaKerjaController::class, 'store'])->name('tenagakerja.store');
-        Route::match(['put', 'patch'], 'tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('tenagakerja.update');
-        Route::delete('tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('tenagakerja.destroy');
         Route::get('tenagakerja/download-template', [TenagaKerjaController::class, 'downloadTemplate'])->name('tenagakerja.download-template');
         Route::post('tenagakerja/bulk-upload', [TenagaKerjaController::class, 'bulkUpload'])->name('tenagakerja.bulk-upload');
+    });
+    Route::middleware('permission:masterdata.tenagakerja.edit')->group(function () {
+        Route::match(['put', 'patch'], 'tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'update'])->name('tenagakerja.update');
+    });
+    Route::middleware('permission:masterdata.tenagakerja.delete')->group(function () {
+        Route::delete('tenagakerja/{companycode}/{id}', [TenagaKerjaController::class, 'destroy'])->name('tenagakerja.destroy');
     });
 
     // ============================================================================
@@ -309,5 +315,4 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
     Route::middleware('permission:masterdata.subkontraktor.delete')->group(function () {
         Route::delete('subkontraktor/{companycode}/{id}', [SubkontraktorController::class, 'destroy'])->name('subkontraktor.destroy');
     });
-
 });

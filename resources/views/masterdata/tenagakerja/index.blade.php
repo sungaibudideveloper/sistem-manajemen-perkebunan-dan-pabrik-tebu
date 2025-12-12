@@ -31,7 +31,7 @@
         <strong class="font-bold">Peringatan Upload!</strong>
         <ul class="mt-2 list-disc list-inside text-sm">
             @foreach(session('upload_errors') as $error)
-                <li>{{ $error }}</li>
+            <li>{{ $error }}</li>
             @endforeach
         </ul>
         <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-yellow-200 rounded"
@@ -86,9 +86,10 @@
         <!-- Header Controls -->
         <div class="px-4 py-4 border-b border-gray-200">
             <div class="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-                
+
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap gap-2">
+                    @can('masterdata.tenagakerja.create')
                     <button @click="resetForm()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +98,8 @@
                         <span class="hidden sm:inline">Tambah Tenaga Kerja</span>
                         <span class="sm:hidden">Tambah</span>
                     </button>
-
+                    @endcan
+                    @can('masterdata.tenagakerja.create')
                     <button @click="openUpload = true"
                         class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 transition-colors duration-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,11 +108,12 @@
                         <span class="hidden sm:inline">Upload Excel</span>
                         <span class="sm:hidden">Upload</span>
                     </button>
+                    @endcan
                 </div>
 
                 <!-- Search and Controls -->
                 <div class="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-                    
+
                     <!-- Search Form -->
                     <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                         <label for="search" class="text-xs font-medium text-gray-700 whitespace-nowrap">Cari:</label>
@@ -120,15 +123,15 @@
                             class="text-xs w-full sm:w-48 md:w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                             onkeydown="if(event.key==='Enter') this.form.submit()" />
                         @if(request('search'))
-                            <a href="{{ route('masterdata.tenagakerja.index') }}" 
-                               class="text-gray-500 hover:text-gray-700 px-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </a>
+                        <a href="{{ route('masterdata.tenagakerja.index') }}"
+                            class="text-gray-500 hover:text-gray-700 px-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </a>
                         @endif
                         @if(request('perPage'))
-                            <input type="hidden" name="perPage" value="{{ request('perPage') }}">
+                        <input type="hidden" name="perPage" value="{{ request('perPage') }}">
                         @endif
                     </form>
 
@@ -143,7 +146,7 @@
                             <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100</option>
                         </select>
                         @if(request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
                     </form>
                 </div>
@@ -186,18 +189,19 @@
                             <td class="py-3 px-3 text-sm text-gray-700">{{ $item->jenis_nama ?: 'Unknown' }}</td>
                             <td class="py-3 px-3 text-center text-sm">
                                 @if($item->isactive == 1)
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Aktif
-                                    </span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Aktif
+                                </span>
                                 @else
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        Nonaktif
-                                    </span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Nonaktif
+                                </span>
                                 @endif
                             </td>
                             <td class="py-3 px-3">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
+                                    @can('masterdata.tenagakerja.edit')
                                     <button @click='editForm({
                                             id: "{{ $item->tenagakerjaid }}",
                                             name: "{{ $item->nama }}",
@@ -213,8 +217,9 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                     </button>
-
+                                    @endcan
                                     <!-- Delete Button -->
+                                    @can('masterdata.tenagakerja.delete')
                                     <form action="{{ route('masterdata.tenagakerja.destroy', [$item->companycode, $item->tenagakerjaid]) }}" method="POST"
                                         onsubmit="return confirm('Yakin ingin menonaktifkan {{ $item->nama }}?');" class="inline">
                                         @csrf
@@ -227,6 +232,7 @@
                                             </svg>
                                         </button>
                                     </form>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>
@@ -263,7 +269,7 @@
         <div x-show="openUpload" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
             @keydown.window.escape="openUpload = false">
             <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md">
-                
+
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-900">Upload Data Tenaga Kerja</h3>
@@ -286,8 +292,8 @@
                             <div class="flex-1">
                                 <h4 class="text-sm font-semibold text-blue-900 mb-1">Langkah 1: Download Template</h4>
                                 <p class="text-xs text-blue-700 mb-3">Download template Excel terlebih dahulu dan isi data sesuai format yang tersedia</p>
-                                <a href="{{ route('masterdata.tenagakerja.download-template') }}" 
-                                   class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                                <a href="{{ route('masterdata.tenagakerja.download-template') }}"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
@@ -300,7 +306,7 @@
                     <!-- Upload Form Section -->
                     <form action="{{ route('masterdata.tenagakerja.bulk-upload') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        
+
                         <div class="mb-6">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Langkah 2: Upload File Excel <span class="text-red-500">*</span>
@@ -355,7 +361,7 @@
         <div x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" x-cloak
             @keydown.window.escape="open = false">
             <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                
+
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-900" x-text="mode === 'create' ? 'Tambah Tenaga Kerja' : 'Edit Tenaga Kerja'"></h3>
@@ -379,8 +385,8 @@
                         <template x-if="mode === 'edit'">
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">ID Tenaga Kerja</label>
-                                <input type="text" x-model="form.id" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed" 
+                                <input type="text" x-model="form.id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
                                     readonly>
                             </div>
                         </template>
@@ -446,9 +452,9 @@
                         <template x-if="mode === 'edit'">
                             <div class="mb-6">
                                 <label class="flex items-center">
-                                    <input type="checkbox" name="isactive" 
-                                           :checked="form.isactive == 1" 
-                                           value="1" class="mr-2">
+                                    <input type="checkbox" name="isactive"
+                                        :checked="form.isactive == 1"
+                                        value="1" class="mr-2">
                                     <span class="text-sm font-medium text-gray-700">Status Aktif</span>
                                 </label>
                             </div>
@@ -472,7 +478,9 @@
     </div>
 
     <style>
-        [x-cloak] { display: none !important; }
+        [x-cloak] {
+            display: none !important;
+        }
     </style>
 
 </x-layout>
