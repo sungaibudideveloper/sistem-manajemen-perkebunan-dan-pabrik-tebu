@@ -93,7 +93,7 @@
             
             @if(request()->hasAny(['search','start_date','end_date']) || request('perPage') != 15)
               <a 
-                href="{{ url()->current() }}" 
+                href="{{ route('transaction.pias.index') }}" 
                 class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium text-center"
               >
                 Reset
@@ -126,7 +126,7 @@
               <tr> 
                 <td class="py-2 px-4 border border-gray-300 text-lg text-center">{{ $loop->iteration }}</td>
                 <td class="py-2 px-4 border border-gray-300">
-                  <a href="#" onclick="location.href='{{ url('transaction/pias/detail?rkhno='.$item->rkhno) }}'" target="_blank" class="text-blue-600 hover:underline">
+                  <a href="{{ route('transaction.pias.detail', ['rkhno' => $item->rkhno]) }}" target="_blank" class="text-blue-600 hover:underline">
                     {{ $item->rkhno }}  
                     @if($item->is_generated)
                     <span class="inline-block px-2 py-1 text-xs font-semibold text-white rounded-full bg-green-600">

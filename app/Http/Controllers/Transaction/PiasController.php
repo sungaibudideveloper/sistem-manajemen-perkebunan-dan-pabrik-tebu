@@ -51,6 +51,7 @@ class PiasController extends Controller
                 $join->on('ph.rkhno', '=', 'rkhhdr.rkhno')
                      ->on('ph.companycode', '=', 'rkhhdr.companycode');
             })
+            ->where('rkhhdr.companycode', auth()->user()->companycode)
             ->where('rkhhdr.approvalstatus', 1)
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -96,8 +97,12 @@ class PiasController extends Controller
         $piashdr = new piashdr;
         $piaslst = new piaslst;
 
-        $hdr = $piashdr->where('rkhno', $request->input('rkhno'))->first();
-        $lst = $piaslst->where('rkhno', $request->input('rkhno'))->get();
+        $hdr = $piashdr->where('rkhno', $request->input('rkhno'))
+                        ->where('companycode', auth()->user()->companycode)
+                        ->first();
+        $lst = $piaslst->where('rkhno', $request->input('rkhno'))
+                        ->where('companycode', auth()->user()->companycode)
+                        ->get();
 
         $data = $rkhhdr
         ->leftJoin('user as u', 'u.userid', '=', 'rkhhdr.mandorid')
@@ -121,6 +126,7 @@ class PiasController extends Controller
                  ->on('batch.batchno', '=', 'masterlist.activebatchno');
         })
         ->where('rkhhdr.rkhno', $request->input('rkhno'))
+        ->where('rkhhdr.companycode', auth()->user()->companycode)
         ->where('rkhhdr.approvalstatus', 1)
         ->select(
             'rkhhdr.*', 
