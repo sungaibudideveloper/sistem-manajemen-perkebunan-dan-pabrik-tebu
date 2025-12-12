@@ -41,8 +41,6 @@ class HomeController extends Controller
             session(['companyname' => $companyName]);
         }
 
-        $this->h_flash('Company berhasil dipilih', 'success');
-
         return url()->previous() ? redirect()->back() : redirect()->route('home');
     }
 }
