@@ -51,7 +51,7 @@ class PiasController extends Controller
                 $join->on('ph.rkhno', '=', 'rkhhdr.rkhno')
                      ->on('ph.companycode', '=', 'rkhhdr.companycode');
             })
-            ->where('rkhhdr.companycode', auth()->user()->companycode)
+            ->where('rkhhdr.companycode', session('companycode'))
             ->where('rkhhdr.approvalstatus', 1)
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -98,10 +98,10 @@ class PiasController extends Controller
         $piaslst = new piaslst;
 
         $hdr = $piashdr->where('rkhno', $request->input('rkhno'))
-                        ->where('companycode', auth()->user()->companycode)
+                        ->where('companycode', session('companycode'))
                         ->first();
         $lst = $piaslst->where('rkhno', $request->input('rkhno'))
-                        ->where('companycode', auth()->user()->companycode)
+                        ->where('companycode', session('companycode'))
                         ->get();
 
         $data = $rkhhdr
@@ -126,7 +126,7 @@ class PiasController extends Controller
                  ->on('batch.batchno', '=', 'masterlist.activebatchno');
         })
         ->where('rkhhdr.rkhno', $request->input('rkhno'))
-        ->where('rkhhdr.companycode', auth()->user()->companycode)
+        ->where('rkhhdr.companycode', session('companycode'))
         ->where('rkhhdr.approvalstatus', 1)
         ->select(
             'rkhhdr.*', 
@@ -212,7 +212,7 @@ class PiasController extends Controller
     $validMap = array_flip($validKeys);
 
     // Ambil companycode
-    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', auth()->user()->companycode)->value('companycode');
+    $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', session('companycode'))->value('companycode');
 
     // 4) Simpan dalam transaksi
     return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC) {
@@ -476,7 +476,7 @@ class PiasController extends Controller
                 return back()->withErrors(['data' => 'Data plot untuk RKH ini tidak ditemukan / belum di-approve.'])->withInput();
             }
 
-            $companycode = $rowsDb->first()->companycode ?? (auth()->user()->companycode ?? 'DEFAULT');
+            $companycode = $rowsDb->first()->companycode ?? (session('companycode') ?? 'DEFAULT');
 
             // --- PERSENTASE PER BULAN ---
             $pcts = [
