@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\MasterData;
 use App\Http\Controllers\Controller;
 
-use App\Models\Activity;
-use App\Models\ActivityGroup;
-use App\Models\Blok;
+use App\Models\MasterData\Activity;
+use App\Models\MasterData\ActivityGroup;
+use App\Models\MasterData\Blok;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;

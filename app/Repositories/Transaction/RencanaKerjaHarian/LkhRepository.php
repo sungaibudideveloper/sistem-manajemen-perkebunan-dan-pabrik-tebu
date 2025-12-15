@@ -3,21 +3,77 @@
 namespace App\Repositories\Transaction\RencanaKerjaHarian;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * LkhRepository
  * 
- * Handles all database queries related to LKH (Laporan Kegiatan Harian)
- * Uses surrogate ID for all joins
+ * Handles LKH (lkhhdr + lkhdetail*) database operations.
+ * RULE: All LKH queries here. Batch-load methods for N+1 prevention.
  */
 class LkhRepository
 {
-        /**
-     * Get LKH list for specific RKH
+    /**
+     * Get LKH header with approval metadata
+     * Used in: show page
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return object|null
      */
-    public function getLkhByRkhNo(string $companycode, string $rkhno): Collection
+    public function getHeaderForShow($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                     ->where('app.companycode', '=', $companycode);
+            })
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3'
+            ])
+            ->first();
+    }
+
+    /**
+     * Get LKH header for edit
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return object|null
+     */
+    public function getHeaderForEdit($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandornama',
+                'a.activityname'
+            ])
+            ->first();
+    }
+
+    /**
+     * List all LKH for specific RKH
+     * Returns: lkhno, activitycode, status, workers, etc.
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function listByRkhNo($companycode, $rkhno)
     {
         return DB::table('lkhhdr as h')
             ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
@@ -28,7 +84,6 @@ class LkhRepository
             ->where('h.companycode', $companycode)
             ->where('h.rkhno', $rkhno)
             ->select([
-                'h.id',
                 'h.lkhno',
                 'h.activitycode',
                 'a.activityname',
@@ -54,69 +109,73 @@ class LkhRepository
     }
 
     /**
-     * Get LKH header by surrogate ID
+     * Batch-load: Get plots grouped by lkhno
+     * Input: array of lkhno
+     * Output: Collection grouped by lkhno
+     * 
+     * @param string $companycode
+     * @param array $lkhNos
+     * @return \Illuminate\Support\Collection
      */
-    public function findById(int $id): ?object
+    public function getPlotsByLkhNos($companycode, array $lkhNos)
     {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->on('h.companycode', '=', 'app.companycode');
-            })
-            ->where('h.id', $id)
-            ->select([
-                'h.*',
-                'm.name as mandornama',
-                'a.activityname',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3'
-            ])
-            ->first();
+        return DB::table('lkhdetailplot')
+            ->where('companycode', $companycode)
+            ->whereIn('lkhno', $lkhNos)
+            ->select('lkhno', 'blok', 'plot', 'luasrkh')
+            ->get()
+            ->groupBy('lkhno');
     }
 
     /**
-     * Get LKH header by business key
+     * Batch-load: Get workers count grouped by lkhno
+     * 
+     * @param string $companycode
+     * @param array $lkhNos
+     * @return \Illuminate\Support\Collection
      */
-    public function findByLkhNo(string $companycode, string $lkhno): ?object
+    public function getWorkersCountByLkhNos($companycode, array $lkhNos)
     {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select([
-                'h.*',
-                'm.name as mandornama',
-                'a.activityname',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3'
-            ])
-            ->first();
+        return DB::table('lkhdetailworker')
+            ->where('companycode', $companycode)
+            ->whereIn('lkhno', $lkhNos)
+            ->select('lkhno', DB::raw('COUNT(*) as count'))
+            ->groupBy('lkhno')
+            ->pluck('count', 'lkhno');
     }
 
     /**
-     * ✅ FIXED: Get LKH plot details - JOIN menggunakan surrogate ID
+     * Batch-load: Get materials count grouped by lkhno
+     * 
+     * @param string $companycode
+     * @param array $lkhNos
+     * @return \Illuminate\Support\Collection
      */
-    public function getPlotDetails(string $companycode, string $lkhno): Collection
+    public function getMaterialsCountByLkhNos($companycode, array $lkhNos)
+    {
+        return DB::table('lkhdetailmaterial')
+            ->where('companycode', $companycode)
+            ->whereIn('lkhno', $lkhNos)
+            ->select('lkhno', DB::raw('COUNT(*) as count'))
+            ->groupBy('lkhno')
+            ->pluck('count', 'lkhno');
+    }
+
+    /**
+     * Get plot details for show (normal activity)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getPlotDetailsForShow($companycode, $lkhno)
     {
         return DB::table('lkhdetailplot as ldp')
-            // ✅ FIXED: Use batchid instead of batchno
             ->leftJoin('batch as b', 'ldp.batchid', '=', 'b.id')
             ->where('ldp.companycode', $companycode)
             ->where('ldp.lkhno', $lkhno)
             ->select([
                 'ldp.*',
-                'b.batchno',
                 'b.lifecyclestatus',
                 'b.batcharea',
                 'b.tanggalpanen'
@@ -127,22 +186,25 @@ class LkhRepository
     }
 
     /**
-     * Get LKH worker details
+     * Get worker details for show
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
      */
-    public function getWorkerDetails(string $companycode, string $lkhno): Collection
+    public function getWorkerDetailsForShow($companycode, $lkhno)
     {
         return DB::table('lkhdetailworker as ldw')
             ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
                 $join->on('ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
-                     ->where('tk.companycode', '=', $companycode);
+                    ->where('tk.companycode', '=', $companycode);
             })
             ->where('ldw.companycode', $companycode)
             ->where('ldw.lkhno', $lkhno)
             ->select([
                 'ldw.*',
-                'tk.nama as tenagakerja_nama',
+                'tk.nama',
                 'tk.nik',
-                'tk.gender',
                 'tk.jenistenagakerja'
             ])
             ->orderBy('ldw.tenagakerjaurutan')
@@ -150,111 +212,172 @@ class LkhRepository
     }
 
     /**
-     * Get LKH material details
+     * Get material details for show
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
      */
-    public function getMaterialDetails(string $companycode, string $lkhno): Collection
+    public function getMaterialDetailsForShow($companycode, $lkhno)
     {
         return DB::table('lkhdetailmaterial as ldm')
             ->leftJoin('herbisida as h', function($join) use ($companycode) {
                 $join->on('ldm.itemcode', '=', 'h.itemcode')
-                     ->where('h.companycode', '=', $companycode);
+                    ->where('h.companycode', '=', $companycode);
             })
             ->where('ldm.companycode', $companycode)
             ->where('ldm.lkhno', $lkhno)
             ->select([
-                'ldm.*',
+                'ldm.id',
+                'ldm.plot',
+                'ldm.itemcode',
+                'ldm.qtyditerima',
+                'ldm.qtysisa', 
+                'ldm.qtydigunakan',
+                'ldm.keterangan',
+                'ldm.inputby',
+                'ldm.createdat',
+                'ldm.updatedat',
                 'h.itemname',
-                'h.measure',
-                'h.jenis'
+                'h.measure as satuan'
             ])
             ->orderBy('ldm.plot')
             ->orderBy('ldm.itemcode')
-            ->get();
+            ->get()
+            ->map(function($material) {
+                return (object)[
+                    'id' => $material->id,
+                    'plot' => (string)($material->plot ?? '-'),
+                    'itemcode' => (string)($material->itemcode ?? ''),
+                    'itemname' => (string)($material->itemname ?? 'Unknown Item'),
+                    'qtyditerima' => floatval($material->qtyditerima ?? 0),
+                    'qtysisa' => floatval($material->qtysisa ?? 0),
+                    'qtydigunakan' => floatval($material->qtydigunakan ?? 0),
+                    'satuan' => (string)($material->satuan ?? '-'),
+                    'keterangan' => (string)($material->keterangan ?? ''),
+                    'inputby' => (string)($material->inputby ?? ''),
+                    'createdat' => $material->createdat,
+                    'updatedat' => $material->updatedat,
+                ];
+            });
     }
 
     /**
-     * ✅ FIXED: Get LKH kendaraan details - JOIN menggunakan surrogate ID
-     */
-    public function getKendaraanDetails(string $companycode, string $lkhno): Collection
-    {
-        return DB::table('lkhdetailkendaraan as ldk')
-            // ✅ FIXED: Use kendaraanid instead of nokendaraan
-            ->leftJoin('kendaraan as k', 'ldk.kendaraanid', '=', 'k.id')
-            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
-                $join->on('ldk.operatorid', '=', 'tk.tenagakerjaid')
-                     ->where('tk.companycode', '=', $companycode);
-            })
-            ->where('ldk.companycode', $companycode)
-            ->where('ldk.lkhno', $lkhno)
-            ->select([
-                'ldk.*',
-                'k.nokendaraan',
-                'k.jenis as kendaraan_jenis',
-                'tk.nama as operator_nama',
-                'tk.nik as operator_nik'
-            ])
-            ->get();
-    }
-
-    /**
-     * ✅ FIXED: Get LKH BSM details - JOIN menggunakan surrogate ID
-     */
-    public function getBsmDetails(string $companycode, string $lkhno): Collection
-    {
-        return DB::table('lkhdetailbsm as ldb')
-            // ✅ FIXED: Use batchid instead of batchno
-            ->leftJoin('batch as b', 'ldb.batchid', '=', 'b.id')
-            ->where('ldb.companycode', $companycode)
-            ->where('ldb.lkhno', $lkhno)
-            ->select([
-                'ldb.*',
-                'b.batchno',
-                'b.lifecyclestatus'
-            ])
-            ->orderBy('ldb.plot')
-            ->get();
-    }
-
-    /**
-     * Get LKH panen details with batch calculations (STC, HC, BC)
+     * Get BSM details for show
      * 
      * @param string $companycode
      * @param string $lkhno
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getPanenDetails(string $companycode, string $lkhno): Collection
+    public function getBsmDetailsForShow($companycode, $lkhno)
     {
-        $lkhDate = $this->getLkhDate($companycode, $lkhno);
+        return DB::table('lkhdetailbsm as bsm')
+            ->leftJoin('batch as b', function($join) use ($companycode) {
+                $join->on('bsm.batchno', '=', 'b.batchno')
+                    ->where('b.companycode', '=', $companycode);
+            })
+            ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
+                $join->on('bsm.companycode', '=', 'ldp.companycode')
+                    ->on('bsm.lkhno', '=', 'ldp.lkhno')
+                    ->on('bsm.plot', '=', 'ldp.plot');
+            })
+            ->where('bsm.companycode', $companycode)
+            ->where('bsm.lkhno', $lkhno)
+            ->select([
+                'bsm.id',
+                'bsm.suratjalanno',
+                'ldp.blok',
+                'bsm.plot',
+                'bsm.kodetebang',
+                'bsm.batchno',
+                'bsm.nilaibersih',
+                'bsm.nilaisegar',
+                'bsm.nilaimanis',
+                'bsm.averagescore',
+                'bsm.grade',
+                'bsm.keterangan',
+                'bsm.inputby',
+                'bsm.createdat',
+                'bsm.updateby',
+                'bsm.updatedat',
+                'b.lifecyclestatus as kodestatus',
+                'b.batcharea',
+                'ldp.luasrkh'
+            ])
+            ->orderBy('ldp.blok')
+            ->orderBy('bsm.plot')
+            ->orderBy('bsm.suratjalanno')
+            ->get()
+            ->map(function($item) {
+                return (object)[
+                    'id' => $item->id,
+                    'suratjalanno' => $item->suratjalanno,
+                    'blok' => $item->blok ?? '-',
+                    'plot' => $item->plot,
+                    'plot_display' => $item->plot,
+                    'kodetebang' => $item->kodetebang ?? '-',
+                    'kodetebang_label' => stripos($item->kodetebang ?? '', 'premium') !== false ? 'Premium' : 'Non-Premium',
+                    'batchno' => $item->batchno ?? '-',
+                    'kodestatus' => $item->kodestatus ?? '-',
+                    'batcharea' => number_format((float)($item->batcharea ?? 0), 2),
+                    'luasrkh' => number_format((float)($item->luasrkh ?? 0), 2),
+                    'nilaibersih' => $item->nilaibersih ? number_format((float)$item->nilaibersih, 2) : null,
+                    'nilaisegar' => $item->nilaisegar ? number_format((float)$item->nilaisegar, 2) : null,
+                    'nilaimanis' => $item->nilaimanis ? number_format((float)$item->nilaimanis, 2) : null,
+                    'averagescore' => $item->averagescore ? number_format((float)$item->averagescore, 2) : null,
+                    'grade' => $item->grade ?? null,
+                    'status' => $item->averagescore ? 'COMPLETED' : 'PENDING',
+                    'keterangan' => $item->keterangan ?? '-',
+                    'inputby' => $item->inputby ?? '-',
+                    'createdat' => $item->createdat ? \Carbon\Carbon::parse($item->createdat)->format('d/m/Y H:i') : '-',
+                    'updateby' => $item->updateby ?? '-',
+                    'updatedat' => $item->updatedat ? \Carbon\Carbon::parse($item->updatedat)->format('d/m/Y H:i') : '-',
+                ];
+            });
+    }
+
+    /**
+     * Get panen details for show (with STC/BC calculations)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getPanenDetailsForShow($companycode, $lkhno)
+    {
+        $lkhDate = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->value('lkhdate');
         
         return DB::table('lkhdetailplot as ldp')
-            ->leftJoin('batch as b', function($join) use ($companycode) {
-                $join->on('ldp.batchid', '=', 'b.id')
-                     ->where('b.companycode', '=', $companycode);
-            })
+            ->leftJoin('batch as b', 'ldp.batchid', '=', 'b.id')
             ->where('ldp.companycode', $companycode)
             ->where('ldp.lkhno', $lkhno)
             ->select([
                 'ldp.plot',
                 'ldp.blok',
+                'ldp.batchno',
                 'ldp.luasrkh',
                 'ldp.luashasil',
                 'ldp.createdat',
                 'ldp.fieldbalancerit',
                 'ldp.fieldbalanceton',
-                'b.batchno',
                 'b.batcharea',
                 'b.tanggalpanen',
                 'b.lifecyclestatus as kodestatus',
                 
-                // STC calculation (Standing To Cut)
+                // STC calculation
                 DB::raw("(
                     COALESCE(b.batcharea, 0) - 
                     COALESCE((
                         SELECT SUM(ldp2.luashasil)
                         FROM lkhdetailplot ldp2
-                        JOIN lkhhdr lh2 ON ldp2.lkhhdrid = lh2.id
+                        JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno 
+                                        AND ldp2.companycode = lh2.companycode
                         WHERE ldp2.companycode = ldp.companycode
-                        AND ldp2.batchid = ldp.batchid
+                        AND ldp2.batchno = ldp.batchno
+                        AND ldp2.batchno IS NOT NULL
                         AND lh2.approvalstatus = '1'
                         AND lh2.lkhdate < '{$lkhDate}'
                     ), 0)
@@ -262,23 +385,25 @@ class LkhRepository
                 
                 DB::raw('COALESCE(ldp.luashasil, 0) as hc'),
                 
-                // BC calculation (Balance to Cut)
+                // BC calculation
                 DB::raw("(
                     (
                         COALESCE(b.batcharea, 0) - 
                         COALESCE((
                             SELECT SUM(ldp2.luashasil)
                             FROM lkhdetailplot ldp2
-                            JOIN lkhhdr lh2 ON ldp2.lkhhdrid = lh2.id
+                            JOIN lkhhdr lh2 ON ldp2.lkhno = lh2.lkhno 
+                                            AND ldp2.companycode = lh2.companycode
                             WHERE ldp2.companycode = ldp.companycode
-                            AND ldp2.batchid = ldp.batchid
+                            AND ldp2.batchno = ldp.batchno
+                            AND ldp2.batchno IS NOT NULL
                             AND lh2.approvalstatus = '1'
                             AND lh2.lkhdate < '{$lkhDate}'
                         ), 0)
                     ) - COALESCE(ldp.luashasil, 0)
                 ) as bc"),
                 
-                // Hari Tebang
+                // Hari Tebang dengan fallback
                 DB::raw("CASE 
                     WHEN b.tanggalpanen IS NULL THEN 1
                     ELSE DATEDIFF('{$lkhDate}', b.tanggalpanen) + 1
@@ -290,18 +415,18 @@ class LkhRepository
     }
 
     /**
-     * Get kontraktor summary for LKH Panen
+     * Get kontraktor summary for LKH panen
      * 
      * @param string $companycode
      * @param string $lkhno
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getKontraktorSummary(string $companycode, string $lkhno): Collection
+    public function getKontraktorSummaryForLkh($companycode, $lkhno)
     {
         return DB::table('suratjalanpos as sjp')
             ->leftJoin('kontraktor as k', function($join) use ($companycode) {
                 $join->on('sjp.namakontraktor', '=', 'k.id')
-                     ->where('k.companycode', '=', $companycode);
+                    ->where('k.companycode', '=', $companycode);
             })
             ->where('sjp.companycode', $companycode)
             ->where('sjp.suratjalanno', 'LIKE', "%-{$lkhno}-%")
@@ -318,27 +443,27 @@ class LkhRepository
     }
 
     /**
-     * Get subkontraktor detail per plot for LKH Panen
+     * Get subkontraktor detail for LKH panen
      * 
      * @param string $companycode
      * @param string $lkhno
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getSubkontraktorDetail(string $companycode, string $lkhno): Collection
+    public function getSubkontraktorDetailForLkh($companycode, $lkhno)
     {
         return DB::table('suratjalanpos as sjp')
             ->join('lkhdetailplot as ldp', function($join) use ($companycode, $lkhno) {
                 $join->on('sjp.plot', '=', 'ldp.plot')
-                     ->where('ldp.companycode', '=', $companycode)
-                     ->where('ldp.lkhno', '=', $lkhno);
+                    ->where('ldp.companycode', '=', $companycode)
+                    ->where('ldp.lkhno', '=', $lkhno);
             })
             ->leftJoin('kontraktor as k', function($join) use ($companycode) {
                 $join->on('sjp.namakontraktor', '=', 'k.id')
-                     ->where('k.companycode', '=', $companycode);
+                    ->where('k.companycode', '=', $companycode);
             })
             ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
                 $join->on('sjp.namasubkontraktor', '=', 'sk.id')
-                     ->where('sk.companycode', '=', $companycode);
+                    ->where('sk.companycode', '=', $companycode);
             })
             ->where('sjp.companycode', $companycode)
             ->where('sjp.suratjalanno', 'LIKE', "%-{$lkhno}-%")
@@ -365,16 +490,20 @@ class LkhRepository
     }
 
     /**
-     * Get ongoing plots for mandor (panen in progress, not in current LKH)
+     * Get ongoing plots for mandor (not in current LKH)
      * 
      * @param string $companycode
      * @param string $lkhno
      * @param string $mandorid
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getOngoingPlotsForMandor(string $companycode, string $lkhno, string $mandorid): Collection
+    public function getOngoingPlotsForMandor($companycode, $lkhno, $mandorid)
     {
-        $lkhDate = $this->getLkhDate($companycode, $lkhno);
+        // Get LKH date for reference
+        $lkhDate = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->value('lkhdate');
         
         // Get plots in current LKH (to exclude)
         $currentLkhPlots = DB::table('lkhdetailplot')
@@ -383,27 +512,27 @@ class LkhRepository
             ->pluck('plot')
             ->toArray();
         
-        return DB::table('masterlist as m')
+        // Query ongoing plots for this mandor
+        $ongoingPlots = DB::table('masterlist as m')
             ->join('batch as b', function($join) use ($companycode) {
                 $join->on('m.activebatchno', '=', 'b.batchno')
-                     ->where('b.companycode', '=', $companycode);
+                    ->where('b.companycode', '=', $companycode);
             })
             ->leftJoin(DB::raw('(
                 SELECT 
                     ldp.plot,
-                    b2.batchno,
+                    ldp.batchno,
                     SUM(ldp.luashasil) as total_dipanen,
                     MAX(lh.lkhdate) as last_harvest_date
                 FROM lkhdetailplot ldp
-                JOIN lkhhdr lh ON ldp.lkhhdrid = lh.id
-                JOIN batch b2 ON ldp.batchid = b2.id
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno AND ldp.companycode = lh.companycode
                 WHERE ldp.companycode = "' . $companycode . '"
                     AND lh.mandorid = "' . $mandorid . '"
                     AND lh.approvalstatus = "1"
-                GROUP BY ldp.plot, b2.batchno
+                GROUP BY ldp.plot, ldp.batchno
             ) as harvest_summary'), function($join) {
                 $join->on('m.plot', '=', 'harvest_summary.plot')
-                     ->on('b.batchno', '=', 'harvest_summary.batchno');
+                    ->on('b.batchno', '=', 'harvest_summary.batchno');
             })
             ->where('m.companycode', $companycode)
             ->where('m.isactive', 1)
@@ -427,502 +556,213 @@ class LkhRepository
             ->orderBy('m.blok')
             ->orderBy('m.plot')
             ->get();
-    }
-
-    /**
-     * Get surat jalan list for plot and subkontraktor
-     * 
-     * @param string $companycode
-     * @param string $plot
-     * @param string $subkontraktorId
-     * @param string $lkhno
-     * @return Collection
-     */
-    public function getSuratJalanByPlot(string $companycode, string $plot, string $subkontraktorId, string $lkhno): Collection
-    {
-        $lkhDate = $this->getLkhDate($companycode, $lkhno);
         
-        return DB::table('suratjalanpos as sj')
-            ->leftJoin('timbanganpayload as tp', function($join) use ($companycode) {
-                $join->on('sj.companycode', '=', 'tp.companycode')
-                     ->on('sj.suratjalanno', '=', 'tp.suratjalanno');
-            })
-            ->leftJoin('subkontraktor as sk', function($join) use ($companycode) {
-                $join->on('sj.namasubkontraktor', '=', 'sk.id')
-                     ->where('sk.companycode', '=', $companycode);
-            })
-            ->where('sj.companycode', $companycode)
-            ->where('sj.plot', $plot)
-            ->where('sj.namasubkontraktor', $subkontraktorId)
-            ->whereDate('sj.tanggalcetakpossecurity', $lkhDate)
-            ->select([
-                'sj.suratjalanno',
-                'sj.tanggalcetakpossecurity',
-                'sk.namasubkontraktor',
-                DB::raw('CASE WHEN tp.suratjalanno IS NULL THEN "Pending" ELSE "Sudah Timbang" END as status')
-            ])
-            ->orderBy('sj.tanggalcetakpossecurity', 'desc')
-            ->get();
+        return $ongoingPlots->map(function($plot) {
+            return (object)[
+                'plot' => $plot->plot,
+                'blok' => $plot->blok,
+                'batchno' => $plot->batchno,
+                'batcharea' => number_format((float)$plot->batcharea, 2),
+                'tanggalpanen' => $plot->tanggalpanen ? \Carbon\Carbon::parse($plot->tanggalpanen)->format('d/m/Y') : '-',
+                'kodestatus' => $plot->kodestatus,
+                'total_dipanen' => number_format((float)$plot->total_dipanen, 2),
+                'sisa' => number_format((float)$plot->sisa, 2),
+                'last_harvest_date' => $plot->last_harvest_date ? \Carbon\Carbon::parse($plot->last_harvest_date)->format('d/m/Y') : '-',
+                'days_since_harvest' => (int)$plot->days_since_harvest
+            ];
+        });
     }
 
     /**
-     * Create LKH header
-     * 
-     * @param array $data
-     * @return int (inserted ID)
-     */
-    public function create(array $data): int
-    {
-        return DB::table('lkhhdr')->insertGetId($data);
-    }
-
-    /**
-     * Update LKH header by ID
-     * 
-     * @param int $id
-     * @param array $data
-     * @return bool
-     */
-    public function update(int $id, array $data): bool
-    {
-        return DB::table('lkhhdr')
-            ->where('id', $id)
-            ->update($data);
-    }
-
-    /**
-     * Update LKH header by lkhno
+     * Get plot details for edit
      * 
      * @param string $companycode
      * @param string $lkhno
-     * @param array $data
-     * @return bool
+     * @return \Illuminate\Support\Collection
      */
-    public function updateByLkhNo(string $companycode, string $lkhno, array $data): bool
-    {
-        return DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->update($data);
-    }
-
-    /**
-     * Delete LKH by ID (cascade handled by foreign keys)
-     * 
-     * @param int $id
-     * @return bool
-     */
-    public function delete(int $id): bool
-    {
-        return DB::table('lkhhdr')
-            ->where('id', $id)
-            ->delete();
-    }
-
-    /**
-     * Create LKH plot details
-     * 
-     * @param array $plots
-     * @return bool
-     */
-    public function createPlotDetails(array $plots): bool
-    {
-        if (empty($plots)) {
-            return true;
-        }
-
-        // Validate surrogate IDs
-        foreach ($plots as $plot) {
-            if (isset($plot['batchno']) && !isset($plot['batchid'])) {
-                \Log::warning('Creating lkhdetailplot without batchid', $plot);
-            }
-            if (!isset($plot['lkhhdrid'])) {
-                \Log::warning('Creating lkhdetailplot without lkhhdrid', $plot);
-            }
-        }
-
-        return DB::table('lkhdetailplot')->insert($plots);
-    }
-
-    /**
-     * Delete LKH plot details by lkhno
-     * 
-     * @param string $companycode
-     * @param string $lkhno
-     * @return int
-     */
-    public function deletePlotDetails(string $companycode, string $lkhno): int
+    public function getPlotDetailsForEdit($companycode, $lkhno)
     {
         return DB::table('lkhdetailplot')
             ->where('companycode', $companycode)
             ->where('lkhno', $lkhno)
-            ->delete();
-    }
-
-    /**
-     * Create LKH worker details
-     * 
-     * @param array $workers
-     * @return bool
-     */
-    public function createWorkerDetails(array $workers): bool
-    {
-        if (empty($workers)) {
-            return true;
-        }
-
-        // Validate lkhhdrid
-        foreach ($workers as $worker) {
-            if (!isset($worker['lkhhdrid'])) {
-                \Log::warning('Creating lkhdetailworker without lkhhdrid', $worker);
-            }
-        }
-
-        return DB::table('lkhdetailworker')->insert($workers);
-    }
-
-    /**
-     * Delete LKH worker details by lkhno
-     * 
-     * @param string $companycode
-     * @param string $lkhno
-     * @return int
-     */
-    public function deleteWorkerDetails(string $companycode, string $lkhno): int
-    {
-        return DB::table('lkhdetailworker')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->delete();
-    }
-
-    /**
-     * Create LKH material details
-     * 
-     * @param array $materials
-     * @return bool
-     */
-    public function createMaterialDetails(array $materials): bool
-    {
-        if (empty($materials)) {
-            return true;
-        }
-
-        // Validate lkhhdrid
-        foreach ($materials as $material) {
-            if (!isset($material['lkhhdrid'])) {
-                \Log::warning('Creating lkhdetailmaterial without lkhhdrid', $material);
-            }
-        }
-
-        return DB::table('lkhdetailmaterial')->insert($materials);
-    }
-
-    public function createKendaraanDetails(array $kendaraan): bool
-    {
-        if (empty($kendaraan)) {
-            return true;
-        }
-
-        // Validate surrogate IDs
-        foreach ($kendaraan as $k) {
-            if (isset($k['nokendaraan']) && !isset($k['kendaraanid'])) {
-                \Log::warning('Creating lkhdetailkendaraan without kendaraanid', $k);
-            }
-            if (!isset($k['lkhhdrid'])) {
-                \Log::warning('Creating lkhdetailkendaraan without lkhhdrid', $k);
-            }
-        }
-
-        return DB::table('lkhdetailkendaraan')->insert($kendaraan);
-    }
-
-    /**
-     * Delete kendaraan details
-     */
-    public function deleteKendaraanDetails(string $companycode, string $lkhno): int
-    {
-        return DB::table('lkhdetailkendaraan')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->delete();
-    }
-
-    /**
-     * Delete LKH material details by lkhno
-     * 
-     * @param string $companycode
-     * @param string $lkhno
-     * @return int
-     */
-    public function deleteMaterialDetails(string $companycode, string $lkhno): int
-    {
-        return DB::table('lkhdetailmaterial')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->delete();
-    }
-
-    /**
-     * Get LKH numbers for specific date
-     * 
-     * @param string $companycode
-     * @param string $date
-     * @return array
-     */
-    public function getLkhNumbersByDate(string $companycode, string $date): array
-    {
-        return DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->whereDate('lkhdate', $date)
-            ->pluck('lkhno')
-            ->unique()
-            ->values()
-            ->toArray();
-    }
-
-    /**
-     * Check if LKH exists
-     * 
-     * @param string $companycode
-     * @param string $lkhno
-     * @return bool
-     */
-    public function exists(string $companycode, string $lkhno): bool
-    {
-        return DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->exists();
-    }
-
-    /**
-     * Get pending approvals for specific jabatan
-     * 
-     * @param string $companycode
-     * @param int $jabatanId
-     * @return Collection
-     */
-    public function getPendingApprovals(string $companycode, int $jabatanId): Collection
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->where('h.companycode', $companycode)
-            ->where('h.issubmit', 1)
-            ->where(function($query) use ($jabatanId) {
-                $query->where(function($q) use ($jabatanId) {
-                    // Level 1 approval
-                    $q->where('h.approval1idjabatan', $jabatanId)
-                      ->whereNull('h.approval1flag');
-                })->orWhere(function($q) use ($jabatanId) {
-                    // Level 2 approval
-                    $q->where('h.approval2idjabatan', $jabatanId)
-                      ->where('h.approval1flag', '1')
-                      ->whereNull('h.approval2flag');
-                })->orWhere(function($q) use ($jabatanId) {
-                    // Level 3 approval
-                    $q->where('h.approval3idjabatan', $jabatanId)
-                      ->where('h.approval1flag', '1')
-                      ->where('h.approval2flag', '1')
-                      ->whereNull('h.approval3flag');
-                });
-            })
-            ->select([
-                'h.*',
-                'm.name as mandor_nama',
-                'a.activityname',
-                DB::raw('CASE 
-                    WHEN h.approval1idjabatan = '.$jabatanId.' AND h.approval1flag IS NULL THEN 1
-                    WHEN h.approval2idjabatan = '.$jabatanId.' AND h.approval1flag = "1" AND h.approval2flag IS NULL THEN 2
-                    WHEN h.approval3idjabatan = '.$jabatanId.' AND h.approval1flag = "1" AND h.approval2flag = "1" AND h.approval3flag IS NULL THEN 3
-                    ELSE 0
-                END as approval_level')
-            ])
-            ->orderBy('h.lkhdate', 'desc')
+            ->orderBy('blok')
+            ->orderBy('plot')
             ->get();
     }
 
     /**
-     * Get LKH approval detail (with approval history)
+     * Get worker details for edit
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getWorkerDetailsForEdit($companycode, $lkhno)
+    {
+        return DB::table('lkhdetailworker as ldw')
+            ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
+                $join->on('ldw.tenagakerjaid', '=', 'tk.tenagakerjaid')
+                    ->where('tk.companycode', '=', $companycode);
+            })
+            ->where('ldw.companycode', $companycode)
+            ->where('ldw.lkhno', $lkhno)
+            ->select(['ldw.*', 'tk.nama', 'tk.nik'])
+            ->orderBy('ldw.tenagakerjaurutan')
+            ->get();
+    }
+
+    /**
+     * Get material details for edit
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMaterialDetailsForEdit($companycode, $lkhno)
+    {
+        return DB::table('lkhdetailmaterial as ldm')
+            ->leftJoin('herbisida as h', function($join) use ($companycode) {
+                $join->on('ldm.itemcode', '=', 'h.itemcode')
+                    ->where('h.companycode', '=', $companycode);
+            })
+            ->where('ldm.companycode', $companycode)
+            ->where('ldm.lkhno', $lkhno)
+            ->select([
+                'ldm.id',
+                'ldm.plot',
+                'ldm.itemcode',
+                'ldm.qtyditerima',
+                'ldm.qtysisa', 
+                'ldm.qtydigunakan',
+                'ldm.keterangan',
+                'ldm.inputby',
+                'ldm.createdat',
+                'ldm.updatedat',
+                'h.itemname',
+                'h.measure as satuan'
+            ])
+            ->orderBy('ldm.plot')
+            ->orderBy('ldm.itemcode')
+            ->get();
+    }
+
+    /**
+     * Update LKH header
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param array $data
+     * @return int
+     */
+    public function updateHeader($companycode, $lkhno, array $data)
+    {
+        return DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->update($data);
+    }
+
+    /**
+     * Replace plot details (delete + insert)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param array $rows
+     * @return void
+     */
+    public function replacePlotDetails($companycode, $lkhno, array $rows)
+    {
+        // Delete existing
+        DB::table('lkhdetailplot')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->delete();
+        
+        if (empty($rows)) {
+            return;
+        }
+        
+        // Insert new
+        DB::table('lkhdetailplot')->insert($rows);
+    }
+
+    /**
+     * Replace worker details (delete + insert)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param array $rows
+     * @return void
+     */
+    public function replaceWorkerDetails($companycode, $lkhno, array $rows)
+    {
+        // Delete existing
+        DB::table('lkhdetailworker')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->delete();
+        
+        if (empty($rows)) {
+            return;
+        }
+        
+        // Insert new
+        DB::table('lkhdetailworker')->insert($rows);
+    }
+
+    /**
+     * Replace material details (delete + insert)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param array $rows
+     * @return void
+     */
+    public function replaceMaterialDetails($companycode, $lkhno, array $rows)
+    {
+        // Delete existing
+        DB::table('lkhdetailmaterial')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->delete();
+        
+        if (empty($rows)) {
+            return;
+        }
+        
+        // Insert new
+        DB::table('lkhdetailmaterial')->insert($rows);
+    }
+
+    /**
+     * Submit LKH (update submission flags)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @param array $data
+     * @return int
+     */
+    public function submitLkh($companycode, $lkhno, array $data)
+    {
+        return DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->update($data);
+    }
+
+    /**
+     * Get LKH for validation (check issubmit)
      * 
      * @param string $companycode
      * @param string $lkhno
      * @return object|null
      */
-    public function getApprovalDetail(string $companycode, string $lkhno): ?object
-    {
-        return DB::table('lkhhdr as h')
-            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
-            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('a.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('user as u1', 'h.approval1userid', '=', 'u1.userid')
-            ->leftJoin('user as u2', 'h.approval2userid', '=', 'u2.userid')
-            ->leftJoin('user as u3', 'h.approval3userid', '=', 'u3.userid')
-            ->leftJoin('jabatan as j1', 'h.approval1idjabatan', '=', 'j1.idjabatan')
-            ->leftJoin('jabatan as j2', 'h.approval2idjabatan', '=', 'j2.idjabatan')
-            ->leftJoin('jabatan as j3', 'h.approval3idjabatan', '=', 'j3.idjabatan')
-            ->where('h.companycode', $companycode)
-            ->where('h.lkhno', $lkhno)
-            ->select([
-                'h.*',
-                'm.name as mandor_nama',
-                'a.activityname',
-                'h.jumlahapproval',
-                'h.approval1idjabatan',
-                'h.approval2idjabatan', 
-                'h.approval3idjabatan',
-                'u1.name as approval1_user_name',
-                'u2.name as approval2_user_name',
-                'u3.name as approval3_user_name',
-                'j1.namajabatan as jabatan1_name',
-                'j2.namajabatan as jabatan2_name',
-                'j3.namajabatan as jabatan3_name'
-            ])
-            ->first();
-    }
-
-    /**
-     * Get plot info for activity (luas, sisa, batch)
-     * 
-     * @param string $companycode
-     * @param string $plot
-     * @param string $activitycode
-     * @return object|null
-     */
-    public function getPlotInfo(string $companycode, string $plot, string $activitycode): ?object
-    {
-        $plotData = DB::table('masterlist as m')
-            ->leftJoin('batch as b', function ($join) use ($companycode) {
-                $join->on('m.activebatchno', '=', 'b.batchno')
-                     ->where('b.companycode', '=', $companycode)
-                     ->where('b.isactive', '=', 1);
-            })
-            ->where('m.companycode', $companycode)
-            ->where('m.plot', $plot)
-            ->where('m.isactive', 1)
-            ->select([
-                'm.plot',
-                'm.blok',
-                'm.activebatchno',
-                'b.id as batchid',
-                'b.batchno',
-                'b.batcharea',
-                'b.lifecyclestatus',
-                'b.tanggalpanen',
-            ])
-            ->first();
-
-        if (!$plotData) {
-            return null;
-        }
-
-        // Calculate total sudah dikerjakan
-        $totalSudahDikerjakan = DB::table('lkhdetailplot as ldp')
-            ->join('lkhhdr as lh', function($join) {
-                $join->on('ldp.lkhhdrid', '=', 'lh.id');
-            })
-            ->where('ldp.companycode', $companycode)
-            ->where('ldp.plot', $plot)
-            ->where('lh.activitycode', $activitycode)
-            ->where('lh.approvalstatus', '1')
-            ->sum('ldp.luashasil');
-
-        $plotData->totalsudahdikerjakan = (float) $totalSudahDikerjakan;
-        $plotData->luassisa = (float) $plotData->batcharea - (float) $totalSudahDikerjakan;
-
-        return $plotData;
-    }
-
-    /**
-     * ✅ FIXED: Create BSM details - Pastikan isi batchid & lkhhdrid
-     */
-    public function createBsmDetails(array $bsm): bool
-    {
-        if (empty($bsm)) {
-            return true;
-        }
-
-        // Validate surrogate IDs
-        foreach ($bsm as $b) {
-            if (isset($b['batchno']) && !isset($b['batchid'])) {
-                \Log::warning('Creating lkhdetailbsm without batchid', $b);
-            }
-            if (!isset($b['lkhhdrid'])) {
-                \Log::warning('Creating lkhdetailbsm without lkhhdrid', $b);
-            }
-        }
-
-        return DB::table('lkhdetailbsm')->insert($bsm);
-    }
-
-    /**
-     * Delete BSM details
-     */
-    public function deleteBsmDetails(string $companycode, string $lkhno): int
-    {
-        return DB::table('lkhdetailbsm')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->delete();
-    }
-
-    // ==========================================
-    // PRIVATE HELPER METHODS
-    // ==========================================
-
-    /**
-     * Get LKH date (helper for subqueries)
-     * 
-     * @param string $companycode
-     * @param string $lkhno
-     * @return string
-     */
-    private function getLkhDate(string $companycode, string $lkhno): string
-    {
-        $date = DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->value('lkhdate');
-        
-        return $date ?? now()->format('Y-m-d');
-    }
-    
-    /**
-     * Get last LKH number for RKH (for sequence generation)
-     */
-    public function getLastLkhNoForRkh(string $companycode, string $rkhno): ?object
+    public function getForValidation($companycode, $lkhno)
     {
         return DB::table('lkhhdr')
             ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->lockForUpdate()
-            ->orderBy(DB::raw('CAST(SUBSTRING(lkhno, 12, 2) AS UNSIGNED)'), 'desc')
+            ->where('lkhno', $lkhno)
+            ->select(['lkhno', 'issubmit', 'status', 'activitycode'])
             ->first();
-    }
-
-    /**
-     * Get total upah for LKH
-     */
-    public function getTotalUpah(string $companycode, string $lkhno): float
-    {
-        return DB::table('lkhdetailworker')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->sum('totalupah') ?? 0;
-    }
-
-    /**
-     * Get total luas hasil for LKH
-     */
-    public function getTotalLuasHasil(string $companycode, string $lkhno): float
-    {
-        return DB::table('lkhdetailplot')
-            ->where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->sum('luashasil') ?? 0;
     }
 }

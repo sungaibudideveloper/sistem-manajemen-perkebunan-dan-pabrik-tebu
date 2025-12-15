@@ -11,7 +11,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use App\Models\Timbangan;
-use App\Models\Rkhhdr;
+use App\Models\Transaction\RkhHdr;
 
 class MappingBsmController extends Controller
 {

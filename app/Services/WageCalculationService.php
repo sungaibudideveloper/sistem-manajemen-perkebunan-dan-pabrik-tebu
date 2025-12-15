@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Upah;
-use App\Models\Activity;
+use App\Models\MasterData\Upah;
+use App\Models\MasterData\Activity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 

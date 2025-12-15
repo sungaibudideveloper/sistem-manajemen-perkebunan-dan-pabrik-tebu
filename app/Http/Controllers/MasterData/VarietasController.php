@@ -4,7 +4,7 @@ namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Varietas;
+use App\Models\MasterData\Varietas;
 use Illuminate\Support\Facades\Auth;
 
 class VarietasController extends Controller

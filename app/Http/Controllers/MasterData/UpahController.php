@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Menu;
 use App\Models\Submenu;
-use App\Models\Upah;
+use App\Models\MasterData\Upah;
 use App\Models\User;
 
 class UpahController extends Controller

@@ -1,28 +1,31 @@
 <?php
-// =====================================================
-// FILE: app/Models/MasterData/Activity.php
-// =====================================================
-namespace App\Models\MasterData;
+
+namespace App\Models\MasterData;;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Activity extends Model
 {
-    protected $table = 'activity';
-    protected $primaryKey = 'activitycode';
     public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = false;
-
+    protected $table = 'activity';
+    protected $primaryKey = ['activitycode'];
     protected $fillable = [
         'activitycode',
         'activitygroup',
-        'activityname',
         'tanggaltanam',
         'description',
         'jurnalno',
-        'jenistenagakerja',
-        'isblokactivity',
+        'jumlahvar',
+        'var1',
+        'satuan1',
+        'var2',
+        'satuan1',
+        'var3',
+        'satuan1',
+        'var4',
+        'satuan1',
+        'var5',
+        'satuan5',
         'createdat',
         'inputby',
         'updatedat',
@@ -30,16 +33,29 @@ class Activity extends Model
         'accno'
     ];
 
-    protected $casts = [
-        'tanggaltanam' => 'date',
-        'jenistenagakerja' => 'integer',
-        'isblokactivity' => 'boolean',
-        'createdat' => 'datetime',
-        'updatedat' => 'datetime'
-    ];
+    public function setCreatedAt($value)
+    {
+        $this->attributes['createdat'] = $value;
+    }
+
+    public function getCreatedAtAttribute()
+    {
+        return $this->attributes['createdat'];
+    }
 
     public function group()
     {
         return $this->belongsTo(ActivityGroup::class, 'activitygroup', 'activitygroup');
     }
+
+    public function jenistenagakerja()
+    {
+        return $this->belongsTo(JenisTenagaKerja::class, 'jenistenagakerja', 'idjenistenagakerja');
+    }
+
+    public function accounting()
+    {
+        return $this->hasOne(Accounting::class, 'activitycode', 'activitycode');
+    }
+
 }

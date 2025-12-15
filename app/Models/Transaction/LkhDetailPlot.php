@@ -1,11 +1,7 @@
 <?php
-// =====================================================
-// FILE: app/Models/Transaction/LkhDetailPlot.php
-// =====================================================
 namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Batch;
 
 class LkhDetailPlot extends Model
 {
@@ -13,7 +9,7 @@ class LkhDetailPlot extends Model
     protected $primaryKey = 'id';
     public $incrementing = true;
     public $timestamps = false;
-
+    
     protected $fillable = [
         'companycode',
         'lkhno',
@@ -30,7 +26,7 @@ class LkhDetailPlot extends Model
         'createdat',
         'updatedat',
     ];
-
+    
     protected $casts = [
         'luasrkh' => 'decimal:2',
         'luashasil' => 'decimal:2',
@@ -40,13 +36,12 @@ class LkhDetailPlot extends Model
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
     ];
-
-    // Relationships (FK menggunakan surrogate ID)
-    public function lkhHeader()
+    
+    public function lkhheader()
     {
         return $this->belongsTo(Lkhhdr::class, 'lkhhdrid', 'id');
     }
-
+    
     public function batch()
     {
         return $this->belongsTo(Batch::class, 'batchid', 'id');

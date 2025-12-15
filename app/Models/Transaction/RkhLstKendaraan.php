@@ -1,21 +1,14 @@
 <?php
 namespace App\Models\Transaction;
-// =====================================================
-// FILE: app/Models/Transaction/RkhLstKendaraan.php
-// =====================================================
-
-
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Kendaraan;
-use App\Models\MasterData\TenagaKerja;
-use App\Models\MasterData\Activity;
 
 class RkhLstKendaraan extends Model
 {
     protected $table = 'rkhlstkendaraan';
     protected $primaryKey = 'id';
     public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
@@ -38,10 +31,14 @@ class RkhLstKendaraan extends Model
         'createdat' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
     public function rkhHeader()
     {
         return $this->belongsTo(Rkhhdr::class, 'rkhhdrid', 'id');
+    }
+
+    public function activity()
+    {
+        return $this->belongsTo(Activity::class, 'activitycode', 'activitycode');
     }
 
     public function kendaraan()
@@ -57,10 +54,5 @@ class RkhLstKendaraan extends Model
     public function helper()
     {
         return $this->belongsTo(TenagaKerja::class, 'helperid', 'tenagakerjaid');
-    }
-
-    public function activity()
-    {
-        return $this->belongsTo(Activity::class, 'activitycode', 'activitycode');
     }
 }

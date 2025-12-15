@@ -1,7 +1,5 @@
 <?php
-// =====================================================
-// FILE: app/Models/MasterData/ActivityGroup.php
-// =====================================================
+
 namespace App\Models\MasterData;
 
 use Illuminate\Database\Eloquent\Model;
@@ -16,18 +14,6 @@ class ActivityGroup extends Model
 
     protected $fillable = [
         'activitygroup',
-        'groupname',
-        'description',
-        'createdat',
-        'inputby'
+        'groupname'
     ];
-
-    protected $casts = [
-        'createdat' => 'datetime'
-    ];
-
-    public function activities()
-    {
-        return $this->hasMany(Activity::class, 'activitygroup', 'activitygroup');
-    }
 }

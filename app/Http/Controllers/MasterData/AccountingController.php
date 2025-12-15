@@ -5,7 +5,7 @@ namespace App\Http\Controllers\MasterData;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Accounting;
-use App\Models\Activity;
+use App\Models\MasterData\Activity;
 use Illuminate\Support\Facades\Auth;
 
 class AccountingController extends Controller

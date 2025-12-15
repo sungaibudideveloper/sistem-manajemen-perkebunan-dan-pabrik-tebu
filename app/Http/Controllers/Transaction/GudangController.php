@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
-use App\Models\Company;
+use App\Models\MasterData\Company;
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
-use App\Models\HerbisidaDosage;
-use App\Models\Herbisida;
+use App\Models\MasterData\HerbisidaDosage;
+use App\Models\MasterData\Herbisida;
 
 class GudangController extends Controller
 {

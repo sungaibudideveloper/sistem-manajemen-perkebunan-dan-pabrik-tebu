@@ -1,0 +1,511 @@
+<?php
+
+namespace App\Services\Transaction\RencanaKerjaHarian\Rkh;
+
+use App\Repositories\Transaction\RencanaKerjaHarian\RkhRepository;
+use App\Repositories\Transaction\RencanaKerjaHarian\Domain\WorkerRepository;
+use App\Repositories\Transaction\RencanaKerjaHarian\Domain\KendaraanRepository;
+use App\Repositories\Transaction\RencanaKerjaHarian\Shared\MasterDataRepository;
+use App\Repositories\Transaction\RencanaKerjaHarian\Shared\MasterlistBatchRepository;
+use App\Repositories\Transaction\RencanaKerjaHarian\Shared\AbsenRepository;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+/**
+ * RkhService
+ * 
+ * Orchestrates RKH CRUD business logic.
+ * RULE: NO DB queries. Only orchestration + business rules + transformations.
+ */
+class RkhService
+{
+    protected $rkhRepo;
+    protected $workerRepo;
+    protected $kendaraanRepo;
+    protected $masterDataRepo;
+    protected $batchRepo;
+    protected $absenRepo;
+    protected $numberGenerator;
+
+    public function __construct(
+        RkhRepository $rkhRepo,
+        WorkerRepository $workerRepo,
+        KendaraanRepository $kendaraanRepo,
+        MasterDataRepository $masterDataRepo,
+        MasterlistBatchRepository $batchRepo,
+        AbsenRepository $absenRepo,
+        RkhNumberGeneratorService $numberGenerator
+    ) {
+        $this->rkhRepo = $rkhRepo;
+        $this->workerRepo = $workerRepo;
+        $this->kendaraanRepo = $kendaraanRepo;
+        $this->masterDataRepo = $masterDataRepo;
+        $this->batchRepo = $batchRepo;
+        $this->absenRepo = $absenRepo;
+        $this->numberGenerator = $numberGenerator;
+    }
+
+    /**
+     * Get data for index page
+     */
+    public function getIndexPageData($filters, $perPage, $companycode)
+    {
+        $rkhData = $this->rkhRepo->paginateIndex($companycode, $filters, $perPage);
+        
+        $rkhNos = $rkhData->pluck('rkhno')->toArray();
+        $lkhProgress = [];
+        if (!empty($rkhNos)) {
+            $lkhProgress = $this->rkhRepo->getLkhProgressForRkhNos($companycode, $rkhNos);
+        }
+        
+        // ✅ FIX: Changed from lkh_status to lkh_progress_status to match blade view
+        $rkhData->getCollection()->transform(function($rkh) use ($lkhProgress) {
+            $rkh->lkh_progress_status = $lkhProgress[$rkh->rkhno] ?? [
+                'status' => 'no_lkh',
+                'progress' => 'No LKH Created',
+                'can_complete' => false,
+                'color' => 'gray'
+            ];
+            return $rkh;
+        });
+        
+        $filterDate = $filters['filterDate'] ?? date('Y-m-d');
+        $mandorId = null; // index tidak filter by mandor
+        
+        $absenData = $this->absenRepo->getAttendanceData($companycode, $filterDate, $mandorId);
+        $mandors = $this->masterDataRepo->getMandorsByCompany($companycode);
+        
+        return [
+            'rkhData' => $rkhData,
+            'absentenagakerja' => $absenData,
+            'mandors' => $mandors
+        ];
+    }
+
+    /**
+     * Get data for create page
+     */
+    public function getCreatePageData($date, $mandorId, $companycode)
+    {
+        $rkhno = $this->numberGenerator->generatePreviewRkhNo($date, $companycode);
+
+        $selectedMandor = DB::table('user')
+        ->where('userid', $mandorId)
+        ->first();
+        
+        // Get all master data from respective repositories
+        $activities = $this->masterDataRepo->getActivitiesActive();
+        $herbisidaData = $this->masterDataRepo->getFullHerbisidaGroupData($companycode);
+        $blokData = $this->masterDataRepo->getBlokData($companycode);
+        $masterlistData = $this->batchRepo->getAllActivePlotsWithBatch($companycode);
+        $absenData = $this->absenRepo->getDataAbsenFull($companycode, $date, $mandorId);
+        $vehicles = $this->kendaraanRepo->getVehiclesWithOperators($companycode);
+        $helpersData = $this->workerRepo->getHelpersByCompany($companycode);
+
+        return [
+            'rkhno' => $rkhno,
+            'selectedDate' => $date,
+            'selectedMandor' => $selectedMandor,
+            'activities' => $activities,
+            'bloks' => $blokData,
+            'masterlist' => $masterlistData,
+            'herbisida' => $herbisidaData,
+            'herbisidagroups' => $herbisidaData,
+            'kendaraan' => $vehicles,
+            'vehiclesData' => $vehicles,
+            'helpersData' => $helpersData,
+            'absentenagakerja' => $absenData,
+        ];
+    }
+
+    /**
+     * Create new RKH (transaction)
+     */
+    public function createRkh($dto, $companycode, $userid)
+    {
+        return DB::transaction(function() use ($dto, $companycode, $userid) {
+            $rkhno = $this->numberGenerator->generateUniqueRkhNo($dto['rkhdate'], $companycode);
+
+            // Build components
+            $activityGroup = $this->getPrimaryActivityGroup($dto['rows']);
+            $workers = $this->groupWorkersByActivity($dto['workers'] ?? []);
+            $kendaraan = $this->groupKendaraanByActivity($dto['kendaraan'] ?? []);
+            $approvalData = $this->getApprovalData($dto['rows'], $companycode);
+            
+            // ✅ FIX: Calculate totals BEFORE insert
+            $totalLuas = collect($dto['rows'])->sum('luas');
+            $totalManpower = collect($workers)->sum('jumlahtenagakerja');
+            
+            $headerData = array_merge([
+                'companycode' => $companycode,
+                'rkhno' => $rkhno,
+                'rkhdate' => $dto['rkhdate'],
+                'totalluas' => $totalLuas,        // ✅ ADDED
+                'manpower' => $totalManpower,     // ✅ ADDED
+                'mandorid' => $dto['mandorid'],
+                'activitygroup' => $activityGroup,
+                'status' => 'In Progress',
+                'createdat' => now(),
+                'inputby' => $userid,
+            ], $approvalData);
+            
+            $rkhhdrid = $this->rkhRepo->insertHeaderReturnId($headerData);
+            
+            // Build details AFTER getting rkhhdrid
+            $details = $this->buildRkhDetails($dto['rows'], $companycode, $rkhno, $dto['rkhdate'], $rkhhdrid);
+            
+            if (!empty($details)) {
+                $this->rkhRepo->insertDetails($details);
+            }
+            
+            if (!empty($workers)) {
+                $this->workerRepo->replaceWorkersForRkh($companycode, $rkhno, $rkhhdrid, $workers);
+            }
+            
+            if (!empty($kendaraan)) {
+                $this->kendaraanRepo->replaceKendaraanForRkh($companycode, $rkhno, $rkhhdrid, $kendaraan);
+            }
+            
+            return [
+                'success' => true,
+                'rkhno' => $rkhno,
+                'message' => "RKH berhasil dibuat: {$rkhno}"
+            ];
+        });
+    }
+
+    /**
+     * Get data for show page
+     */
+    public function getShowPageData($rkhno, $companycode)
+    {
+        $header = $this->rkhRepo->getHeader($companycode, $rkhno);
+        if (!$header) {
+            throw new \Exception('RKH not found');
+        }
+        
+        $details = $this->rkhRepo->getDetails($companycode, $rkhno);
+        $workers = $this->workerRepo->getWorkersByActivityForRkh($companycode, $rkhno);
+        $kendaraan = $this->kendaraanRepo->getKendaraanByActivity($companycode, $rkhno);
+        
+        $absenData = $this->absenRepo->getAttendanceData($companycode, $header->rkhdate, $header->mandorid);
+        $herbisidaData = $this->masterDataRepo->getFullHerbisidaGroupData($companycode);
+        
+        return [
+            // ✅ FIX: Match God Controller variable names
+            'rkhHeader' => $header,                      // header → rkhHeader
+            'rkhDetails' => $details,                    // details → rkhDetails
+            'workersByActivity' => $workers,             // workers → workersByActivity
+            'kendaraanByActivity' => $kendaraan,         // kendaraan → kendaraanByActivity
+            'absentenagakerja' => $absenData,
+            'herbisidagroups' => $herbisidaData,
+        ];
+    }
+
+    /**
+     * Get data for edit page
+     */
+    public function getEditPageData($rkhno, $companycode)
+    {
+        $header = $this->rkhRepo->getHeaderForEdit($companycode, $rkhno);
+        if (!$header) {
+            throw new \Exception('RKH not found');
+        }
+        
+        $details = $this->rkhRepo->getDetailsForEdit($companycode, $rkhno);
+        $workers = $this->workerRepo->getWorkersByActivityForRkh($companycode, $rkhno);
+        $kendaraan = $this->kendaraanRepo->getKendaraanByActivity($companycode, $rkhno);
+        
+        // Get all master data from respective repositories
+        $activities = $this->masterDataRepo->getActivitiesActive();
+        $herbisidaData = $this->masterDataRepo->getFullHerbisidaGroupData($companycode);
+        $blokData = $this->masterDataRepo->getBlokData($companycode);
+        $masterlistData = $this->batchRepo->getAllActivePlotsWithBatch($companycode);
+        $absenData = $this->absenRepo->getDataAbsenFull($companycode, $header->rkhdate, $header->mandorid);
+        $vehicles = $this->kendaraanRepo->getVehiclesWithOperators($companycode);
+        $helpersData = $this->workerRepo->getHelpersByCompany($companycode);
+        
+        return [
+            // ✅ FIX: Match God Controller variable names
+            'rkhHeader' => $header,              // header → rkhHeader
+            'rkhDetails' => $details,            // details → rkhDetails
+            'existingWorkers' => $workers,       // workers → existingWorkers
+            'existingKendaraan' => $kendaraan,   // kendaraan → existingKendaraan
+            
+            // Master data (sudah benar)
+            'activities' => $activities,
+            'bloks' => $blokData,
+            'masterlist' => $masterlistData,
+            'herbisida' => $herbisidaData,
+            'herbisidagroups' => $herbisidaData,
+            'vehiclesData' => $vehicles,
+            'helpersData' => $helpersData,
+            'absentenagakerja' => $absenData,
+            
+            // ✅ TAMBAH: oldInput (dipake di view)
+            'oldInput' => old(),
+        ];
+    }
+
+    /**
+     * Update existing RKH (transaction)
+     */
+    public function updateRkh($rkhno, $dto, $companycode, $userid)
+    {
+        return DB::transaction(function() use ($rkhno, $dto, $companycode, $userid) {
+            
+            // ✅ FIX: Get header dulu untuk ambil rkhhdrid
+            $existingHeader = $this->rkhRepo->getHeaderForEdit($companycode, $rkhno);
+            
+            if (!$existingHeader) {
+                throw new \Exception("RKH {$rkhno} tidak ditemukan");
+            }
+            
+            $rkhhdrid = $existingHeader->id;
+            
+            // ✅ FIX: Build components sama kayak create
+            $activityGroup = $this->getPrimaryActivityGroup($dto['rows']);
+            $workers = $this->groupWorkersByActivity($dto['workers'] ?? []);
+            $kendaraan = $this->groupKendaraanByActivity($dto['kendaraan'] ?? []);
+            $approvalData = $this->getApprovalDataForUpdate($dto['rows'], $companycode);
+            
+            // ✅ FIX: Calculate totals
+            $totalLuas = collect($dto['rows'])->sum('luas');
+            $totalManpower = collect($workers)->sum('jumlahtenagakerja');
+            
+            // ✅ Update header dengan approval reset
+            $headerData = array_merge([
+                'rkhdate' => $dto['rkhdate'],
+                'totalluas' => $totalLuas,
+                'manpower' => $totalManpower,
+                'mandorid' => $dto['mandorid'],
+                'activitygroup' => $activityGroup,
+                'keterangan' => $dto['keterangan'] ?? null,
+                'updatedat' => now(),
+                'updateby' => $userid,
+            ], $approvalData);
+            
+            $this->rkhRepo->updateHeader($companycode, $rkhno, $headerData);
+            
+            // ✅ Delete old details
+            $this->rkhRepo->deleteDetails($companycode, $rkhno);
+            
+            // ✅ Build & insert new details
+            $details = $this->buildRkhDetails($dto['rows'], $companycode, $rkhno, $dto['rkhdate'], $rkhhdrid);
+            
+            if (!empty($details)) {
+                $this->rkhRepo->insertDetails($details);
+            }
+            
+            // ✅ Replace workers
+            if (!empty($workers)) {
+                $this->workerRepo->replaceWorkersForRkh($companycode, $rkhno, $rkhhdrid, $workers);
+            }
+            
+            // ✅ Replace kendaraan
+            if (!empty($kendaraan)) {
+                $this->kendaraanRepo->replaceKendaraanForRkh($companycode, $rkhno, $rkhhdrid, $kendaraan);
+            }
+            
+            \Log::info('RKH Update Success', [
+                'rkhno' => $rkhno,
+                'details_count' => count($details),
+                'workers_count' => count($workers),
+                'kendaraan_count' => count($kendaraan)
+            ]);
+            
+            return true;
+        });
+    }
+
+    /**
+     * Delete RKH (transaction)
+     */
+    public function deleteRkh($rkhno, $companycode)
+    {
+        return DB::transaction(function() use ($rkhno, $companycode) {
+            $this->kendaraanRepo->deleteByRkhNo($companycode, $rkhno);
+            $this->workerRepo->deleteByRkhNo($companycode, $rkhno);
+            $this->rkhRepo->deleteDetails($companycode, $rkhno);
+            $this->rkhRepo->deleteHeader($companycode, $rkhno);
+            
+            return [
+                'success' => true,
+                'message' => 'RKH berhasil dihapus'
+            ];
+        });
+    }
+
+
+
+
+
+    // =====================================
+    // PRIVATE HELPER METHODS
+    // =====================================
+
+    /**
+     * Group workers by activity
+     */
+    private function groupWorkersByActivity($workersData)
+    {
+        $grouped = [];
+        
+        foreach ($workersData as $activityCode => $data) {
+            $totalWorkers = ($data['laki'] ?? 0) + ($data['perempuan'] ?? 0);
+            
+            if ($totalWorkers > 0) {
+                $grouped[] = [
+                    'activitycode' => $activityCode,
+                    'jumlahlaki' => $data['laki'] ?? 0,
+                    'jumlahperempuan' => $data['perempuan'] ?? 0,
+                    'jumlahtenagakerja' => $totalWorkers,
+                ];
+            }
+        }
+        
+        return $grouped;
+    }
+
+    /**
+     * Group kendaraan by activity
+     */
+    private function groupKendaraanByActivity($kendaraanData)
+    {
+        $grouped = [];
+        
+        foreach ($kendaraanData as $activityCode => $vehicles) {
+            if (!empty($vehicles)) {
+                $grouped[$activityCode] = $vehicles;
+            }
+        }
+        
+        return $grouped;
+    }
+
+    /**
+     * Get primary activity group
+     */
+    private function getPrimaryActivityGroup($rows)
+    {
+        if (empty($rows)) {
+            return null;
+        }
+        
+        $firstRow = $rows[0];
+        $activityCode = $firstRow['nama'] ?? null;
+        
+        if (!$activityCode) {
+            return null;
+        }
+        
+        $activity = $this->masterDataRepo->getActivityByCode($activityCode);
+        return $activity->activitygroup ?? null;
+    }
+
+    /**
+     * Get approval data
+     */
+    private function getApprovalData($rows, $companycode)
+    {
+        $activityGroup = $this->getPrimaryActivityGroup($rows);
+        
+        if (!$activityGroup) {
+            return [
+                'jumlahapproval' => 0,
+                'approval1idjabatan' => null,
+                'approval2idjabatan' => null,
+                'approval3idjabatan' => null,
+            ];
+        }
+        
+        $approvalSetting = $this->masterDataRepo->getApprovalSettingByActivityGroup($companycode, $activityGroup);
+        
+        if (!$approvalSetting) {
+            return [
+                'jumlahapproval' => 0,
+                'approval1idjabatan' => null,
+                'approval2idjabatan' => null,
+                'approval3idjabatan' => null,
+            ];
+        }
+        
+        return [
+            'jumlahapproval' => $approvalSetting->jumlahapproval ?? 0,
+            'approval1idjabatan' => $approvalSetting->idjabatanapproval1,
+            'approval2idjabatan' => $approvalSetting->idjabatanapproval2,
+            'approval3idjabatan' => $approvalSetting->idjabatanapproval3,
+        ];
+    }
+
+    /**
+     * Get approval data for update (reset flags)
+     */
+    private function getApprovalDataForUpdate($rows, $companycode)
+    {
+        $baseApproval = $this->getApprovalData($rows, $companycode);
+
+        return array_merge($baseApproval, [
+            'approval1flag' => null,
+            'approval2flag' => null,
+            'approval3flag' => null,
+            'approval1date' => null,
+            'approval2date' => null,
+            'approval3date' => null,
+            'approval1userid' => null,
+            'approval2userid' => null,
+            'approval3userid' => null,
+            'approvalstatus' => null,
+        ]);
+    }
+
+    /**
+     * Build RKH details rows
+     */
+    private function buildRkhDetails($rows, $companycode, $rkhno, $date, $rkhhdrid)
+    {
+        $details = [];
+        
+        foreach ($rows as $row) {
+            $activityCode = $row['nama'] ?? null;
+            
+            if (!$activityCode) {
+                continue;
+            }
+            
+            $activity = $this->masterDataRepo->getActivityByCode($activityCode);
+            
+            $jenistenagakerja = $activity ? $activity->jenistenagakerja : null;
+            $isBlokActivity = $activity ? ($activity->isblokactivity == 1) : false;
+            
+            $batchno = null;
+            $batchid = null;
+            
+            if (!$isBlokActivity && !empty($row['plot'])) {
+                $batchInfo = $this->batchRepo->getActiveBatchForPlot($companycode, $row['plot']);
+                if ($batchInfo) {
+                    $batchno = $batchInfo->batchno;
+                    $batchid = $batchInfo->id;
+                }
+            }
+            
+            $details[] = [
+                'companycode'      => $companycode,
+                'rkhno'            => $rkhno,
+                'rkhhdrid'         => $rkhhdrid,
+                'rkhdate'          => $date,
+                'blok'             => $row['blok'] ?? null,
+                'plot'             => $isBlokActivity ? null : ($row['plot'] ?? null),
+                'activitycode'     => $activityCode,
+                'luasarea'         => $row['luas'] ?? 0,
+                'jenistenagakerja' => $jenistenagakerja,
+                'usingmaterial'    => !empty($row['material_group_id']) ? 1 : 0,
+                'herbisidagroupid' => !empty($row['material_group_id']) ? (int) $row['material_group_id'] : null,
+                'batchno'          => $batchno,
+                'batchid'          => $batchid,
+            ];
+        }
+        
+        return $details;
+    }
+}

@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Herbisida extends Model
 {
     protected $table = 'herbisida';
-    protected $primaryKey = 'itemcode';
-    public $incrementing = false;
-    protected $keyType = 'string';
+
     public $timestamps = false;
+
+    protected $primaryKey = 'itemcode';
+    public $incrementing = false;        // kalau key-nya string/non-numeric
+    protected $keyType = 'string';
 
     protected $fillable = [
         'itemcode',

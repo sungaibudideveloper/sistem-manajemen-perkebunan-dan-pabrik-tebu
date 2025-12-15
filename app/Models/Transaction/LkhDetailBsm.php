@@ -1,11 +1,7 @@
 <?php
-// =====================================================
-// FILE: app/Models/Transaction/LkhDetailBsm.php
-// =====================================================
 namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Batch;
 
 class LkhDetailBsm extends Model
 {
@@ -33,7 +29,7 @@ class LkhDetailBsm extends Model
         'createdat',
         'updateby',
         'updatedat',
-        'parentbsm'
+        'parentbsm',
     ];
 
     protected $casts = [
@@ -42,11 +38,10 @@ class LkhDetailBsm extends Model
         'nilaimanis' => 'decimal:2',
         'averagescore' => 'decimal:2',
         'createdat' => 'datetime',
-        'updatedat' => 'datetime'
+        'updatedat' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
-    public function lkhHeader()
+    public function lkhheader()
     {
         return $this->belongsTo(Lkhhdr::class, 'lkhhdrid', 'id');
     }

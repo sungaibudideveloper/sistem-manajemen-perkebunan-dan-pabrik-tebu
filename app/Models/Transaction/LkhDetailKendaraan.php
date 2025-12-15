@@ -2,8 +2,6 @@
 namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Kendaraan;
-use App\Models\MasterData\TenagaKerja;
 
 class LkhDetailKendaraan extends Model
 {
@@ -19,26 +17,36 @@ class LkhDetailKendaraan extends Model
         'nokendaraan',
         'kendaraanid',
         'operatorid',
+        'helperid',
+        'jammulai',
+        'jamselesai',
         'hourmeterstart',
         'hourmeterend',
-        'hourmeterusage',
-        'fuelused',
-        'keterangan',
+        'solar',
+        'adminupdateby',
+        'adminupdatedat',
+        'ordernumber',
+        'printedby',
+        'printedat',
+        'status',
+        'gudangconfirm',
+        'gudangconfirmedby',
+        'gudangconfirmedat',
         'createdat',
-        'updatedat',
     ];
 
     protected $casts = [
         'hourmeterstart' => 'decimal:2',
         'hourmeterend' => 'decimal:2',
-        'hourmeterusage' => 'decimal:2',
-        'fuelused' => 'decimal:2',
+        'solar' => 'decimal:3',
+        'gudangconfirm' => 'boolean',
+        'adminupdatedat' => 'datetime',
+        'printedat' => 'datetime',
+        'gudangconfirmedat' => 'datetime',
         'createdat' => 'datetime',
-        'updatedat' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
-    public function lkhHeader()
+    public function lkhheader()
     {
         return $this->belongsTo(Lkhhdr::class, 'lkhhdrid', 'id');
     }
@@ -46,10 +54,5 @@ class LkhDetailKendaraan extends Model
     public function kendaraan()
     {
         return $this->belongsTo(Kendaraan::class, 'kendaraanid', 'id');
-    }
-
-    public function operator()
-    {
-        return $this->belongsTo(TenagaKerja::class, 'operatorid', 'tenagakerjaid');
     }
 }

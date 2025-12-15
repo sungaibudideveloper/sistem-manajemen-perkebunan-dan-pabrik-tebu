@@ -1127,7 +1127,7 @@ function workerInfoCard() {
           this.workers[activity.activitycode] = {
             activityname: activity.activityname || '',
             jenisId: typeof jenisData === 'object' ? jenisData?.idjenistenagakerja : jenisData,
-            jenisLabel: typeof jenisData === 'object' ? jenisData?.nama : '-',
+            jenisLabel: fullActivity?.jenistenagakerja_nama || '-',
             laki: '',
             perempuan: '',
             total: ''

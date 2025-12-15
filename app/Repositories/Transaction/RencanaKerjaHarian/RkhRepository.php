@@ -3,30 +3,298 @@
 namespace App\Repositories\Transaction\RencanaKerjaHarian;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * RkhRepository
  * 
- * Handles all database queries related to RKH (Rencana Kerja Harian)
- * Uses surrogate ID (id) for joins, natural key (rkhno) for business logic
+ * Handles RKH (rkhhdr + rkhlst) database operations.
+ * RULE: All RKH queries here. Can join batch for display (avoid N+1).
  */
 class RkhRepository
 {
     /**
-     * RkhRepository - FIXED VERSION
+     * Get RKH header with approval metadata + mandor name
+     * Used in: show page
      * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return object|null
      */
-
-    // =====================================
-    // QUERY BUILDERS
-    // =====================================
+    public function getHeader($companycode, $rkhno)
+    {
+        return DB::table('rkhhdr as r')
+            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('r.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select([
+                'r.*',
+                'm.name as mandor_nama',
+                'ag.groupname as activity_group_name',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2',
+                'app.idjabatanapproval3',
+                DB::raw('CASE 
+                    WHEN app.jumlahapproval IS NULL OR app.jumlahapproval = 0 THEN "No Approval Required"
+                    WHEN r.approval1flag IS NULL AND app.idjabatanapproval1 IS NOT NULL THEN "Waiting Level 1"
+                    WHEN r.approval1flag = "0" THEN "Declined Level 1"
+                    WHEN r.approval1flag = "1" AND app.idjabatanapproval2 IS NOT NULL AND r.approval2flag IS NULL THEN "Waiting Level 2"
+                    WHEN r.approval2flag = "0" THEN "Declined Level 2"
+                    WHEN r.approval2flag = "1" AND app.idjabatanapproval3 IS NOT NULL AND r.approval3flag IS NULL THEN "Waiting Level 3"
+                    WHEN r.approval3flag = "0" THEN "Declined Level 3"
+                    WHEN (app.jumlahapproval = 1 AND r.approval1flag = "1") OR
+                        (app.jumlahapproval = 2 AND r.approval1flag = "1" AND r.approval2flag = "1") OR
+                        (app.jumlahapproval = 3 AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag = "1") THEN "Approved"
+                    ELSE "Waiting"
+                END as approval_status'),
+                DB::raw('CASE 
+                    WHEN r.status = "Completed" THEN "Completed"
+                    ELSE "In Progress"
+                END as current_status')
+            ])
+            ->first();
+    }
 
     /**
-     * Get RKH list with filters (for index/listing)
+     * Get RKH header for edit (minimal fields)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return object|null
      */
-    public function getIndexQuery(string $companycode, array $filters = [])
+    public function getHeaderForEdit($companycode, $rkhno)
+    {
+        return DB::table('rkhhdr as r')
+            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select(['r.*', 'm.name as mandor_nama'])
+            ->first();
+    }
+
+    /**
+     * Get RKH details (rkhlst) with workers + batch info
+     * Used in: show page
+     * ALLOWED: Join batch directly (avoid N+1)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @param string|null $rkhDate Optional for progress subquery
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDetails($companycode, $rkhno, $rkhDate = null)
+    {
+        $query = DB::table('rkhlst as r')
+            ->leftJoin('rkhlstworker as w', function($join) {
+                $join->on('r.companycode', '=', 'w.companycode')
+                    ->on('r.rkhno', '=', 'w.rkhno')
+                    ->on('r.activitycode', '=', 'w.activitycode');
+            })
+            ->leftJoin('herbisidagroup as hg', function($join) {
+                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+                    ->on('r.activitycode', '=', 'hg.activitycode');
+            })
+            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->leftJoin('activitygroup as ag', 'a.activitygroup', '=', 'ag.activitygroup')
+            ->leftJoin('jenistenagakerja as jtk', 'a.jenistenagakerja', '=', 'jtk.idjenistenagakerja')
+            ->leftJoin('batch as b', 'r.batchid', '=', 'b.id')
+            ->leftJoin('masterlist as m', function($join) use ($companycode) {
+                $join->on('r.plot', '=', 'm.plot')
+                    ->where('m.companycode', '=', $companycode);
+            })
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno);
+
+        $selectFields = [
+            'r.*',
+            'w.jumlahlaki',
+            'w.jumlahperempuan',
+            'w.jumlahtenagakerja',
+            'hg.herbisidagroupname',
+            'a.activityname',
+            'ag.groupname as activity_group_name',
+            'jtk.nama as jenistenagakerja_nama',
+            'a.jenistenagakerja',
+            'a.isblokactivity',
+            'b.batchno as batch_number',
+            'b.lifecyclestatus as batch_lifecycle',
+            'b.batcharea',
+            'b.tanggalpanen',
+            'm.blok as masterlist_blok',
+            DB::raw("CASE 
+                WHEN r.blok = 'ALL' THEN 'Semua Blok'
+                WHEN r.plot IS NULL THEN CONCAT('Blok: ', r.blok)
+                ELSE CONCAT(COALESCE(m.blok, r.blok), '-', r.plot)
+            END as location_display")
+        ];
+
+        // Add progress subquery if rkhDate provided
+        if ($rkhDate) {
+            $selectFields[] = DB::raw("(
+                SELECT COALESCE(SUM(ldp.luashasil), 0)
+                FROM lkhdetailplot ldp
+                JOIN lkhhdr lh ON ldp.lkhno = lh.lkhno 
+                            AND ldp.companycode = lh.companycode
+                WHERE ldp.plot = r.plot
+                AND lh.activitycode = r.activitycode
+                AND lh.approvalstatus = '1'
+                AND lh.lkhdate < '{$rkhDate}'
+            ) as total_sudah_dikerjakan");
+        }
+
+        return $query->select($selectFields)->get();
+    }
+
+    /**
+     * Get RKH details for edit (simpler join, no subquery)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDetailsForEdit($companycode, $rkhno)
+    {
+        return DB::table('rkhlst as r')
+            ->leftJoin('rkhlstworker as w', function($join) {
+                $join->on('r.companycode', '=', 'w.companycode')
+                    ->on('r.rkhno', '=', 'w.rkhno')
+                    ->on('r.activitycode', '=', 'w.activitycode');
+            })
+            ->leftJoin('herbisidagroup as hg', function($join) {
+                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
+                    ->on('r.activitycode', '=', 'hg.activitycode');
+            })
+            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
+            ->leftJoin('activitygroup as ag', 'a.activitygroup', '=', 'ag.activitygroup')
+            ->leftJoin('jenistenagakerja as jtk', 'a.jenistenagakerja', '=', 'jtk.idjenistenagakerja')
+            ->leftJoin('batch as b', 'r.batchid', '=', 'b.id')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select([
+                'r.*',
+                'w.jumlahlaki',
+                'w.jumlahperempuan',
+                'w.jumlahtenagakerja',
+                'hg.herbisidagroupname',
+                'a.activityname',
+                'ag.groupname as activity_group_name',
+                'jtk.nama as jenistenagakerja_nama',
+                'a.jenistenagakerja',
+                'b.batchno as batch_number',
+                'b.lifecyclestatus as batch_lifecycle',
+                'b.batcharea'
+            ])
+            ->get();
+    }
+
+    /**
+     * Get latest outstanding RKH by mandor
+     * (status != Completed OR status IS NULL)
+     * 
+     * @param string $companycode
+     * @param string $mandorId
+     * @return object|null
+     */
+    public function getLatestOutstandingByMandor($companycode, $mandorId)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('mandorid', $mandorId)
+            ->where(function($query) {
+                $query->where('status', '!=', 'Completed')
+                      ->orWhereNull('status');
+            })
+            ->orderBy('rkhdate', 'desc')
+            ->select(['rkhno', 'rkhdate', 'status'])
+            ->first();
+    }
+
+    /**
+     * Insert RKH header and return surrogate ID
+     * 
+     * @param array $data
+     * @return int
+     */
+    public function insertHeaderReturnId(array $data)
+    {
+        return DB::table('rkhhdr')->insertGetId($data);
+    }
+
+    /**
+     * Update RKH header
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @param array $data
+     * @return int
+     */
+    public function updateHeader($companycode, $rkhno, array $data)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->update($data);
+    }
+
+    /**
+     * Delete RKH header
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return int
+     */
+    public function deleteHeader($companycode, $rkhno)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->delete();
+    }
+
+    /**
+     * Delete all RKH details (rkhlst)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return int
+     */
+    public function deleteDetails($companycode, $rkhno)
+    {
+        return DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->delete();
+    }
+
+    /**
+     * Bulk insert RKH details
+     * 
+     * @param array $rows
+     * @return bool
+     */
+    public function insertDetails(array $rows)
+    {
+        if (empty($rows)) {
+            return false;
+        }
+
+        return DB::table('rkhlst')->insert($rows);
+    }
+
+    /**
+     * Paginate RKH index with filters
+     * 
+     * @param string $companycode
+     * @param array $filters [search, filterApproval, filterStatus, filterDate, allDate]
+     * @param int $perPage
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function paginateIndex($companycode, array $filters, $perPage)
     {
         $query = DB::table('rkhhdr as r')
             ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
@@ -63,344 +331,137 @@ class RkhRepository
                 END as current_status')
             ]);
 
-        // Apply filters
+        // Apply search filter
         if (!empty($filters['search'])) {
             $query->where('r.rkhno', 'like', '%' . $filters['search'] . '%');
         }
 
-        if (!empty($filters['filter_approval'])) {
-            $query = $this->applyApprovalFilter($query, $filters['filter_approval']);
+        // Apply approval filter
+        if (!empty($filters['filterApproval'])) {
+            $query = $this->applyApprovalFilter($query, $filters['filterApproval']);
         }
 
-        if (!empty($filters['filter_status'])) {
-            $query = $this->applyStatusFilter($query, $filters['filter_status']);
+        // Apply status filter
+        if (!empty($filters['filterStatus'])) {
+            if ($filters['filterStatus'] === 'Completed') {
+                $query->where('r.status', 'Completed');
+            } else {
+                $query->where(function($q) {
+                    $q->whereNull('r.status')
+                    ->orWhere('r.status', '!=', 'Completed');
+                });
+            }
         }
 
-        if (empty($filters['all_date'])) {
-            $dateToFilter = $filters['filter_date'] ?? Carbon::today()->format('Y-m-d');
+        // Apply date filter (ONLY if allDate is false)
+        if (empty($filters['allDate'])) {
+            $dateToFilter = $filters['filterDate'] ?? date('Y-m-d');
             $query->whereDate('r.rkhdate', $dateToFilter);
         }
 
-        return $query->orderBy('r.rkhdate', 'desc')->orderBy('r.rkhno', 'desc');
+        $query->orderBy('r.rkhdate', 'desc')
+            ->orderBy('r.rkhno', 'desc');
+
+        return $query->paginate($perPage);
     }
 
     /**
-     * Get RKH header by surrogate ID
+     * Apply approval filter to query
+     * 
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param string $filterApproval
+     * @return void
      */
-    public function findById(int $id): ?object
+    private function applyApprovalFilter($query, $filterApproval)
     {
-        return DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->leftJoin('approval as app', function($join) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->on('r.companycode', '=', 'app.companycode');
-            })
-            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
-            ->where('r.id', $id)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                'ag.groupname as activity_group_name',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3'
-            ])
-            ->first();
+        switch ($filterApproval) {
+            case 'Approved':
+                $query->where(function($q) {
+                    $q->where(function($subq) {
+                        $subq->where('app.jumlahapproval', 1)->where('r.approval1flag', '1');
+                    })->orWhere(function($subq) {
+                        $subq->where('app.jumlahapproval', 2)->where('r.approval1flag', '1')->where('r.approval2flag', '1');
+                    })->orWhere(function($subq) {
+                        $subq->where('app.jumlahapproval', 3)->where('r.approval1flag', '1')->where('r.approval2flag', '1')->where('r.approval3flag', '1');
+                    })->orWhere(function($subq) {
+                        $subq->whereNull('app.jumlahapproval')->orWhere('app.jumlahapproval', 0);
+                    });
+                });
+                break;
+            case 'Waiting':
+                $query->where(function($q) {
+                    $q->where(function($subq) {
+                        $subq->whereNotNull('app.idjabatanapproval1')->whereNull('r.approval1flag');
+                    })->orWhere(function($subq) {
+                        $subq->whereNotNull('app.idjabatanapproval2')->where('r.approval1flag', '1')->whereNull('r.approval2flag');
+                    })->orWhere(function($subq) {
+                        $subq->whereNotNull('app.idjabatanapproval3')->where('r.approval1flag', '1')->where('r.approval2flag', '1')->whereNull('r.approval3flag');
+                    });
+                });
+                break;
+            case 'Decline':
+                $query->where(function($q) {
+                    $q->where('r.approval1flag', '0')->orWhere('r.approval2flag', '0')->orWhere('r.approval3flag', '0');
+                });
+                break;
+        }
     }
 
     /**
-     * Get RKH header by business key (rkhno)
+     * Get LKH progress for multiple RKH numbers (batch load)
+     * Returns collection grouped by rkhno
+     * 
+     * @param string $companycode
+     * @param array $rkhNos
+     * @return \Illuminate\Support\Collection
      */
-    public function findByRkhNo(string $companycode, string $rkhno): ?object
+    public function getLkhProgressForRkhNos($companycode, array $rkhNos)
     {
-        return DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                'ag.groupname as activity_group_name',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3'
-            ])
-            ->first();
-    }
-
-    /**
-     * ✅ FIXED: Get RKH details (rkhlst) - JOIN menggunakan surrogate ID
-     */
-    public function getDetails(string $companycode, string $rkhno): Collection
-    {
-        return DB::table('rkhlst as r')
-            ->leftJoin('rkhlstworker as w', function($join) {
-                $join->on('r.companycode', '=', 'w.companycode')
-                     ->on('r.rkhno', '=', 'w.rkhno')
-                     ->on('r.activitycode', '=', 'w.activitycode');
-            })
-            ->leftJoin('herbisidagroup as hg', function($join) {
-                $join->on('r.herbisidagroupid', '=', 'hg.herbisidagroupid')
-                    ->on('r.activitycode', '=', 'hg.activitycode');
-            })
-            ->leftJoin('activity as a', 'r.activitycode', '=', 'a.activitycode')
-            // ✅ FIXED: Use batchid instead of batchno
-            ->leftJoin('batch as b', 'r.batchid', '=', 'b.id')
-            ->leftJoin('masterlist as m', function($join) use ($companycode) {
-                $join->on('r.plot', '=', 'm.plot')
-                     ->where('m.companycode', '=', $companycode);
-            })
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select([
-                'r.*',
-                'w.jumlahlaki',
-                'w.jumlahperempuan',
-                'w.jumlahtenagakerja',
-                'hg.herbisidagroupname',
-                'a.activityname',
-                'a.jenistenagakerja',
-                'a.isblokactivity',
-                'b.batchno',
-                'b.lifecyclestatus as batch_lifecycle',
-                'b.batcharea',
-                'b.tanggalpanen',
-                'm.blok as masterlist_blok',
-                DB::raw("CASE 
-                    WHEN r.blok = 'ALL' THEN 'Semua Blok'
-                    WHEN r.plot IS NULL THEN CONCAT('Blok: ', r.blok)
-                    ELSE CONCAT(COALESCE(m.blok, r.blok), '-', r.plot)
-                END as location_display")
-            ])
-            ->orderBy('r.blok')
-            ->orderBy('r.plot')
-            ->get();
-    }
-
-    /**
-     * Get worker assignments grouped by activity
-     */
-    public function getWorkersByActivity(string $companycode, string $rkhno): Collection
-    {
-        return DB::table('rkhlstworker as w')
-            ->leftJoin('activity as a', 'w.activitycode', '=', 'a.activitycode')
-            ->where('w.companycode', $companycode)
-            ->where('w.rkhno', $rkhno)
-            ->select([
-                'w.activitycode',
-                'a.activityname',
-                'w.jumlahlaki',
-                'w.jumlahperempuan',
-                'w.jumlahtenagakerja'
-            ])
-            ->orderBy('w.activitycode')
+        return DB::table('lkhhdr')
+            ->whereIn('rkhno', $rkhNos)
+            ->where('companycode', $companycode)
+            ->select('rkhno', 'status')
             ->get()
-            ->groupBy('activitycode');
+            ->groupBy('rkhno')
+            ->map(function($lkhs) {
+                if ($lkhs->isEmpty()) {
+                    return [
+                        'status' => 'no_lkh',
+                        'progress' => 'No LKH Created',
+                        'can_complete' => false,
+                        'color' => 'gray'
+                    ];
+                }
+                
+                $totalLkh = $lkhs->count();
+                $completedLkh = $lkhs->where('status', 'APPROVED')->count();
+                
+                if ($completedLkh === $totalLkh) {
+                    return [
+                        'status' => 'complete',
+                        'progress' => 'All Complete',
+                        'can_complete' => true,
+                        'color' => 'green'
+                    ];
+                } else {
+                    return [
+                        'status' => 'in_progress',
+                        'progress' => "LKH In Progress ({$completedLkh}/{$totalLkh})",
+                        'can_complete' => false,
+                        'color' => 'yellow'
+                    ];
+                }
+            });
     }
 
     /**
-     * ✅ FIXED: Get kendaraan assignments - JOIN menggunakan surrogate ID
-     */
-    public function getKendaraanByActivity(string $companycode, string $rkhno): Collection
-    {
-        return DB::table('rkhlstkendaraan as rk')
-            // ✅ FIXED: Use kendaraanid instead of nokendaraan
-            ->leftJoin('kendaraan as k', 'rk.kendaraanid', '=', 'k.id')
-            ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
-                $join->on('rk.operatorid', '=', 'tk_operator.tenagakerjaid')
-                     ->where('tk_operator.companycode', '=', $companycode);
-            })
-            ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
-                $join->on('rk.helperid', '=', 'tk_helper.tenagakerjaid')
-                     ->where('tk_helper.companycode', '=', $companycode);
-            })
-            ->leftJoin('activity as a', 'rk.activitycode', '=', 'a.activitycode')
-            ->where('rk.companycode', $companycode)
-            ->where('rk.rkhno', $rkhno)
-            ->select([
-                'rk.activitycode',
-                'a.activityname',
-                'k.nokendaraan',
-                'k.jenis as vehicle_type',
-                'rk.operatorid',
-                'tk_operator.nama as operator_nama',
-                'tk_operator.nik as operator_nik',
-                'rk.usinghelper',
-                'rk.helperid',
-                'tk_helper.nama as helper_nama',
-                'rk.urutan'
-            ])
-            ->orderBy('rk.activitycode')
-            ->orderBy('rk.urutan')
-            ->get()
-            ->groupBy('activitycode');
-    }
-
-    // =====================================
-    // CREATE/UPDATE/DELETE
-    // =====================================
-
-    /**
-     * Create RKH header
-     */
-    public function create(array $data): int
-    {
-        return DB::table('rkhhdr')->insertGetId($data);
-    }
-
-    /**
-     * Update by surrogate ID
-     */
-    public function update(int $id, array $data): bool
-    {
-        return DB::table('rkhhdr')
-            ->where('id', $id)
-            ->update($data);
-    }
-
-    /**
-     * Update by business key
-     */
-    public function updateByRkhNo(string $companycode, string $rkhno, array $data): bool
-    {
-        return DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->update($data);
-    }
-
-    /**
-     * Delete by surrogate ID
-     */
-    public function delete(int $id): bool
-    {
-        return DB::table('rkhhdr')
-            ->where('id', $id)
-            ->delete();
-    }
-
-    /**
-     * Delete by business key
-     */
-    public function deleteByRkhNo(string $companycode, string $rkhno): bool
-    {
-        return DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->delete();
-    }
-
-    /**
-     * ✅ FIXED: Create RKH details - Pastikan isi batchid & rkhhdrid
-     */
-    public function createDetails(array $details): bool
-    {
-        if (empty($details)) {
-            return true;
-        }
-
-        // Validate that all details have required surrogate IDs
-        foreach ($details as $detail) {
-            if (isset($detail['batchno']) && !isset($detail['batchid'])) {
-                \Log::warning('Creating rkhlst without batchid', $detail);
-            }
-            if (!isset($detail['rkhhdrid'])) {
-                \Log::warning('Creating rkhlst without rkhhdrid', $detail);
-            }
-        }
-
-        return DB::table('rkhlst')->insert($details);
-    }
-
-    /**
-     * Delete RKH details
-     */
-    public function deleteDetails(string $companycode, string $rkhno): int
-    {
-        return DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->delete();
-    }
-
-    /**
-     * ✅ FIXED: Create worker assignments - Pastikan isi rkhhdrid
-     */
-    public function createWorkers(array $workers): bool
-    {
-        if (empty($workers)) {
-            return true;
-        }
-
-        // Validate rkhhdrid
-        foreach ($workers as $worker) {
-            if (!isset($worker['rkhhdrid'])) {
-                \Log::warning('Creating rkhlstworker without rkhhdrid', $worker);
-            }
-        }
-        
-        return DB::table('rkhlstworker')->insert($workers);
-    }
-
-    /**
-     * Delete worker assignments
-     */
-    public function deleteWorkers(string $companycode, string $rkhno): int
-    {
-        return DB::table('rkhlstworker')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->delete();
-    }
-
-    /**
-     * ✅ FIXED: Create kendaraan assignments - Pastikan isi kendaraanid & rkhhdrid
-     */
-    public function createKendaraan(array $kendaraan): bool
-    {
-        if (empty($kendaraan)) {
-            return true;
-        }
-
-        // Validate surrogate IDs
-        foreach ($kendaraan as $k) {
-            if (isset($k['nokendaraan']) && !isset($k['kendaraanid'])) {
-                \Log::warning('Creating rkhlstkendaraan without kendaraanid', $k);
-            }
-            if (!isset($k['rkhhdrid'])) {
-                \Log::warning('Creating rkhlstkendaraan without rkhhdrid', $k);
-            }
-        }
-        
-        return DB::table('rkhlstkendaraan')->insert($kendaraan);
-    }
-
-    /**
-     * Delete kendaraan assignments
-     */
-    public function deleteKendaraan(string $companycode, string $rkhno): int
-    {
-        return DB::table('rkhlstkendaraan')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->delete();
-    }
-
-    /**
-     * Get RKH numbers for specific date
+     * Get RKH numbers by date
      * 
      * @param string $companycode
      * @param string $date
      * @return array
      */
-    public function getRkhNumbersByDate(string $companycode, string $date): array
+    public function getRkhNumbersByDate($companycode, $date)
     {
         return DB::table('rkhhdr')
             ->where('companycode', $companycode)
@@ -412,271 +473,41 @@ class RkhRepository
     }
 
     /**
-     * Get last RKH number for specific date (for sequence generation)
-     * WITH LOCK to prevent race condition
+     * Get last RKH sequence for date with lock
+     * Used in number generation
      * 
      * @param string $companycode
      * @param string $date
-     * @param string $prefix (e.g., "RKH01012")
      * @return object|null
      */
-    public function getLastRkhNoForDate(string $companycode, string $date, string $prefix): ?object
+    public function getLastRkhSequenceForDateWithLock($companycode, $date)
     {
+        $carbonDate = \Carbon\Carbon::parse($date);
+        $day = $carbonDate->format('d');
+        $month = $carbonDate->format('m');
+        $year = $carbonDate->format('y');
+
         return DB::table('rkhhdr')
             ->where('companycode', $companycode)
-            ->whereDate('rkhdate', $date)
-            ->where('rkhno', 'like', "{$prefix}%")
+            ->whereDate('rkhdate', $carbonDate->format('Y-m-d'))
+            ->where('rkhno', 'like', "RKH{$day}{$month}%{$year}")
             ->lockForUpdate()
             ->orderBy(DB::raw('CAST(SUBSTRING(rkhno, 8, 2) AS UNSIGNED)'), 'desc')
             ->first();
     }
 
     /**
-     * Check if RKH exists
+     * Check if RKH number exists
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return bool
      */
-    public function exists(string $companycode, string $rkhno): bool
+    public function existsRkhNo($companycode, $rkhno)
     {
         return DB::table('rkhhdr')
             ->where('companycode', $companycode)
             ->where('rkhno', $rkhno)
             ->exists();
-    }
-
-    /**
-     * Get pending approvals for specific jabatan
-     * 
-     * @param string $companycode
-     * @param int $jabatanId
-     * @return Collection
-     */
-    public function getPendingApprovals(string $companycode, int $jabatanId): Collection
-    {
-        return DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
-            ->where('r.companycode', $companycode)
-            ->where(function($query) use ($jabatanId) {
-                $query->where(function($q) use ($jabatanId) {
-                    // Level 1 approval
-                    $q->where('app.idjabatanapproval1', $jabatanId)
-                      ->whereNull('r.approval1flag');
-                })->orWhere(function($q) use ($jabatanId) {
-                    // Level 2 approval
-                    $q->where('app.idjabatanapproval2', $jabatanId)
-                      ->where('r.approval1flag', '1')
-                      ->whereNull('r.approval2flag');
-                })->orWhere(function($q) use ($jabatanId) {
-                    // Level 3 approval
-                    $q->where('app.idjabatanapproval3', $jabatanId)
-                      ->where('r.approval1flag', '1')
-                      ->where('r.approval2flag', '1')
-                      ->whereNull('r.approval3flag');
-                });
-            })
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                'ag.groupname as activity_group_name',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2',
-                'app.idjabatanapproval3',
-                DB::raw('CASE 
-                    WHEN app.idjabatanapproval1 = '.$jabatanId.' AND r.approval1flag IS NULL THEN 1
-                    WHEN app.idjabatanapproval2 = '.$jabatanId.' AND r.approval1flag = "1" AND r.approval2flag IS NULL THEN 2
-                    WHEN app.idjabatanapproval3 = '.$jabatanId.' AND r.approval1flag = "1" AND r.approval2flag = "1" AND r.approval3flag IS NULL THEN 3
-                    ELSE 0
-                END as approval_level')
-            ])
-            ->orderBy('r.rkhdate', 'desc')
-            ->get();
-    }
-
-    /**
-     * Get RKH approval detail (with approval history)
-     * 
-     * @param string $companycode
-     * @param string $rkhno
-     * @return object|null
-     */
-    public function getApprovalDetail(string $companycode, string $rkhno): ?object
-    {
-        return DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->leftJoin('approval as app', function($join) use ($companycode) {
-                $join->on('r.activitygroup', '=', 'app.activitygroup')
-                     ->where('app.companycode', '=', $companycode);
-            })
-            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
-            ->leftJoin('user as u1', 'r.approval1userid', '=', 'u1.userid')
-            ->leftJoin('user as u2', 'r.approval2userid', '=', 'u2.userid')
-            ->leftJoin('user as u3', 'r.approval3userid', '=', 'u3.userid')
-            ->leftJoin('jabatan as j1', 'app.idjabatanapproval1', '=', 'j1.idjabatan')
-            ->leftJoin('jabatan as j2', 'app.idjabatanapproval2', '=', 'j2.idjabatan')
-            ->leftJoin('jabatan as j3', 'app.idjabatanapproval3', '=', 'j3.idjabatan')
-            ->where('r.companycode', $companycode)
-            ->where('r.rkhno', $rkhno)
-            ->select([
-                'r.*',
-                'm.name as mandor_nama',
-                'ag.groupname as activity_group_name',
-                'app.jumlahapproval',
-                'app.idjabatanapproval1',
-                'app.idjabatanapproval2', 
-                'app.idjabatanapproval3',
-                'u1.name as approval1_user_name',
-                'u2.name as approval2_user_name',
-                'u3.name as approval3_user_name',
-                'j1.namajabatan as jabatan1_name',
-                'j2.namajabatan as jabatan2_name',
-                'j3.namajabatan as jabatan3_name'
-            ])
-            ->first();
-    }
-
-    /**
-     * Get outstanding RKH for mandor
-     * RKH is considered "outstanding" if status is NOT 'Completed'
-     * 
-     * @param string $companycode
-     * @param string $mandorId
-     * @return object|null
-     */
-    public function getOutstandingRkh(string $companycode, string $mandorId): ?object
-    {
-        return DB::table('rkhhdr as r')
-            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
-            ->where('r.companycode', $companycode)
-            ->where('r.mandorid', $mandorId)
-            ->where(function($query) {
-                // Outstanding means: NOT Completed
-                $query->where('r.status', '!=', 'Completed')
-                    ->orWhereNull('r.status');
-            })
-            ->select([
-                'r.rkhno',
-                'r.rkhdate',
-                'r.status',
-                'r.mandorid',
-                'm.name as mandor_name'
-            ])
-            ->orderBy('r.rkhdate', 'desc')
-            ->first();
-    }
-
-    /**
-     * Check if RKH has planting activities (2.2.7)
-     * 
-     * @param string $companycode
-     * @param string $rkhno
-     * @return bool
-     */
-    public function hasPlantingActivities(string $companycode, string $rkhno): bool
-    {
-        return DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('activitycode', '2.2.7')
-            ->exists();
-    }
-
-    /**
-     * Check if RKH needs material usage generation
-     * 
-     * @param string $companycode
-     * @param string $rkhno
-     * @return bool
-     */
-    public function needsMaterialUsage(string $companycode, string $rkhno): bool
-    {
-        return DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('usingmaterial', 1)
-            ->whereNotNull('herbisidagroupid')
-            ->exists();
-    }
-
-    /**
-     * Get planting plots for RKH
-     * 
-     * @param string $companycode
-     * @param string $rkhno
-     * @return Collection
-     */
-    public function getPlantingPlots(string $companycode, string $rkhno): Collection
-    {
-        return DB::table('rkhlst')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->where('activitycode', '2.2.7')
-            ->get();
-    }
-
-    // ==========================================
-    // PRIVATE HELPER METHODS
-    // ==========================================
-
-    /**
-     * Get RKH date (helper for subqueries)
-     * 
-     * @param string $companycode
-     * @param string $rkhno
-     * @return string
-     */
-    private function getRkhDate(string $companycode, string $rkhno): ?string
-    {
-        $result = DB::table('rkhhdr')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->value('rkhdate');
-        
-        return $result ? Carbon::parse($result)->format('Y-m-d') : null;
-    }
-
-     /**
-     * Get LKH count for RKH
-     */
-    public function getLkhCount(string $companycode, string $rkhno): int
-    {
-        return DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->where('rkhno', $rkhno)
-            ->count();
-    }
-
-    // =====================================
-    // FILTER HELPERS
-    // =====================================
-
-    private function applyApprovalFilter($query, string $filter)
-    {
-        switch ($filter) {
-            case 'approved':
-                return $query->where('r.approvalstatus', '1');
-            case 'pending':
-                return $query->whereNull('r.approvalstatus')
-                    ->where('app.jumlahapproval', '>', 0);
-            case 'declined':
-                return $query->where('r.approvalstatus', '0');
-            default:
-                return $query;
-        }
-    }
-
-    private function applyStatusFilter($query, string $filter)
-    {
-        switch ($filter) {
-            case 'completed':
-                return $query->where('r.status', 'Completed');
-            case 'in_progress':
-                return $query->where('r.status', '!=', 'Completed');
-            default:
-                return $query;
-        }
     }
 }

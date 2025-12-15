@@ -1,12 +1,8 @@
 <?php
-// =====================================================
-// FILE: app/Models/MasterData/Kendaraan.php
-// =====================================================
-namespace App\Models\MasterData;
+
+namespace App\Models\MasterData;;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Transaction\LkhDetailKendaraan;
-use App\Models\Transaction\RkhLstKendaraan;
 
 class Kendaraan extends Model
 {
@@ -19,43 +15,42 @@ class Kendaraan extends Model
         'companycode',
         'idtenagakerja',
         'nokendaraan',
+        'companygroup',
         'hourmeter',
         'jenis',
+        'tahunterima',
+        'statuskendaraan',
         'inputby',
         'createdat',
         'updateby',
         'updatedate',
-        'isactive'
+        'isactive',
     ];
 
     protected $casts = [
         'hourmeter' => 'float',
         'isactive' => 'boolean',
         'createdat' => 'datetime',
-        'updatedate' => 'datetime'
+        'updatedate' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
     public function operator()
     {
         return $this->belongsTo(TenagaKerja::class, 'idtenagakerja', 'tenagakerjaid');
     }
 
-    public function lkhDetailKendaraan()
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
+    }
+
+    public function lkhDetailKendaraans()
     {
         return $this->hasMany(LkhDetailKendaraan::class, 'kendaraanid', 'id');
     }
 
-    public function rkhLstKendaraan()
+    public function rkhlstKendaraans()
     {
-        return $this->hasMany(RkhLstKendaraan::class, 'kendaraanid', 'id');
-    }
-
-    // Finder by business key
-    public static function findByBusinessKey(string $companycode, string $nokendaraan): ?self
-    {
-        return static::where('companycode', $companycode)
-            ->where('nokendaraan', $nokendaraan)
-            ->first();
+        return $this->hasMany(RkhlstKendaraan::class, 'kendaraanid', 'id');
     }
 }

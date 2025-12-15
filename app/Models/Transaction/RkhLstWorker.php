@@ -2,13 +2,13 @@
 namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Activity;
 
 class RkhLstWorker extends Model
 {
     protected $table = 'rkhlstworker';
     protected $primaryKey = 'id';
     public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
@@ -29,7 +29,15 @@ class RkhLstWorker extends Model
         'createdat' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::saving(function ($model) {
+            $model->jumlahtenagakerja = $model->jumlahlaki + $model->jumlahperempuan;
+        });
+    }
+
     public function rkhHeader()
     {
         return $this->belongsTo(Rkhhdr::class, 'rkhhdrid', 'id');

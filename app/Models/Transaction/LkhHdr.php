@@ -1,19 +1,15 @@
 <?php
-// =====================================================
-// FILE: app/Models/Transaction/Lkhhdr.php
-// =====================================================
 namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\MasterData\Activity;
-use App\Models\User;
 
-class Lkhhdr extends Model
+class LkhHdr extends Model
 {
     protected $table = 'lkhhdr';
     protected $primaryKey = 'id';
     public $incrementing = true;
     public $timestamps = false;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'lkhno',
@@ -21,7 +17,6 @@ class Lkhhdr extends Model
         'rkhhdrid',
         'companycode',
         'activitycode',
-        'blok',
         'mandorid',
         'lkhdate',
         'jenistenagakerja',
@@ -53,6 +48,10 @@ class Lkhhdr extends Model
         'createdat',
         'updateby',
         'updatedat',
+        'mobilecreatedat',
+        'mobileupdatedat',
+        'webreceivedat',
+        'mobile_status',
     ];
 
     protected $casts = [
@@ -74,6 +73,9 @@ class Lkhhdr extends Model
         'submitat' => 'datetime',
         'createdat' => 'datetime',
         'updatedat' => 'datetime',
+        'mobilecreatedat' => 'datetime',
+        'mobileupdatedat' => 'datetime',
+        'webreceivedat' => 'datetime',
     ];
 
     protected function serializeDate(\DateTimeInterface $date)
@@ -81,10 +83,19 @@ class Lkhhdr extends Model
         return $date->format('Y-m-d H:i:s');
     }
 
-    // Relationships (FK menggunakan surrogate ID)
-    public function rkh()
+    public function rkhHeader()
     {
         return $this->belongsTo(Rkhhdr::class, 'rkhhdrid', 'id');
+    }
+
+    public function activity()
+    {
+        return $this->belongsTo(Activity::class, 'activitycode', 'activitycode');
+    }
+
+    public function mandor()
+    {
+        return $this->belongsTo(User::class, 'mandorid', 'userid');
     }
 
     public function plotDetails()
@@ -102,7 +113,7 @@ class Lkhhdr extends Model
         return $this->hasMany(LkhDetailMaterial::class, 'lkhhdrid', 'id');
     }
 
-    public function kendaraanDetails()
+    public function vehicleDetails()
     {
         return $this->hasMany(LkhDetailKendaraan::class, 'lkhhdrid', 'id');
     }
@@ -110,23 +121,5 @@ class Lkhhdr extends Model
     public function bsmDetails()
     {
         return $this->hasMany(LkhDetailBsm::class, 'lkhhdrid', 'id');
-    }
-
-    public function activity()
-    {
-        return $this->belongsTo(Activity::class, 'activitycode', 'activitycode');
-    }
-
-    public function mandor()
-    {
-        return $this->belongsTo(User::class, 'mandorid', 'userid');
-    }
-
-    // Finder by business key
-    public static function findByBusinessKey(string $companycode, string $lkhno): ?self
-    {
-        return static::where('companycode', $companycode)
-            ->where('lkhno', $lkhno)
-            ->first();
     }
 }

@@ -1,17 +1,8 @@
 <?php
-// =====================================================
-// MASTER DATA MODELS
-// =====================================================
 
-// =====================================================
-// FILE: app/Models/MasterData/Batch.php
-// =====================================================
 namespace App\Models\MasterData;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Transaction\LkhDetailPlot;
-use App\Models\Transaction\LkhDetailBsm;
-use App\Models\Transaction\Rkhlst;
 
 class Batch extends Model
 {
@@ -40,20 +31,53 @@ class Batch extends Model
         'inputby',
         'createdat',
         'plottype',
+        'splitfrombatchno',
+        'mergedtobatchno',
+        'splitmergedreason',
     ];
 
     protected $casts = [
+        'batcharea' => 'decimal:2',
         'batchdate' => 'date',
         'tanggalulangtahun' => 'date',
         'tanggalpanen' => 'date',
-        'batcharea' => 'decimal:2',
         'pkp' => 'integer',
         'isactive' => 'boolean',
-        'createdat' => 'datetime',
         'closedat' => 'datetime',
+        'createdat' => 'datetime',
     ];
 
-    // Relationships (FK menggunakan surrogate ID)
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
+    }
+
+    public function previousBatch()
+    {
+        return $this->belongsTo(Batch::class, 'previousbatchno', 'batchno');
+    }
+
+    public function nextBatch()
+    {
+        return $this->hasOne(Batch::class, 'previousbatchno', 'batchno');
+    }
+
+    public function plantingLkh()
+    {
+        return $this->belongsTo(Lkhhdr::class, 'plantinglkhno', 'lkhno');
+    }
+
+    public function kontraktor()
+    {
+        return $this->belongsTo(Kontraktor::class, 'kontraktorid', 'id');
+    }
+
+    public function masterlist()
+    {
+        return $this->belongsTo(Masterlist::class, 'plot', 'plot')
+                    ->where('companycode', $this->companycode);
+    }
+
     public function lkhDetailPlots()
     {
         return $this->hasMany(LkhDetailPlot::class, 'batchid', 'id');
@@ -64,16 +88,8 @@ class Batch extends Model
         return $this->hasMany(LkhDetailBsm::class, 'batchid', 'id');
     }
 
-    public function rkhLst()
+    public function rkhlsts()
     {
         return $this->hasMany(Rkhlst::class, 'batchid', 'id');
-    }
-
-    // Finder by business key
-    public static function findByBusinessKey(string $batchno, string $companycode): ?self
-    {
-        return static::where('batchno', $batchno)
-            ->where('companycode', $companycode)
-            ->first();
     }
 }
