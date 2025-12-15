@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
 use App\Models\usematerialhdr;
-use App\Models\Batch;
+use App\Models\MasterData\Batch;
 use Arr;
 
 class TimelineController extends Controller

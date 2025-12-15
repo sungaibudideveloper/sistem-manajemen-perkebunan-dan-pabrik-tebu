@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\MasterData;
 use App\Http\Controllers\Controller;
 
-use App\Models\Blok;
+use App\Models\MasterData\Blok;
 use App\Models\Mapping;
 use App\Models\Plotting;
 use Illuminate\Http\Request;

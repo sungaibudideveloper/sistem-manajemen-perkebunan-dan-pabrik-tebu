@@ -369,7 +369,7 @@ function activityPicker(rowIndex) {
         if (!groups[code]) {
           groups[code] = {
             code,
-            groupName: a.group?.groupname || code,
+            groupName: a.groupname || code,
             activities: []
           }
         }

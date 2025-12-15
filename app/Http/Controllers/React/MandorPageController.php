@@ -15,15 +15,15 @@ use App\Models\User;
 use App\Models\TenagaKerja;
 use App\Models\AbsenHdr;
 use App\Models\AbsenLst;
-use App\Models\Lkhhdr;
+use App\Models\Transaction\LkhHdr;
 use App\Models\Lkhlst;
-use App\Models\Rkhhdr;
-use App\Models\Rkhlst;
-use App\Models\Activity;
+use App\Models\Transaction\RkhHdr;
+use App\Models\Transaction\RkhLst;
+use App\Models\MasterData\Activity;
 use App\Models\Kendaraan;
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
-use App\Models\Upah;
+use App\Models\MasterData\Upah;
 
 class MandorPageController extends Controller
 {

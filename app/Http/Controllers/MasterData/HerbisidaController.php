@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
-use App\Models\Herbisida;
-use App\Models\Herbisidagroup;
+use App\Models\MasterData\Herbisida;
+use App\Models\MasterData\HerbisidaGroup;
 
 class HerbisidaController extends Controller
 {

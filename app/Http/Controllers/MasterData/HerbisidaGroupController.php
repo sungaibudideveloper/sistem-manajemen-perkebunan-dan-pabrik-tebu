@@ -7,9 +7,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
-use App\Models\Herbisida;
-use App\Models\Herbisidagroup;
-use App\Models\Herbisidadosage;
+use App\Models\MasterData\Herbisida;
+use App\Models\MasterData\HerbisidaGroup;
+use App\Models\MasterData\HerbisidaDosage;
 use Illuminate\Support\Facades\DB;
 
 class HerbisidaGroupController extends Controller

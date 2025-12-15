@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
-use App\Models\HerbisidaDosage;
+use App\Models\MasterData\HerbisidaDosage;
 
 class HerbisidaDosageController extends Controller
 {

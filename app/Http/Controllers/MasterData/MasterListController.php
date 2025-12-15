@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
-use App\Models\Masterlist;
-use App\Models\Batch;
+use App\Models\MasterData\Masterlist;
+use App\Models\MasterData\Batch;
 
 class MasterListController extends Controller
 {

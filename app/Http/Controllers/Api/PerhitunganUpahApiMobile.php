@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Upah;
+use App\Models\MasterData\Upah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -25,14 +25,38 @@ class PerhitunganUpahApiMobile extends Controller
                 'tenagakerjaid' => 'required|string',
                 'tenagakerjaurutan' => 'required|integer',
                 'activitycode' => 'required|string',
-                'jenistenagakerja' => 'required|integer|in:1,2',
+                'jenistenagakerja' => 'required|integer|in:1,2,3,4,5', // ✅ Accept 1,2,3,4,5
                 'lkhdate' => 'required|date',
                 'jammulai' => 'required|date_format:H:i:s',
                 'jamselesai' => 'required|date_format:H:i:s',
                 'overtimehours' => 'nullable|numeric|min:0',
-                'luashasil' => 'nullable|numeric|min:0', // for borongan
+                'luashasil' => 'nullable|numeric|min:0',
                 'keterangan' => 'nullable|string|max:255',
             ]);
+            
+            // ✅ Handle jenis tenaga kerja 3 dan 5 (return null)
+            if (in_array($validated['jenistenagakerja'], [3, 5])) {
+                return response()->json([
+                    'status' => 1,
+                    'description' => 'Jenis tenaga kerja 3 dan 5 tidak memerlukan perhitungan upah',
+                    'data' => [
+                        'total_upah' => null,
+                        'jam_kerja' => null,
+                        'breakdown' => [
+                            'upah_harian' => null,
+                            'upah_perjam' => null,
+                            'upah_lembur' => null,
+                            'upah_borongan' => null,
+                            'premi' => null
+                        ]
+                    ]
+                ], 200);
+            }
+            
+            // ✅ Convert jenis 4 → 1 (harian)
+            if ($validated['jenistenagakerja'] == 4) {
+                $validated['jenistenagakerja'] = 1;
+            }
             
             // Calculate work hours
             $totalJamKerja = $this->calculateWorkHours($validated['jammulai'], $validated['jamselesai']);
@@ -79,7 +103,7 @@ class PerhitunganUpahApiMobile extends Controller
                 ]);
 
             if ($updated) {
-                // ✅ SYNC HEADER SETELAH UPDATE BERHASIL
+                // Sync header totals
                 $this->syncLkhHeaderTotals($validated['companycode'], $validated['lkhno']);
                 
                 return response()->json([
@@ -100,7 +124,7 @@ class PerhitunganUpahApiMobile extends Controller
             } else {
                 return response()->json([
                     'status' => 0,
-                    'description' => 'Failed to update worker wage No changes were made to the record'
+                    'description' => 'Failed to update worker wage. No changes were made to the record'
                 ], 400);
             }
             

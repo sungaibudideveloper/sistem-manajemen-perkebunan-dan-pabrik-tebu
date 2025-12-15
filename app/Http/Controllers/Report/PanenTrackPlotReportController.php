@@ -14,11 +14,11 @@ class PanenTrackPlotReportController extends Controller
     {
         $companycode = Session::get('companycode');
         
-        // Get all plots with batch info
+        // Get all plots with batch info (optimized join)
         $plots = DB::table('masterlist as m')
-            ->leftJoin('batch as b', function($join) use ($companycode) {
+            ->leftJoin('batch as b', function($join) {
                 $join->on('m.activebatchno', '=', 'b.batchno')
-                    ->where('b.companycode', '=', $companycode);
+                    ->on('m.companycode', '=', 'b.companycode'); // ✅ Proper composite key join
             })
             ->where('m.companycode', $companycode)
             ->where('m.isactive', 1)
@@ -26,6 +26,7 @@ class PanenTrackPlotReportController extends Controller
                 'm.plot',
                 'm.blok',
                 'm.activebatchno',
+                'b.id as batch_id',           // ✅ Add surrogate ID
                 'b.tanggalpanen',
                 'b.lifecyclestatus'
             ])
@@ -65,6 +66,7 @@ class PanenTrackPlotReportController extends Controller
             ->where('b.plot', $plot)
             ->whereNotNull('b.tanggalpanen')
             ->select([
+                'b.id',                        // ✅ Add surrogate ID
                 'b.batchno',
                 'b.tanggalpanen',
                 'b.batcharea',
@@ -98,15 +100,16 @@ class PanenTrackPlotReportController extends Controller
         }
 
         try {
-            // Get batch info
+            // ✅ STEP 1: Get batch info with surrogate ID
             $batchInfo = DB::table('batch as b')
-                ->join('masterlist as m', function($join) use ($companycode) {
+                ->join('masterlist as m', function($join) {
                     $join->on('b.plot', '=', 'm.plot')
-                        ->where('m.companycode', '=', $companycode);
+                        ->on('b.companycode', '=', 'm.companycode'); // ✅ Proper composite key
                 })
                 ->where('b.companycode', $companycode)
                 ->where('b.batchno', $batchno)
                 ->select([
+                    'b.id as batch_id',        // ✅ Add surrogate ID
                     'b.batchno',
                     'b.plot',
                     'm.blok',
@@ -129,15 +132,11 @@ class PanenTrackPlotReportController extends Controller
             $startDate = Carbon::parse($batchInfo->tanggalpanen);
             $endDate = Carbon::now();
 
-            // Get daily harvest data
+            // ✅ STEP 2: Get daily harvest data using surrogate ID
             $harvestData = DB::table('lkhdetailplot as ldp')
-                ->join('lkhhdr as lh', function($join) use ($companycode) {
-                    $join->on('ldp.lkhno', '=', 'lh.lkhno')
-                        ->where('lh.companycode', '=', $companycode);
-                })
-                ->where('ldp.companycode', $companycode)
-                ->where('ldp.plot', $plot)
-                ->where('ldp.batchno', $batchno)
+                ->join('lkhhdr as lh', 'ldp.lkhhdrid', '=', 'lh.id') // ✅ Use surrogate FK
+                ->where('lh.companycode', $companycode)
+                ->where('ldp.batchid', $batchInfo->batch_id)          // ✅ Use surrogate FK
                 ->where('lh.approvalstatus', '1')
                 ->select([
                     'lh.lkhdate',

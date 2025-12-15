@@ -4,7 +4,7 @@ namespace App\Http\Controllers\InfoUpdates;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
-use App\Models\Company;
+use App\Models\MasterData\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -107,11 +107,41 @@ class NotificationController extends Controller
     {
         try {
             $userId = auth()->id();
+            $user = auth()->user();
             
-            $unreadCount = DB::table('notification')
-                ->where('userid', $userId)
-                ->where('is_read', 0)
-                ->count();
+            // Get user's companies
+            $userCompanies = $user->userCompanies;
+            if ($userCompanies->isEmpty()) {
+                $userCompanyArray = $user->companycode ? explode(',', $user->companycode) : [];
+            } else {
+                $userCompanyArray = $userCompanies->pluck('companycode')->toArray();
+            }
+            $userCompanyArray = array_filter($userCompanyArray);
+            
+            // Get user's jabatan
+            $idjabatan = $user->idjabatan;
+            
+            // Query notifications
+            $notifications = DB::table('notification')
+                ->where('status', 'active')
+                ->where(function($query) use ($userCompanyArray) {
+                    foreach ($userCompanyArray as $companycode) {
+                        $query->orWhere('companycode', 'like', "%{$companycode}%");
+                    }
+                })
+                ->where(function($query) use ($idjabatan) {
+                    $query->whereNull('target_jabatan')
+                        ->orWhere('target_jabatan', '')
+                        ->orWhere('target_jabatan', 'like', "%{$idjabatan}%");
+                })
+                ->get()
+                ->map(function($notif) use ($userId) {
+                    $readBy = json_decode($notif->readby, true) ?? [];
+                    $notif->is_read = in_array($userId, $readBy);
+                    return $notif;
+                });
+            
+            $unreadCount = $notifications->where('is_read', false)->count();
             
             return response()->json([
                 'unread_count' => $unreadCount
@@ -239,7 +269,7 @@ class NotificationController extends Controller
 
         $title = 'Create Notification';
         $companies = Company::orderBy('name')->get();
-        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+        $jabatan = \App\Models\MasterData\Jabatan::orderBy('namajabatan')->get();
 
         return view('info-updates.notifications.create', compact('title', 'companies', 'jabatan'));
     }
@@ -306,7 +336,7 @@ class NotificationController extends Controller
 
         $title = 'Edit Notification';
         $companies = Company::orderBy('name')->get();
-        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+        $jabatan = \App\Models\MasterData\Jabatan::orderBy('namajabatan')->get();
 
         return view('info-updates.notifications.edit', compact('title', 'notification', 'companies', 'jabatan'));
     }

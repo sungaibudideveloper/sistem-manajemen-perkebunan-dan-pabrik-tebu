@@ -4,8 +4,8 @@ namespace App\Http\Controllers\MasterData;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Approval;
-use App\Models\Jabatan;
+use App\Models\MasterData\Approval;
+use App\Models\MasterData\Jabatan;
 use Illuminate\Support\Facades\Auth;
 
 class ApprovalController extends Controller

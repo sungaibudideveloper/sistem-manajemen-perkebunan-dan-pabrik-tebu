@@ -1,0 +1,348 @@
+<?php
+
+namespace App\Http\Controllers\Transaction\RencanaKerjaHarian;
+
+use App\Http\Controllers\Controller;
+use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhService;
+use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhValidationService;
+use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhNumberGeneratorService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class RkhController extends Controller
+{
+    protected $rkhService;
+    protected $validationService;
+    protected $numberGenerator;
+
+    public function __construct(
+        RkhService $rkhService,
+        RkhValidationService $validationService,
+        RkhNumberGeneratorService $numberGenerator
+    ) {
+        $this->rkhService = $rkhService;
+        $this->validationService = $validationService;
+        $this->numberGenerator = $numberGenerator;
+    }
+
+    /**
+     * Display listing of RKH with filters
+     */
+    public function index(Request $request)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            
+            // Extract filters from request
+            $filters = [
+                'search' => $request->input('search', ''),
+                'filterApproval' => $request->input('filter_approval', ''),
+                'filterStatus' => $request->input('filter_status', ''),
+                'filterDate' => $request->input('filter_date', date('Y-m-d')),
+                'allDate' => $request->boolean('all_date'),
+            ];
+
+            $perPage = 50;
+
+            // Get paginated data from service
+            $serviceData = $this->rkhService->getIndexPageData($filters, $perPage, $companycode);
+
+            // Return view with all required variables
+            return view('transaction.rencanakerjaharian.index', [
+                'title' => 'Rencana Kerja Harian',
+                'navbar' => 'Transaction',
+                'nav' => 'Rencana Kerja Harian',
+                
+                // Data
+                'rkhData' => $serviceData['rkhData'],
+                
+                // Filters (for form state)
+                'search' => $filters['search'],
+                'filterApproval' => $filters['filterApproval'],
+                'filterStatus' => $filters['filterStatus'],
+                'filterDate' => $filters['filterDate'],
+                'allDate' => $filters['allDate'],
+                
+                // Optional data
+                'absentenagakerja' => $serviceData['absentenagakerja'] ?? [],
+                'mandors' => $serviceData['mandors'] ?? []
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Index Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Terjadi kesalahan saat memuat data RKH: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show create form
+     */
+    public function create(Request $request)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            $date = $request->input('date', date('Y-m-d'));
+            $mandorId = $request->input('mandor_id');
+
+            $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
+
+            return view('transaction.rencanakerjaharian.create', array_merge($data, [
+                'title' => 'Create Rencana Kerja Harian',
+                'navbar' => 'Transaction',
+                'nav' => 'Rencana Kerja Harian',
+            ]));
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Create Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store new RKH
+     */
+    public function store(Request $request)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            $userid = Auth::user()->userid;
+
+            \Log::info('RKH Store - Incoming Request', [
+                'tanggal' => $request->input('tanggal'),
+                'mandor_id' => $request->input('mandor_id'),
+                'rows_count' => count($request->input('rows', [])),
+                'has_workers' => $request->has('workers'),
+                'has_kendaraan' => $request->has('kendaraan'),
+            ]);
+
+            // Validate request
+            $this->validationService->validateRkhRequest($request);
+
+            \Log::info('RKH Store - Validation Passed');
+
+            // Prepare DTO
+            $dto = [
+                'companycode' => $companycode,
+                'userid' => $userid,
+                'rkhdate' => $request->input('tanggal'),
+                'mandorid' => $request->input('mandor_id'),
+                'rows' => $request->input('rows', []),
+                'workers' => $request->input('workers', []),
+                'kendaraan' => $request->input('kendaraan', []),
+            ];
+
+            // Create RKH via service
+            $result = $this->rkhService->createRkh($dto, $companycode, $userid);
+
+            \Log::info('RKH Store - Service Result', [
+                'success' => $result['success'],
+                'rkhno' => $result['rkhno'] ?? 'N/A'
+            ]);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $result['message'],
+                    'redirect_url' => route('transaction.rencanakerjaharian.show', $result['rkhno'])
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('RKH Store - Validation Failed', [
+                'errors' => $e->errors()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Form Belum Lengkap',
+                'errors' => $e->validator->errors()->all()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \Log::error('RKH Store Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Show RKH detail
+     */
+    public function show($rkhno)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            
+            // ✅ FIX: Pastikan urutan parameter benar
+            $data = $this->rkhService->getShowPageData($rkhno, $companycode);
+
+            return view('transaction.rencanakerjaharian.show', array_merge($data, [
+                'title' => 'Detail Rencana Kerja Harian',
+                'navbar' => 'Transaction',
+                'nav' => 'Rencana Kerja Harian',
+            ]));
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Show Error', [
+                'rkhno' => $rkhno,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show edit form
+     */
+    public function edit($rkhno)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            
+            $data = $this->rkhService->getEditPageData($rkhno, $companycode);
+
+            return view('transaction.rencanakerjaharian.edit', array_merge($data, [
+                'title' => 'Edit Rencana Kerja Harian',
+                'navbar' => 'Transaction',
+                'nav' => 'Rencana Kerja Harian',
+            ]));
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Edit Error', [
+                'rkhno' => $rkhno,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update existing RKH
+     */
+    public function update(Request $request, $rkhno)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            $userid = Auth::user()->userid;
+
+            \Log::info('RKH Update - Incoming Request', [
+                'rkhno' => $rkhno,
+                'tanggal' => $request->input('tanggal'),
+                'mandor_id' => $request->input('mandor_id'),
+                'rows_count' => count($request->input('rows', [])),
+            ]);
+
+            // Validate request
+            $this->validationService->validateRkhRequest($request);
+
+            \Log::info('RKH Update - Validation Passed');
+
+            // ✅ FIX: Prepare DTO yang lengkap (sama kayak store)
+            $dto = [
+                'companycode' => $companycode,
+                'userid' => $userid,
+                'rkhdate' => $request->input('tanggal'),
+                'mandorid' => $request->input('mandor_id'),
+                'keterangan' => $request->input('keterangan'),
+                'rows' => $request->input('rows', []),
+                'workers' => $request->input('workers', []),
+                'kendaraan' => $request->input('kendaraan', []),
+            ];
+
+            // ✅ Update RKH via service
+            $result = $this->rkhService->updateRkh($rkhno, $dto, $companycode, $userid);
+
+            \Log::info('RKH Update - Service Result', ['success' => $result]);
+
+            if ($result) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'RKH berhasil diupdate',
+                    'redirect_url' => route('transaction.rencanakerjaharian.show', $rkhno)
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate RKH'
+            ], 400);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('RKH Update - Validation Failed', [
+                'errors' => $e->errors()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->validator->errors()->all()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \Log::error('RKH Update Error', [
+                'rkhno' => $rkhno,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mengupdate RKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete RKH
+     */
+    public function destroy($rkhno)
+    {
+        try {
+            $companycode = Auth::user()->companycode;
+            
+            // ✅ FIX: Correct parameter order (rkhno first, then companycode)
+            $result = $this->rkhService->deleteRkh($rkhno, $companycode);
+
+            return response()->json($result, $result['success'] ? 200 : 400);
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Delete Error', [
+                'rkhno' => $rkhno,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus RKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\UserManagement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\UserManagement\SupportTicketService;
-use App\Models\Company;
+use App\Models\MasterData\Company;
 
 class SupportTicketController extends Controller
 {

@@ -8,10 +8,19 @@ use App\Http\Controllers\Transaction\GudangController;
 use App\Http\Controllers\Transaction\AgronomiController;
 use App\Http\Controllers\Transaction\GudangBbmController;
 use App\Http\Controllers\Transaction\KendaraanController;
-use App\Http\Controllers\Transaction\RencanaKerjaHarianController;
 use App\Http\Controllers\Transaction\RencanaKerjaMingguanController;
 use App\Http\Controllers\Transaction\MappingBsmController;
 use App\Http\Controllers\Transaction\NfcController;
+
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\RkhController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\LkhController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Approval\RkhApprovalController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Approval\LkhApprovalController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\DthReportController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\RekapLkhReportController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\OperatorReportController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Utility\RkhUtilityController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\MaterialUsageController;
 
 Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(function () {
 
@@ -91,50 +100,94 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
     // RENCANA KERJA HARIAN
     // ============================================================================
     Route::middleware('permission:transaction.rencanakerjaharian.view')->group(function () {
-        Route::prefix('kerjaharian/rencanakerjaharian')->name('rencanakerjaharian.')->controller(RencanaKerjaHarianController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::get('/create', 'create')->name('create');
-            Route::post('/store', 'store')->name('store');
-            Route::get('/{rkhno}/edit', 'edit')->name('edit');
-            Route::put('/{rkhno}', 'update')->name('update');
-            Route::get('/{rkhno}/show', 'show')->name('show');
-            Route::delete('/{rkhno}', 'destroy')->name('destroy');
+        Route::prefix('kerjaharian/rencanakerjaharian')->name('rencanakerjaharian.')->group(function () {
 
-            Route::post('/lkh/submit', 'submitLKH')->name('submitLKH');
-            Route::get('/lkh/{lkhno}/approval-detail', 'getLkhApprovalDetail')->name('getLkhApprovalDetail');
-            Route::get('/{rkhno}/lkh', 'getLKHData')->name('getLKHData');
-            Route::get('/lkh/{lkhno}/show', 'showLKH')->name('showLKH');
-            Route::get('/lkh/{lkhno}/edit', 'editLKH')->name('editLKH');
-            Route::put('/lkh/{lkhno}', 'updateLKH')->name('updateLKH');
+            // ============================================================
+            // RKH CRUD
+            // ============================================================
+            Route::controller(RkhController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/create', 'create')->name('create');
+                Route::post('/store', 'store')->name('store');
+                Route::get('/{rkhno}/show', 'show')->name('show');
+                Route::get('/{rkhno}/edit', 'edit')->name('edit');
+                Route::put('/{rkhno}', 'update')->name('update');
+                Route::delete('/{rkhno}', 'destroy')->name('destroy');
+            });
 
-            Route::get('/pending-approvals', 'getPendingApprovals')->name('getPendingApprovals');
-            Route::post('/process-approval', 'processApproval')->name('processApproval');
-            Route::get('/{rkhno}/approval-detail', 'getApprovalDetail')->name('getApprovalDetail');
+            // ============================================================
+            // RKH APPROVAL
+            // ============================================================
+            Route::controller(RkhApprovalController::class)->group(function () {
+                Route::get('/pending-approvals', 'getPendingApprovals')->name('getPendingApprovals');
+                Route::post('/process-approval', 'processApproval')->name('processApproval');
+                Route::get('/{rkhno}/approval-detail', 'getApprovalDetail')->name('getApprovalDetail');
+                Route::post('/update-status', 'updateStatus')->name('updateStatus');
+            });
 
-            Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
-            Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
+            // ============================================================
+            // LKH MANAGEMENT
+            // ============================================================
+            Route::controller(LkhController::class)->group(function () {
+                Route::get('/{rkhno}/lkh', 'getLKHData')->name('getLKHData');
+                Route::get('/lkh/{lkhno}/show', 'showLKH')->name('showLKH');
+                Route::get('/lkh/{lkhno}/edit', 'editLKH')->name('editLKH');
+                Route::put('/lkh/{lkhno}', 'updateLKH')->name('updateLKH');
+                Route::post('/lkh/submit', 'submitLKH')->name('submitLKH');
+                Route::post('/{rkhno}/generate-lkh', 'manualGenerateLkh')->name('manualGenerateLkh');
+            });
 
-            Route::get('/lkh-panen-report/get-sj', 'getSuratJalan')->name('lkh-panen-report.get-sj');
+            // ============================================================
+            // LKH APPROVAL
+            // ============================================================
+            Route::controller(LkhApprovalController::class)->group(function () {
+                Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
+                Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
+                Route::get('/lkh/{lkhno}/approval-detail', 'getLkhApprovalDetail')->name('getLkhApprovalDetail');
+            });
 
-            Route::get('/operators-for-date', 'getOperatorsForDate')->name('getOperatorsForDate');
-            Route::post('/generate-operator-report', 'generateOperatorReport')->name('generateOperatorReport');
-            Route::get('/operator-report', 'showOperatorReport')->name('operator-report');
-            Route::get('/operator-report-data', 'getOperatorReportData')->name('operator-report-data');
+            // ============================================================
+            // REPORTS
+            // ============================================================
+            // DTH Report
+            Route::controller(DthReportController::class)->group(function () {
+                Route::post('/generate-dth', 'generate')->name('generateDTH');
+                Route::get('/dth-report', 'show')->name('dth-report');
+                Route::get('/dth-data', 'getData')->name('dth-data');
+            });
 
-            Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
+            // Rekap LKH Report
+            Route::controller(RekapLkhReportController::class)->group(function () {
+                Route::post('/generate-rekap-lkh', 'generate')->name('generateRekapLKH');
+                Route::get('/rekap-lkh-report', 'show')->name('rekap-lkh-report');
+                Route::get('/lkh-rekap-data', 'getData')->name('lkh-rekap-data');
+            });
 
-            Route::post('/check-outstanding', 'checkOutstandingRKH')->name('checkOutstanding');
-            Route::post('/update-status', 'updateStatus')->name('updateStatus');
-            Route::get('/load-absen-by-date', 'loadAbsenByDate')->name('loadAbsenByDate');
-            Route::post('/generate-dth', 'generateDTH')->name('generateDTH');
-            Route::post('/generate-rekap-lkh', 'generateRekapLKH')->name('generateRekapLKH');
-            Route::get('/dth-report', 'showDTHReport')->name('dth-report');
-            Route::get('/rekap-lkh-report', 'showRekapLKHReport')->name('rekap-lkh-report');
-            Route::post('/{rkhno}/generate-lkh', 'manualGenerateLkh')->name('manualGenerateLkh');
-            Route::get('/dth-data', 'getDTHData')->name('dth-data');
-            Route::get('/lkh-rekap-data', 'getLKHRekapData')->name('lkh-rekap-data');
-            Route::get('/{rkhno}/material-usage', 'getMaterialUsageApi')->name('getMaterialUsage');
-            Route::post('/generate-material-usage', 'generateMaterialUsage')->name('generateMaterialUsage');
+            // Operator Report
+            Route::controller(OperatorReportController::class)->group(function () {
+                Route::get('/operators-for-date', 'getOperatorsForDate')->name('getOperatorsForDate');
+                Route::post('/generate-operator-report', 'generate')->name('generateOperatorReport');
+                Route::get('/operator-report', 'show')->name('operator-report');
+                Route::get('/operator-report-data', 'getData')->name('operator-report-data');
+            });
+
+            // ============================================================
+            // UTILITY / HELPERS
+            // ============================================================
+            Route::controller(RkhUtilityController::class)->group(function () {
+                Route::get('/load-absen-by-date', 'loadAbsenByDate')->name('loadAbsenByDate');
+                Route::get('/plot-info/{plot}/{activitycode}', 'getPlotInfo')->name('getPlotInfo');
+                Route::post('/check-outstanding', 'checkOutstandingRKH')->name('checkOutstanding');
+                Route::get('/lkh-panen-report/get-sj', 'getSuratJalan')->name('lkh-panen-report.get-sj');
+            });
+
+            // ============================================================
+            // MATERIAL USAGE
+            // ============================================================
+            Route::controller(MaterialUsageController::class)->group(function () {
+                Route::get('/{rkhno}/material-usage', 'getMaterialUsageApi')->name('getMaterialUsage');
+                Route::post('/generate-material-usage', 'generateMaterialUsage')->name('generateMaterialUsage');
+            });
         });
     });
 

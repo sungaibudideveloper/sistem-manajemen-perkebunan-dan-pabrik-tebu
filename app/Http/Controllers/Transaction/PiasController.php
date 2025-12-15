@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\Log;
 
 use App\Models\usematerialhdr;
 use App\Models\usemateriallst;
-use App\Models\HerbisidaDosage;
-use App\Models\Herbisida;
-use App\Models\Rkhhdr;
-use App\Models\Rkhlst;
+use App\Models\MasterData\HerbisidaDosage;
+use App\Models\MasterData\Herbisida;
+use App\Models\Transaction\RkhHdr;
+use App\Models\Transaction\RkhLst;
 use App\Models\piashdr;
 use App\Models\piaslst;
 use Carbon\Carbon;
