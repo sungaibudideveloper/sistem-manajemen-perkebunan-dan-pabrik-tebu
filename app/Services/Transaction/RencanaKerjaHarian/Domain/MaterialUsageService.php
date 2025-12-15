@@ -4,7 +4,7 @@ namespace App\Services\Transaction\RencanaKerjaHarian\Domain;
 
 use App\Repositories\Transaction\RencanaKerjaHarian\Domain\MaterialUsageRepository;
 use App\Repositories\Transaction\RencanaKerjaHarian\RkhRepository;
-use App\Services\MaterialUsageGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\MaterialUsageGeneratorService;
 
 /**
  * MaterialUsageService

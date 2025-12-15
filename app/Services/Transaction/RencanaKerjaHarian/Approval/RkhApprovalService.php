@@ -4,8 +4,8 @@ namespace App\Services\Transaction\RencanaKerjaHarian\Approval;
 
 use App\Repositories\Transaction\RencanaKerjaHarian\Approval\RkhApprovalRepository;
 use App\Repositories\Transaction\RencanaKerjaHarian\Shared\MasterDataRepository;
-use App\Services\LkhGeneratorService;
-use App\Services\MaterialUsageGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\LkhGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\MaterialUsageGeneratorService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;

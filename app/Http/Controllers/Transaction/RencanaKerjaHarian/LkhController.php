@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Transaction\RencanaKerjaHarian;
 use App\Http\Controllers\Controller;
 use App\Services\Transaction\RencanaKerjaHarian\Lkh\LkhService;
 use App\Services\Transaction\RencanaKerjaHarian\Lkh\LkhValidationService;
-use App\Services\LkhGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\LkhGeneratorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 

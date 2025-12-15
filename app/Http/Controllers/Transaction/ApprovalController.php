@@ -11,9 +11,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 // Import Services for post-approval actions
-use App\Services\LkhGeneratorService;
-use App\Services\MaterialUsageGeneratorService;
-use App\Services\GenerateNewBatchService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\LkhGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\MaterialUsageGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Generator\GenerateNewBatchService;
 use App\Services\SplitMergePlotService;
 
 /**
