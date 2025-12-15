@@ -269,7 +269,7 @@ class NotificationController extends Controller
 
         $title = 'Create Notification';
         $companies = Company::orderBy('name')->get();
-        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+        $jabatan = \App\Models\MasterData\Jabatan::orderBy('namajabatan')->get();
 
         return view('info-updates.notifications.create', compact('title', 'companies', 'jabatan'));
     }
@@ -336,7 +336,7 @@ class NotificationController extends Controller
 
         $title = 'Edit Notification';
         $companies = Company::orderBy('name')->get();
-        $jabatan = \App\Models\Jabatan::orderBy('namajabatan')->get();
+        $jabatan = \App\Models\MasterData\Jabatan::orderBy('namajabatan')->get();
 
         return view('info-updates.notifications.edit', compact('title', 'notification', 'companies', 'jabatan'));
     }
