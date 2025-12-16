@@ -218,6 +218,15 @@ class GudangController extends Controller
             return redirect()->back()->with('error', 'Cant Retur! No Retur Not Empty');
         }
 
+        $rkhdate = DB::table('rkhhdr')
+        ->where('companycode', session('companycode'))
+        ->where('rkhno', $request->rkhno)
+        ->value('rkhdate');
+
+        if (!$rkhdate) {
+            return back()->with('error', 'RKH Date tidak ditemukan.');
+        }
+
 
 
         $isi = collect();
@@ -247,7 +256,8 @@ class GudangController extends Controller
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,
                 'userid' => auth::user()->userid,
-                'nouse' => $first->nouse
+                'nouse' => $first->nouse,
+                'rkhdate'    => $rkhdate
             ]);
 
         //log
@@ -263,7 +273,7 @@ class GudangController extends Controller
         if ($response->status() == 200) {
             if ($response->json()['status'] == 1) {
                 usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->where('itemcode', $first->itemcode)
-                    ->where('lkhno', $first->lkhno)->where('plot', $first->plot)->update(['noretur' => $response->json()['noretur']]);
+                    ->where('lkhno', $first->lkhno)->where('plot', $first->plot)->update(['noretur' => $response->json()['noretur'],'tglretur'  => now()]);
             }
         } else {
             dd($response->json(), $response->body(), $response->status());
@@ -330,6 +340,15 @@ public function submit(Request $request)
     if ($details->whereNotNull('nouse')->count() >= 1) {
         Cache::forget($lockKey);
         throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
+    }
+
+    $rkhdate = DB::table('rkhhdr')
+    ->where('companycode', session('companycode'))
+    ->where('rkhno', $request->rkhno)
+    ->value('rkhdate');
+
+    if (!$rkhdate) {
+        return back()->with('error', 'RKH Date tidak ditemukan.');
     }
 
     // Validasi duplikat: lkhno + plot + itemcode
@@ -501,7 +520,8 @@ public function submit(Request $request)
                 'factory' => $first->factoryinv,
                 'costcenter' => $request->costcenter,
                 'isi' => array_values($apiPayload),
-                'userid' => substr(auth()->user()->userid, 0, 10)
+                'userid' => substr(auth()->user()->userid, 0, 10),
+                'rkhdate' => $rkhdate
             ]);
 
         // Check jika API gagal
@@ -553,7 +573,8 @@ public function submit(Request $request)
                         'itemprice' => $itemprice,
                         'costcenter' => $request->costcenter,
                         'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
-                        'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0
+                        'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+                        'tgluse'    => now()
                     ]);
 
                 // Cek hasil di database
