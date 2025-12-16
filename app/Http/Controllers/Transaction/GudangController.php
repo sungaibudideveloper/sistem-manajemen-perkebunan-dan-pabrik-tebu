@@ -77,9 +77,10 @@ class GudangController extends Controller
                     usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
                         ->groupBy('rkhno'),
                     'd',
-                    'a.rkhno',
-                    '=',
-                    'd.rkhno'
+                    function($join){
+                        $join->on('a.rkhno','=','d.rkhno')
+                             ->on('a.companycode','=','d.companycode');
+                    }
                 )
                 ->where('a.companycode', session('companycode'))
                 ->whereDate('a.createdat', '>=', $startDate)
