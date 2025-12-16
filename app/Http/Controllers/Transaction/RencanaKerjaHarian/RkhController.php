@@ -8,6 +8,7 @@ use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhValidationService;
 use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhNumberGeneratorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 
 class RkhController extends Controller
 {
@@ -31,7 +32,12 @@ class RkhController extends Controller
     public function index(Request $request)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
+
+            \Log::info('Current Company', [
+    'companycode' => $companycode,
+    'user' => Auth::user()->userid
+]);
             
             // Extract filters from request
             $filters = [
@@ -84,7 +90,7 @@ class RkhController extends Controller
     public function create(Request $request)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             $date = $request->input('date', date('Y-m-d'));
             $mandorId = $request->input('mandor_id');
 
@@ -112,7 +118,7 @@ class RkhController extends Controller
     public function store(Request $request)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             $userid = Auth::user()->userid;
 
             \Log::info('RKH Store - Incoming Request', [
@@ -192,7 +198,7 @@ class RkhController extends Controller
     public function show($rkhno)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             
             // ✅ FIX: Pastikan urutan parameter benar
             $data = $this->rkhService->getShowPageData($rkhno, $companycode);
@@ -220,7 +226,7 @@ class RkhController extends Controller
     public function edit($rkhno)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             
             $data = $this->rkhService->getEditPageData($rkhno, $companycode);
 
@@ -247,7 +253,7 @@ class RkhController extends Controller
     public function update(Request $request, $rkhno)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             $userid = Auth::user()->userid;
 
             \Log::info('RKH Update - Incoming Request', [
@@ -325,7 +331,7 @@ class RkhController extends Controller
     public function destroy($rkhno)
     {
         try {
-            $companycode = Auth::user()->companycode;
+            $companycode = Session::get('companycode');
             
             // ✅ FIX: Correct parameter order (rkhno first, then companycode)
             $result = $this->rkhService->deleteRkh($rkhno, $companycode);

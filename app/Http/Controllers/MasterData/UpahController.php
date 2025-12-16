@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Masterdata;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use App\Http\Controllers\Controller;
+
 use App\Models\Menu;
 use App\Models\Submenu;
 use App\Models\MasterData\Upah;
@@ -28,7 +30,7 @@ class UpahController extends Controller
         }
 
         // Filter berdasarkan company user
-        $query->where('companycode', Auth::user()->companycode);
+        $query->where('companycode', Session::get('companycode'));
 
         $perPage = $request->get('perPage', 10);
         $data = $query->orderBy('effectivedate', 'DESC')->paginate($perPage);
@@ -39,7 +41,7 @@ class UpahController extends Controller
         // Daftar activity group dan wage type untuk dropdown
         $activityGroups = DB::table('upah')
             ->select('activitygroup')
-            ->where('companycode', Auth::user()->companycode)
+            ->where('companycode', Session::get('companycode'))
             ->distinct()
             ->pluck('activitygroup');
 
@@ -71,7 +73,7 @@ class UpahController extends Controller
 
             // Validasi duplikasi data
             $cek = DB::table('upah')
-                ->where('companycode', Auth::user()->companycode)
+                ->where('companycode', Session::get('companycode'))
                 ->where('activitygroup', $request->activitygroup)
                 ->where('wagetype', $request->wagetype)
                 ->where('effectivedate', $request->effectivedate)
@@ -84,7 +86,7 @@ class UpahController extends Controller
             }
 
             $upah = new Upah();
-            $upah->companycode = Auth::user()->companycode;
+            $upah->companycode = Session::get('companycode');
             $upah->activitygroup = $request->activitygroup;
             $upah->wagetype = $request->wagetype;
             $upah->amount = $request->amount;
@@ -106,7 +108,7 @@ class UpahController extends Controller
     public function update(Request $request, $id)
     {
         if (Auth::user()->userid && in_array('Edit Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
-            $company = Auth::user()->companycode;
+            $company = Session::get('companycode');
 
             // Validasi duplikasi data (kecuali data yang sedang diedit)
             $validasi = DB::table('upah')
@@ -152,7 +154,7 @@ class UpahController extends Controller
     public function destroy($id)
     {
         if (Auth::user()->userid && in_array('Hapus Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
-            $company = Auth::user()->companycode;
+            $company = Session::get('companycode');
 
             $deleted = DB::table('upah')
                 ->where('id', $id)
