@@ -75,7 +75,7 @@ class GudangController extends Controller
                 ->join('user as c', 'b.mandorid', '=', 'c.userid')
                 ->leftJoinSub(
                     usemateriallst::select('rkhno', DB::raw('MAX(nouse) as nouse'))
-                        ->groupBy('rkhno'),
+                        ->groupBy('rkhno', 'companycode'),
                     'd',
                     function($join){
                         $join->on('a.rkhno','=','d.rkhno')
