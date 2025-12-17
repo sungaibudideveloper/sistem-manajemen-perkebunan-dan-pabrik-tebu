@@ -328,9 +328,9 @@ table th, table td {
             <option value="">— Cost center tidak tersedia —</option>
             @else
             <option value="" disabled {{ old('costcenter') ? '' : 'selected' }}>Pilih cost center…</option>
-            @foreach ($costcenter as $c)
+            @foreach ($costcenter->sortBy('costcenterdesc') as $c)
                 <option value="{{ $c['costcentercode'] }}" {{ $details[0]->costcenter == $c['costcentercode'] ? 'selected' : '' }}>
-                    ({{ $c['costcentercode'] }}) {{ $c['costcenterdesc'] }}
+                    {{ $c['costcenterdesc'] }} ({{ $c['costcentercode'] }})
                 </option>
             @endforeach
             @endif
