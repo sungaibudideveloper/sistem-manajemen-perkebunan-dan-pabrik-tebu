@@ -31,7 +31,7 @@ class PiasController extends Controller
             'routeName' => route('transaction.gudang.index'),
         ]);
     }
-
+ 
     public function home(Request $request)
     {   
         $perPage = (int) $request->input('perPage', 15);
@@ -164,14 +164,18 @@ class PiasController extends Controller
         'rows.*.lkhno'          => 'required|string|max:20',
         'rows.*.tj'             => 'nullable|numeric|min:0',
         'rows.*.tc'             => 'nullable|numeric|min:0',
+        'dosage'                => 'required|integer|min:10|max:25',
+        'totalNeedTJ'           => 'required|integer|min:0',  
+        'totalNeedTC'           => 'required|integer|min:0'  
     ], [
         'rows.required'         => 'Detail baris wajib ada.',
-    ]);
+    ]); 
 
     $rkhno   = $data['rkhno'];
     $stokTJ  = (float) $data['inputTJ'];
     $stokTC  = (float) $data['inputTC'];
     $rowsIn  = $data['rows'];
+    $dosage   = (int) $data['dosage'];
 
     // 2) Hitung total yang diketik user
     $sumTJ = 0; $sumTC = 0;
@@ -214,8 +218,9 @@ class PiasController extends Controller
     // Ambil companycode
     $companycode = DB::table('rkhhdr')->where('rkhno', $rkhno)->where('companycode', session('companycode'))->value('companycode');
 
-    // 4) Simpan dalam transaksi
-    return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC) {
+    
+    return DB::transaction(function () use ($rkhno, $companycode, $rowsIn, $validMap, $stokTJ, $stokTC, $sumTJ, $sumTC, $dosage, $data) {
+
 
         // Hapus detail lama
         $q = DB::table('piaslst')->where('rkhno', $rkhno);
@@ -259,12 +264,23 @@ class PiasController extends Controller
             DB::table('piaslst')->insert($detail);
         }
 
+//hitung status 
+    $totalNeedTJ = (int) $data['totalNeedTJ'];
+    $totalNeedTC = (int) $data['totalNeedTC'];
+//
+        //
+
         // Upsert header
         $header = [
             'tj'       => $stokTJ,
             'tc'       => $stokTC,
             'sisatj'   => (int) floor($stokTJ - $sumTJ),
             'sisatc'   => (int) floor($stokTC - $sumTC),
+            'dosage'    => $dosage,
+            'totalneedtj' => $totalNeedTJ,
+            'totalneedtc' => $totalNeedTC,
+            'statustj'    => $sumTJ >= $totalNeedTJ ? 1 : 0,
+            'statustc'    => $sumTC >= $totalNeedTC ? 1 : 0
         ];
 
         $keys = array_filter([

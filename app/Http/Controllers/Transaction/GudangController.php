@@ -94,7 +94,7 @@ class GudangController extends Controller
                 });
             }
 
-            $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse')
+            $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse', 'b.rkhdate')
                 ->orderBy('a.createdat', 'desc')
                 ->paginate($perPage)
                 ->appends($request->query());

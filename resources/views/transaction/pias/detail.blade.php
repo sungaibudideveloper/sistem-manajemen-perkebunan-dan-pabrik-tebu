@@ -72,6 +72,14 @@
               <input type="number" name="inputTC" id="inputTC" class="w-full border rounded-md p-1 bg-gray-50 text-sm" placeholder="Masukkan Total TC" 
               value="{{ old('inputTC', optional($hdr)->tc)*1 }}" onchange="render()">
             </div>
+            <div style="text-align:right"> 
+              <label class="text-sm font-medium">Dosis / Ha</label>
+              <select name="dosage" id="dosage" class="border rounded p-2">
+                @for($i=10;$i<=25;$i++)
+                  <option value="{{ $i }}" {{ old('dosage', $hdr->dosage ?? 25)==$i ? 'selected':'' }}>{{ $i }}</option>
+                @endfor
+              </select>
+            </div>
           </div>
         </div>
   
@@ -245,11 +253,14 @@
       </div>
     </div>
   </div>
+  <input type="hidden" name="totalNeedTJ" id="totalNeedTJ_hidden" value="0">
+  <input type="hidden" name="totalNeedTC" id="totalNeedTC_hidden" value="0">
 </form>
 
 <script>
+  
   document.addEventListener('DOMContentLoaded', function () {
-    const inputTJ = document.getElementById('inputTJ');
+    const inputTJ = document.getElementById('inputTJ'); 
     const inputTC = document.getElementById('inputTC');
     const plotTable = document.getElementById('plotTable');
 
@@ -278,6 +289,10 @@
 
     const NF0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
     const fmt0 = (x) => NF0.format(Math.round(x || 0));
+    const dosageEl = document.getElementById('dosage');
+    function getDosage(){
+      return parseFloat(dosageEl?.value || '25');
+    }
 
     // ====== PRECOMPUTE SEKALI: baris, needs, elemen DOM ======
     const rows = Array.from(plotTable.rows); // <tr> di tbody
@@ -288,7 +303,7 @@
       const umur = parseInt(r.dataset.umur) || 0;
       const bulan = Math.max(1, Math.ceil(umur/30));
       const p = pcts[Math.min(bulan,10)-1] || {tj:0.5,tc:0.5};
-      const total = luas * 25;
+      const total = luas * getDosage();
       const needTJ = total * p.tj;
       const needTC = total * p.tc;
 
@@ -328,14 +343,17 @@
     // Sum kebutuhan INTEGER (supaya sinkron dengan piaslst/controller)
     const needTJIntArr = needsTJ.map(v => Math.round(v));
     const needTCIntArr = needsTC.map(v => Math.round(v));
-    const sumNeedTJIntConst = needTJIntArr.reduce((a,b)=>a+b,0);
-    const sumNeedTCIntConst = needTCIntArr.reduce((a,b)=>a+b,0);
+    let sumNeedTJIntConst = needTJIntArr.reduce((a,b)=>a+b,0);
+    let sumNeedTCIntConst = needTCIntArr.reduce((a,b)=>a+b,0);
 
     // ✅ INIT: Tampilkan total kebutuhan dan stok saat page load
     if (totalTJEl) totalTJEl.textContent = sumNeedTJIntConst.toLocaleString('id-ID');
     if (totalTCEl) totalTCEl.textContent = sumNeedTCIntConst.toLocaleString('id-ID');
     if (stokTJEl) stokTJEl.textContent = fmt0(stokTJ0);
     if (stokTCEl) stokTCEl.textContent = fmt0(stokTC0);
+
+    document.getElementById('totalNeedTJ_hidden').value = sumNeedTJIntConst;
+    document.getElementById('totalNeedTC_hidden').value = sumNeedTCIntConst;
 
     // ================= CRC32 (match PHP) =================
     const CRC_TABLE = (() => {
@@ -555,6 +573,9 @@ scheduleFirstRender();
       if (totalTJEl) totalTJEl.textContent = sumNeedTJIntConst.toLocaleString('id-ID');
       if (totalTCEl) totalTCEl.textContent = sumNeedTCIntConst.toLocaleString('id-ID');
 
+      document.getElementById('totalNeedTJ_hidden').value = sumNeedTJIntConst;
+      document.getElementById('totalNeedTC_hidden').value = sumNeedTCIntConst;
+
       const okTJ = sumTJ >= sumNeedTJIntConst;
       const okTC = sumTC >= sumNeedTCIntConst;
       statusTJ.textContent = okTJ ? 'TJ CUKUP' : 'TJ KURANG';
@@ -582,6 +603,54 @@ scheduleFirstRender();
     inputTC.addEventListener('change', recalcTotalsFromInputs);
     inputTJ.addEventListener('input', recalcTotalsFromInputs);
     inputTC.addEventListener('input', recalcTotalsFromInputs);
+
+    dosageEl.addEventListener('change', function(){
+  // Recalc all needs dengan basis baru
+  needsTJ = [];
+  needsTC = [];
+  const dosage = getDosage();
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const luas = parseFloat(r.dataset.luas) || 0;
+    const umur = parseInt(r.dataset.umur) || 0;
+    const bulan = Math.max(1, Math.ceil(umur/30));
+    const p = pcts[Math.min(bulan,10)-1] || {tj:0.5,tc:0.5};
+    
+    const total = luas * dosage;
+    const needTJ = total * p.tj;
+    const needTC = total * p.tc;
+
+    needsTJ.push(needTJ);
+    needsTC.push(needTC);
+
+    if (meta[i] && meta[i].fEl) {
+      meta[i].fEl.innerHTML =
+        `Pembagian: ` +
+        `<span class="inline-block rounded px-2 py-0.5 bg-blue-100 font-semibold">TJ ${Math.round(p.tj*100)}%</span> / ` +
+        `<span class="inline-block rounded px-2 py-0.5 bg-green-100 font-semibold">TC ${Math.round(p.tc*100)}%</span> dari ${fmt0(total)} lembar. <br>`+
+        `Kebutuhan: ` +
+        `<span class="inline-block rounded px-2 py-0.5 bg-blue-100 font-semibold">TJ ${needTJ.toFixed(2)}</span>, ` +
+        `<span class="inline-block rounded px-2 py-0.5 bg-green-100 font-semibold">TC ${needTC.toFixed(2)}</span>`;
+    }
+  }
+
+  const needTJIntArr = needsTJ.map(v => Math.round(v));
+  const needTCIntArr = needsTC.map(v => Math.round(v));
+  sumNeedTJIntConst = needTJIntArr.reduce((a,b)=>a+b,0);
+  sumNeedTCIntConst = needTCIntArr.reduce((a,b)=>a+b,0);
+
+  if (totalTJEl) totalTJEl.textContent = sumNeedTJIntConst.toLocaleString('id-ID');
+  if (totalTCEl) totalTCEl.textContent = sumNeedTCIntConst.toLocaleString('id-ID');
+  
+  document.getElementById('totalNeedTJ_hidden').value = sumNeedTJIntConst;
+  document.getElementById('totalNeedTC_hidden').value = sumNeedTCIntConst;
+
+  lastTJ = null; lastTC = null;
+  if (hasBoth()) render();
+  else recalcTotalsFromInputs();
+});
+
 
     // Initial calculation
     setTimeout(recalcTotalsFromInputs, 250);

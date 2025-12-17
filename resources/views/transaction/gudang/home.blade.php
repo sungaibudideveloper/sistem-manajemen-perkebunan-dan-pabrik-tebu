@@ -112,7 +112,7 @@
                                     @endif
                   </a>
                 </td>
-                <td class="py-2 px-4 border border-gray-300 text-center">{{ date('d M Y', strtotime($u->createdat)) }}</td>
+                <td class="py-2 px-4 border border-gray-300 text-center">{{ date('d M Y', strtotime($u->rkhdate)) }}</td>
                 <td class="py-2 px-4 border border-gray-300">Pre Emergence</td>
                 <td class="py-2 px-4 border border-gray-300">{{ $u->nouse }}</td>
                 <td class="py-2 px-4 border border-gray-300 text-right">{{ $u->totalluas }}</td>
