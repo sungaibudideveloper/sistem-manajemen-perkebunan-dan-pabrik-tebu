@@ -37,32 +37,51 @@ class TimelineController extends Controller
     $fillFilter  = $request->get('fill', 'all');
     $cropType    = $request->get('crop', 'pc');
 
-    // Header plot
-    $plotHeaders = DB::table('plot as p')
-    ->leftJoin('masterlist as m', function($join) {
-        $join->on('p.plot', '=', 'm.plot')
-            ->on('p.companycode', '=', 'm.companycode')
-            ;
+    $plotHeaders = DB::table('batch as b')  // ✅ GANTI: Mulai dari batch
+    ->join('masterlist as m', function($join) {
+        $join->on('b.batchno', '=', 'm.activebatchno')
+            ->on('b.companycode', '=', 'm.companycode');
     })
-    ->leftJoin('batch as b', function($join) {
-        $join->on('m.activebatchno', '=', 'b.batchno')
-            ->on('m.companycode', '=', 'b.companycode')
-            ->where('b.isactive', 1);
-            ;
-    })
-    ->where('p.companycode', $companyCode)
+    ->where('b.companycode', $companyCode)
+    ->where('b.isactive', 1)  // ✅ FILTER: Hanya batch aktif
     ->select(
-        'p.plot', 
-        'p.luasarea',
-        'b.batcharea',        
+        'b.plot',  // ✅ Plot dari batch
+        'b.batcharea',  // ✅ Luas dari batch
         'b.lifecyclestatus',
         'b.batchdate',
-        'b.tanggalpanen',         // ⬅️ tambahkan ini
+        'b.tanggalpanen',
         'b.isactive',
         DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
     )
-    ->orderBy('p.plot')
+    ->orderBy('b.plot')
     ->get();
+
+    // Header plot old 
+    // $plotHeaders = DB::table('plot as p')
+    // ->leftJoin('masterlist as m', function($join) {
+    //     $join->on('p.plot', '=', 'm.plot')
+    //         ->on('p.companycode', '=', 'm.companycode')
+    //         ;
+    // })
+    // ->leftJoin('batch as b', function($join) {
+    //     $join->on('m.activebatchno', '=', 'b.batchno')
+    //         ->on('m.companycode', '=', 'b.companycode')
+    //         ->where('b.isactive', 1);
+    //         ;
+    // })
+    // ->where('p.companycode', $companyCode)
+    // ->select(
+    //     'p.plot',  
+    //     'p.luasarea',
+    //     'b.batcharea',        
+    //     'b.lifecyclestatus',
+    //     'b.batchdate',
+    //     'b.tanggalpanen',         // ⬅️ tambahkan ini
+    //     'b.isactive',
+    //     DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
+    // )
+    // ->orderBy('p.plot')
+    // ->get();
 
 // ✅ Activity map DAN grouping berdasarkan crop type
 if ($cropType === 'rc') {

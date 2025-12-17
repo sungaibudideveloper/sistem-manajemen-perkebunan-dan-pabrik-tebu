@@ -130,7 +130,7 @@
                         <tr class="total-row">
                             <td class="sticky-v sticky-h blok" style="left:0;">TOTAL</td>
                             <td class="sticky-v sticky-h" style="left:60px;">ALL</td>
-                            <td class="sticky-h" style="text-align:right; left:120px;" >{{ number_format($plotHeaders->sum('luasarea'), 2) }}</td>
+                            <td class="sticky-h" style="text-align:right; left:120px;" >{{ number_format($plotHeaders->sum('batcharea'), 2) }}</td>
                             
                             @php
                                 $grandTotalRealisasi = 0;
@@ -179,7 +179,7 @@
                             {{-- Total Persentase --}}
                             <td style="text-align:right;">
                                 @php
-                                    $totalSaldo = $plotHeaders->sum('luasarea');
+                                    $totalSaldo = $plotHeaders->sum('batcharea');
                                     $persenTotal = $totalSaldo > 0 ? ($grandTotalRealisasi / $totalSaldo) * 100 : 0;
                                 @endphp
                                 {{ number_format($persenTotal, 2) }}%
@@ -192,7 +192,7 @@
                             <tr>
                                 @if($index===0)<td rowspan="{{count($plots)}}" class="sticky-h blok" style="left:0;">{{$blok}}</td>@endif
                                 <td class="sticky-h" style="left:60px;">{{$plot->plot}}</td>
-                                <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->luasarea?number_format($plot->luasarea,2):'-'}}</td>
+                                <td class="sticky-h" style="left:120px;text-align:right;">{{$plot->batcharea?number_format($plot->batcharea,2):'-'}}</td>
                                 
                                 @php
                                     $totalRealisasiPlot = 0;
