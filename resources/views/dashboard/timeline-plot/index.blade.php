@@ -68,24 +68,28 @@
                 </button>
             
                 
-                <div class="ml-auto flex items-center gap-3">
-                    <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
-                    <select 
-                        onchange="window.location.href='?crop={{$cropType}}&activity=' + this.value"
-                        class="py-1 px-3 rounded border border-gray-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                        <option value="all" {{$activityFilter==='all'?'selected':''}}>📋 Semua Activity</option>
-                        @foreach($activityMap as $code => $label)
-                            <option value="{{$code}}" {{$activityFilter===$code?'selected':''}}>
-                                {{$code}} - {{$label}}
-                            </option>
-                        @endforeach
-                    </select>
-                    
-                    {{-- Display count --}}
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {{count($plotHeaders)}} plot
-                    </span>
-                </div>
+<div class="ml-auto flex items-center gap-3">
+    <a href="?crop={{ $cropType }}&activity={{ $activityFilter }}&export=excel" 
+        class="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-sm flex items-center gap-2">
+        📊 Export Excel
+    </a>
+    <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
+    <select 
+        onchange="window.location.href='?crop={{$cropType}}&activity=' + this.value"
+        class="py-1 px-3 rounded border border-gray-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+        <option value="all" {{$activityFilter==='all'?'selected':''}}>📋 Semua Activity</option>
+        @foreach($activityMap as $code => $label)
+            <option value="{{$code}}" {{$activityFilter===$code?'selected':''}}>
+                {{$code}} - {{$label}}
+            </option>
+        @endforeach
+    </select>
+    
+    {{-- Display count --}}
+    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+        {{count($plotHeaders)}} plot
+    </span>
+</div>
             </nav>
         </div>
         
