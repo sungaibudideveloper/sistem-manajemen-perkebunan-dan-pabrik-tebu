@@ -36,122 +36,6 @@ class TimelineController extends Controller
     $companyCode = session('companycode');
     $fillFilter  = $request->get('fill', 'all');
     $cropType    = $request->get('crop', 'pc');
-//export
-$isExport = $request->has('export') && $request->get('export') === 'excel';
-
-// ✅ CEK EXPORT - Taruh di AKHIR setelah semua data siap
-if ($isExport) {
-    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
-
-    // ========== HEADER ROW ==========
-    $col = 'A';
-    $sheet->setCellValue($col++ . '1', 'Blok');
-    $sheet->setCellValue($col++ . '1', 'Plot');
-    $sheet->setCellValue($col++ . '1', 'Saldo (HA)');
-    
-    foreach ($activityMap as $code => $label) {
-        $sheet->setCellValue($col++ . '1', "$code - $label (HA)");
-        $sheet->setCellValue($col++ . '1', "$code (%)");
-        $sheet->setCellValue($col++ . '1', "$code (Tanggal)");
-    }
-    
-    $sheet->setCellValue($col++ . '1', 'Realisasi Tanam (HA)');
-    $sheet->setCellValue($col++ . '1', 'Persentase (%)');
-
-    // ========== STYLE HEADER ==========
-    $lastCol = chr(ord($col) - 1); // Kolom terakhir
-    $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true);
-    $sheet->getStyle("A1:{$lastCol}1")->getFill()
-        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-        ->getStartColor()->setRGB('166534');
-    $sheet->getStyle("A1:{$lastCol}1")->getFont()->getColor()->setRGB('FFFFFF');
-    $sheet->freezePane('A2');
-
-    // ========== DATA ROWS ==========
-    $row = 2;
-    $blokPlots = $plotHeaders->groupBy(fn($item) => substr($item->plot, 0, 1));
-    
-    foreach ($blokPlots as $blok => $plots) {
-        foreach ($plots as $index => $plot) {
-            $col = 'A';
-            
-            // Blok (hanya di row pertama per blok)
-            if ($index === 0) {
-                $sheet->setCellValue($col . $row, $blok);
-            }
-            $col++;
-            
-            // Plot
-            $sheet->setCellValue($col++ . $row, $plot->plot);
-            
-            // Saldo
-            $sheet->setCellValue($col++ . $row, $plot->batcharea ? number_format($plot->batcharea, 2) : '-');
-            
-            $totalRealisasiPlot = 0;
-            
-            // Loop activity
-            foreach ($activityMap as $activitycode => $label) {
-                $activity = $activityData->get($plot->plot)?->get($activitycode);
-                $value = $activity->total_luas ?? 0;
-                $percentage = $activity->avg_percentage ?? 0;
-                $tanggal = $activity->tanggal_terbaru ?? null;
-                $totalRealisasiPlot += $value;
-                
-                // HA
-                $sheet->setCellValue($col++ . $row, $value > 0 ? number_format($value, 2) : '-');
-                
-                // %
-                $sheet->setCellValue($col++ . $row, $value > 0 ? number_format($percentage, 2) : '-');
-                
-                // Tanggal
-                $sheet->setCellValue($col++ . $row, $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-');
-            }
-            
-            // Realisasi Tanam
-            $sheet->setCellValue($col++ . $row, $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-');
-            
-            // Avg Percentage
-            $totalPercentage = 0;
-            $activityCount = 0;
-            
-            foreach ($activityMap as $activitycode => $label) {
-                $activity = $activityData->get($plot->plot)?->get($activitycode);
-                if ($activity) {
-                    $totalPercentage += $activity->avg_percentage ?? 0;
-                    $activityCount++;
-                }
-            }
-            
-            $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
-            $sheet->setCellValue($col++ . $row, number_format($avgPersen, 2));
-            
-            $row++;
-        }
-    }
-
-    // ========== AUTO SIZE COLUMNS ==========
-    foreach (range('A', $lastCol) as $columnID) {
-        $sheet->getColumnDimension($columnID)->setAutoSize(true);
-    }
-
-    // ========== DOWNLOAD ==========
-    $filename = "timeline_{$cropType}_" . now()->format('Ymd_His') . ".xlsx";
-    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-    
-    return response()->stream(
-        function () use ($writer) {
-            $writer->save('php://output');
-        },
-        200,
-        [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment;filename="' . $filename . '"',
-            'Cache-Control' => 'max-age=0',
-        ]
-    );
-}
-//export end
 
     $plotHeaders = DB::table('batch as b')  // ✅ GANTI: Mulai dari batch
     ->join('masterlist as m', function($join) {
@@ -373,6 +257,126 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
                    $activityData->get($plot->plot)->has($activityFilter);
         });
     }
+
+
+
+    //export
+$isExport = $request->has('export') && $request->get('export') === 'excel';
+
+// ✅ CEK EXPORT - Taruh di AKHIR setelah semua data siap
+if ($isExport) {
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // ========== HEADER ROW ==========
+    $col = 'A';
+    $sheet->setCellValue($col++ . '1', 'Blok');
+    $sheet->setCellValue($col++ . '1', 'Plot');
+    $sheet->setCellValue($col++ . '1', 'Saldo (HA)');
+    
+    foreach ($activityMap as $code => $label) {
+        $sheet->setCellValue($col++ . '1', "$code - $label (HA)");
+        $sheet->setCellValue($col++ . '1', "$code (%)");
+        $sheet->setCellValue($col++ . '1', "$code (Tanggal)");
+    }
+    
+    $sheet->setCellValue($col++ . '1', 'Realisasi Tanam (HA)');
+    $sheet->setCellValue($col++ . '1', 'Persentase (%)');
+
+    // ========== STYLE HEADER ==========
+    $lastCol = chr(ord($col) - 1); // Kolom terakhir
+    $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true);
+    $sheet->getStyle("A1:{$lastCol}1")->getFill()
+        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+        ->getStartColor()->setRGB('166534');
+    $sheet->getStyle("A1:{$lastCol}1")->getFont()->getColor()->setRGB('FFFFFF');
+    $sheet->freezePane('A2');
+
+    // ========== DATA ROWS ==========
+    $row = 2;
+    $blokPlots = $plotHeaders->groupBy(fn($item) => substr($item->plot, 0, 1));
+    
+    foreach ($blokPlots as $blok => $plots) {
+        foreach ($plots as $index => $plot) {
+            $col = 'A';
+            
+            // Blok (hanya di row pertama per blok)
+            if ($index === 0) {
+                $sheet->setCellValue($col . $row, $blok);
+            }
+            $col++;
+            
+            // Plot
+            $sheet->setCellValue($col++ . $row, $plot->plot);
+            
+            // Saldo
+            $sheet->setCellValue($col++ . $row, $plot->batcharea ? number_format($plot->batcharea, 2) : '-');
+            
+            $totalRealisasiPlot = 0;
+            
+            // Loop activity
+            foreach ($activityMap as $activitycode => $label) {
+                $activity = $activityData->get($plot->plot)?->get($activitycode);
+                $value = $activity->total_luas ?? 0;
+                $percentage = $activity->avg_percentage ?? 0;
+                $tanggal = $activity->tanggal_terbaru ?? null;
+                $totalRealisasiPlot += $value;
+                
+                // HA
+                $sheet->setCellValue($col++ . $row, $value > 0 ? number_format($value, 2) : '-');
+                
+                // %
+                $sheet->setCellValue($col++ . $row, $value > 0 ? number_format($percentage, 2) : '-');
+                
+                // Tanggal
+                $sheet->setCellValue($col++ . $row, $tanggal ? \Carbon\Carbon::parse($tanggal)->format('d M y') : '-');
+            }
+            
+            // Realisasi Tanam
+            $sheet->setCellValue($col++ . $row, $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-');
+            
+            // Avg Percentage
+            $totalPercentage = 0;
+            $activityCount = 0;
+            
+            foreach ($activityMap as $activitycode => $label) {
+                $activity = $activityData->get($plot->plot)?->get($activitycode);
+                if ($activity) {
+                    $totalPercentage += $activity->avg_percentage ?? 0;
+                    $activityCount++;
+                }
+            }
+            
+            $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
+            $sheet->setCellValue($col++ . $row, number_format($avgPersen, 2));
+            
+            $row++;
+        }
+    }
+
+    // ========== AUTO SIZE COLUMNS ==========
+    foreach (range('A', $lastCol) as $columnID) {
+        $sheet->getColumnDimension($columnID)->setAutoSize(true);
+    }
+
+    // ========== DOWNLOAD ==========
+    $filename = "timeline_{$cropType}_" . now()->format('Ymd_His') . ".xlsx";
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    
+    return response()->stream(
+        function () use ($writer) {
+            $writer->save('php://output');
+        },
+        200,
+        [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment;filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ]
+    );
+}
+//export end
+
 
     $filteredPlots = $plotHeaders->pluck('plot')->toArray();
 
