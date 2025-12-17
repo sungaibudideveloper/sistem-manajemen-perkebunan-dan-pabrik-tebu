@@ -317,26 +317,38 @@
                                                     <summary class="cursor-pointer text-blue-600 hover:text-blue-800">
                                                         {{ count($detail['activities']) }} activities
                                                     </summary>
-                                                    <div class="mt-2 space-y-1 pl-2">
+                                                    <div class="mt-2 space-y-2 pl-2">
                                                         @foreach($detail['activities'] as $act)
                                                             @php
                                                                 $actPct = $act['percentage'] ?? 0;
                                                                 $actColor = $actPct >= 100 ? 'text-green-600' : ($actPct > 0 ? 'text-orange-600' : 'text-gray-500');
                                                             @endphp
-                                                            <div class="flex justify-between gap-2 py-1 border-b">
-                                                                <span class="text-gray-700">{{ $act['code'] }}</span>
-                                                                <span class="font-semibold {{ $actColor }}">{{ number_format($actPct, 1) }}%</span>
-                                                            </div>
-                                                            @if(count($act['lkh_details'] ?? []) > 0)
-                                                                <div class="pl-3 text-gray-500 space-y-0.5">
-                                                                    @foreach($act['lkh_details'] as $lkh)
-                                                                        <div class="flex justify-between text-xs">
-                                                                            <span>📄 {{ $lkh['lkhno'] }}</span>
-                                                                            <span>{{ number_format($lkh['luas_hasil'], 2) }} HA</span>
-                                                                        </div>
-                                                                    @endforeach
+                                                            <div class="border-b pb-2">
+                                                                <div class="flex justify-between gap-2 mb-1">
+                                                                    <span class="text-gray-700 font-semibold">{{ $act['code'] }} - {{ $act['label'] }}</span>
+                                                                    <span class="font-bold {{ $actColor }}">{{ number_format($actPct, 1) }}%</span>
                                                                 </div>
-                                                            @endif
+                                                                <div class="text-gray-500 text-xs mb-1">
+                                                                    Luas: <strong>{{ number_format($act['luas_hasil'], 2) }} HA</strong> / {{ number_format($detail['luas_rkh'], 2) }} HA
+                                                                    @if($act['tanggal'])
+                                                                        <span class="ml-2">📅 {{ \Carbon\Carbon::parse($act['tanggal'])->format('d/m/Y') }}</span>
+                                                                    @endif
+                                                                </div>
+                                                                
+                                                                {{-- ✅ DETAIL LKH --}}
+                                                                @if(count($act['lkh_details'] ?? []) > 0)
+                                                                    <div class="pl-3 mt-1 space-y-0.5 bg-gray-50 p-2 rounded">
+                                                                        <div class="text-gray-600 font-semibold text-xs mb-1">Detail LKH:</div>
+                                                                        @foreach($act['lkh_details'] as $lkh)
+                                                                            <div class="flex justify-between text-xs text-gray-600">
+                                                                                <span>📄 {{ $lkh['lkhno'] }}</span>
+                                                                                <span class="font-semibold">{{ number_format($lkh['luas_hasil'], 2) }} HA</span>
+                                                                                <span class="text-gray-400">{{ \Carbon\Carbon::parse($lkh['tanggal'])->format('d/m/y') }}</span>
+                                                                            </div>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         @endforeach
                                                     </div>
                                                 </details>
