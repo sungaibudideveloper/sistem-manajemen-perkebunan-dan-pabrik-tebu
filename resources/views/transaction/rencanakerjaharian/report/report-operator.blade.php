@@ -1,21 +1,26 @@
-{{-- resources\views\input\rencanakerjaharian\lkh-report-operator.blade.php --}}
+{{-- resources\views\transaction\rencanakerjaharian\report\report-operator.blade.php --}}
 <x-layout>
     <x-slot:title>Laporan Kegiatan Harian - Operator Alat</x-slot:title>
     <x-slot:navbar>Input</x-slot:navbar>
     <x-slot:nav>Rencana Kerja Harian</x-slot:nav>
 
-    <!-- Print-optimized container -->
-    <div class="print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-4">
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            .print-container, .print-container * { visibility: visible; }
+            .print-container { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
 
-        <!-- Title -->
+    <div class="print-container print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-4">
+
         <h1 class="text-xl font-bold text-center text-gray-800 mb-4 uppercase tracking-wider">
             Laporan Kegiatan Harian - Operator Alat
         </h1>
 
-        <!-- Header Information -->
-        <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+        <div class="mb-4 p-3 bg-gray-50 rounded-lg print:bg-white">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Left side - Company & Date -->
                 <div class="space-y-2">
                     <div class="flex items-center text-sm">
                         <span class="font-semibold text-gray-700 w-16">Divisi:</span>
@@ -27,7 +32,6 @@
                     </div>
                 </div>
 
-                <!-- Right side - Operator & Vehicle -->
                 <div class="space-y-2">
                     <div class="flex items-center text-sm">
                         <span class="font-semibold text-gray-700 w-20">Operator:</span>
@@ -41,7 +45,6 @@
             </div>
         </div>
 
-        <!-- Activities Table -->
         <div class="mb-4">
             <h2 class="text-lg font-semibold text-gray-800 mb-3">Detail Kegiatan</h2>
             <div class="overflow-x-auto">
@@ -51,11 +54,11 @@
                             <th class="border border-gray-300 px-2 py-2 text-center" style="width: 5%">No</th>
                             <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Jam Mulai</th>
                             <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Jam Selesai</th>
-                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 12%">Durasi</th>
+                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Durasi</th>
                             <th class="border border-gray-300 px-2 py-2 text-left" style="width: 25%">Kegiatan</th>
-                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 8%">Plot</th>
-                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Luas RKH<br><small>(ha)</small></th>
-                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Luas Hasil<br><small>(ha)</small></th>
+                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 15%">Plot(s)</th>
+                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Total Luas RKH<br><small>(ha)</small></th>
+                            <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Total Luas Hasil<br><small>(ha)</small></th>
                             <th class="border border-gray-300 px-2 py-2 text-center" style="width: 10%">Pemakaian BBM<br><small>(Solar)</small></th>
                         </tr>
                     </thead>
@@ -67,15 +70,11 @@
                         </tr>
                     </tbody>
                     <tfoot id="activities-tfoot" class="bg-gray-50 font-semibold">
-                        <!-- Total row will be inserted here -->
                     </tfoot>
                 </table>
             </div>
         </div>
 
-        <!-- Summary Section - REMOVED -->
-
-        <!-- Signatures - SIMPLIFIED -->
         <div class="mt-6 flex justify-end print:mt-8">
             <div class="text-center" style="width: 200px;">
                 <div class="font-semibold mb-12 text-sm">Disiapkan Oleh</div>
@@ -83,7 +82,6 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="mt-4 flex justify-center space-x-4 no-print">
             <button
                 onclick="window.print()"
@@ -112,8 +110,6 @@
         const reportDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
         const operatorId = urlParams.get('operator_id');
 
-        let globalData = null;
-
         async function loadOperatorReportData() {
             try {
                 if (!operatorId) {
@@ -123,7 +119,6 @@
 
                 const response = await fetch(`{{ route('transaction.rencanakerjaharian.operator-report-data') }}?date=${reportDate}&operator_id=${operatorId}`);
                 const data = await response.json();
-                globalData = data;
 
                 if (data.success) {
                     updateHeaderInfo(data);
@@ -138,21 +133,12 @@
         }
 
         function updateHeaderInfo(data) {
-            const reportDateEl = document.getElementById('report-date');
-            if (reportDateEl) reportDateEl.textContent = data.date_formatted || reportDate;
-
-            const companyInfoEl = document.getElementById('company-info');
-            if (companyInfoEl) companyInfoEl.textContent = data.company_info || 'N/A';
+            document.getElementById('report-date').textContent = data.date_formatted || reportDate;
+            document.getElementById('company-info').textContent = data.company_info || 'N/A';
 
             if (data.operator_info) {
-                const operatorNameEl = document.getElementById('operator-name');
-                if (operatorNameEl) operatorNameEl.textContent = data.operator_info.operator_name || 'N/A';
-
-                const vehicleInfoEl = document.getElementById('vehicle-info');
-                if (vehicleInfoEl) {
-                    const vehicleText = `${data.operator_info.nokendaraan || 'N/A'} - ${data.operator_info.vehicle_type || 'N/A'}`;
-                    vehicleInfoEl.textContent = vehicleText;
-                }
+                document.getElementById('operator-name').textContent = data.operator_info.operator_name || 'N/A';
+                document.getElementById('vehicle-info').textContent = `${data.operator_info.nokendaraan || 'N/A'} - ${data.operator_info.vehicle_type || 'N/A'}`;
             }
         }
 
@@ -182,30 +168,46 @@
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
 
-                // Calculate duration in minutes for total
-                const durationParts = activity.durasi_kerja.split(':');
-                const activityMinutes = (parseInt(durationParts[0]) * 60) + parseInt(durationParts[1]);
-                totalDurationMinutes += activityMinutes;
+                // Check if jam mulai/selesai NULL
+                const jamMulai = activity.jam_mulai && activity.jam_mulai !== '00:00' ? activity.jam_mulai : '<span class="text-gray-400 italic">Belum diinput</span>';
+                const jamSelesai = activity.jam_selesai && activity.jam_selesai !== '00:00' ? activity.jam_selesai : '<span class="text-gray-400 italic">Belum diinput</span>';
+                
+                // Check if durasi NULL or 00:00
+                const isDurasiValid = activity.durasi_kerja && activity.durasi_kerja !== '00:00';
+                const durasiDisplay = isDurasiValid ? activity.durasi_kerja : '<span class="text-gray-400 italic">Belum diinput</span>';
+                
+                // Check if luas hasil NULL or 0
+                const isLuasHasilValid = activity.luas_hasil_ha && parseFloat(activity.luas_hasil_ha.replace(',', '')) > 0;
+                const luasHasilDisplay = isLuasHasilValid ? activity.luas_hasil_ha : '<span class="text-gray-400 italic">Belum diinput</span>';
 
-                // Sum other totals
+                // Calculate duration in minutes for total (only if valid)
+                if (isDurasiValid) {
+                    const durationParts = activity.durasi_kerja.split(':');
+                    const activityMinutes = (parseInt(durationParts[0]) * 60) + parseInt(durationParts[1]);
+                    totalDurationMinutes += activityMinutes;
+                }
+
+                // Sum totals
                 totalLuasRencana += parseFloat(activity.luas_rencana_ha.replace(',', ''));
-                totalLuasHasil += parseFloat(activity.luas_hasil_ha.replace(',', ''));
+                if (isLuasHasilValid) {
+                    totalLuasHasil += parseFloat(activity.luas_hasil_ha.replace(',', ''));
+                }
                 if (activity.solar_liter) {
                     totalSolar += parseFloat(activity.solar_liter);
                 }
 
                 row.innerHTML = `
                     <td class="border border-gray-300 px-2 py-2 text-center text-sm">${index + 1}</td>
-                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${activity.jam_mulai}</td>
-                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${activity.jam_selesai}</td>
-                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${formatDurationText(activityMinutes)}</td>
+                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${jamMulai}</td>
+                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${jamSelesai}</td>
+                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${durasiDisplay}</td>
                     <td class="border border-gray-300 px-2 py-2 text-sm">
                         <div class="font-medium">${activity.activityname}</div>
                         <div class="text-xs text-gray-500">${activity.activitycode}</div>
                     </td>
-                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${activity.plot_display}</td>
+                    <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">${activity.plots_display}</td>
                     <td class="border border-gray-300 px-2 py-2 text-right text-sm">${activity.luas_rencana_ha}</td>
-                    <td class="border border-gray-300 px-2 py-2 text-right text-sm">${activity.luas_hasil_ha}</td>
+                    <td class="border border-gray-300 px-2 py-2 text-right text-sm">${luasHasilDisplay}</td>
                     <td class="border border-gray-300 px-2 py-2 text-center text-sm ${activity.solar_liter ? 'font-medium' : 'text-gray-400 italic'}">${activity.solar_display}</td>
                 `;
 
@@ -220,8 +222,8 @@
                 <td class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">-</td>
                 <td class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">-</td>
                 <td class="border border-gray-300 px-2 py-2 text-right text-sm font-bold">${totalLuasRencana.toFixed(2)}</td>
-                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-bold">${totalLuasHasil.toFixed(2)}</td>
-                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">${totalSolar.toFixed(1)} L</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-bold">${totalLuasHasil > 0 ? totalLuasHasil.toFixed(2) : '<span class="text-gray-400 italic">Belum diinput</span>'}</td>
+                <td class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">${totalSolar > 0 ? totalSolar.toFixed(1) + ' L' : '<span class="text-gray-400 italic">Belum diinput</span>'}</td>
             `;
             tfoot.appendChild(totalRow);
         }
@@ -254,7 +256,6 @@
             }
         }
 
-        // Load data when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadOperatorReportData();
         });

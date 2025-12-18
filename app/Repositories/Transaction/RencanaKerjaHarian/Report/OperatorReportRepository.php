@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * OperatorReportRepository
  * 
- * Handles Operator report queries.
- * RULE: All queries here.
+ * Handles all database queries for Operator Report.
+ * RULE: All DB queries must be here, nowhere else.
  */
 class OperatorReportRepository
 {
@@ -22,11 +22,14 @@ class OperatorReportRepository
     public function listOperatorsForDate($companycode, $date)
     {
         return DB::table('lkhdetailkendaraan as lk')
-            ->join('lkhhdr as lh', 'lk.lkhno', '=', 'lh.lkhno')
+            ->join('lkhhdr as lh', function($join) {
+                $join->on('lk.lkhno', '=', 'lh.lkhno')
+                     ->on('lk.companycode', '=', 'lh.companycode');
+            })
             ->join('tenagakerja as tk', function($join) use ($companycode) {
                 $join->on('lk.operatorid', '=', 'tk.tenagakerjaid')
                     ->where('tk.companycode', '=', $companycode)
-                    ->where('tk.jenistenagakerja', '=', 3);
+                    ->where('tk.jenistenagakerja', '=', 3); // 3 = Operator
             })
             ->join('kendaraan as k', function($join) use ($companycode) {
                 $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
@@ -47,6 +50,7 @@ class OperatorReportRepository
 
     /**
      * Get operator activities for specific date
+     * Uses aggregation to prevent duplicate rows (1 LKH = 1 row)
      * 
      * @param string $companycode
      * @param string $date
@@ -56,38 +60,61 @@ class OperatorReportRepository
     public function getOperatorActivitiesForDate($companycode, $date, $operatorId)
     {
         return DB::table('lkhdetailkendaraan as lk')
-            ->join('lkhhdr as lh', 'lk.lkhno', '=', 'lh.lkhno')
-            ->join('lkhdetailplot as ldp', function($join) {
-                $join->on('lh.lkhno', '=', 'ldp.lkhno')
-                    ->on('lh.companycode', '=', 'ldp.companycode');
+            ->join('lkhhdr as lh', function($join) {
+                $join->on('lk.lkhno', '=', 'lh.lkhno')
+                     ->on('lk.companycode', '=', 'lh.companycode');
             })
             ->join('activity as a', 'lh.activitycode', '=', 'a.activitycode')
+            
+            // ✅ LEFT JOIN with aggregated plot data per LKH
+            ->leftJoin(DB::raw('(
+                SELECT 
+                    lkhno,
+                    companycode,
+                    GROUP_CONCAT(DISTINCT CONCAT(blok, "-", plot) ORDER BY blok, plot SEPARATOR ", ") as plots_display,
+                    SUM(luasrkh) as total_luas_rencana,
+                    SUM(luashasil) as total_luas_hasil
+                FROM lkhdetailplot
+                GROUP BY lkhno, companycode
+            ) as ldp'), function($join) {
+                $join->on('lh.lkhno', '=', 'ldp.lkhno')
+                     ->on('lh.companycode', '=', 'ldp.companycode');
+            })
+            
             ->where('lk.companycode', $companycode)
             ->whereDate('lh.lkhdate', $date)
             ->where('lk.operatorid', $operatorId)
+            
             ->select([
+                // Time data (from lkhdetailkendaraan)
                 'lk.jammulai',
                 'lk.jamselesai',
                 DB::raw('TIMEDIFF(lk.jamselesai, lk.jammulai) as durasi_kerja'),
-                'ldp.blok',
-                'ldp.plot',
+                
+                // Activity data
                 'lh.activitycode',
                 'a.activityname',
-                'ldp.luasrkh as luas_rencana_ha',
-                'ldp.luashasil as luas_hasil_ha',
+                
+                // ✅ Plot data (AGGREGATED per LKH)
+                'ldp.plots_display',
+                'ldp.total_luas_rencana as luas_rencana_ha',
+                'ldp.total_luas_hasil as luas_hasil_ha',
+                
+                // Fuel & hourmeter data
                 'lk.solar',
                 'lk.hourmeterstart',
                 'lk.hourmeterend',
+                
+                // References
                 'lh.lkhno',
                 'lh.rkhno'
             ])
             ->orderBy('lk.jammulai')
-            ->orderBy('ldp.plot')
             ->get();
     }
 
     /**
-     * Get operator basic info
+     * Get operator basic info (name, NIK, vehicle)
      * 
      * @param string $companycode
      * @param string $operatorId
@@ -102,7 +129,7 @@ class OperatorReportRepository
             })
             ->where('tk.tenagakerjaid', $operatorId)
             ->where('tk.companycode', $companycode)
-            ->where('tk.jenistenagakerja', 3)
+            ->where('tk.jenistenagakerja', 3) // 3 = Operator
             ->select([
                 'tk.tenagakerjaid',
                 'tk.nama as operator_name',

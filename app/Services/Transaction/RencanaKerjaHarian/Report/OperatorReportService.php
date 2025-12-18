@@ -27,29 +27,23 @@ class OperatorReportService
 
     /**
      * Get operators list for date
-     * 
-     * @param string $companycode
-     * @param string $date
-     * @return array
      */
     public function getOperatorsForDate($companycode, $date)
     {
         $operators = $this->operatorRepo->listOperatorsForDate($companycode, $date);
 
-        return [
-            'operators' => $operators->toArray(),
-            'date' => $date,
-            'total_operators' => $operators->count()
-        ];
+        return $operators->map(function($op) {
+            return [
+                'tenagakerjaid' => $op->tenagakerjaid,
+                'nama' => $op->nama,
+                'nokendaraan' => $op->nokendaraan,
+                'jenis' => $op->jenis
+            ];
+        })->toArray();
     }
 
     /**
      * Build operator report payload
-     * 
-     * @param string $companycode
-     * @param string $date
-     * @param string $operatorId
-     * @return array
      */
     public function buildOperatorReportPayload($companycode, $date, $operatorId)
     {
@@ -65,7 +59,6 @@ class OperatorReportService
         $activities = $this->operatorRepo->getOperatorActivitiesForDate($companycode, $date, $operatorId);
         $formattedActivities = $this->formatActivities($activities);
         $totals = $this->calculateTotals($formattedActivities);
-
         $companyInfo = $this->masterDataRepo->getCompanyInfo($companycode);
 
         return [
@@ -90,9 +83,7 @@ class OperatorReportService
                 'jam_mulai' => substr($activity->jammulai, 0, 5),
                 'jam_selesai' => substr($activity->jamselesai, 0, 5),
                 'durasi_kerja' => $activity->durasi_kerja ? substr($activity->durasi_kerja, 0, 5) : '00:00',
-                'blok' => $activity->blok,
-                'plot' => $activity->plot,
-                'plot_display' => $activity->blok . '-' . $activity->plot,
+                'plots_display' => $activity->plots_display ?: '-',
                 'activitycode' => $activity->activitycode,
                 'activityname' => $activity->activityname,
                 'luas_rencana_ha' => number_format((float)$activity->luas_rencana_ha, 2),

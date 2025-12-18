@@ -3,33 +3,24 @@
 namespace App\Services\Transaction\RencanaKerjaHarian\Report;
 
 use App\Repositories\Transaction\RencanaKerjaHarian\Report\RekapLkhReportRepository;
-use App\Repositories\Transaction\RencanaKerjaHarian\LkhRepository;
-use App\Repositories\Transaction\RencanaKerjaHarian\Shared\MasterDataRepository;
 
 /**
  * RekapLkhReportService
  * 
- * Orchestrates Rekap LKH report business logic.
- * RULE: No DB queries. Only orchestration + grouping logic.
+ * Business logic for LKH Rekap report.
+ * Updated to include summary statistics.
  */
 class RekapLkhReportService
 {
     protected $rekapRepo;
-    protected $lkhRepo;
-    protected $masterDataRepo;
 
-    public function __construct(
-        RekapLkhReportRepository $rekapRepo,
-        LkhRepository $lkhRepo,
-        MasterDataRepository $masterDataRepo
-    ) {
+    public function __construct(RekapLkhReportRepository $rekapRepo)
+    {
         $this->rekapRepo = $rekapRepo;
-        $this->lkhRepo = $lkhRepo;
-        $this->masterDataRepo = $masterDataRepo;
     }
 
     /**
-     * Build Rekap LKH payload
+     * Build rekap payload with grouped activities and summary stats
      * 
      * @param string $companycode
      * @param string $date
@@ -37,53 +28,22 @@ class RekapLkhReportService
      */
     public function buildRekapPayload($companycode, $date)
     {
-        $companyInfo = $this->masterDataRepo->getCompanyInfo($companycode);
-        $lkhNumbers = $this->getLkhNumbers($companycode, $date);
+        // Get all approved LKH rows
+        $allLkhData = $this->rekapRepo->getAllLkhRowsForDate($companycode, $date);
         
-        $allRows = $this->rekapRepo->getAllLkhRowsForDate($companycode, $date);
-        $grouped = $this->groupByActivityGroup($allRows);
+        // Get summary statistics
+        $summary = $this->rekapRepo->getLkhSummaryForDate($companycode, $date);
 
-        return [
-            'company_info' => $companyInfo ? "{$companyInfo->companycode} - {$companyInfo->name}" : $companycode,
-            'pengolahan' => $grouped['pengolahan'],
-            'perawatan' => $grouped['perawatan'],
-            'panen' => $grouped['panen'],
-            'pias' => $grouped['pias'],
-            'lainlain' => $grouped['lainlain'],
-            'lkh_numbers' => $lkhNumbers,
-            'date' => $date,
-            'generated_at' => now()->format('d/m/Y H:i:s')
-        ];
-    }
-
-    /**
-     * Get LKH numbers for date
-     */
-    private function getLkhNumbers($companycode, $date)
-    {
-        return \DB::table('lkhhdr')
-            ->where('companycode', $companycode)
-            ->whereDate('lkhdate', $date)
-            ->pluck('lkhno')
-            ->unique()
-            ->values()
-            ->toArray();
-    }
-
-    /**
-     * Group data by activity group
-     */
-    private function groupByActivityGroup($allRows)
-    {
+        // Group data by activity group
         $grouped = [
-            'pengolahan' => [],
-            'perawatan' => ['pc' => [], 'rc' => []],
-            'panen' => [],
-            'pias' => [],
-            'lainlain' => []
+            'pengolahan' => [],  // I, II
+            'perawatan' => ['pc' => [], 'rc' => []], // III
+            'panen' => [],       // IV
+            'pias' => [],        // V
+            'lainlain' => []     // VI, VII, VIII
         ];
 
-        foreach ($allRows as $record) {
+        foreach ($allLkhData as $record) {
             $item = (object)[
                 'lkhno' => $record->lkhno,
                 'activitycode' => $record->activitycode,
@@ -100,6 +60,7 @@ class RekapLkhReportService
             $activityGroup = $record->activitygroup;
             $activityCode = $record->activitycode;
 
+            // Route to correct section
             switch ($activityGroup) {
                 case 'I':
                 case 'II':
@@ -142,6 +103,13 @@ class RekapLkhReportService
             }
         }
 
-        return $grouped;
+        return [
+            'pengolahan' => $grouped['pengolahan'],
+            'perawatan' => $grouped['perawatan'],
+            'panen' => $grouped['panen'],
+            'pias' => $grouped['pias'],
+            'lainlain' => $grouped['lainlain'],
+            'summary' => $summary, // ✅ NEW: Add summary stats
+        ];
     }
 }
