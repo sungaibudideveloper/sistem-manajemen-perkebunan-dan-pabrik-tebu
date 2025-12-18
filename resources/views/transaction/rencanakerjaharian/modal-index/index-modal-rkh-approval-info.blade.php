@@ -1,4 +1,4 @@
-{{-- resources\views\transaction\rencanakerjaharian\indexmodal\index-modal-rkh-approval-info.blade.php --}}
+{{-- resources\views\transaction\rencanakerjaharian\modal-index\index-modal-rkh-approval-info.blade.php --}}
 
 {{-- RKH APPROVAL INFO MODAL (READ-ONLY) --}}
 <div x-show="showRkhApprovalInfoModal" x-cloak x-transition.opacity

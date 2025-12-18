@@ -211,13 +211,13 @@
             </div>
 
             {{-- Include All Modals --}}
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-create-rkh')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-lkh-list')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-absen')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-dth')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-rekap')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-rkh-approval-info')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-lkh-approval-info')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-create-rkh')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-lkh-list')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-absen')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-dth')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-rekap')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-rkh-approval-info')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-lkh-approval-info')
         </div>
     </div>
 

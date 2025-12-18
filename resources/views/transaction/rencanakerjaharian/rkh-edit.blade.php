@@ -97,37 +97,17 @@
           <input type="hidden" name="rkhno" value="{{ $rkhHeader->rkhno }}">
 
           <!-- Mandor -->
-          <div x-data="mandorPicker()" x-init="
-            selected = {
-                userid: '{{ old('mandor_id', $rkhHeader->mandorid) }}',
-                name: '{{ old('mandor', $rkhHeader->mandor_nama) }}'
-            };
-            setTimeout(() => {
-              if (selected.userid) {
-                updateAbsenSummary(selected.userid, selected.userid, selected.name);
-              }
-            }, 100);
-          ">
+          <div>
             <label for="mandor" class="block text-sm font-semibold text-gray-700 mb-1">Mandor</label>
             <input
-              type="text"
-              name="mandor"
-              id="mandor"
-              readonly
-              placeholder="Pilih Mandor"
-              @click="!isMandorUser && (open = true)"
-              :value="selected.userid && selected.name ? `${selected.userid} - ${selected.name}` : ''"
-              :class="{
-                'cursor-not-allowed bg-gray-100 border-gray-300': isMandorUser,
-                'cursor-pointer bg-white hover:bg-gray-50': !isMandorUser
-              }"
-              class="w-full text-sm font-medium border-2 border-gray-200 rounded-lg px-3 py-2 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                name="mandor"
+                id="mandor"
+                readonly
+                value="{{ $rkhHeader->mandorid ?? '' }} - {{ $rkhHeader->mandor_nama ?? '' }}"
+                class="w-full text-sm font-medium border-2 border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
             >
-            <input type="hidden" name="mandor_id" x-model="selected.userid">
-
-            <template x-if="!isMandorUser">
-              @include('transaction.rencanakerjaharian.modal-mandor')
-            </template>
+            <input type="hidden" name="mandor_id" value="{{ $rkhHeader->mandorid ?? '' }}">
           </div>
 
           <!-- Tanggal -->
@@ -360,7 +340,7 @@
             </div>
 
             <!-- Kendaraan Modal Component -->
-            @include('transaction.rencanakerjaharian.modal-kendaraan')
+            @include('transaction.rencanakerjaharian.modal-form.form-modal-kendaraan')
           </div>
 
         </div>
@@ -452,7 +432,7 @@
                       </div>
                     </div>
                     <input type="hidden" :name="`rows[${index}][nama]`" x-model="selected.activitycode">
-                    @include('transaction.rencanakerjaharian.modal-activity')
+                    @include('transaction.rencanakerjaharian.modal-form.form-modal-activity')
                   </td>
 
                   <!-- Blok -->
@@ -472,7 +452,7 @@
                         class="w-full text-xs border-2 border-gray-200 rounded-lg px-3 py-2 text-center cursor-pointer bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                       <input type="hidden" :name="`rows[${index}][blok]`" x-model="selected.blok">
-                      @include('transaction.rencanakerjaharian.modal-blok')
+                      @include('transaction.rencanakerjaharian.modal-form.form-modal-blok')
                     </div>
                   </td>
 
@@ -499,7 +479,7 @@
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                       <input type="hidden" :name="`rows[${index}][plot]`" x-model="selected.plot">
-                      @include('transaction.rencanakerjaharian.modal-plot')
+                      @include('transaction.rencanakerjaharian.modal-form.form-modal-plot')
                     </div>
                   </td>
 
@@ -638,7 +618,7 @@
                       :data-row-index="index"
                     >
                     
-                    @include('transaction.rencanakerjaharian.modal-material')
+                    @include('transaction.rencanakerjaharian.modal-form.form-modal-material')
                   </td>
 
                   <!-- Delete Button -->
@@ -1712,19 +1692,17 @@ function cleanupValidationListeners() {
 // ============================================================
 // ABSEN SUMMARY UPDATE
 // ============================================================
-function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedMandorName = '') {
-  if (!selectedMandorId || !window.absenData) {
+function updateAbsenSummary() {
+  const mandorId = document.querySelector('input[name="mandor_id"]')?.value;
+  
+  if (!mandorId || !window.absenData) {
     document.getElementById('summary-laki').textContent = '0';
     document.getElementById('summary-perempuan').textContent = '0';
     document.getElementById('summary-total').textContent = '0';
     return;
   }
 
-  if (selectedMandorCode && selectedMandorName) {
-    document.getElementById('absen-info').textContent = `${selectedMandorCode} ${selectedMandorName}`;
-  }
-
-  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === selectedMandorId);
+  const filteredAbsen = window.absenData.filter(absen => absen.mandorid === mandorId);
   let lakiCount = 0, perempuanCount = 0;
 
   filteredAbsen.forEach(absen => {
@@ -1736,6 +1714,14 @@ function updateAbsenSummary(selectedMandorId, selectedMandorCode = '', selectedM
   document.getElementById('summary-perempuan').textContent = perempuanCount;
   document.getElementById('summary-total').textContent = lakiCount + perempuanCount;
 }
+
+// ✅ Call on page load (for edit mode)
+document.addEventListener('DOMContentLoaded', function() {
+  updateAbsenSummary(); // Auto-update absen summary on load
+  initializeRowValidation();
+  initializeValidationStyles();
+  initializeFormSubmit();
+});
 
 // ============================================================
 // ✅ PLOT AUTO-UPDATE (Updated - dari AJAX)

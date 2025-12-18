@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-absen.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-absen.blade.php --}}
 
 {{-- ABSEN MODAL --}}
 <div x-show="showAbsenModal" x-cloak x-transition.opacity

@@ -338,7 +338,7 @@
             </div>
 
             <!-- Kendaraan Modal Component -->
-            @include('transaction.rencanakerjaharian.modal-kendaraan')
+            @include('transaction.rencanakerjaharian.modal-form.form-modal-kendaraan')
           </div>
 
         </div>
@@ -420,7 +420,7 @@
                       </div>
                     </div>
                     <input type="hidden" :name="`rows[${index}][nama]`" x-model="selected.activitycode">
-                    @include('transaction.rencanakerjaharian.modal-activity')
+                    @include('transaction.rencanakerjaharian.modal-form.form-modal-activity')
                   </td>
 
                   <!-- Blok -->
@@ -440,7 +440,7 @@
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                       <input type="hidden" :name="`rows[${index}][blok]`" x-model="selected.blok">
-                      @include('transaction.rencanakerjaharian.modal-blok')
+                      @include('transaction.rencanakerjaharian.modal-form.form-modal-blok')
                     </div>
                   </td>
 
@@ -461,7 +461,7 @@
                         class="w-full text-xs border-2 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                       <input type="hidden" :name="`rows[${index}][plot]`" x-model="selected.plot">
-                      @include('transaction.rencanakerjaharian.modal-plot')
+                      @include('transaction.rencanakerjaharian.modal-form.form-modal-plot')
                     </div>
                   </td>
 
@@ -574,7 +574,7 @@
                           :name="`rows[${index}][usingmaterial]`" 
                           :value="(hasMaterial && selectedGroup) ? '1' : '0'">
                     
-                    @include('transaction.rencanakerjaharian.modal-material')
+                    @include('transaction.rencanakerjaharian.modal-form.form-modal-material')
                   </td>
 
                   <!-- Delete Button -->

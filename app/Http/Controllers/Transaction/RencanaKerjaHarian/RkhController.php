@@ -225,7 +225,7 @@ class RkhController extends Controller
             
             $data = $this->rkhService->getEditPageData($rkhno, $companycode);
 
-            return view('transaction.rencanakerjaharian.rkhedit', array_merge($data, [
+            return view('transaction.rencanakerjaharian.rkh-edit', array_merge($data, [
                 'title' => 'Edit Rencana Kerja Harian',
                 'navbar' => 'Transaction',
                 'nav' => 'Rencana Kerja Harian',
