@@ -8,7 +8,8 @@
         table{width:100%;border-collapse:separate;border-spacing:0;box-shadow:0 3px 8px rgba(0,0,0,.1);animation:fadeIn 0.4s ease-in;}
         th,td{border:1px solid #ddd;padding:6px 8px;font-size:13px;vertical-align:middle;background-clip:padding-box;}
         tbody tr{transition:background-color .2s;}
-        tbody tr:hover td{background:#24874a !important;color:white;}
+        tbody tr:hover td{background:#1f6f3d  !important;color:#ffffff ;}
+        tbody tr:hover td *{color:#ffffff !important;}
          
         /* ✅ Sticky Vertical */
         .sticky-v{position:sticky;background:#166534;color:#fff;}

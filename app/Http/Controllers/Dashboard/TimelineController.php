@@ -380,47 +380,105 @@ if ($isExport) {
     if ($tab === 'map') {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Map Summary');
+        $sheet->setTitle('Map Detail');
 
-        // Header
+        // Header (plot info + activity + lkh)
         $sheet->fromArray([[
             'Plot','Blok','CenterLat','CenterLng',
             'Luas RKH (HA)','Total Hasil (HA)','Progress (%)','Marker',
-            'Status','Umur (hari)','Is Panen','Tgl Panen Terakhir'
+            'Status','Umur (hari)','Is Panen','Tgl Panen Terakhir',
+            'Activity Code','Activity Label','Activity Luas (HA)','Activity (%)','Activity Tanggal',
+            'LKH No','LKH Tanggal','LKH Luas (HA)','LKH (%)'
         ]], null, 'A1');
 
-        $sheet->getStyle("A1:L1")->getFont()->setBold(true);
+        $sheet->getStyle("A1:U1")->getFont()->setBold(true);
         $sheet->freezePane('A2');
 
         $row = 2;
+
         foreach ($plotHeadersForMap as $h) {
             $plotCode = $h->plot;
-            $detail   = $plotActivityDetails[$plotCode] ?? [];
+            $blok     = substr($plotCode, 0, 1);
 
-            $sheet->setCellValue("A{$row}", $plotCode);
-            $sheet->setCellValue("B{$row}", substr($plotCode, 0, 1));
-            $sheet->setCellValue("C{$row}", $h->centerlatitude);
-            $sheet->setCellValue("D{$row}", $h->centerlongitude);
-
-            $sheet->setCellValue("E{$row}", $detail['luas_rkh'] ?? 0);
-            $sheet->setCellValue("F{$row}", $detail['total_luas_hasil'] ?? 0);
-            $sheet->setCellValue("G{$row}", $detail['avg_percentage'] ?? 0);
-            $sheet->setCellValue("H{$row}", $detail['marker_color'] ?? 'black');
-            $sheet->setCellValue("I{$row}", $detail['lifecyclestatus'] ?? '-');
-            $sheet->setCellValue("J{$row}", $detail['umur_hari'] ?? 0);
-            $sheet->setCellValue("K{$row}", $detail['is_panen'] ?? 0);
+            $detail = $plotActivityDetails[$plotCode] ?? [
+                'avg_percentage' => 0,
+                'marker_color' => 'black',
+                'luas_rkh' => 0,
+                'total_luas_hasil' => 0,
+                'lifecyclestatus' => '-',
+                'umur_hari' => 0,
+                'is_panen' => 0,
+                'tanggal_panen_terakhir' => null,
+                'activities' => [],
+            ];
 
             $tglPanen = $detail['tanggal_panen_terakhir'] ?? null;
-            $sheet->setCellValue("L{$row}", $tglPanen ? \Carbon\Carbon::parse($tglPanen)->format('Y-m-d') : '-');
 
-            $row++;
+            $base = [
+                $plotCode,
+                $blok,
+                $h->centerlatitude,
+                $h->centerlongitude,
+                (float)($detail['luas_rkh'] ?? 0),
+                (float)($detail['total_luas_hasil'] ?? 0),
+                (float)($detail['avg_percentage'] ?? 0),
+                $detail['marker_color'] ?? 'black',
+                $detail['lifecyclestatus'] ?? '-',
+                (int)($detail['umur_hari'] ?? 0),
+                (int)($detail['is_panen'] ?? 0),
+                $tglPanen ? \Carbon\Carbon::parse($tglPanen)->format('Y-m-d') : '-',
+            ];
+
+            $acts = $detail['activities'] ?? [];
+
+            // kalau tidak ada activity sama sekali, tetap tulis 1 row plot
+            if (empty($acts)) {
+                $sheet->fromArray([array_merge($base, ['-','-','-','-','-','-','-','-','-'])], null, "A{$row}");
+                $row++;
+                continue;
+            }
+
+            foreach ($acts as $act) {
+                $actCode  = $act['code'] ?? '';
+                $actLabel = $act['label'] ?? '';
+                $actLuas  = (float)($act['luas_hasil'] ?? 0);
+                $actPct   = (float)($act['percentage'] ?? 0);
+                $actTgl   = !empty($act['tanggal']) ? \Carbon\Carbon::parse($act['tanggal'])->format('Y-m-d') : '-';
+
+                $lkhList = $act['lkh_details'] ?? [];
+
+                // kalau activity tidak punya lkh detail, tetap tulis 1 row activity
+                if (empty($lkhList)) {
+                    $sheet->fromArray([array_merge($base, [
+                        $actCode, $actLabel, $actLuas, $actPct, $actTgl,
+                        '-', '-', 0, 0
+                    ])], null, "A{$row}");
+                    $row++;
+                    continue;
+                }
+
+                // kalau ada lkh, tulis 1 row per lkh
+                foreach ($lkhList as $lkh) {
+                    $lkhNo   = $lkh['lkhno'] ?? '';
+                    $lkhTgl  = !empty($lkh['tanggal']) ? \Carbon\Carbon::parse($lkh['tanggal'])->format('Y-m-d') : '-';
+                    $lkhLuas = (float)($lkh['luas_hasil'] ?? 0);
+                    $lkhPct  = (float)($lkh['percentage'] ?? 0);
+
+                    $sheet->fromArray([array_merge($base, [
+                        $actCode, $actLabel, $actLuas, $actPct, $actTgl,
+                        $lkhNo, $lkhTgl, $lkhLuas, $lkhPct
+                    ])], null, "A{$row}");
+                    $row++;
+                }
+            }
         }
 
-        foreach (range('A','L') as $col) {
+        // Autosize (A..U, aman)
+        foreach (range('A','U') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $filename = "map_{$cropType}_" . now()->format('Ymd_His') . ".xlsx";
+        $filename = "map_detail_{$cropType}_" . now()->format('Ymd_His') . ".xlsx";
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
         return response()->stream(function () use ($writer) {
@@ -431,6 +489,7 @@ if ($isExport) {
             'Cache-Control' => 'max-age=0',
         ]);
     }
+
 
     // =======================
     // B) EXPORT TIMELINE (default tab=table)
