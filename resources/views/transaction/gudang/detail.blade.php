@@ -84,9 +84,9 @@ table th, table td {
                         <th class="py-1 px-2 text-left border-0" colspan="5">
                             <div class="space-y-1 mb-3">
                                 <div class="grid grid-cols-3 gap-4">
-                                    <span class="text-left"><b>Company:</b> {{ $details[0]->companycode }} {{session('companycode')}} </span>
+                                    <span class="text-left"><b>Company:</b> {{session('companycode')}} </span>
                                     <span class="text-center"><b>RKH:</b> {{ $details[0]->rkhno }}</span>
-                                    <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span>
+                                    {{-- <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span> --}}
                                 </div>
                                 <div class="grid grid-cols-3 gap-4">
                                     <span class="text-left"><b>Mandor:</b> {{ $details[0]->name }}</span>
