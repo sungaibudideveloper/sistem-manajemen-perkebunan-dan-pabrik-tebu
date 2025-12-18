@@ -1,6 +1,6 @@
 {{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-rekap.blade.php --}}
 
-{{-- GENERATE REKAP LKH MODAL - UPDATED WITH OPERATOR OPTION --}}
+{{-- GENERATE REKAP LKH MODAL - UPDATED WITH 3 OPTIONS --}}
 <div x-show="showGenerateRekapLKHModal" x-cloak x-transition.opacity
      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div x-show="showGenerateRekapLKHModal" x-transition.scale
@@ -26,7 +26,7 @@
             <div class="space-y-4">
                 <h3 class="text-sm font-medium text-gray-700">Pilih Jenis Laporan:</h3>
 
-                <!-- Rekap LKH Option -->
+                <!-- 1. Rekap LKH Option -->
                 <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-400 transition-colors">
                     <label class="flex items-start space-x-3 cursor-pointer">
                         <input type="radio" name="reportType" value="rekap" x-model="selectedReportType"
@@ -40,16 +40,31 @@
                     </label>
                 </div>
 
-                <!-- LKH Operator Option -->
+                <!-- 2. LKH Operator Rekap Option (NEW) -->
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-400 transition-colors">
+                    <label class="flex items-start space-x-3 cursor-pointer">
+                        <input type="radio" name="reportType" value="operator_rekap" x-model="selectedReportType"
+                               class="mt-1 text-gray-600 focus:ring-gray-500">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium text-gray-900">Rekap Operator Unit Alat</span>
+                                <span class="px-2 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded-full">NEW</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Ringkasan semua operator alat dalam 1 tanggal dengan total jam kerja, luas, dan BBM</p>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 3. LKH Operator (Per Operator) Option -->
                 <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-400 transition-colors">
                     <label class="flex items-start space-x-3 cursor-pointer">
                         <input type="radio" name="reportType" value="operator" x-model="selectedReportType"
                                class="mt-1 text-gray-600 focus:ring-gray-500">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="font-medium text-gray-900">LKH Operator Unit Alat</span>
+                                <span class="font-medium text-gray-900">LKH Operator Unit Alat (Per Operator)</span>
                             </div>
-                            <p class="text-sm text-gray-600 mt-1">Detail aktivitas operator alat termasuk jam kerja, plot, dan pemakaian BBM</p>
+                            <p class="text-sm text-gray-600 mt-1">Detail aktivitas operator alat tertentu termasuk jam kerja, plot, dan pemakaian BBM</p>
                         </div>
                     </label>
 
@@ -91,10 +106,16 @@
                                 <p>Laporan berisi ringkasan semua LKH per tanggal termasuk aktivitas pengolahan dan perawatan manual (PC/RC).</p>
                             </div>
                         </template>
+                        <template x-if="selectedReportType === 'operator_rekap'">
+                            <div>
+                                <p class="font-medium">Informasi Rekap Operator:</p>
+                                <p>Laporan ringkasan semua operator dalam 1 hari dengan total aktivitas, jam kerja, luas area hasil, dan konsumsi BBM. Klik detail untuk melihat breakdown per operator.</p>
+                            </div>
+                        </template>
                         <template x-if="selectedReportType === 'operator'">
                             <div>
                                 <p class="font-medium">Informasi LKH Operator:</p>
-                                <p>Laporan detail aktivitas operator unit alat termasuk jam kerja, kegiatan per plot, luas area, dan konsumsi BBM.</p>
+                                <p>Laporan detail aktivitas operator unit alat tertentu termasuk jam kerja, kegiatan per plot, luas area, dan konsumsi BBM.</p>
                             </div>
                         </template>
                     </div>

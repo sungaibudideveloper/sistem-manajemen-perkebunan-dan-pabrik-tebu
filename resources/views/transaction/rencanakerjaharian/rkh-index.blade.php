@@ -347,14 +347,20 @@
                 return date.toISOString().split('T')[0];
             },
 
-            // ✅ NEW: Computed property for report generation
+            //  Computed property for report generation
             get canGenerateReport() {
                 if (!this.rekapLkhDate || !this.selectedReportType) return false;
+                
+                // Operator rekap tidak perlu pilih operator
+                if (this.selectedReportType === 'operator_rekap') return true;
+                
+                // Operator per-individual butuh pilih operator
                 if (this.selectedReportType === 'operator' && !this.selectedOperatorId) return false;
+                
                 return true;
             },
 
-            // ✅ NEW: Initialize watchers
+            // Initialize watchers
             init() {
                 // Listen for outstanding error event
                 window.addEventListener('show-outstanding-error', (event) => {
@@ -430,11 +436,15 @@
                     let url, payload;
                     
                     if (this.selectedReportType === 'rekap') {
-                        // Existing rekap LKH logic
+                        // Rekap LKH logic
                         url = '{{ route("transaction.rencanakerjaharian.generateRekapLKH") }}';
                         payload = { date: this.rekapLkhDate };
+                    } else if (this.selectedReportType === 'operator_rekap') {
+                        // Operator Rekap Report
+                        url = '{{ route("transaction.rencanakerjaharian.generateOperatorRekapReport") }}';
+                        payload = { date: this.rekapLkhDate };
                     } else if (this.selectedReportType === 'operator') {
-                        // New operator report logic
+                        // Operator report logic
                         url = '{{ route("transaction.rencanakerjaharian.generateOperatorReport") }}';
                         payload = { 
                             date: this.rekapLkhDate,

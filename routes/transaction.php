@@ -17,6 +17,7 @@ use App\Http\Controllers\Transaction\RencanaKerjaHarian\LkhController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\ApprovalInfoController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\DthReportController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\RekapLkhReportController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\OperatorRekapReportController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\OperatorReportController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Utility\RkhUtilityController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\MaterialUsageController;
@@ -153,6 +154,13 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
                 Route::post('/generate-rekap-lkh', 'generate')->name('generateRekapLKH');
                 Route::get('/rekap-lkh-report', 'show')->name('rekap-lkh-report');
                 Route::get('/lkh-rekap-data', 'getData')->name('lkh-rekap-data');
+            });
+
+            // Operator Rekap Report (All Operators - Summary)
+            Route::controller(OperatorRekapReportController::class)->group(function () {
+                Route::post('/generate-operator-rekap-report', 'generate')->name('generateOperatorRekapReport');
+                Route::get('/operator-rekap-report', 'show')->name('operator-rekap-report');
+                Route::get('/operator-rekap-report-data', 'getData')->name('operator-rekap-report-data');
             });
 
             // Operator Report
