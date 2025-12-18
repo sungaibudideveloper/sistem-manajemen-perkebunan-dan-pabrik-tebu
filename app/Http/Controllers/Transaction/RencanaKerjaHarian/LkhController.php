@@ -124,7 +124,7 @@ class LkhController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            return view('transaction.rencanakerjaharian.edit-lkh', array_merge([
+            return view('transaction.rencanakerjaharian.lkh-edit', array_merge([
                 'title' => 'Edit LKH',
                 'navbar' => 'Input',
                 'nav' => 'Rencana Kerja Harian',

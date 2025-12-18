@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-dth.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-dth.blade.php --}}
 
 {{-- GENERATE DTH MODAL --}}
 <div x-show="showGenerateDTHModal" x-cloak x-transition.opacity

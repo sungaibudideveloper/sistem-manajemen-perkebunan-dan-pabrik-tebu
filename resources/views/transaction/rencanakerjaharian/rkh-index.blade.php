@@ -1,4 +1,4 @@
-{{--resources\views\input\rencanakerjaharian\index.blade.php--}}
+{{--resources\views\input\rencanakerjaharian\rkh-index.blade.php--}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
@@ -18,11 +18,6 @@
                         <input type="hidden" name="all_date" value="{{ $allDate }}">
                         <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs rounded">Search</button>
                     </form>
-
-                    <button type="button" @click="showRkhApprovalModal = true; loadPendingApprovals()"
-                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded">Approve RKH</button>
-                    <button type="button" @click="showLkhApprovalModal = true; loadPendingLKHApprovals()"
-                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 text-xs rounded">Approve LKH</button>
                 </div>
 
                 <div class="mt-2 md:mt-0">
@@ -216,13 +211,13 @@
             </div>
 
             {{-- Include All Modals --}}
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-create-rkh')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-rkh-approval')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-lkh-approval')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-lkh-list')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-absen')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-dth')
-            @include('transaction.rencanakerjaharian.indexmodal.index-modal-rekap')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-create-rkh')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-lkh-list')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-absen')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-dth')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-rekap')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-rkh-approval-info')
+            @include('transaction.rencanakerjaharian.modal-index.index-modal-lkh-approval-info')
         </div>
     </div>
 
@@ -304,15 +299,11 @@
             showGenerateDTHModal: false,
             showGenerateRekapLKHModal: false,
             showDateModal: false,
-            showRkhApprovalModal: false,
             showRkhApprovalInfoModal: false,
-            showLkhApprovalModal: false,
             showLkhApprovalInfoModal: false,
             showOutstandingModal: false,
 
             // Loading states
-            isRkhApprovalLoading: false,
-            isLkhApprovalLoading: false,
             isRkhInfoLoading: false,
             isLkhInfoLoading: false,
             isLkhModalLoading: false,
@@ -338,22 +329,12 @@
                 mandor_id: ''
             },
             
-            // ✅ NEW: Operator Report Properties
             selectedReportType: '',
             selectedOperatorId: '',
             availableOperators: [],
             isLoadingOperators: false,
-            
-            // RKH Approval
-            pendingRkhApprovals: [],
-            rkhUserInfo: {},
-            selectedRKHs: [],
+
             rkhApprovalDetail: {},
-            
-            // LKH Approval
-            pendingLKHApprovals: [],
-            lkhUserInfo: {},
-            selectedLKHs: [],
             lkhApprovalDetail: {},
             
             get today() {
@@ -612,28 +593,6 @@
                 await this.generateSelectedReport();
             },
 
-            // RKH Approval Methods
-            async loadPendingApprovals() {
-                this.isRkhApprovalLoading = true;
-                try {
-                    const response = await fetch('{{ route("transaction.rencanakerjaharian.getPendingApprovals") }}');
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        this.pendingRkhApprovals = data.data || [];
-                        this.rkhUserInfo = data.user_info || {};
-                        this.selectedRKHs = [];
-                    } else {
-                        alert('Gagal memuat data approval: ' + data.message);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat memuat data approval');
-                } finally {
-                    this.isRkhApprovalLoading = false;
-                }
-            },
-
             async loadRkhApprovalDetail(rkhno) {
                 this.isRkhInfoLoading = true;
                 try {
@@ -650,101 +609,6 @@
                     alert('Terjadi kesalahan saat memuat detail approval');
                 } finally {
                     this.isRkhInfoLoading = false;
-                }
-            },
-
-            toggleSelectAllRkh(checked) {
-                this.selectedRKHs = checked ? this.pendingRkhApprovals.map(rkh => rkh.rkhno) : [];
-            },
-
-            async bulkApproveRkh() {
-                if (this.selectedRKHs.length === 0) {
-                    alert('Silakan pilih RKH yang akan di-approve');
-                    return;
-                }
-
-                if (!confirm(`Apakah Anda yakin ingin menyetujui ${this.selectedRKHs.length} RKH yang dipilih?`)) return;
-
-                try {
-                    const promises = this.selectedRKHs.map(rkhno => {
-                        const rkh = this.pendingRkhApprovals.find(r => r.rkhno === rkhno);
-                        return this.processRkhApproval(rkhno, 'approve', rkh.approval_level);
-                    });
-
-                    const results = await Promise.all(promises);
-                    const successCount = results.filter(r => r.success).length;
-                    
-                    alert(`${successCount} RKH berhasil di-approve`);
-                    await this.loadPendingApprovals();
-                    location.reload();
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat bulk approve');
-                }
-            },
-
-            async bulkDeclineRkh() {
-                if (this.selectedRKHs.length === 0) {
-                    alert('Silakan pilih RKH yang akan di-decline');
-                    return;
-                }
-
-                if (!confirm(`Apakah Anda yakin ingin menolak ${this.selectedRKHs.length} RKH yang dipilih?`)) return;
-
-                try {
-                    const promises = this.selectedRKHs.map(rkhno => {
-                        const rkh = this.pendingRkhApprovals.find(r => r.rkhno === rkhno);
-                        return this.processRkhApproval(rkhno, 'decline', rkh.approval_level);
-                    });
-
-                    const results = await Promise.all(promises);
-                    const successCount = results.filter(r => r.success).length;
-                    
-                    alert(`${successCount} RKH berhasil di-decline`);
-                    await this.loadPendingApprovals();
-                    location.reload();
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat bulk decline');
-                }
-            },
-
-            async processRkhApproval(rkhno, action, level) {
-                try {
-                    const response = await fetch('{{ route("transaction.rencanakerjaharian.processApproval") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ rkhno, action, level })
-                    });
-                    return await response.json();
-                } catch (error) {
-                    console.error('Error:', error);
-                    return { success: false, message: 'Network error' };
-                }
-            },
-
-            // LKH Approval Methods
-            async loadPendingLKHApprovals() {
-                this.isLkhApprovalLoading = true;
-                try {
-                    const response = await fetch('{{ route("transaction.rencanakerjaharian.getPendingLKHApprovals") }}');
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        this.pendingLKHApprovals = data.data || [];
-                        this.lkhUserInfo = data.user_info || {};
-                        this.selectedLKHs = [];
-                    } else {
-                        alert('Gagal memuat data approval LKH: ' + data.message);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat memuat data approval LKH');
-                } finally {
-                    this.isLkhApprovalLoading = false;
                 }
             },
 
@@ -766,79 +630,6 @@
                     this.isLkhInfoLoading = false;
                 }
             },
-
-            toggleSelectAllLKH(checked) {
-                this.selectedLKHs = checked ? this.pendingLKHApprovals.map(lkh => lkh.lkhno) : [];
-            },
-
-            async bulkApproveLKH() {
-                if (this.selectedLKHs.length === 0) {
-                    alert('Silakan pilih LKH yang akan di-approve');
-                    return;
-                }
-
-                if (!confirm(`Apakah Anda yakin ingin menyetujui ${this.selectedLKHs.length} LKH yang dipilih?`)) return;
-
-                try {
-                    const promises = this.selectedLKHs.map(lkhno => {
-                        const lkh = this.pendingLKHApprovals.find(l => l.lkhno === lkhno);
-                        return this.processLKHApproval(lkhno, 'approve', lkh.approval_level);
-                    });
-
-                    const results = await Promise.all(promises);
-                    const successCount = results.filter(r => r.success).length;
-                    
-                    alert(`${successCount} LKH berhasil di-approve`);
-                    await this.loadPendingLKHApprovals();
-                    location.reload();
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat bulk approve LKH');
-                }
-            },
-
-            async bulkDeclineLKH() {
-                if (this.selectedLKHs.length === 0) {
-                    alert('Silakan pilih LKH yang akan di-decline');
-                    return;
-                }
-
-                if (!confirm(`Apakah Anda yakin ingin menolak ${this.selectedLKHs.length} LKH yang dipilih?`)) return;
-
-                try {
-                    const promises = this.selectedLKHs.map(lkhno => {
-                        const lkh = this.pendingLKHApprovals.find(l => l.lkhno === lkhno);
-                        return this.processLKHApproval(lkhno, 'decline', lkh.approval_level);
-                    });
-
-                    const results = await Promise.all(promises);
-                    const successCount = results.filter(r => r.success).length;
-                    
-                    alert(`${successCount} LKH berhasil di-decline`);
-                    await this.loadPendingLKHApprovals();
-                    location.reload();
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat bulk decline LKH');
-                }
-            },
-
-            async processLKHApproval(lkhno, action, level) {
-                try {
-                    const response = await fetch('{{ route("transaction.rencanakerjaharian.processLKHApproval") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ lkhno, action, level })
-                    });
-                    return await response.json();
-                } catch (error) {
-                    console.error('Error:', error);
-                    return { success: false, message: 'Network error' };
-                }
-            }
         };
     }
 

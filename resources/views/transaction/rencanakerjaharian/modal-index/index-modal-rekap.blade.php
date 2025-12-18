@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-rekap.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-rekap.blade.php --}}
 
 {{-- GENERATE REKAP LKH MODAL - UPDATED WITH OPERATOR OPTION --}}
 <div x-show="showGenerateRekapLKHModal" x-cloak x-transition.opacity

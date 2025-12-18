@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-create-rkh.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-create-rkh.blade.php --}}
 
 {{-- DATE & MANDOR SELECTION MODAL FOR CREATE RKH --}}
 <div x-data="createRkhModal()" x-show="showDateModal" x-cloak x-transition.opacity

@@ -765,4 +765,62 @@ class LkhRepository
             ->select(['lkhno', 'issubmit', 'status', 'activitycode'])
             ->first();
     }
+
+    /**
+     * Get LKH approval detail with all approval metadata
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return object|null
+     */
+    public function getLkhApprovalDetail($companycode, $lkhno)
+    {
+        return DB::table('lkhhdr as h')
+            ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
+            ->leftJoin('activity as a', 'h.activitycode', '=', 'a.activitycode')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('a.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('user as u1', 'h.approval1userid', '=', 'u1.userid')
+            ->leftJoin('user as u2', 'h.approval2userid', '=', 'u2.userid')
+            ->leftJoin('user as u3', 'h.approval3userid', '=', 'u3.userid')
+            ->leftJoin('jabatan as j1', 'h.approval1idjabatan', '=', 'j1.idjabatan')
+            ->leftJoin('jabatan as j2', 'h.approval2idjabatan', '=', 'j2.idjabatan')
+            ->leftJoin('jabatan as j3', 'h.approval3idjabatan', '=', 'j3.idjabatan')
+            ->where('h.companycode', $companycode)
+            ->where('h.lkhno', $lkhno)
+            ->select([
+                'h.*',
+                'm.name as mandor_nama',
+                'a.activityname',
+                'h.jumlahapproval',
+                'h.approval1idjabatan',
+                'h.approval2idjabatan', 
+                'h.approval3idjabatan',
+                'u1.name as approval1_user_name',
+                'u2.name as approval2_user_name',
+                'u3.name as approval3_user_name',
+                'j1.namajabatan as jabatan1_name',
+                'j2.namajabatan as jabatan2_name',
+                'j3.namajabatan as jabatan3_name'
+            ])
+            ->first();
+    }
+
+    /**
+     * Get plots for LKH (for location display)
+     * 
+     * @param string $companycode
+     * @param string $lkhno
+     * @return \Illuminate\Support\Collection
+     */
+    public function getPlotsForLkh($companycode, $lkhno)
+    {
+        return DB::table('lkhdetailplot')
+            ->where('companycode', $companycode)
+            ->where('lkhno', $lkhno)
+            ->select(['blok', 'plot'])
+            ->get();
+    }
 }

@@ -508,4 +508,114 @@ class RkhService
         
         return $details;
     }
+
+    // ============================================
+    // APPROVAL INFO METHODS (READ-ONLY)
+    // ============================================
+
+    /**
+     * Get approval detail for specific RKH (for info modal)
+     * 
+     * @param string $rkhno
+     * @param string $companycode
+     * @return array|null
+     */
+    public function getApprovalDetail($rkhno, $companycode)
+    {
+        $rkh = $this->rkhRepo->getApprovalDetail($companycode, $rkhno);
+
+        if (!$rkh) {
+            return null;
+        }
+
+        return $this->formatApprovalDetailData($rkh);
+    }
+
+    /**
+     * Update RKH status (Completed/In Progress)
+     * 
+     * @param string $rkhno
+     * @param string $status
+     * @param object $currentUser
+     * @param string $companycode
+     * @return array
+     */
+    public function updateRkhStatus($rkhno, $status, $currentUser, $companycode)
+    {
+        // Validate LKH completion if marking as Completed
+        if ($status === 'Completed') {
+            $progressStatus = $this->rkhRepo->getProgressStatusFromLkh($companycode, $rkhno);
+            
+            if (!$progressStatus['can_complete']) {
+                return [
+                    'success' => false,
+                    'message' => 'Tidak dapat menandai RKH sebagai Completed. ' . 
+                                $progressStatus['progress'] . '. Semua LKH harus diapprove terlebih dahulu.'
+                ];
+            }
+        }
+        
+        $updated = $this->rkhRepo->updateStatus($companycode, $rkhno, $status, $currentUser->userid, now());
+
+        if ($updated) {
+            return [
+                'success' => true, 
+                'message' => 'Status RKH berhasil diupdate menjadi ' . $status
+            ];
+        } else {
+            return ['success' => false, 'message' => 'RKH tidak ditemukan'];
+        }
+    }
+
+    /**
+     * Format approval detail data (PRIVATE HELPER)
+     * 
+     * @param object $rkh
+     * @return array
+     */
+    private function formatApprovalDetailData($rkh)
+    {
+        $levels = [];
+        
+        for ($i = 1; $i <= 3; $i++) {
+            $jabatanId = $rkh->{"idjabatanapproval{$i}"};
+            if (!$jabatanId) continue;
+
+            $flagField = "approval{$i}flag";
+            $dateField = "approval{$i}date";
+            $userField = "approval{$i}_user_name";
+            $jabatanField = "jabatan{$i}_name";
+
+            $flag = $rkh->$flagField;
+            $status = 'waiting';
+            $statusText = 'Waiting';
+
+            if ($flag === '1') {
+                $status = 'approved';
+                $statusText = 'Approved';
+            } elseif ($flag === '0') {
+                $status = 'declined';
+                $statusText = 'Declined';
+            }
+
+            $levels[] = [
+                'level' => $i,
+                'jabatan_name' => $rkh->$jabatanField ?? 'Unknown',
+                'status' => $status,
+                'status_text' => $statusText,
+                'user_name' => $rkh->$userField ?? null,
+                'date_formatted' => $rkh->$dateField ? \Carbon\Carbon::parse($rkh->$dateField)->format('d/m/Y H:i') : null
+            ];
+        }
+
+        return [
+            'rkhno' => $rkh->rkhno,
+            'rkhdate' => $rkh->rkhdate,
+            'rkhdate_formatted' => \Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y'),
+            'mandor_nama' => $rkh->mandor_nama,
+            'activity_group_name' => $rkh->activity_group_name ?? 'Unknown',
+            'jumlah_approval' => $rkh->jumlahapproval ?? 0,
+            'levels' => $levels
+        ];
+    }
 }

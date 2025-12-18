@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-lkh-list.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\modal-index\index-modal-lkh-list.blade.php --}}
 
 {{-- LKH LIST MODAL --}}
 <div x-show="showLKHModal" x-cloak x-transition.opacity
