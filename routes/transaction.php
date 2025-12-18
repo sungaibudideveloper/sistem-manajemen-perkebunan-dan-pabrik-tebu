@@ -14,8 +14,7 @@ use App\Http\Controllers\Transaction\NfcController;
 
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\RkhController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\LkhController;
-use App\Http\Controllers\Transaction\RencanaKerjaHarian\Approval\RkhApprovalController;
-use App\Http\Controllers\Transaction\RencanaKerjaHarian\Approval\LkhApprovalController;
+use App\Http\Controllers\Transaction\RencanaKerjaHarian\ApprovalInfoController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\DthReportController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\RekapLkhReportController;
 use App\Http\Controllers\Transaction\RencanaKerjaHarian\Report\OperatorReportController;
@@ -116,13 +115,15 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
             });
 
             // ============================================================
-            // RKH APPROVAL
+            // APPROVAL INFO (RKH & LKH - Read Only)
             // ============================================================
-            Route::controller(RkhApprovalController::class)->group(function () {
-                Route::get('/pending-approvals', 'getPendingApprovals')->name('getPendingApprovals');
-                Route::post('/process-approval', 'processApproval')->name('processApproval');
-                Route::get('/{rkhno}/approval-detail', 'getApprovalDetail')->name('getApprovalDetail');
-                Route::post('/update-status', 'updateStatus')->name('updateStatus');
+            Route::controller(ApprovalInfoController::class)->group(function () {
+                // RKH Approval Info
+                Route::get('/{rkhno}/approval-detail', 'getRkhApprovalDetail')->name('getApprovalDetail');
+                Route::post('/update-status', 'updateRkhStatus')->name('updateStatus');
+                
+                // LKH Approval Info
+                Route::get('/lkh/{lkhno}/approval-detail', 'getLkhApprovalDetail')->name('getLkhApprovalDetail');
             });
 
             // ============================================================
@@ -135,15 +136,6 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
                 Route::put('/lkh/{lkhno}', 'updateLKH')->name('updateLKH');
                 Route::post('/lkh/submit', 'submitLKH')->name('submitLKH');
                 Route::post('/{rkhno}/generate-lkh', 'manualGenerateLkh')->name('manualGenerateLkh');
-            });
-
-            // ============================================================
-            // LKH APPROVAL
-            // ============================================================
-            Route::controller(LkhApprovalController::class)->group(function () {
-                Route::get('/pending-lkh-approvals', 'getPendingLKHApprovals')->name('getPendingLKHApprovals');
-                Route::post('/process-lkh-approval', 'processLKHApproval')->name('processLKHApproval');
-                Route::get('/lkh/{lkhno}/approval-detail', 'getLkhApprovalDetail')->name('getLkhApprovalDetail');
             });
 
             // ============================================================

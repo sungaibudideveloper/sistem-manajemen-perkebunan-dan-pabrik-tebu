@@ -614,4 +614,84 @@ class LkhService
         
         return $details;
     }
+
+    // ============================================
+    // APPROVAL INFO METHODS (READ-ONLY)
+    // ============================================
+
+    /**
+     * Get LKH approval detail (for info modal)
+     * 
+     * @param string $lkhno
+     * @param string $companycode
+     * @return array|null
+     */
+    public function getLkhApprovalDetail($lkhno, $companycode)
+    {
+        $lkh = $this->lkhRepo->getLkhApprovalDetail($companycode, $lkhno);
+
+        if (!$lkh) {
+            return null;
+        }
+
+        return $this->formatLkhApprovalDetailData($lkh);
+    }
+
+    /**
+     * Format LKH approval detail data (PRIVATE HELPER)
+     * 
+     * @param object $lkh
+     * @return array
+     */
+    private function formatLkhApprovalDetailData($lkh)
+    {
+        $levels = [];
+        
+        for ($i = 1; $i <= 3; $i++) {
+            $jabatanId = $lkh->{"approval{$i}idjabatan"};
+            if (!$jabatanId) continue;
+
+            $flagField = "approval{$i}flag";
+            $dateField = "approval{$i}date";
+            $userField = "approval{$i}_user_name";
+            $jabatanField = "jabatan{$i}_name";
+
+            $flag = $lkh->$flagField;
+            $status = 'waiting';
+            $statusText = 'Waiting';
+
+            if ($flag === '1') {
+                $status = 'approved';
+                $statusText = 'Approved';
+            } elseif ($flag === '0') {
+                $status = 'declined';
+                $statusText = 'Declined';
+            }
+
+            $levels[] = [
+                'level' => $i,
+                'jabatan_name' => $lkh->$jabatanField ?? 'Unknown',
+                'status' => $status,
+                'status_text' => $statusText,
+                'user_name' => $lkh->$userField ?? null,
+                'date_formatted' => $lkh->$dateField ? \Carbon\Carbon::parse($lkh->$dateField)->format('d/m/Y H:i') : null
+            ];
+        }
+
+        // Get plots for location display
+        $plots = $this->lkhRepo->getPlotsForLkh($companycode, $lkh->lkhno);
+        $location = $plots->map(fn($p) => $p->blok . '-' . $p->plot)->join(', ') ?: '-';
+
+        return [
+            'lkhno' => $lkh->lkhno,
+            'rkhno' => $lkh->rkhno,
+            'lkhdate' => $lkh->lkhdate,
+            'lkhdate_formatted' => \Carbon\Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
+            'mandor_nama' => $lkh->mandor_nama,
+            'activityname' => $lkh->activityname ?? 'Unknown Activity',
+            'location' => $location,
+            'jumlah_approval' => $lkh->jumlahapproval ?? 0,
+            'levels' => $levels
+        ];
+    }
 }

@@ -33,11 +33,6 @@ class RkhController extends Controller
     {
         try {
             $companycode = Session::get('companycode');
-
-            \Log::info('Current Company', [
-    'companycode' => $companycode,
-    'user' => Auth::user()->userid
-]);
             
             // Extract filters from request
             $filters = [

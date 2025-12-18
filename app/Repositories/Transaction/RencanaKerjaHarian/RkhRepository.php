@@ -510,4 +510,111 @@ class RkhRepository
             ->where('rkhno', $rkhno)
             ->exists();
     }
+
+    /**
+     * Get RKH approval detail with all approval metadata
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return object|null
+     */
+    public function getApprovalDetail($companycode, $rkhno)
+    {
+        return DB::table('rkhhdr as r')
+            ->leftJoin('user as m', 'r.mandorid', '=', 'm.userid')
+            ->leftJoin('approval as app', function($join) use ($companycode) {
+                $join->on('r.activitygroup', '=', 'app.activitygroup')
+                    ->where('app.companycode', '=', $companycode);
+            })
+            ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
+            ->leftJoin('user as u1', 'r.approval1userid', '=', 'u1.userid')
+            ->leftJoin('user as u2', 'r.approval2userid', '=', 'u2.userid')
+            ->leftJoin('user as u3', 'r.approval3userid', '=', 'u3.userid')
+            ->leftJoin('jabatan as j1', 'app.idjabatanapproval1', '=', 'j1.idjabatan')
+            ->leftJoin('jabatan as j2', 'app.idjabatanapproval2', '=', 'j2.idjabatan')
+            ->leftJoin('jabatan as j3', 'app.idjabatanapproval3', '=', 'j3.idjabatan')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->select([
+                'r.*',
+                'm.name as mandor_nama',
+                'ag.groupname as activity_group_name',
+                'app.jumlahapproval',
+                'app.idjabatanapproval1',
+                'app.idjabatanapproval2', 
+                'app.idjabatanapproval3',
+                'u1.name as approval1_user_name',
+                'u2.name as approval2_user_name',
+                'u3.name as approval3_user_name',
+                'j1.namajabatan as jabatan1_name',
+                'j2.namajabatan as jabatan2_name',
+                'j3.namajabatan as jabatan3_name'
+            ])
+            ->first();
+    }
+
+    /**
+     * Get RKH progress status from LKH
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return array
+     */
+    public function getProgressStatusFromLkh($companycode, $rkhno)
+    {
+        $lkhData = DB::table('lkhhdr')
+            ->where('rkhno', $rkhno)
+            ->where('companycode', $companycode)
+            ->get();
+        
+        if ($lkhData->isEmpty()) {
+            return [
+                'status' => 'no_lkh',
+                'progress' => 'No LKH Created',
+                'can_complete' => false,
+                'color' => 'gray'
+            ];
+        }
+        
+        $totalLkh = $lkhData->count();
+        $completedLkh = $lkhData->where('status', 'APPROVED')->count();
+        
+        if ($completedLkh === $totalLkh) {
+            return [
+                'status' => 'complete',
+                'progress' => 'All Complete',
+                'can_complete' => true,
+                'color' => 'green'
+            ];
+        } else {
+            return [
+                'status' => 'in_progress',
+                'progress' => "LKH In Progress ({$completedLkh}/{$totalLkh})",
+                'can_complete' => false,
+                'color' => 'yellow'
+            ];
+        }
+    }
+
+    /**
+     * Update RKH status (Completed/In Progress)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @param string $status
+     * @param string $userid
+     * @param Carbon $now
+     * @return int
+     */
+    public function updateStatus($companycode, $rkhno, $status, $userid, $now)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->update([
+                'status' => $status,
+                'updateby' => $userid,
+                'updatedat' => $now
+            ]);
+    }
 }

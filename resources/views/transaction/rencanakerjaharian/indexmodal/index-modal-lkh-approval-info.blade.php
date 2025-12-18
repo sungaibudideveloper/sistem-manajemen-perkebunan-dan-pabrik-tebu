@@ -1,6 +1,6 @@
-{{-- resources\views\input\rencanakerjaharian\indexmodal\index-modal-lkh-approval.blade.php --}}
+{{-- resources\views\transaction\rencanakerjaharian\indexmodal\index-modal-lkh-approval-info.blade.php --}}
 
-{{-- LKH APPROVAL INFO MODAL --}}
+{{-- LKH APPROVAL INFO MODAL (READ-ONLY) --}}
 <div x-show="showLkhApprovalInfoModal" x-cloak x-transition.opacity
      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
     <div x-show="showLkhApprovalInfoModal" x-transition.scale
@@ -107,108 +107,6 @@
         <div x-show="!isLkhInfoLoading" class="flex justify-end p-4 border-t bg-gray-50">
             <button @click="showLkhApprovalInfoModal = false"
                     class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded">Close</button>
-        </div>
-    </div>
-</div>
-
-{{-- LKH APPROVAL ACTION MODAL --}}
-<div x-show="showLkhApprovalModal" x-cloak x-transition.opacity
-     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div x-show="showLkhApprovalModal" x-transition.scale
-         class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-2/3 max-h-[90vh] flex flex-col">
-        <!-- Header -->
-        <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-gray-50 to-white-50">
-            <h2 class="text-lg font-semibold text-gray-900">LKH Approval Actions</h2>
-            <button @click="showLkhApprovalModal = false" class="text-gray-600 hover:text-gray-800 text-2xl leading-none">&times;</button>
-        </div>
-
-        <!-- User Info -->
-        <div class="p-4 bg-blue-50 border-b">
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-blue-900">Logged in as:</span>
-                    <span class="text-blue-800" x-text="lkhUserInfo.name"></span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-blue-900">Position:</span>
-                    <span class="text-blue-800" x-text="lkhUserInfo.jabatan_name"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Loading State -->
-        <div x-show="isLkhApprovalLoading" class="p-6 text-center">
-            <div class="loading-spinner mx-auto"></div>
-            <p class="mt-2 text-gray-500 loading-dots">Loading LKH approval data</p>
-        </div>
-
-        <!-- Body -->
-        <div x-show="!isLkhApprovalLoading" class="p-4 overflow-hidden flex-grow">
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">LKH yang menunggu persetujuan Anda:</p>
-            </div>
-            <div class="overflow-x-auto">
-                <div class="max-h-[400px] overflow-y-auto">
-                    <table class="min-w-full table-auto text-sm">
-                        <thead class="bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="px-3 py-2 text-center">
-                                    <input type="checkbox" @change="toggleSelectAllLKH($event.target.checked)"
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                </th>
-                                <th class="px-3 py-2 text-left">No LKH</th>
-                                <th class="px-3 py-2 text-left">RKH</th>
-                                <th class="px-3 py-2 text-left">Tanggal</th>
-                                <th class="px-3 py-2 text-left">Mandor</th>
-                                <th class="px-3 py-2 text-left">Aktivitas</th>
-                                <th class="px-3 py-2 text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="lkh in pendingLKHApprovals" :key="lkh.lkhno">
-                                <tr class="hover:bg-gray-50">
-                                    <td class="border px-3 py-2 text-center">
-                                        <input type="checkbox" :value="lkh.lkhno" x-model="selectedLKHs"
-                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    </td>
-                                    <td class="border px-3 py-2 font-mono text-xs" x-text="lkh.lkhno"></td>
-                                    <td class="border px-3 py-2 font-mono text-xs" x-text="lkh.rkhno"></td>
-                                    <td class="border px-3 py-2" x-text="lkh.lkhdate_formatted"></td>
-                                    <td class="border px-3 py-2" x-text="lkh.mandor_nama"></td>
-                                    <td class="border px-3 py-2" x-text="lkh.activityname"></td>
-                                    <td class="border px-3 py-2 text-center">
-                                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Waiting</span>
-                                    </td>
-                                </tr>
-                            </template>
-                            <tr x-show="pendingLKHApprovals.length === 0">
-                                <td colspan="7" class="border px-3 py-8 text-center text-gray-500">
-                                    Tidak ada LKH yang menunggu persetujuan Anda
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div x-show="!isLkhApprovalLoading" class="flex justify-between items-center p-4 border-t bg-gray-50">
-            <div class="text-sm text-gray-600">
-                <span x-text="selectedLKHs.length"></span> of <span x-text="pendingLKHApprovals.length"></span> selected
-            </div>
-            <div class="flex space-x-2">
-                <button @click="bulkApproveLKH()" :disabled="selectedLKHs.length === 0"
-                        class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded">
-                    Approve Selected
-                </button>
-                <button @click="bulkDeclineLKH()" :disabled="selectedLKHs.length === 0"
-                        class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 text-sm rounded">
-                    Decline Selected
-                </button>
-                <button @click="showLkhApprovalModal = false"
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded">Close</button>
-            </div>
         </div>
     </div>
 </div>
