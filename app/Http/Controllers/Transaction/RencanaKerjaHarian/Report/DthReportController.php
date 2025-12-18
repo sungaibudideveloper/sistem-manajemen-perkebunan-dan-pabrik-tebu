@@ -31,7 +31,7 @@ class DthReportController extends Controller
     public function show(Request $request)
     {
         $date = $request->query('date', date('Y-m-d'));
-        return view('transaction.rencanakerjaharian.dth-report', ['date' => $date]);
+        return view('transaction.rencanakerjaharian.report.report-dth', ['date' => $date]);
     }
 
     public function getData(Request $request)
