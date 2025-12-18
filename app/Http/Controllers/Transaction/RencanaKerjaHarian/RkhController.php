@@ -49,7 +49,7 @@ class RkhController extends Controller
             $serviceData = $this->rkhService->getIndexPageData($filters, $perPage, $companycode);
 
             // Return view with all required variables
-            return view('transaction.rencanakerjaharian.index', [
+            return view('transaction.rencanakerjaharian.rkh-index', [
                 'title' => 'Rencana Kerja Harian',
                 'navbar' => 'Transaction',
                 'nav' => 'Rencana Kerja Harian',
@@ -91,7 +91,7 @@ class RkhController extends Controller
 
             $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
 
-            return view('transaction.rencanakerjaharian.create', array_merge($data, [
+            return view('transaction.rencanakerjaharian.rkh-create', array_merge($data, [
                 'title' => 'Create Rencana Kerja Harian',
                 'navbar' => 'Transaction',
                 'nav' => 'Rencana Kerja Harian',
@@ -198,7 +198,7 @@ class RkhController extends Controller
             // ✅ FIX: Pastikan urutan parameter benar
             $data = $this->rkhService->getShowPageData($rkhno, $companycode);
 
-            return view('transaction.rencanakerjaharian.show', array_merge($data, [
+            return view('transaction.rencanakerjaharian.rkh-show', array_merge($data, [
                 'title' => 'Detail Rencana Kerja Harian',
                 'navbar' => 'Transaction',
                 'nav' => 'Rencana Kerja Harian',
@@ -225,7 +225,7 @@ class RkhController extends Controller
             
             $data = $this->rkhService->getEditPageData($rkhno, $companycode);
 
-            return view('transaction.rencanakerjaharian.edit', array_merge($data, [
+            return view('transaction.rencanakerjaharian.rkhedit', array_merge($data, [
                 'title' => 'Edit Rencana Kerja Harian',
                 'navbar' => 'Transaction',
                 'nav' => 'Rencana Kerja Harian',
@@ -284,7 +284,7 @@ class RkhController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'RKH berhasil diupdate',
-                    'redirect_url' => route('transaction.rencanakerjaharian.show', $rkhno)
+                    'redirect_url' => route('transaction.rencanakerjaharian.rkh-show', $rkhno)
                 ]);
             }
 

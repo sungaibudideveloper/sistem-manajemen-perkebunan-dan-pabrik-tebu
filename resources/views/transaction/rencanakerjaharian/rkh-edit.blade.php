@@ -1,4 +1,4 @@
-{{--resources\views\input\rencanakerjaharian\edit.blade.php--}}
+{{--resources\views\input\rencanakerjaharian\rkh-edit.blade.php--}}
 <x-layout>
   <x-slot:title>{{ $title }}</x-slot:title>
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
