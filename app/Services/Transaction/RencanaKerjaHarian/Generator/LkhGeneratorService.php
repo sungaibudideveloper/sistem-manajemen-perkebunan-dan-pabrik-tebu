@@ -283,18 +283,6 @@ class LkhGeneratorService
                 ->get();
             
             if ($kendaraanAssignments->isEmpty()) {
-                Log::info("No kendaraan assignments for activity {$activitycode} in RKH {$rkhno}");
-                return [
-                    'success' => true,
-                    'total_vehicles' => 0,
-                    'records' => []
-                ];
-            }
-            
-            $plots = $activities->pluck('plot')->unique()->values();
-            
-            if ($plots->isEmpty()) {
-                Log::warning("No plots found for activity {$activitycode} in RKH {$rkhno}");
                 return [
                     'success' => true,
                     'total_vehicles' => 0,
@@ -314,35 +302,26 @@ class LkhGeneratorService
                     $kendaraanid = $kendaraan ? $kendaraan->id : null;
                 }
                 
-                foreach ($plots as $plot) {
-                    $record = [
-                        'companycode' => $companycode,
-                        'lkhno' => $lkhno,
-                        'lkhhdrid' => $lkhhdrid,
-                        'nokendaraan' => $assignment->nokendaraan,
-                        'kendaraanid' => $kendaraanid,
-                        'operatorid' => $assignment->operatorid,
-                        'helperid' => $assignment->helperid,
-                        'jammulai' => null,
-                        'jamselesai' => null,
-                        'hourmeterstart' => null,
-                        'hourmeterend' => null,
-                        'solar' => null,
-                        'status' => null,
-                        'createdat' => now()
-                    ];
-                    
-                    DB::table('lkhdetailkendaraan')->insert($record);
-                    $records[] = $record;
-                }
+                $record = [
+                    'companycode' => $companycode,
+                    'lkhno' => $lkhno,
+                    'lkhhdrid' => $lkhhdrid,
+                    'nokendaraan' => $assignment->nokendaraan,
+                    'kendaraanid' => $kendaraanid,
+                    'operatorid' => $assignment->operatorid,
+                    'helperid' => $assignment->helperid,
+                    'jammulai' => null,
+                    'jamselesai' => null,
+                    'hourmeterstart' => null,
+                    'hourmeterend' => null,
+                    'solar' => null,
+                    'status' => null,
+                    'createdat' => now()
+                ];
+                
+                DB::table('lkhdetailkendaraan')->insert($record);
+                $records[] = $record;
             }
-            
-            Log::info("LKH kendaraan records generated", [
-                'lkhno' => $lkhno,
-                'activitycode' => $activitycode,
-                'total_vehicles' => $kendaraanAssignments->count(),
-                'total_records' => count($records)
-            ]);
             
             return [
                 'success' => true,
@@ -354,10 +333,8 @@ class LkhGeneratorService
         } catch (\Exception $e) {
             Log::error("Error generating LKH kendaraan records", [
                 'lkhno' => $lkhno,
-                'activitycode' => $activitycode,
                 'error' => $e->getMessage()
             ]);
-            
             throw $e;
         }
     }

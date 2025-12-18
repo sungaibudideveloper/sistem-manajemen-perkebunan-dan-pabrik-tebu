@@ -16,15 +16,21 @@ class OperatorReportController extends Controller
         $this->operatorService = $operatorService;
     }
 
+    /**
+     * Get list of operators for specific date (AJAX)
+     */
     public function getOperatorsForDate(Request $request)
     {
         try {
             $date = $request->query('date', date('Y-m-d'));
             $companycode = Session::get('companycode');
             
-            $result = $this->operatorService->getOperatorsForDate($companycode, $date);
+            $operators = $this->operatorService->getOperatorsForDate($companycode, $date);
             
-            return response()->json(array_merge(['success' => true], $result));
+            return response()->json([
+                'success' => true,
+                'operators' => $operators
+            ]);
             
         } catch (\Exception $e) {
             \Log::error("Error getting operators: " . $e->getMessage());
@@ -35,6 +41,9 @@ class OperatorReportController extends Controller
         }
     }
 
+    /**
+     * Generate report URL
+     */
     public function generate(Request $request)
     {
         $request->validate([
@@ -54,6 +63,9 @@ class OperatorReportController extends Controller
         ]);
     }
 
+    /**
+     * Show report page
+     */
     public function show(Request $request)
     {
         $date = $request->query('date', date('Y-m-d'));
@@ -64,12 +76,15 @@ class OperatorReportController extends Controller
                 ->with('error', 'Operator ID tidak ditemukan');
         }
         
-        return view('transaction.rencanakerjaharian.lkh-report-operator', [
+        return view('transaction.rencanakerjaharian.report.report-operator', [
             'date' => $date,
             'operator_id' => $operatorId
         ]);
     }
 
+    /**
+     * Get report data (AJAX)
+     */
     public function getData(Request $request)
     {
         try {
@@ -77,12 +92,19 @@ class OperatorReportController extends Controller
             $operatorId = $request->query('operator_id');
             $companycode = Session::get('companycode');
             
+            if (!$operatorId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Operator ID tidak ditemukan'
+                ], 400);
+            }
+            
             $result = $this->operatorService->buildOperatorReportPayload($companycode, $date, $operatorId);
             
             return response()->json($result);
             
         } catch (\Exception $e) {
-            \Log::error("Error getting operator report: " . $e->getMessage());
+            \Log::error("Error getting operator report data: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memuat data laporan operator: ' . $e->getMessage()

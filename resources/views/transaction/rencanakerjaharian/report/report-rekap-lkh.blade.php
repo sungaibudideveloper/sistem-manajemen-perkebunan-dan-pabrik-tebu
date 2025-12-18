@@ -1,4 +1,4 @@
-{{-- resources\views\input\rencanakerjaharian\lkh-rekap.blade.php --}}
+{{-- resources\views\input\rencanakerjaharian\report\report-rekap-lkh.blade.php --}}
 <x-layout>
     <x-slot:title>Rekap Laporan Kegiatan Harian (LKH)</x-slot:title>
     <x-slot:navbar>Input</x-slot:navbar>
@@ -12,12 +12,16 @@
             Rekap Laporan Kegiatan Harian (LKH)
         </h1>
 
-        <!-- Info Box -->
+        <!-- ✅ FIXED: Info Box with proper LKH count & percentage -->
         <div class="flex justify-between items-start mb-3 p-2 bg-gray-50 rounded-lg">
             <div class="text-sm space-y-0.5">
-                <div>Total LKH: <strong id="stat-total-lkh">0</strong></div>
-                <div>Total Hasil: <strong id="stat-total-hasil">0.00</strong> ha</div>
-                <div>Total Workers: <strong id="stat-total-workers">0</strong></div>
+                <!-- ✅ NEW: Total LKH hari ini dengan approved & percentage -->
+                <div>
+                    Total LKH Hari Ini: <strong id="stat-total-all-lkh">0</strong>
+                    (<span id="stat-approved-lkh">0</span> Approved - <span id="stat-approval-percentage">0</span>%)
+                </div>
+                <div>Total Hasil (Approved): <strong id="stat-total-hasil">0.00</strong> ha</div>
+                <div>Total Workers (Approved): <strong id="stat-total-workers">0</strong></div>
             </div>
             <div class="text-right text-sm text-gray-600">
                 <div class="font-semibold text-gray-800">Tanggal: <span id="report-date"></span></div>
@@ -163,47 +167,22 @@
             const companyInfo = document.getElementById('company-info');
             if (companyInfo) companyInfo.textContent = data.company_info || 'N/A';
             
+            // ✅ NEW: Update statistics from summary data
             updateStatistics(data);
         }
 
         function updateStatistics(data) {
-            let totalLkh = 0, totalHasil = 0, totalWorkers = 0;
-
-            // Count all sections
-            ['pengolahan', 'panen', 'pias', 'lainlain'].forEach(section => {
-                if (data[section]) {
-                    Object.values(data[section]).forEach(activities => {
-                        if (Array.isArray(activities)) {
-                            activities.forEach(item => {
-                                totalLkh++;
-                                totalHasil += parseFloat(item.totalhasil || 0);
-                                totalWorkers += parseInt(item.totalworkers || 0);
-                            });
-                        }
-                    });
-                }
-            });
-
-            // Perawatan has PC/RC structure
-            if (data.perawatan) {
-                ['pc', 'rc'].forEach(type => {
-                    if (data.perawatan[type]) {
-                        Object.values(data.perawatan[type]).forEach(activities => {
-                            if (Array.isArray(activities)) {
-                                activities.forEach(item => {
-                                    totalLkh++;
-                                    totalHasil += parseFloat(item.totalhasil || 0);
-                                    totalWorkers += parseInt(item.totalworkers || 0);
-                                });
-                            }
-                        });
-                    }
-                });
+            // ✅ FIXED: Use summary data from backend
+            if (data.summary) {
+                document.getElementById('stat-total-all-lkh').textContent = data.summary.total_all_lkh || 0;
+                document.getElementById('stat-approved-lkh').textContent = data.summary.total_approved_lkh || 0;
+                document.getElementById('stat-approval-percentage').textContent = data.summary.approval_percentage || 0;
+                document.getElementById('stat-total-hasil').textContent = (data.summary.total_hasil || 0).toFixed(2);
+                document.getElementById('stat-total-workers').textContent = data.summary.total_workers || 0;
+            } else {
+                // Fallback if summary not available
+                console.warn('Summary data not available in response');
             }
-
-            document.getElementById('stat-total-lkh').textContent = totalLkh;
-            document.getElementById('stat-total-hasil').textContent = totalHasil.toFixed(2);
-            document.getElementById('stat-total-workers').textContent = totalWorkers;
         }
 
         function populateSection(data, sectionId, type) {
@@ -211,7 +190,7 @@
             section.innerHTML = '';
             
             if (!data || Object.keys(data).length === 0) {
-                section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data untuk tanggal yang dipilih</div>';
+                section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data LKH yang sudah diapprove untuk tanggal ini</div>';
                 return;
             }
             
@@ -228,7 +207,7 @@
             section.innerHTML = '';
             
             if (!data || Object.keys(data).length === 0) {
-                section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data untuk tanggal yang dipilih</div>';
+                section.innerHTML = '<div class="text-center py-6 text-gray-400 italic">Tidak ada data LKH yang sudah diapprove untuk tanggal ini</div>';
                 return;
             }
             
