@@ -2,7 +2,7 @@
 
 Sistem Enterprise Resource Planning (ERP) untuk manajemen operasional perkebunan tebu, dibangun dengan Laravel.
 
-**Live Demo:** [sugarcane.sblampung.com](https://sugarcane.sblampung.com)
+**Live Website:** [sugarcane.sblampung.com](https://sugarcane.sblampung.com)
 
 ---
 
@@ -19,8 +19,7 @@ Sistem ini mengelola seluruh alur kerja operasional perkebunan tebu, mulai dari 
 | Framework | Laravel (PHP) |
 | Database | MariaDB |
 | Authentication | Laravel Session-based |
-| Frontend | Blade Template, JavaScript, jQuery |
-| Query | Laravel Query Builder |
+| Frontend | Blade Template, JavaScript, Alpine JS |
 
 ---
 
