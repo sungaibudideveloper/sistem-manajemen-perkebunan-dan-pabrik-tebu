@@ -1,70 +1,311 @@
-<<<<<<< HEAD
-# Web-Tebu
-=======
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistem ERP Perkebunan Tebu
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem Enterprise Resource Planning (ERP) untuk manajemen operasional perkebunan tebu, dibangun dengan Laravel.
 
-## About Laravel
+**Live Demo:** [sugarcane.sblampung.com](https://sugarcane.sblampung.com)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Deskripsi
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Sistem ini mengelola seluruh alur kerja operasional perkebunan tebu, mulai dari perencanaan kerja harian, eksekusi lapangan, hingga pelaporan dan integrasi dengan pabrik. Sistem mencakup manajemen sumber daya (tenaga kerja, alat, material), alur persetujuan bertingkat, hingga monitoring hasil panen.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Tech Stack
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Laravel (PHP) |
+| Database | MySQL |
+| Authentication | Laravel Session-based |
+| Frontend | Blade Template, JavaScript, jQuery |
+| Query | Laravel Query Builder |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Arsitektur Sistem
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Sistem menggunakan pola arsitektur 3-layer untuk separation of concerns:
 
-### Premium Partners
+```
+┌─────────────────────────────────────┐
+│           Controllers               │  → Routing HTTP, validasi, response
+├─────────────────────────────────────┤
+│            Services                 │  → Business logic, orkestrasi
+├─────────────────────────────────────┤
+│          Repositories               │  → Data access, query database
+└─────────────────────────────────────┘
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+**Prinsip:**
 
-## Contributing
+- **Controllers** - Menangani routing, validasi request, dan response. Tidak ada query database.
+- **Services** - Berisi logika bisnis dan orkestrasi antar repository. Tidak akses database langsung (kecuali `DB::transaction()`).
+- **Repositories** - Semua operasi database (read/write, joins, raw SQL, query optimization).
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Fitur Utama
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 1. Perencanaan dan Pelaksanaan Kerja
 
-## Security Vulnerabilities
+- RKH (Rencana Kerja Harian) - Perencanaan kerja harian mandor dan pekerja
+- LKH (Laporan Kegiatan Harian) - Pencatatan realisasi pekerjaan harian
+- Monitoring progress pekerjaan real-time
+- Manajemen aktivitas berbasis plot dan batch
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 2. Manajemen Sumber Daya
 
-## License
+- Penugasan dan absensi tenaga kerja
+- Alokasi kendaraan dan alat berat
+- Kontrol penggunaan material (pupuk, herbisida, dll)
+- Perhitungan upah harian dan borongan
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
->>>>>>> 11e5db9 (First commit)
+### 3. Manajemen Inventori dan Logistik
+
+- Stock pupuk dan herbisida
+- Surat jalan material
+- Tracking distribusi material ke lapangan
+- Rekonsiliasi penggunaan material
+
+### 4. Agronomi
+
+- Manajemen batch tanam
+- Tracking siklus tanaman per plot
+- Pencatatan aktivitas pemeliharaan
+- Monitoring kesehatan tanaman
+
+### 5. Integrasi Pabrik
+
+- Integrasi dengan sistem timbangan pabrik
+- Tracking hasil panen per batch
+- Sinkronisasi data tebang muat
+- Monitoring produktivitas panen
+
+### 6. Alur Persetujuan
+
+- Sistem approval multi-level berbasis jabatan
+- Routing approval otomatis sesuai jenis kegiatan
+- Audit trail lengkap untuk setiap transaksi
+- Notifikasi status persetujuan
+
+### 7. Pelaporan
+
+- Laporan DTH (Daily Time and Hour)
+- Rekap LKH per periode
+- Laporan produktivitas operator
+- Dashboard monitoring kegiatan
+
+---
+
+## Modul-Modul Utama
+
+### Rencana Kerja Harian (RKH)
+
+Perencanaan kerja harian yang dibuat oleh mandor:
+
+- Aktivitas yang akan dikerjakan
+- Plot dan luas yang ditarget
+- Penugasan pekerja dan kendaraan
+- Estimasi material yang dibutuhkan
+
+### Laporan Kegiatan Harian (LKH)
+
+Realisasi pekerjaan lapangan:
+
+- Plot dan luas yang diselesaikan
+- Jam kerja pekerja (harian/borongan)
+- Material yang terpakai
+- Hasil panen (untuk aktivitas tebang)
+
+### Stock Pupuk dan Herbisida
+
+Manajemen inventori material:
+
+- Penerimaan barang (PO)
+- Stock opname
+- Alokasi ke lapangan
+- Rekonsiliasi penggunaan
+
+### Surat Jalan
+
+Tracking distribusi material:
+
+- Pembuatan surat jalan
+- Validasi penerimaan di lapangan
+- Integrasi dengan LKH untuk penggunaan aktual
+
+### Integrasi Pabrik
+
+Sinkronisasi data pabrik:
+
+- Data timbangan hasil panen
+- Matching dengan LKH tebang
+- Kalkulasi produktivitas per batch
+- Rekonsiliasi tonase
+
+### Agronomi
+
+Data teknis perkebunan:
+
+- Master varietas tebu
+- Standar aktivitas per fase tanaman
+- Monitoring pertumbuhan batch
+- Analisis produktivitas per varietas
+
+---
+
+## Konsep Domain
+
+### Sistem Masterlist dan Batch
+
+| Konsep | Deskripsi |
+|--------|-----------|
+| Masterlist | Data master plot perkebunan dengan tracking batch aktif |
+| Batch | Siklus tanam untuk sebuah plot (nomor batch, tanggal tanam, varietas, luas) |
+| Active Batch | Batch yang sedang berjalan, direferensikan via `masterlist.activebatchno` |
+
+Setiap plot memiliki satu batch aktif pada satu waktu. Batch baru dibuat otomatis saat approval LKH untuk aktivitas tanam.
+
+### Manajemen Aktivitas
+
+- Aktivitas dikelompokkan berdasarkan jenis (tanam, rawat, panen, pupuk, herbisida)
+- Tracking pekerjaan per plot dengan perhitungan luas
+- Alokasi material dan tenaga kerja per aktivitas
+- Validasi aktivitas berbasis kondisi plot dan batch aktif
+
+### Hirarki Persetujuan
+
+- Konfigurasi level approval per grup aktivitas
+- Routing berbasis jabatan: Mandor → Asisten → Manager
+- Progress status otomatis sesuai level persetujuan
+- Trigger otomatis: Generate LKH dari RKH approved, generate material usage, generate batch baru untuk aktivitas tanam
+
+---
+
+## Alur Kerja Sistem
+
+### Flow RKH → LKH → Approval
+
+```
+Mandor membuat RKH (Rencana Kerja Harian)
+         │
+         ▼
+RKH di-approve oleh atasan
+         │
+         ▼
+Sistem generate LKH template dari RKH
+         │
+         ▼
+Mandor input realisasi pekerjaan di LKH
+         │
+         ▼
+LKH di-submit untuk approval
+         │
+         ▼
+LKH di-approve oleh atasan
+         │
+         ▼
+Sistem generate batch baru (jika aktivitas tanam)
+         │
+         ▼
+Update stock material (jika ada penggunaan)
+         │
+         ▼
+Data siap untuk pelaporan dan integrasi pabrik
+```
+
+### Flow Material dan Logistik
+
+```
+Purchase Order material (pupuk/herbisida)
+         │
+         ▼
+Penerimaan barang & update stock
+         │
+         ▼
+Pembuatan surat jalan untuk distribusi
+         │
+         ▼
+Alokasi material ke RKH/LKH
+         │
+         ▼
+Pencatatan penggunaan aktual di LKH
+         │
+         ▼
+Rekonsiliasi stock vs penggunaan
+```
+
+### Flow Integrasi Pabrik
+
+```
+LKH tebang di-approve
+         │
+         ▼
+Data tonase dari timbangan pabrik
+         │
+         ▼
+Matching otomatis berdasarkan tanggal & batch
+         │
+         ▼
+Kalkulasi produktivitas per batch
+         │
+         ▼
+Update status panen batch
+         │
+         ▼
+Generate laporan hasil panen
+```
+
+---
+
+## Keamanan dan Audit
+
+| Aspek | Implementasi |
+|-------|--------------|
+| Authentication | Session-based dengan Laravel Auth |
+| Authorization | Role-based access control (RBAC) berbasis jabatan |
+| Audit Trail | Semua transaksi mencatat user, tanggal, dan perubahan data |
+| Data Validation | Validasi di level controller dan business logic di service |
+| Transaction Safety | Operasi multi-step dibungkus dalam database transaction |
+
+---
+
+## Performance Optimization
+
+| Strategi | Implementasi |
+|----------|--------------|
+| Query Optimization | Semua query dioptimasi di repository layer |
+| Batch Loading | Menghindari N+1 problem dengan eager loading |
+| Indexing | Index database untuk kolom yang sering di-query |
+| Caching | Cache untuk data master yang jarang berubah |
+
+---
+
+## Status Pengembangan
+
+Sistem ini sedang dalam proses refactoring dari arsitektur monolitik (God Controller) ke arsitektur 3-layer yang lebih terstruktur. Refactoring dilakukan secara bertahap dengan menjaga 100% backward compatibility dengan blade template dan JavaScript yang sudah ada.
+
+**Fokus Perbaikan:**
+
+- Separation of concerns yang lebih jelas
+- Query optimization untuk performance
+- Code maintainability dan testability
+- Developer experience yang lebih baik
+
+---
+
+## Lisensi
+
+Proprietary - All rights reserved
+
+---
+
+## Kontak
+
+Untuk pertanyaan atau issue, silakan hubungi tim development.
+
+---
+
+*Dokumentasi ini diperbarui secara berkala sesuai perkembangan sistem.*
