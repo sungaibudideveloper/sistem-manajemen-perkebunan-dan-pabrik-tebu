@@ -17,7 +17,7 @@ Sistem ini mengelola seluruh alur kerja operasional perkebunan tebu, mulai dari 
 | Layer | Teknologi |
 |-------|-----------|
 | Framework | Laravel (PHP) |
-| Database | MySQL |
+| Database | MariaDB |
 | Authentication | Laravel Session-based |
 | Frontend | Blade Template, JavaScript, jQuery |
 | Query | Laravel Query Builder |
