@@ -1,0 +1,36 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag version to rollback to (contoh: v1.0.0)"
+        required: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Rollback via SSM to tag
+        shell: bash
+        run: |
+          aws ssm send-command \
+            --region "${{ secrets.AWS_REGION }}" \
+            --document-name "AWS-RunPowerShellScript" \
+            --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
+            --parameters commands='[
+              "cd /d D:\\WebServer\\Apache24\\htdocs\\tebu",
+              "git fetch --tags origin",
+              "git checkout tags/${{ github.event.inputs.version }}",
+              "php artisan optimize:clear",
+              "php artisan config:cache",
+              "php artisan route:cache",
+              "php artisan view:cache"
+            ]'
