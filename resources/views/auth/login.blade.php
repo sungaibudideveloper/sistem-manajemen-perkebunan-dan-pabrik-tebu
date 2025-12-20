@@ -131,7 +131,7 @@
                         @csrf
                         
                         <div>
-                            <label for="userid" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <label for="userid" class="block text-sm font-medium text-gray-700 mb-2">Bai</label>
                             <div class="relative">
                                 <input 
                                     type="text" 
