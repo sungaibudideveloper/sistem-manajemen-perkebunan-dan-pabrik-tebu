@@ -27,7 +27,7 @@ jobs:
             --document-name "AWS-RunPowerShellScript" \
             --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
             --parameters commands='[
-              "cd /d D:\\WebServer\\Apache24\\htdocs\\tebu",
+              "Set-Location \"D:\\WebServer\\Apache24\\htdocs\\tebu\"",
               "git fetch --tags origin",
               "git checkout tags/${{ github.event.inputs.version }}",
               "php artisan optimize:clear",
