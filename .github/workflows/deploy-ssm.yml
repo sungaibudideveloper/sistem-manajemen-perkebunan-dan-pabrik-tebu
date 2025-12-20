@@ -24,11 +24,7 @@ jobs:
             --region "${{ secrets.AWS_REGION }}" \
             --document-name "AWS-RunPowerShellScript" \
             --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
-            --parameters commands='[
-                "whoami",
-                "echo USERPROFILE=%USERPROFILE%",
-                "dir %USERPROFILE%\\.ssh"
-              ]' \
+            --parameters commands='["cmd.exe /c C:\\Users\\admin2\\Desktop\\AutoGitPullTebu.bat"]' \
             --query "Command.CommandId" \
             --output text)
 
