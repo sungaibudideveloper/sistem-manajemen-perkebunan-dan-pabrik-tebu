@@ -5,18 +5,22 @@ on:
     branches: ["main"]
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   deploy_staging:
     runs-on: [self-hosted, windows, staging]
     environment: staging
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         shell: powershell
         run: |
-          if (Test-Path package-lock.json) { npm ci } else { npm install }
+          npm install
 
       - name: Build assets
         shell: powershell
