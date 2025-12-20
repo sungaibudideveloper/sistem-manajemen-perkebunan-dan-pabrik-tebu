@@ -1,4 +1,4 @@
-name: Deploy to EC2 via SSM
+name: Direct Deploy to Production EC2 via SSM
 
 on:
   workflow_dispatch: {}
