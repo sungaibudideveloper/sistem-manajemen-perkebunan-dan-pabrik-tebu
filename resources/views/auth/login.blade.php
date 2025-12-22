@@ -41,7 +41,7 @@
                     
                     <h1 class="text-3xl font-bold text-white mb-6 leading-tight">
                         Sungai Budi Group<br>
-                        <span class="text-green-200">Sugarcane Management System</span>
+                        <span class="text-green-200">Sugarcane Management Systemsss</span>
                     </h1>
                     
                     <p class="text-xl text-green-100 mb-8 max-w-md leading-relaxed">
