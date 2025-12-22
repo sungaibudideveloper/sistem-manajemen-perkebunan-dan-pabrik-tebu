@@ -7,10 +7,10 @@
     x-data="{
       open: @json($errors->any()),
       mode: 'create',
-      form: { companycode: '', id: null, name: '' },
+      form: { companycode: '{{ $companycode }}', userid: '', name: '', isactive: 1 },
       resetForm() {
         this.mode = 'create';
-        this.form = { companycode: '', id: null, name: '' };
+        this.form = { companycode: '{{ $companycode }}', userid: '', name: '', isactive: 1 };
         this.open = true;
       }
     }"
@@ -74,7 +74,7 @@
             >
               <form method="POST"
                     :action="mode === 'edit'
-                      ? '{{ url('masterdata/mandor') }}/' + form.companycode + '/' + form.id
+                      ? '{{ url('masterdata/mandor') }}/' + form.companycode + '/' + form.userid
                       : '{{ url('masterdata/mandor') }}'"
                     class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
                 @csrf
@@ -90,32 +90,40 @@
                   ></h3>
                   
                   <div class="mt-4 space-y-4">
-                  <template x-if="mode === 'edit'">
+                    <template x-if="mode === 'create'">
+                      <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <p class="text-sm text-blue-700">
+                          <strong>Info:</strong> ID Mandor akan di-generate otomatis (M001, M002, dst.)
+                        </p>
+                      </div>
+                    </template>
+
+                    <template x-if="mode === 'edit'">
+                      <div>
+                        <label for="userid" class="block text-sm font-medium text-gray-700">ID Mandor</label>
+                        <input
+                          type="text"
+                          name="userid"
+                          id="userid"
+                          x-model="form.userid"
+                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500"
+                          readonly
+                        >
+                        @error('userid')
+                          <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                      </div>
+                    </template>
+
                     <div>
-                      <label for="id" class="block text-sm font-medium text-gray-700">ID Mandor</label>
-                      <input
-                        type="text"
-                        name="id"
-                        id="id"
-                        x-model="form.id"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled"
-                        required
-                        readonly
-                      >
-                      @error('id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                      @enderror
-                    </div>
-                  </template>
-                    <div>
-                      <label for="name" class="block text-sm font-medium text-gray-700">Nama Mandor</label>
+                      <label for="name" class="block text-sm font-medium text-gray-700">Nama Mandor <span class="text-red-500">*</span></label>
                       <input
                         type="text"
                         name="name"
                         id="name"
                         x-model="form.name"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        maxlength="50"
+                        maxlength="30"
                         required
                         x-init="form.name = '{{ old('name') }}'"
                       >
@@ -123,18 +131,22 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                       @enderror
                     </div>
+
                     <template x-if="mode === 'edit'">
-                      <div>
-                        <label for="id" class="block text-sm font-medium text-gray-700">Active</label>
+                      <div class="flex items-center">
                         <input
                           type="checkbox"
                           name="isactive"
                           id="isactive"
+                          x-model="form.isactive"
                           :checked="form.isactive == 1"
-                          class="mt-1  border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled"
                           value="1"
+                          class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         >
-                        @error('id')
+                        <label for="isactive" class="ml-2 block text-sm text-gray-900">
+                          Status Aktif
+                        </label>
+                        @error('isactive')
                           <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                       </div>
@@ -172,19 +184,29 @@
             <thead>
                 <tr class="bg-gray-100 text-gray-700">
                     <th class="w-2/12 py-2 px-4 border-b">Company</th>
-                    <th class="w-1/12 py-2 px-4 border-b">ID</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Nama Mandor</th>
-                    <th class="w-6/12 py-2 px-4 border-b">Status</th>
+                    <th class="w-2/12 py-2 px-4 border-b">ID Mandor</th>
+                    <th class="w-5/12 py-2 px-4 border-b">Nama Mandor</th>
+                    <th class="w-2/12 py-2 px-4 border-b">Status</th>
                     <th class="w-3/12 py-2 px-4 border-b">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-            @foreach($mandor as $data)
-              <tr class="hover:bg-gray-50">
+            @forelse($mandor as $data)
+              <tr class="hover:bg-gray-50 {{ $data->isactive == 0 ? 'bg-gray-100 text-gray-500' : '' }}">
                 <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->userid }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->name }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->isactive == 1 ? 'Aktif' : 'Tidak Aktif' }}</td>
+                <td class="py-2 px-4 border-b font-medium">{{ $data->userid }}</td>
+                <td class="py-2 px-4 border-b text-left">{{ $data->name }}</td>
+                <td class="py-2 px-4 border-b">
+                  @if($data->isactive == 1)
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Aktif
+                    </span>
+                  @else
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Tidak Aktif
+                    </span>
+                  @endif
+                </td>
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
                     {{-- Edit --}}
@@ -193,10 +215,10 @@
                         @click="
                           mode = 'edit';
                           form.companycode = '{{ $data->companycode }}';
-                          form.id = '{{ $data->userid }}';
-                          form.name = '{{ $data->name }}';
-                          form.isactive = {{ $data->isactive ?? 0 }} == 1 ? 1 : 0;
-                          open = true
+                          form.userid = '{{ $data->userid }}';
+                          form.name = {{ json_encode($data->name) }};
+                          form.isactive = {{ (int)($data->isactive ?? 0) }};
+                          open = true;
                         "
                         class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
                       >
@@ -209,33 +231,59 @@
                       </button>
                     @endcan
 
-                    {{-- Delete --}}
+                    {{-- Delete/Deactivate or Reactivate --}}
                     @can('masterdata.mandor.delete')
-                      <form
-                        action="{{ url("masterdata/mandor/{$data->companycode}/{$data->userid}") }}"
-                        method="POST"
-                        onsubmit="return confirm('Yakin ingin menghapus data ini?');"
-                        class="inline"
-                      >
-                        @csrf
-                        @method('DELETE')
-                        <button
-                          type="submit"
-                          class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
+                      @if($data->isactive == 1)
+                        <form
+                          action="{{ url("masterdata/mandor/{$data->companycode}/{$data->userid}") }}"
+                          method="POST"
+                          onsubmit="return confirm('Yakin ingin menonaktifkan mandor ini?');"
+                          class="inline"
                         >
-                          <svg class="w-6 h-6 text-red-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <use xlink:href="#icon-trash-outline"/>
-                          </svg>
-                          <svg class="w-6 h-6 text-red-500 hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                            <use xlink:href="#icon-trash-solid"/>
+                          @csrf
+                          @method('DELETE')
+                          <button
+                            type="submit"
+                            class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
+                          >
+                            <svg class="w-6 h-6 text-red-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <use xlink:href="#icon-trash-outline"/>
+                            </svg>
+                            <svg class="w-6 h-6 text-red-500 hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                              <use xlink:href="#icon-trash-solid"/>
+                            </svg>
+                          </button>
+                        </form>
+                      @else
+                        {{-- Reactivate Button --}}
+                        <button
+                          @click="
+                            mode = 'edit';
+                            form.companycode = '{{ $data->companycode }}';
+                            form.userid = '{{ $data->userid }}';
+                            form.name = {{ json_encode($data->name) }};
+                            form.isactive = 1;
+                            open = true;
+                          "
+                          class="group flex items-center text-green-600 hover:text-green-800 focus:ring-2 focus:ring-green-500 rounded-md px-2 py-1 text-sm"
+                          title="Aktifkan kembali"
+                        >
+                          <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </button>
-                      </form>
+                      @endif
                     @endcan
                   </div>
                 </td>
               </tr>
-            @endforeach
+            @empty
+              <tr>
+                <td colspan="5" class="py-4 px-4 text-center text-gray-500">
+                  Tidak ada data mandor
+                </td>
+              </tr>
+            @endforelse
             </tbody>
         </table>
       </div>
