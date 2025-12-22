@@ -169,7 +169,7 @@
                 <td class="p-3 border-b">
                   <span class="inline-flex gap-1">
                     <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold">Bulan ke {{ $bulan }}</span>
-                    <span class="text-gray-700 text-sm">({{ $hari }} hari sejak tanam)</span>
+                    {{-- <span class="text-gray-700 text-sm">({{ $hari }} hari sejak tanam)</span> --}}
                   </span>
                 </td> 
                 <td class="p-3 border-b text-center">{{ $item->kodestatus }}</td>
