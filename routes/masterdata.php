@@ -229,9 +229,15 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
     // ============================================================================
     Route::middleware('permission:masterdata.mandor.view')->group(function () {
         Route::get('mandor', [MandorController::class, 'index'])->name('mandor.index');
+        });
+    Route::middleware('permission:masterdata.mandor.create')->group(function () {
         Route::post('mandor', [MandorController::class, 'store'])->name('mandor.store');
-        Route::match(['put', 'patch'], 'mandor/{companycode}/{id}', [MandorController::class, 'update'])->name('mandor.update');
-        Route::delete('mandor/{companycode}/{id}', [MandorController::class, 'destroy'])->name('mandor.destroy');
+    });
+    Route::middleware('permission:masterdata.mandor.edit')->group(function () {
+        Route::match(['put', 'patch'], 'mandor/{companycode}/{userid}', [MandorController::class, 'update'])->name('mandor.update');
+    });
+    Route::middleware('permission:masterdata.mandor.delete')->group(function () {
+        Route::delete('mandor/{companycode}/{userid}', [MandorController::class, 'destroy'])->name('mandor.destroy');
     });
 
     // ============================================================================

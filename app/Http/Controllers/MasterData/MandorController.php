@@ -17,19 +17,20 @@ class MandorController extends Controller
     {
         $perPage = (int) $request->input('perPage', 10);
         $search  = $request->input('search');
+        $companycode = session('companycode');
 
-        $query = User::where('idjabatan',5);
+        $query = User::where('companycode', $companycode)
+                    ->where('idjabatan', 5);
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('companycode', 'like', "%{$search}%")
-                  ->orWhere('userid', 'like', "%{$search}%")
+                $q->where('userid', 'like', "%{$search}%")
                   ->orWhere('name', 'like', "%{$search}%");
             });
         }
 
         $mandor = $query
-            ->orderBy('isactive','desc')
+            ->orderBy('isactive', 'desc')
             ->orderBy('userid')
             ->paginate($perPage)
             ->appends([
@@ -38,34 +39,37 @@ class MandorController extends Controller
             ]);
 
         return view('masterdata.mandor.index', [
-            'mandor'  => $mandor,
-            'title'    => 'Data Mandor',
-            'navbar'   => 'Master',
-            'nav'      => 'Mandor',
-            'perPage'  => $perPage,
-            'search'   => $search,
+            'mandor'       => $mandor,
+            'title'        => 'Data Mandor',
+            'navbar'       => 'Master',
+            'nav'          => 'Mandor',
+            'perPage'      => $perPage,
+            'search'       => $search,
+            'companycode'  => $companycode,
         ]);
     }
 
     /**
-     * Generate next mandor ID with M01, M02, M03 format
+     * Generate next mandor ID with M001, M002, M003 format
      */
     private function generateNextId($companycode)
     {
         // Get the latest ID for this company
-        $latestMandor = User::where('companycode', $companycode)->where('idjabatan',5)
-                              ->orderByRaw('CAST(SUBSTRING(userid, 2) AS UNSIGNED) DESC')
-                              ->first();
+        $latestMandor = User::where('companycode', $companycode)
+                            ->where('idjabatan', 5)
+                            ->orderByRaw('CAST(SUBSTRING(userid, 2) AS UNSIGNED) DESC')
+                            ->first();
+
         if (!$latestMandor) {
-            // No existing mandor for this company, start with M01
-            $latestMandor = 'M001';
+            // No existing mandor for this company, start with M001
+            return 'M001';
         }
 
         // Extract the numeric part and increment
         $idNumber = (int) substr($latestMandor->userid, 1);
         $nextNumber = $idNumber + 1;
 
-        // Format as M01, M02, etc.
+        // Format as M001, M002, etc.
         return 'M' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
     }
 
@@ -75,14 +79,16 @@ class MandorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'        => 'required|string|max:50',
+            'name' => 'required|string|max:30',
         ]);
 
-        // Generate the next ID in M01, M02, M03 format
-        $nextId = $this->generateNextId( session('companycode') );
+        $companycode = session('companycode');
+        
+        // Generate the next ID in M001, M002, M003 format
+        $nextId = $this->generateNextId($companycode);
 
         // Check if the combination already exists
-        $exists = User::where('companycode', session('companycode'))
+        $exists = User::where('companycode', $companycode)
                        ->where('userid', $nextId)
                        ->exists();
 
@@ -90,12 +96,12 @@ class MandorController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->withErrors([
-                    'id' => 'Duplicate Entry, Mandor ID already exists'
+                    'userid' => 'Duplicate Entry, Mandor ID already exists'
                 ]);
         }
 
         User::create([
-            'companycode' => session('companycode'),
+            'companycode' => $companycode,
             'userid'      => $nextId,
             'idjabatan'   => 5,
             'password'    => bcrypt('sungaibudi'),
@@ -105,39 +111,50 @@ class MandorController extends Controller
             'isactive'    => 1
         ]);
 
-        return redirect()->back()->with('success', 'Data berhasil dibuat.');
+        return redirect()->back()->with('success', "Mandor berhasil dibuat! ID: {$nextId}, Company: {$companycode}, Password: 'sungaibudi'");
     }
 
     /**
      * Update the specified mandor in storage.
      */
-    public function update(Request $request, $companycode, $id)
+    public function update(Request $request, $companycode, $userid)
     {
         $mandor = User::where('companycode', $companycode)
-                         ->where('userid', $id)
-                         ->firstOrFail();
+                     ->where('userid', $userid)
+                     ->where('idjabatan', 5)
+                     ->firstOrFail();
 
         $request->validate([
-            'name' => 'required|string|max:50',
+            'name' => 'required|string|max:30',
+            'isactive' => 'nullable|boolean',
         ]);
 
         $mandor->update([
-            'name'      => $request->name,
-            'isactive'  => $request->isactive,
-            'updateby'  => Auth::user()->userid,
-            'updatedat' => now()
+            'name'       => $request->name,
+            'isactive'   => $request->has('isactive') ? 1 : 0,
+            'updateby'   => Auth::user()->userid,
+            'updatedat'  => now()
         ]);
 
-        return redirect()->back()->with('success', 'Data berhasil di-update.');
+        return redirect()->back()->with('success', 'Data mandor berhasil di-update.');
     }
 
     /**
-     * Remove the specified mandor from storage.
+     * Remove the specified mandor from storage (soft delete).
      */
-    public function destroy(Request $request, $companycode, $id)
+    public function destroy($companycode, $userid)
     {
-        User::where('companycode', $companycode)->where('id', $id)->update([ 'isactive' => 0 ]);
+        $mandor = User::where('companycode', $companycode)
+                     ->where('userid', $userid)
+                     ->where('idjabatan', 5)
+                     ->firstOrFail();
 
-        return redirect()->back()->with('success', 'Data berhasil di non aktifkan.');
+        $mandor->update([
+            'isactive'   => 0,
+            'updateby'   => Auth::user()->userid,
+            'updatedat'  => now()
+        ]);
+
+        return redirect()->back()->with('success', 'Data mandor berhasil di non-aktifkan.');
     }
 }
