@@ -2,7 +2,8 @@
 
 namespace App\Repositories\UserManagement;
 
-use App\Models\{Jabatan, JabatanPermission};
+use App\Models\MasterData\Jabatan;
+use App\Models\JabatanPermission;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 

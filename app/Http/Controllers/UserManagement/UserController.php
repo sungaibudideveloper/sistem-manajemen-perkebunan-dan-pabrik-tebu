@@ -5,7 +5,7 @@ namespace App\Http\Controllers\UserManagement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\UserManagement\UserService;
-use App\Models\{Jabatan, Company, ActivityGroup};
+use App\Models\MasterData\{Jabatan, Company, ActivityGroup};
 
 class UserController extends Controller
 {
