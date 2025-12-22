@@ -19,7 +19,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
       {{-- Create Button --}}
-      @if(hasPermission('Create Mandor'))
+      @can('masterdata.mandor.create')
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
           <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -27,7 +27,7 @@
           </svg>
           New Data
         </button>
-      @endif
+      @endcan
 
       {{-- Search Form --}}
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
@@ -188,7 +188,7 @@
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
                     {{-- Edit --}}
-                    @if(hasPermission('Edit Mandor'))
+                    @can('masterdata.mandor.edit')
                       <button
                         @click="
                           mode = 'edit';
@@ -207,10 +207,10 @@
                           <use xlink:href="#icon-edit-solid"/> <use xlink:href="#icon-edit-solid2" />
                         </svg>
                       </button>
-                    @endif
+                    @endcan
 
                     {{-- Delete --}}
-                    @if(hasPermission('Hapus Mandor'))
+                    @can('masterdata.mandor.delete')
                       <form
                         action="{{ url("masterdata/mandor/{$data->companycode}/{$data->userid}") }}"
                         method="POST"
@@ -231,7 +231,7 @@
                           </svg>
                         </button>
                       </form>
-                    @endif
+                    @endcan
                   </div>
                 </td>
               </tr>
