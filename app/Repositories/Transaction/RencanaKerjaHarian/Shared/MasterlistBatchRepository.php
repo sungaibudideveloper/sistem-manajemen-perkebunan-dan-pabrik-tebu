@@ -177,6 +177,7 @@ class MasterlistBatchRepository
     /**
      * Calculate total approved work (luashasil) 
      * for plot+activity BEFORE specific date
+     * filter by active BATCH
      * 
      * @param string $companycode
      * @param string $plot
@@ -188,9 +189,10 @@ class MasterlistBatchRepository
         $companycode, 
         $plot, 
         $activitycode, 
-        $beforeDate
+        $beforeDate,
+        $batchno = null
     ) {
-        return (float) DB::table('lkhdetailplot as ldp')
+        $query = DB::table('lkhdetailplot as ldp')
             ->join('lkhhdr as lh', function($join) {
                 $join->on('ldp.lkhno', '=', 'lh.lkhno')
                     ->on('ldp.companycode', '=', 'lh.companycode');
@@ -199,8 +201,13 @@ class MasterlistBatchRepository
             ->where('ldp.plot', $plot)
             ->where('lh.activitycode', $activitycode)
             ->where('lh.approvalstatus', '1')
-            ->whereDate('lh.lkhdate', '<', $beforeDate)
-            ->sum('ldp.luashasil');
+            ->whereDate('lh.lkhdate', '<', $beforeDate);
+
+        if ($batchno) {
+            $query->where('ldp.batchno', $batchno);
+        }
+        
+        return (float) $query->sum('ldp.luashasil');
     }
 
     /**

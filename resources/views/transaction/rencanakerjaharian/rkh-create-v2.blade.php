@@ -6,7 +6,7 @@
 
   <div x-data="rkhWizardApp()" class="max-w-7xl mx-auto px-4 pb-6">
     
-    {{-- ✅ STICKY Progress Bar - Compact & Professional (Below Header) --}}
+    {{-- ✅ STICKY Progress Bar - Compact & Professional --}}
     <div class="sticky top-[6rem] z-30 bg-white border-b border-gray-200 shadow-sm mb-6">
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between relative">
@@ -18,11 +18,11 @@
           <div class="absolute top-5 left-0 h-0.5 bg-blue-600 transition-all duration-500 -z-10"
                :style="`width: ${((currentStep - 1) / 6) * 100}%`"></div>
 
-          {{-- Step Circles - Compact --}}
+          {{-- Step Circles --}}
           <template x-for="(step, index) in steps" :key="step.id">
             <div class="flex flex-col items-center flex-1 relative">
               
-              {{-- Circle - Smaller --}}
+              {{-- Circle --}}
               <div 
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-110 z-10 text-sm font-bold"
                 :class="{
@@ -42,7 +42,7 @@
                 </template>
               </div>
 
-              {{-- Step Label - Compact --}}
+              {{-- Step Label --}}
               <div class="mt-2 text-center">
                 <p class="text-xs font-semibold transition-colors"
                    :class="currentStep >= step.id ? 'text-gray-800' : 'text-gray-400'"
@@ -55,7 +55,7 @@
 
         </div>
 
-        {{-- Current Step Info - Compact --}}
+        {{-- Current Step Info --}}
         <div class="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div class="text-sm text-gray-600">
             <span class="font-medium">{{ $selectedMandor->name ?? 'Loading...' }}</span>
@@ -67,7 +67,7 @@
               Step <span class="font-bold" x-text="currentStep"></span> of 7
             </div>
             
-            {{-- ✅ Quick Next Button --}}
+            {{-- Quick Next Button --}}
             <button 
               type="button"
               @click="nextStep()" 
@@ -85,10 +85,10 @@
       </div>
     </div>
 
-    {{-- Main Wizard Container - Compact --}}
+    {{-- Main Wizard Container --}}
     <div class="bg-white rounded-lg shadow border border-gray-200">
       
-      {{-- Step Content Area - Reduced Padding --}}
+      {{-- Step Content Area --}}
       <div class="p-6">
 
         {{-- STEP 1: Select Activities --}}
@@ -149,7 +149,7 @@
 
       </div>
 
-      {{-- Navigation Footer - Compact --}}
+      {{-- Navigation Footer --}}
       <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
         <div class="flex justify-between items-center">
           
@@ -210,10 +210,12 @@
 
   @push('scripts')
 <script>
-  // ✅ Set global data FIRST
+  // ============================================================
+  // ✅ GLOBAL DATA INITIALIZATION
+  // ============================================================
   window.activitiesData = @json($activities ?? []);
   window.bloksData = @json($bloks ?? []);
-  window.masterlistData = @json($masterlist ?? []);
+  window.masterlistData = @json($masterlist ?? []); // ✅ Batch info source
   window.herbisidaData = @json($herbisidagroups ?? []);
   window.vehiclesData = @json($vehiclesData ?? []);
   window.helpersData = @json($helpersData ?? []);
@@ -226,7 +228,6 @@
   console.log('🔥 Global Data Loaded:', {
     activities: window.activitiesData?.length,
     masterlist: window.masterlistData?.length,
-    plots: window.plotsData?.length,
     vehicles: window.vehiclesData?.length,
     helpers: window.helpersData?.length
   });
@@ -234,7 +235,7 @@
 
 <script>
   // ============================================================
-  // MAIN RKH WIZARD APP COMPONENT
+  // ✅ MAIN RKH WIZARD APP - COMPLETE
   // ============================================================
   document.addEventListener('alpine:init', () => {
     Alpine.data('rkhWizardApp', () => ({
@@ -262,16 +263,16 @@
       
       // Step 1: Activities
       activitySearch: '',
-      blokSearchQuery: '',
       
       // Step 2: Plots
       currentActivityForPlots: null,
       selectedBlokForPlots: null,
+      blokSearchQuery: '',
+      plotSearchQuery: '',
 
       init() {
         console.log('🚀 RKH Wizard Initialized');
         
-        // Auto-watch untuk set first activity
         this.$watch('selectedActivities', (activities) => {
           const actCodes = Object.keys(activities);
           if (actCodes.length > 0 && !this.currentActivityForPlots) {
@@ -282,7 +283,6 @@
           }
         });
         
-        // Auto-set first blok
         this.$nextTick(() => {
           const bloks = this.availableBloks();
           if (bloks.length > 0 && !this.selectedBlokForPlots) {
@@ -292,7 +292,6 @@
       },
 
       // ==================== STEP 1: ACTIVITIES ====================
-      // ✅ Group activities by activitygroup from database
       get groupedActivities() {
         const activities = window.activitiesData || [];
         const filtered = !this.activitySearch ? activities : activities.filter(act => 
@@ -315,9 +314,7 @@
           groups[groupCode].activities.push(act);
         });
 
-        // Sort by group code (I, II, III, etc.)
         return Object.values(groups).sort((a, b) => {
-          // Handle Roman numerals sorting
           const romanValues = { 'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10 };
           return (romanValues[a.code] || 999) - (romanValues[b.code] || 999);
         });
@@ -325,11 +322,10 @@
       
       toggleActivity(activity) {
         if (this.selectedActivities[activity.activitycode]) {
-          // Remove
           delete this.selectedActivities[activity.activitycode];
           delete this.plotAssignments[activity.activitycode];
+          delete this.blokActivityAssignments[activity.activitycode];
           
-          // Cascade delete
           Object.keys(this.luasConfirmed).forEach(key => {
             if (key.startsWith(activity.activitycode + '_')) {
               delete this.luasConfirmed[key];
@@ -345,7 +341,6 @@
           delete this.workers[activity.activitycode];
           
         } else {
-          // Add
           this.selectedActivities[activity.activitycode] = {
             code: activity.activitycode,
             name: activity.activityname,
@@ -366,13 +361,12 @@
       // ==================== STEP 2: PLOTS ====================
       availableBloks() {
         const bloksSet = new Set();
-        (window.plotsData || []).forEach(plot => {
+        (window.masterlistData || []).forEach(plot => {
           if (plot.blok) bloksSet.add(plot.blok);
         });
         return Array.from(bloksSet).sort();
       },
 
-      // ✅ NEW: Filtered bloks for blok activity (with search)
       filteredBloksForActivity() {
         const bloks = this.availableBloks();
         if (!this.blokSearchQuery) return bloks;
@@ -381,9 +375,17 @@
         return bloks.filter(blok => blok.toUpperCase().includes(q));
       },
 
+      filteredPlotsForBlok(blok) {
+        const plots = this.getPlotsForBlok(blok);
+        if (!this.plotSearchQuery) return plots;
+        
+        const q = this.plotSearchQuery.toUpperCase();
+        return plots.filter(plot => plot.plot.toUpperCase().includes(q));
+      },
+
       getPlotsForBlok(blok) {
         if (!blok) return [];
-        return (window.plotsData || []).filter(plot => plot.blok === blok);
+        return (window.masterlistData || []).filter(plot => plot.blok === blok);
       },
 
       isPlotSelectedForActivity(actCode, plot) {
@@ -407,45 +409,37 @@
           delete this.luasConfirmed[key];
           delete this.materials[key];
         } else {
-          // ✅ FIXED: Store correct data from plotsData
           this.plotAssignments[actCode].push({
             blok: plot.blok,
             plot: plot.plot,
-            luasplot: parseFloat(plot.luasplot) || 0,
-            luassisa: parseFloat(plot.luassisa) || 0, // ✅ This comes from plotsData
             batchno: plot.batchno || null,
+            batcharea: parseFloat(plot.batcharea) || 0,
             lifecyclestatus: plot.lifecyclestatus || null,
             last_activitycode: plot.last_activitycode || null,
             last_activity_date: plot.last_activity_date || null
           });
           
           const key = `${actCode}_${plot.blok}_${plot.plot}`;
-          this.luasConfirmed[key] = parseFloat(plot.luassisa) || 0;
+          this.luasConfirmed[key] = parseFloat(plot.batcharea) || 0;
         }
       },
 
-      // ✅ NEW: Select blok for blok activity
       selectBlokForBlokActivity(blok) {
         if (!this.currentActivityForPlots) return;
         
         const activity = this.selectedActivities[this.currentActivityForPlots];
         if (!activity || activity.isblokactivity != 1) return;
         
-        // Store selected blok
         this.blokActivityAssignments[this.currentActivityForPlots] = blok;
-        
-        // Clear plots for this activity (blok activities don't need plots)
         this.plotAssignments[this.currentActivityForPlots] = [];
         
         showToast(`Blok "${blok}" selected for ${this.currentActivityForPlots}`, 'success', 2000);
       },
 
-      // ✅ NEW: Get selected blok for activity
       getSelectedBlokForActivity(actCode) {
         return this.blokActivityAssignments[actCode] || '';
       },
 
-      // ✅ NEW: Check if any blok activity has selection
       hasAnyBlokActivitySelected() {
         return Object.keys(this.blokActivityAssignments).length > 0;
       },
@@ -464,7 +458,6 @@
         
         this.plotAssignments[actCode] = [];
         
-        // Also clear blok activity assignment if exists
         if (this.blokActivityAssignments[actCode]) {
           delete this.blokActivityAssignments[actCode];
         }
@@ -485,11 +478,10 @@
 
       getTotalLuasForActivity(actCode) {
         const plots = this.plotAssignments[actCode] || [];
-        const total = plots.reduce((sum, plot) => sum + parseFloat(plot.luassisa || 0), 0);
+        const total = plots.reduce((sum, plot) => sum + parseFloat(plot.batcharea || 0), 0);
         return total.toFixed(2);
       },
 
-      // ✅ NEW: Format date helper (for last activity date)
       formatDate(dateString) {
         if (!dateString) return '-';
         const date = new Date(dateString);
@@ -499,14 +491,22 @@
         return `${day}-${month}-${year}`;
       },
 
-      // ✅ NEW: Check if can proceed from Step 2
+      getDaysGap(lastActivityDate) {
+        if (!lastActivityDate || !window.rkhDate) return 0;
+        
+        const lastDate = new Date(lastActivityDate);
+        const rkhDate = new Date(window.rkhDate);
+        const diffTime = rkhDate - lastDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays;
+      },
+
       canProceedStep2() {
         return Object.entries(this.selectedActivities).every(([actCode, activity]) => {
           if (activity.isblokactivity == 1) {
-            // Blok activity: must have blok selected
             return this.blokActivityAssignments[actCode] !== undefined;
           }
-          // Normal activity: must have at least 1 plot
           return this.plotAssignments[actCode] && this.plotAssignments[actCode].length > 0;
         });
       },
@@ -541,7 +541,7 @@
       validateLuasInput(event, actCode, plot) {
         const input = event.target;
         const value = parseFloat(input.value) || 0;
-        const maxLuas = parseFloat(plot.luassisa);
+        const maxLuas = parseFloat(plot.batcharea);
         const key = `${actCode}_${plot.blok}_${plot.plot}`;
         
         if (value > maxLuas) {
@@ -793,7 +793,6 @@
           case 1: 
             return Object.keys(this.selectedActivities).length > 0;
           case 2:
-            // ✅ Use dedicated method
             return this.canProceedStep2();
           case 3:
             return this.allLuasConfirmed();
@@ -807,7 +806,6 @@
             return true;
         }
       },
-
 
       getNextButtonText() {
         if (this.currentStep === 6) return 'Review';
@@ -928,7 +926,7 @@
               nama: activityCode,
               blok: plot.blok,
               plot: plot.plot,
-              luas: this.luasConfirmed[key] || plot.luassisa,
+              luas: this.luasConfirmed[key] || plot.batcharea,
               material_group_id: material?.groupid || '',
               usingmaterial: material ? '1' : '0',
               batchno: plot.batchno || null
@@ -936,13 +934,13 @@
           });
         });
         
-        // ✅ Handle blok activities
+        // Handle blok activities
         Object.entries(this.blokActivityAssignments).forEach(([activityCode, blok]) => {
           rows.push({
             nama: activityCode,
-            blok: blok, // 'ALL' or specific blok code
-            plot: null, // Blok activities don't have specific plots
-            luas: null, // Optional for blok activities
+            blok: blok,
+            plot: null,
+            luas: null,
             material_group_id: '',
             usingmaterial: '0',
             batchno: null
@@ -1011,7 +1009,6 @@
           wizardApp.vehicles[this.currentActivityCode] = [];
         }
         
-        // Check duplicate
         const isDuplicate = wizardApp.vehicles[this.currentActivityCode].some(
           v => v.nokendaraan === this.selectedVehicle.nokendaraan
         );

@@ -77,7 +77,8 @@ class RkhUtilityService
             $companycode,
             $plot,
             $activitycode,
-            now()->format('Y-m-d')
+            now()->format('Y-m-d'),
+            $plotData->activebatchno
         );
 
         $luasSisa = $luasPlot - $totalSudahDikerjakan;
