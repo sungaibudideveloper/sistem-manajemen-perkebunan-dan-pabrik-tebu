@@ -258,24 +258,30 @@ class MasterlistBatchRepository
     }
 
     /**
-     * Get last approved activity date for plot
+     * Get last approved activity info for plot
      * 
      * @param string $companycode
      * @param string $plot
      * @return string|null
      */
-    public function getLastApprovedActivityDateForPlot($companycode, $plot)
+    public function getLastApprovedActivityInfoForPlot($companycode, $plot)
     {
         return DB::table('lkhdetailplot as ldp')
             ->join('lkhhdr as lh', function($join) {
                 $join->on('ldp.lkhno', '=', 'lh.lkhno')
                     ->on('ldp.companycode', '=', 'lh.companycode');
             })
+            ->join('activity as ma', 'lh.activitycode', '=', 'ma.activitycode')
             ->where('ldp.companycode', $companycode)
             ->where('ldp.plot', $plot)
             ->where('lh.approvalstatus', '1')
             ->orderBy('lh.lkhdate', 'desc')
-            ->value('lh.lkhdate');
+            ->select([
+                'lh.activitycode as last_activitycode',
+                'ma.activityname as last_activityname',
+                'lh.lkhdate as last_activity_date'
+            ])
+            ->first();
     }
 
     /**

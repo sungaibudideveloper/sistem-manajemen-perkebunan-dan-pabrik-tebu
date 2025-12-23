@@ -60,8 +60,8 @@
                 {{-- ✅ Single Row Layout --}}
                 <div x-show="!isLoading" class="flex items-center divide-x divide-gray-200">
                   
-                  {{-- Column 1: Blok-Plot (15%) --}}
-                  <div class="px-4 py-3 w-[15%] min-w-0">
+                  {{-- Column 1: Blok-Plot (Fixed Width) --}}
+                  <div class="px-4 py-3 w-32 min-w-[8rem] flex-shrink-0">
                     <div class="min-w-0">
                       <p class="text-sm font-bold text-gray-800 truncate" x-text="`${plot.blok}-${plot.plot}`"></p>
                       <span 
@@ -78,20 +78,20 @@
                     </div>
                   </div>
 
-                  {{-- Column 2: Luas Plot (12%) --}}
-                  <div class="px-4 py-3 w-[12%] min-w-0 text-center">
+                  {{-- Column 2: Luas Plot (Fixed Width) --}}
+                  <div class="px-4 py-3 w-24 min-w-[6rem] flex-shrink-0 text-center">
                     <p class="text-[10px] text-gray-500 mb-0.5">Luas Plot</p>
                     <p class="text-sm font-bold text-gray-800" x-text="parseFloat(plotInfo.luasplot || 0).toFixed(2) + ' Ha'"></p>
                   </div>
 
-                  {{-- Column 3: Luas Sisa (12%) --}}
-                  <div class="px-4 py-3 w-[12%] min-w-0 text-center">
+                  {{-- Column 3: Luas Sisa (Fixed Width) --}}
+                  <div class="px-4 py-3 w-24 min-w-[6rem] flex-shrink-0 text-center">
                     <p class="text-[10px] text-gray-500 mb-0.5">Luas Sisa</p>
                     <p class="text-sm font-bold text-green-600" x-text="parseFloat(plotInfo.luassisa || 0).toFixed(2) + ' Ha'"></p>
                   </div>
 
-                  {{-- Column 4: Luas Rencana Kerja Input (18%) --}}
-                  <div class="px-4 py-3 w-[18%] min-w-0">
+                  {{-- Column 4: Luas Rencana Kerja Input (Fixed Width) --}}
+                  <div class="px-4 py-3 w-36 min-w-[9rem] flex-shrink-0">
                     <label class="block text-[10px] text-gray-500 mb-1">
                       Luas Rencana Kerja <span class="text-red-500">*</span>
                     </label>
@@ -117,29 +117,60 @@
                   <div class="px-4 py-3 flex-1 min-w-0">
                     <div class="space-y-1.5">
                       
-                      {{-- ✅ Batch Info (if PANEN activity) --}}
-                      <div x-show="isPanenActivity && plotInfo.batchno" class="bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
+                      {{-- ✅ Batch Info (Always show if exists) --}}
+                      <div x-show="plotInfo.batchno" class="bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
                         <div class="flex items-center justify-between">
                           <div class="flex items-center gap-1.5">
-                            <svg class="w-3 h-3 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <svg class="w-3 h-3 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                             </svg>
-                            <span class="text-[10px] font-semibold text-yellow-800">Sedang Panen</span>
+                            <span class="text-[10px] font-semibold text-gray-700">Batch:</span>
+                            <span class="text-[10px] font-mono font-bold text-gray-800" x-text="plotInfo.batchno"></span>
                           </div>
-                          <span class="text-[10px] text-yellow-700">
-                            Batch: <span class="font-mono font-bold" x-text="plotInfo.batchno"></span>
+                          <span 
+                            x-show="plotInfo.lifecyclestatus"
+                            class="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded"
+                            :class="{
+                              'bg-yellow-100 text-yellow-700': plotInfo.lifecyclestatus === 'PC',
+                              'bg-green-100 text-green-700': plotInfo.lifecyclestatus === 'RC1',
+                              'bg-blue-100 text-blue-700': plotInfo.lifecyclestatus === 'RC2',
+                              'bg-purple-100 text-purple-700': plotInfo.lifecyclestatus === 'RC3'
+                            }"
+                            x-text="plotInfo.lifecyclestatus">
                           </span>
                         </div>
-                        <p x-show="plotInfo.tanggal" class="text-[10px] text-yellow-700 mt-1">
-                          Tgl Panen: <span x-text="plotInfo.tanggal"></span>
-                        </p>
+                      </div>
+
+                      {{-- ✅ Info Panen (if PANEN activity) --}}
+                      <div x-show="isPanenActivity && plotInfo.tanggal" class="bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[10px] font-semibold text-yellow-800">Info Panen</span>
+                          <span class="text-[10px] text-yellow-700" x-text="'Tgl: ' + (plotInfo.tanggal || 'Belum Panen')"></span>
+                        </div>
                       </div>
 
                       {{-- ✅ Last Activity Info (if NOT panen) --}}
-                      <div x-show="!isPanenActivity && plotInfo.tanggal" class="bg-blue-50 border border-blue-200 rounded px-2 py-1">
-                        <p class="text-[10px] text-blue-700">
-                          <span class="font-semibold">Last Activity:</span> <span x-text="plotInfo.tanggal"></span>
-                        </p>
+                      <div x-show="!isPanenActivity" class="bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
+                        <div class="flex items-center justify-between text-[10px]">
+                          <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span class="text-blue-600 font-semibold flex-shrink-0">Last Activity:</span>
+                            <span class="font-bold text-blue-800 flex-shrink-0" x-text="plotInfo.last_activitycode || '-'"></span>
+                            <template x-if="plotInfo.last_activitycode && plotInfo.last_activityname">
+                              <span class="text-blue-400 flex-shrink-0">•</span>
+                            </template>
+                            <span class="text-blue-700 truncate" x-text="plotInfo.last_activityname || '-'"></span>
+                          </div>
+                          <div class="flex items-center gap-1.5 flex-shrink-0 text-blue-600">
+                            <span class="font-semibold">Tgl:</span>
+                            <span x-text="plotInfo.last_activity_date ? formatDateDMY(plotInfo.last_activity_date) : (plotInfo.tanggal || '-')"></span>
+                            <template x-if="plotInfo.last_activity_date">
+                              <span class="text-blue-400">•</span>
+                            </template>
+                            <template x-if="plotInfo.last_activity_date">
+                              <span x-text="getDaysGap(plotInfo.last_activity_date) + 'd ago'"></span>
+                            </template>
+                          </div>
+                        </div>
                       </div>
 
                       {{-- ✅ ZPK Info (if exists) --}}
@@ -204,6 +235,9 @@ function plotDetailCard(actCode, plot) {
       batchno: '',
       lifecyclestatus: plot.lifecyclestatus || '',
       tanggal: '',
+      last_activitycode: '',
+      last_activityname: '',
+      last_activity_date: '',
       zpk_date: '',
       zpk_days_gap: 0,
       zpk_status: ''
@@ -227,9 +261,13 @@ function plotDetailCard(actCode, plot) {
           this.plotInfo = {
             luasplot: parseFloat(data.luasplot || 0).toFixed(2),
             luassisa: parseFloat(data.luassisa || 0).toFixed(2),
-            batchno: data.batchinfo?.batchno || '',
+            batchno: data.batchinfo?.batchno || data.activebatchno || '',
             lifecyclestatus: data.batchinfo?.lifecyclestatus || this.plot.lifecyclestatus || '',
             tanggal: data.tanggal || '',
+            // ✅ FALLBACK ke plot data dari Step 2
+            last_activitycode: data.last_activitycode || this.plot.last_activitycode || '',
+            last_activityname: data.last_activityname || this.plot.last_activityname || '',
+            last_activity_date: data.last_activity_date || this.plot.last_activity_date || '',
             zpk_date: data.batchinfo?.zpk_date || '',
             zpk_days_gap: data.batchinfo?.zpk_days_gap || 0,
             zpk_status: data.batchinfo?.zpk_status || ''
@@ -316,6 +354,36 @@ function plotDetailCard(actCode, plot) {
         const key = `${this.actCode}_${this.plot.blok}_${this.plot.plot}`;
         wizardApp.luasConfirmed[key] = value;
       }
+    },
+
+    // ✅ Calculate days gap (same as Step 2)
+    getDaysGap(lastActivityDate) {
+      if (!lastActivityDate || !window.rkhDate) return 0;
+      
+      const lastDate = new Date(lastActivityDate);
+      const rkhDate = new Date(window.rkhDate);
+      const diffTime = rkhDate - lastDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays;
+    },
+
+    // ✅ Format date to dd-mm-yy
+    formatDateDMY(dateString) {
+      if (!dateString) return '-';
+      
+      // Check if already formatted as dd/mm/yyyy
+      if (dateString.includes('/')) {
+        const parts = dateString.split('/');
+        return `${parts[0]}-${parts[1]}-${parts[2].slice(-2)}`;
+      }
+      
+      // Parse from ISO date
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
     }
   };
 }
