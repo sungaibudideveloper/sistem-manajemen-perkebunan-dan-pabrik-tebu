@@ -83,9 +83,9 @@ class TenagaKerjaController extends Controller
             'mandor' => $mandor,
             'jenistenagakerja' => $jenistenagakerja,
             'companycode' => $companycode
-        ]);
+        ]);  
     }
-
+// oioioioo
     /**
      * Generate next tenaga kerja ID with M0001, M0002 format
      */
