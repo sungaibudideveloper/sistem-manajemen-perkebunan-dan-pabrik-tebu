@@ -2,49 +2,41 @@
 
 <div class="space-y-4">
   
-  {{-- Header - Compact --}}
-  <div class="flex items-center justify-between mb-4">
-    <div>
-      <h3 class="text-xl font-bold text-gray-800">Input Manpower</h3>
-      <p class="text-sm text-gray-600">Specify the number of workers for each activity</p>
+  {{-- Header with Simple Summary --}}
+  <div class="mb-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-2">Input Manpower</h3>
+    <div class="flex items-center gap-6 text-sm">
+      <p class="text-gray-600">Specify the number of workers for each activity</p>
+      <div class="flex items-center gap-4 ml-auto">
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">Male:</span>
+          <span class="font-semibold text-blue-600" x-text="getTotalWorkers('laki')"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">Female:</span>
+          <span class="font-semibold text-pink-600" x-text="getTotalWorkers('perempuan')"></span>
+        </div>
+        <div class="flex items-center gap-2 pl-4 border-l border-gray-300">
+          <span class="text-gray-500">Total:</span>
+          <span class="font-bold text-purple-600 text-lg" x-text="getTotalWorkers('total')"></span>
+          <span class="text-xs text-gray-400">workers</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  {{-- Summary Stats - Compact --}}
-  <div class="grid grid-cols-4 gap-3 mb-4">
-    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-3 text-white">
-      <p class="text-blue-100 text-xs font-medium mb-1">Male</p>
-      <p class="text-2xl font-bold" x-text="getTotalWorkers('laki')"></p>
-    </div>
-
-    <div class="bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg p-3 text-white">
-      <p class="text-pink-100 text-xs font-medium mb-1">Female</p>
-      <p class="text-2xl font-bold" x-text="getTotalWorkers('perempuan')"></p>
-    </div>
-
-    <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-3 text-white">
-      <p class="text-purple-100 text-xs font-medium mb-1">Total</p>
-      <p class="text-2xl font-bold" x-text="getTotalWorkers('total')"></p>
-    </div>
-
-    <div class="bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg p-3 text-white">
-      <p class="text-gray-300 text-xs font-medium mb-1">Activities</p>
-      <p class="text-2xl font-bold" x-text="Object.keys(selectedActivities).length"></p>
-    </div>
-  </div>
-
-  {{-- Manpower Input Cards - Compact --}}
+  {{-- Manpower Input Cards --}}
   <div class="space-y-3">
     
     <template x-for="(activity, actCode) in selectedActivities" :key="actCode">
-      <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors">
         
-        {{-- Activity Header - Compact --}}
+        {{-- Activity Header --}}
         <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200 px-4 py-3">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 flex-1">
-              <span class="px-2 py-0.5 bg-indigo-500 text-white text-xs font-bold rounded" 
-                    x-text="actCode"></span>
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-sm font-bold text-indigo-600" x-text="actCode"></span>
+              <span class="text-gray-300">|</span>
               <div class="flex-1">
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-semibold text-gray-800" x-text="activity.name"></span>
@@ -63,21 +55,19 @@
             </div>
             
             {{-- Total Badge --}}
-            <div class="text-right">
-              <p class="text-xs text-gray-500">Total</p>
-              <div class="flex items-center gap-1">
-                <span 
-                  class="text-xl font-bold"
-                  :class="workers[actCode]?.total > 0 ? 'text-indigo-600' : 'text-gray-400'"
-                  x-text="workers[actCode]?.total || 0">
-                </span>
-                <span class="text-xs text-gray-500">workers</span>
-              </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">Total:</span>
+              <span 
+                class="text-xl font-bold tabular-nums"
+                :class="workers[actCode]?.total > 0 ? 'text-indigo-600' : 'text-gray-400'"
+                x-text="workers[actCode]?.total || 0">
+              </span>
+              <span class="text-xs text-gray-500">workers</span>
             </div>
           </div>
         </div>
 
-        {{-- Input Form - Compact --}}
+        {{-- Input Form --}}
         <div class="p-4">
           <div class="grid grid-cols-3 gap-3">
             
@@ -96,7 +86,7 @@
                 x-model="workers[actCode].laki"
                 @input="updateWorkerTotal(actCode)"
                 placeholder="0"
-                class="w-full px-3 py-2 border border-blue-300 rounded-lg text-lg font-bold text-blue-700 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                class="w-full px-3 py-2 border border-blue-300 rounded-lg text-lg font-bold text-blue-700 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all"
               >
             </div>
 
@@ -115,7 +105,7 @@
                 x-model="workers[actCode].perempuan"
                 @input="updateWorkerTotal(actCode)"
                 placeholder="0"
-                class="w-full px-3 py-2 border border-pink-300 rounded-lg text-lg font-bold text-pink-700 text-center focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                class="w-full px-3 py-2 border border-pink-300 rounded-lg text-lg font-bold text-pink-700 text-center focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white transition-all"
               >
             </div>
 
@@ -134,7 +124,7 @@
 
           </div>
 
-          {{-- Quick Suggestions from Absen - Compact --}}
+          {{-- Quick Suggestions from Absen --}}
           <div x-show="getAbsenSuggestion(actCode).total > 0" 
                class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <div class="flex items-start gap-2">
@@ -142,11 +132,11 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <div class="flex-1">
-                <p class="text-xs font-semibold text-yellow-800 mb-1">Today's Attendance</p>
+                <p class="text-xs font-semibold text-yellow-800 mb-1">Today's Attendance Available</p>
                 <div class="flex items-center gap-3">
                   <p class="text-xs text-yellow-700">
-                    L: <span class="font-bold" x-text="getAbsenSuggestion(actCode).laki"></span> • 
-                    P: <span class="font-bold" x-text="getAbsenSuggestion(actCode).perempuan"></span> • 
+                    Male: <span class="font-bold" x-text="getAbsenSuggestion(actCode).laki"></span> • 
+                    Female: <span class="font-bold" x-text="getAbsenSuggestion(actCode).perempuan"></span> • 
                     Total: <span class="font-bold" x-text="getAbsenSuggestion(actCode).total"></span>
                   </p>
                   <button
