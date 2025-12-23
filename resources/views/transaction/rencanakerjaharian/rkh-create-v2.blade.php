@@ -4,92 +4,92 @@
   <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
   <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-  <div x-data="rkhWizardApp()" class="max-w-7xl mx-auto px-4 py-6">
+  <div x-data="rkhWizardApp()" class="max-w-7xl mx-auto px-4 pb-6">
     
-    {{-- Modern Progress Bar --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <div class="flex items-center justify-between relative">
-        
-        {{-- Progress Line Background --}}
-        <div class="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10"></div>
-        
-        {{-- Active Progress Line --}}
-        <div class="absolute top-5 left-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 -z-10"
-             :style="`width: ${((currentStep - 1) / 6) * 100}%`"></div>
+    {{-- ✅ STICKY Progress Bar - Compact & Professional (Below Header) --}}
+    <div class="sticky top-[6rem] z-30 bg-white border-b border-gray-200 shadow-sm mb-6">
+      <div class="max-w-7xl mx-auto px-6 py-4">
+        <div class="flex items-center justify-between relative">
+          
+          {{-- Progress Line Background --}}
+          <div class="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10"></div>
+          
+          {{-- Active Progress Line --}}
+          <div class="absolute top-5 left-0 h-0.5 bg-blue-600 transition-all duration-500 -z-10"
+               :style="`width: ${((currentStep - 1) / 6) * 100}%`"></div>
 
-        {{-- Step Circles --}}
-        <template x-for="(step, index) in steps" :key="step.id">
-          <div class="flex flex-col items-center flex-1 relative">
+          {{-- Step Circles - Compact --}}
+          <template x-for="(step, index) in steps" :key="step.id">
+            <div class="flex flex-col items-center flex-1 relative">
+              
+              {{-- Circle - Smaller --}}
+              <div 
+                class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-110 z-10 text-sm font-bold"
+                :class="{
+                  'bg-blue-600 text-white shadow-md': currentStep === step.id,
+                  'bg-green-600 text-white shadow-sm': currentStep > step.id,
+                  'bg-white border-2 border-gray-300 text-gray-400': currentStep < step.id
+                }"
+                @click="currentStep > step.id ? goToStep(step.id) : null"
+              >
+                <template x-if="currentStep > step.id">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </template>
+                <template x-if="currentStep <= step.id">
+                  <span x-text="step.id"></span>
+                </template>
+              </div>
+
+              {{-- Step Label - Compact --}}
+              <div class="mt-2 text-center">
+                <p class="text-xs font-semibold transition-colors"
+                   :class="currentStep >= step.id ? 'text-gray-800' : 'text-gray-400'"
+                   x-text="step.title">
+                </p>
+              </div>
+
+            </div>
+          </template>
+
+        </div>
+
+        {{-- Current Step Info - Compact --}}
+        <div class="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+          <div class="text-sm text-gray-600">
+            <span class="font-medium">{{ $selectedMandor->name ?? 'Loading...' }}</span>
+            <span class="text-gray-400 mx-2">•</span>
+            <span>{{ $selectedDate }}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-xs text-gray-500">
+              Step <span class="font-bold" x-text="currentStep"></span> of 7
+            </div>
             
-            {{-- Circle --}}
-            <div 
-              class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-110 z-10"
-              :class="{
-                'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg': currentStep === step.id,
-                'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md': currentStep > step.id,
-                'bg-white border-2 border-gray-300 text-gray-400': currentStep < step.id
-              }"
-              @click="currentStep > step.id ? goToStep(step.id) : null"
-            >
-              <template x-if="currentStep > step.id">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </template>
-              <template x-if="currentStep <= step.id">
-                <span class="font-bold text-lg" x-text="step.id"></span>
-              </template>
-            </div>
-
-            {{-- Step Label --}}
-            <div class="mt-3 text-center">
-              <p class="text-xs font-semibold transition-colors"
-                 :class="currentStep >= step.id ? 'text-gray-800' : 'text-gray-400'"
-                 x-text="step.title">
-              </p>
-              <p class="text-[10px] text-gray-500 mt-0.5" x-text="step.subtitle"></p>
-            </div>
-
-          </div>
-        </template>
-
-      </div>
-    </div>
-
-    {{-- Main Wizard Container --}}
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      
-      {{-- Header Info (Always Visible) --}}
-      <div class="bg-gradient-to-r from-blue-50 via-sky-50 to-blue-50 border-b border-gray-200 px-8 py-6">
-        <div class="flex justify-between items-center">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-1">Rencana Kerja Harian</h2>
-            <div class="flex items-center gap-4 text-sm text-gray-600">
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                <span class="font-medium">{{ $selectedMandor->name ?? 'Loading...' }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                <span class="font-medium">{{ $selectedDate }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-              <span x-text="currentStep"></span>/<span>7</span>
-            </div>
-            <div class="text-xs text-gray-500 font-medium mt-1" x-text="steps[currentStep-1]?.title"></div>
+            {{-- ✅ Quick Next Button --}}
+            <button 
+              type="button"
+              @click="nextStep()" 
+              x-show="currentStep < 7"
+              :disabled="!canProceed()"
+              :class="canProceed() ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' : 'bg-gray-300 text-gray-500 cursor-not-allowed'"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1">
+              <span x-text="currentStep === 6 ? 'Review' : 'Next'"></span>
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
+    </div>
 
-      {{-- Step Content Area --}}
-      <div class="p-8 min-h-[600px]">
+    {{-- Main Wizard Container - Compact --}}
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+      
+      {{-- Step Content Area - Reduced Padding --}}
+      <div class="p-6">
 
         {{-- STEP 1: Select Activities --}}
         <div x-show="currentStep === 1" 
@@ -149,8 +149,8 @@
 
       </div>
 
-      {{-- Navigation Footer --}}
-      <div class="bg-gray-50 border-t border-gray-200 px-8 py-5">
+      {{-- Navigation Footer - Compact --}}
+      <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
         <div class="flex justify-between items-center">
           
           {{-- Back Button --}}
@@ -158,7 +158,7 @@
             type="button"
             @click="prevStep()" 
             x-show="currentStep > 1"
-            class="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow">
+            class="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -174,8 +174,8 @@
             @click="nextStep()" 
             x-show="currentStep < 7"
             :disabled="!canProceed()"
-            :class="canProceed() ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg' : 'bg-gray-300 cursor-not-allowed'"
-            class="px-6 py-2.5 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2">
+            :class="canProceed() ? 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg' : 'bg-gray-300 cursor-not-allowed'"
+            class="px-5 py-2 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2">
             <span x-text="getNextButtonText()"></span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -188,7 +188,7 @@
             @click="submitForm()" 
             x-show="currentStep === 7"
             :disabled="isSubmitting"
-            class="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+            class="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
@@ -210,21 +210,23 @@
 
   @push('scripts')
 <script>
-  // ✅ Set global data FIRST - SAMAIN DENGAN V1
+  // ✅ Set global data FIRST
   window.activitiesData = @json($activities ?? []);
   window.bloksData = @json($bloks ?? []);
-  window.masterlistData = @json($masterlist ?? []);  // ← GANTI INI
+  window.masterlistData = @json($masterlist ?? []);
   window.herbisidaData = @json($herbisidagroups ?? []);
   window.vehiclesData = @json($vehiclesData ?? []);
   window.helpersData = @json($helpersData ?? []);
   window.absenData = @json($absenData ?? []);
-  window.plotsData = @json($plotsData ?? []);  // ← Keep this juga buat backup
+  window.plotsData = @json($plotsData ?? []);
   window.rkhDate = '{{ $selectedDate }}';
   window.mandorId = '{{ $selectedMandor->userid ?? '' }}';
+  window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
+  window.PLOT_INFO_BASE_URL = "{{ url('transaction/kerjaharian/rencanakerjaharian/plot-info') }}";
 
   console.log('🔥 Global Data Loaded:', {
     activities: window.activitiesData?.length,
-    masterlist: window.masterlistData?.length,  // ← CEK INI
+    masterlist: window.masterlistData?.length,
     plots: window.plotsData?.length,
     vehicles: window.vehiclesData?.length,
     helpers: window.helpersData?.length
@@ -232,25 +234,28 @@
 </script>
 
 <script>
-  // ✅ Register Alpine component
+  // ============================================================
+  // MAIN RKH WIZARD APP COMPONENT
+  // ============================================================
   document.addEventListener('alpine:init', () => {
     Alpine.data('rkhWizardApp', () => ({
       currentStep: 1,
       isSubmitting: false,
 
       steps: [
-        { id: 1, title: 'Activities', subtitle: 'Select tasks' },
-        { id: 2, title: 'Plots', subtitle: 'Assign locations' },
-        { id: 3, title: 'Details', subtitle: 'Confirm area' },
-        { id: 4, title: 'Materials', subtitle: 'Per plot' },
-        { id: 5, title: 'Vehicles', subtitle: 'Per activity' },
-        { id: 6, title: 'Manpower', subtitle: 'Per activity' },
-        { id: 7, title: 'Review', subtitle: 'Final check' }
+        { id: 1, title: 'Activities' },
+        { id: 2, title: 'Plots' },
+        { id: 3, title: 'Details' },
+        { id: 4, title: 'Materials' },
+        { id: 5, title: 'Vehicles' },
+        { id: 6, title: 'Manpower' },
+        { id: 7, title: 'Review' }
       ],
 
       // State management
       selectedActivities: {},
       plotAssignments: {},
+      blokActivityAssignments: {},
       luasConfirmed: {},
       materials: {},
       vehicles: {},
@@ -258,6 +263,7 @@
       
       // Step 1: Activities
       activitySearch: '',
+      blokSearchQuery: '',
       
       // Step 2: Plots
       currentActivityForPlots: null,
@@ -265,8 +271,6 @@
 
       init() {
         console.log('🚀 RKH Wizard Initialized');
-        console.log('Step:', this.currentStep);
-        console.log('Activities:', this.selectedActivities);
         
         // Auto-watch untuk set first activity
         this.$watch('selectedActivities', (activities) => {
@@ -289,15 +293,35 @@
       },
 
       // ==================== STEP 1: ACTIVITIES ====================
-      filteredActivities() {
+      // ✅ Group activities by activitygroup from database
+      get groupedActivities() {
         const activities = window.activitiesData || [];
-        if (!this.activitySearch) return activities;
-        
-        const query = this.activitySearch.toLowerCase();
-        return activities.filter(act => 
-          act.activitycode.toLowerCase().includes(query) ||
-          act.activityname.toLowerCase().includes(query)
+        const filtered = !this.activitySearch ? activities : activities.filter(act => 
+          act.activitycode.toLowerCase().includes(this.activitySearch.toLowerCase()) ||
+          act.activityname.toLowerCase().includes(this.activitySearch.toLowerCase())
         );
+
+        const groups = {};
+        filtered.forEach(act => {
+          const groupCode = act.activitygroup || 'Uncategorized';
+          const groupName = act.groupname || groupCode;
+          
+          if (!groups[groupCode]) {
+            groups[groupCode] = {
+              code: groupCode,
+              name: groupName,
+              activities: []
+            };
+          }
+          groups[groupCode].activities.push(act);
+        });
+
+        // Sort by group code (I, II, III, etc.)
+        return Object.values(groups).sort((a, b) => {
+          // Handle Roman numerals sorting
+          const romanValues = { 'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10 };
+          return (romanValues[a.code] || 999) - (romanValues[b.code] || 999);
+        });
       },
       
       toggleActivity(activity) {
@@ -343,22 +367,33 @@
       // ==================== STEP 2: PLOTS ====================
       availableBloks() {
         const bloksSet = new Set();
-        (window.masterlistData || []).forEach(plot => {
+        // ✅ Use plotsData (masterlist + batch) instead of masterlistData
+        (window.plotsData || []).forEach(plot => {
           if (plot.blok) bloksSet.add(plot.blok);
         });
         return Array.from(bloksSet).sort();
       },
-      
+
+      // ✅ NEW: Filtered bloks for blok activity (with search)
+      filteredBloksForActivity() {
+        const bloks = this.availableBloks();
+        if (!this.blokSearchQuery) return bloks;
+        
+        const q = this.blokSearchQuery.toUpperCase();
+        return bloks.filter(blok => blok.toUpperCase().includes(q));
+      },
+
       getPlotsForBlok(blok) {
         if (!blok) return [];
-        return (window.masterlistData || []).filter(plot => plot.blok === blok);
+        // ✅ CRITICAL: Use plotsData (has luassisa, lifecyclestatus, last_activity)
+        return (window.plotsData || []).filter(plot => plot.blok === blok);
       },
-      
+
       isPlotSelectedForActivity(actCode, plot) {
         const assignments = this.plotAssignments[actCode] || [];
         return assignments.some(p => p.blok === plot.blok && p.plot === plot.plot);
       },
-      
+
       togglePlotForActivity(actCode, plot) {
         if (!this.plotAssignments[actCode]) {
           this.plotAssignments[actCode] = [];
@@ -375,45 +410,52 @@
           delete this.luasConfirmed[key];
           delete this.materials[key];
         } else {
+          // ✅ FIXED: Store correct data from plotsData
           this.plotAssignments[actCode].push({
             blok: plot.blok,
             plot: plot.plot,
-            luasplot: plot.luasplot,
-            luassisa: plot.luassisa || plot.luasplot,
+            luasplot: parseFloat(plot.luasplot) || 0,
+            luassisa: parseFloat(plot.luassisa) || 0, // ✅ This comes from plotsData
             batchno: plot.batchno || null,
-            lifecyclestatus: plot.lifecyclestatus || null
+            lifecyclestatus: plot.lifecyclestatus || null,
+            last_activitycode: plot.last_activitycode || null,
+            last_activity_date: plot.last_activity_date || null
           });
           
           const key = `${actCode}_${plot.blok}_${plot.plot}`;
-          this.luasConfirmed[key] = plot.luassisa || plot.luasplot;
+          this.luasConfirmed[key] = parseFloat(plot.luassisa) || 0;
         }
+      },
+
+      // ✅ NEW: Select blok for blok activity
+      selectBlokForBlokActivity(blok) {
+        if (!this.currentActivityForPlots) return;
+        
+        const activity = this.selectedActivities[this.currentActivityForPlots];
+        if (!activity || activity.isblokactivity != 1) return;
+        
+        // Store selected blok
+        this.blokActivityAssignments[this.currentActivityForPlots] = blok;
+        
+        // Clear plots for this activity (blok activities don't need plots)
+        this.plotAssignments[this.currentActivityForPlots] = [];
+        
+        showToast(`Blok "${blok}" selected for ${this.currentActivityForPlots}`, 'success', 2000);
+      },
+
+      // ✅ NEW: Get selected blok for activity
+      getSelectedBlokForActivity(actCode) {
+        return this.blokActivityAssignments[actCode] || '';
+      },
+
+      // ✅ NEW: Check if any blok activity has selection
+      hasAnyBlokActivitySelected() {
+        return Object.keys(this.blokActivityAssignments).length > 0;
       },
 
       getSelectedPlotsInBlok(blok, actCode) {
         const assignments = this.plotAssignments[actCode] || [];
         return assignments.filter(p => p.blok === blok);
-      },
-      
-      selectAllPlotsInBlok(blok) {
-        if (!blok || !this.currentActivityForPlots) return;
-        
-        const plots = this.getPlotsForBlok(blok);
-        plots.forEach(plot => {
-          if (!this.isPlotSelectedForActivity(this.currentActivityForPlots, plot)) {
-            this.togglePlotForActivity(this.currentActivityForPlots, plot);
-          }
-        });
-      },
-      
-      deselectAllPlotsInBlok(blok) {
-        if (!blok || !this.currentActivityForPlots) return;
-        
-        const plots = this.getPlotsForBlok(blok);
-        plots.forEach(plot => {
-          if (this.isPlotSelectedForActivity(this.currentActivityForPlots, plot)) {
-            this.togglePlotForActivity(this.currentActivityForPlots, plot);
-          }
-        });
       },
 
       clearPlotsForActivity(actCode) {
@@ -424,8 +466,13 @@
         });
         
         this.plotAssignments[actCode] = [];
+        
+        // Also clear blok activity assignment if exists
+        if (this.blokActivityAssignments[actCode]) {
+          delete this.blokActivityAssignments[actCode];
+        }
       },
-      
+
       removePlotFromActivity(actCode, plot) {
         const index = this.plotAssignments[actCode].findIndex(
           p => p.blok === plot.blok && p.plot === plot.plot
@@ -443,6 +490,28 @@
         const plots = this.plotAssignments[actCode] || [];
         const total = plots.reduce((sum, plot) => sum + parseFloat(plot.luassisa || 0), 0);
         return total.toFixed(2);
+      },
+
+      // ✅ NEW: Format date helper (for last activity date)
+      formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+      },
+
+      // ✅ NEW: Check if can proceed from Step 2
+      canProceedStep2() {
+        return Object.entries(this.selectedActivities).every(([actCode, activity]) => {
+          if (activity.isblokactivity == 1) {
+            // Blok activity: must have blok selected
+            return this.blokActivityAssignments[actCode] !== undefined;
+          }
+          // Normal activity: must have at least 1 plot
+          return this.plotAssignments[actCode] && this.plotAssignments[actCode].length > 0;
+        });
       },
 
       // ==================== STEP 3: DETAILS ====================
@@ -727,8 +796,8 @@
           case 1: 
             return Object.keys(this.selectedActivities).length > 0;
           case 2:
-            return Object.keys(this.plotAssignments).length > 0 &&
-                   Object.values(this.plotAssignments).some(plots => plots.length > 0);
+            // ✅ Use dedicated method
+            return this.canProceedStep2();
           case 3:
             return this.allLuasConfirmed();
           case 4:
@@ -741,6 +810,7 @@
             return true;
         }
       },
+
 
       getNextButtonText() {
         if (this.currentStep === 6) return 'Review';
@@ -851,6 +921,7 @@
       transformToBackendFormat() {
         const rows = [];
         
+        // Handle normal activities with plots
         Object.entries(this.plotAssignments).forEach(([activityCode, plots]) => {
           plots.forEach((plot) => {
             const key = `${activityCode}_${plot.blok}_${plot.plot}`;
@@ -868,6 +939,19 @@
           });
         });
         
+        // ✅ Handle blok activities
+        Object.entries(this.blokActivityAssignments).forEach(([activityCode, blok]) => {
+          rows.push({
+            nama: activityCode,
+            blok: blok, // 'ALL' or specific blok code
+            plot: null, // Blok activities don't have specific plots
+            luas: null, // Optional for blok activities
+            material_group_id: '',
+            usingmaterial: '0',
+            batchno: null
+          });
+        });
+        
         return {
           tanggal: window.rkhDate,
           mandor_id: window.mandorId,
@@ -878,26 +962,10 @@
         };
       }
     }));
-  });
 
-  // Toast utility
-  function showToast(message, type = 'info', duration = 3000) {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500' : 
-      type === 'error' ? 'bg-red-500' : 
-      type === 'warning' ? 'bg-yellow-500' :
-      'bg-blue-500'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => toast.remove(), duration);
-  }
-
-  // Vehicle Selection Modal Component
-  document.addEventListener('alpine:init', () => {
+    // ============================================================
+    // VEHICLE SELECTION MODAL COMPONENT
+    // ============================================================
     Alpine.data('vehicleSelectionModal', () => ({
       showModal: false,
       currentActivityCode: '',
@@ -978,6 +1046,24 @@
       }
     }));
   });
+
+  // ============================================================
+  // TOAST UTILITY
+  // ============================================================
+  function showToast(message, type = 'info', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500' : 
+      type === 'error' ? 'bg-red-500' : 
+      type === 'warning' ? 'bg-yellow-500' :
+      'bg-blue-500'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), duration);
+  }
 </script>
 @endpush
 </x-layout>
