@@ -409,6 +409,16 @@ class TenagaKerjaController extends Controller
                 ->withErrors(['id' => 'Gagal mendapatkan ID unik']);
         }
 
+        $ceknik = TenagaKerja::where('nik', $request->nik)->where(
+            'isactive',1
+        )->first();
+        if ($ceknik) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['nik' => 'NIK sudah terdaftar']);
+        }
+
+
         TenagaKerja::create([
             'tenagakerjaid' => $nextId,
             'mandoruserid' => $request->mandor,
