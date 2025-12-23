@@ -360,10 +360,8 @@ class RkhController extends Controller
         // ✅ Reuse existing service method
         $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
 
-        // ✅ PENTING: Pastikan plotsData ada
         \Log::info('RKH Create V2 Data Check', [
             'activities_count' => count($data['activities'] ?? []),
-            'plots_count' => count($data['plotsData'] ?? []),  // ← CEK INI
             'mandor_id' => $mandorId,
             'date' => $date
         ]);

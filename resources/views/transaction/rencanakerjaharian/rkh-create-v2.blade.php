@@ -218,7 +218,6 @@
   window.vehiclesData = @json($vehiclesData ?? []);
   window.helpersData = @json($helpersData ?? []);
   window.absenData = @json($absenData ?? []);
-  window.plotsData = @json($plotsData ?? []);
   window.rkhDate = '{{ $selectedDate }}';
   window.mandorId = '{{ $selectedMandor->userid ?? '' }}';
   window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
@@ -367,7 +366,6 @@
       // ==================== STEP 2: PLOTS ====================
       availableBloks() {
         const bloksSet = new Set();
-        // ✅ Use plotsData (masterlist + batch) instead of masterlistData
         (window.plotsData || []).forEach(plot => {
           if (plot.blok) bloksSet.add(plot.blok);
         });
@@ -385,7 +383,6 @@
 
       getPlotsForBlok(blok) {
         if (!blok) return [];
-        // ✅ CRITICAL: Use plotsData (has luassisa, lifecyclestatus, last_activity)
         return (window.plotsData || []).filter(plot => plot.blok === blok);
       },
 

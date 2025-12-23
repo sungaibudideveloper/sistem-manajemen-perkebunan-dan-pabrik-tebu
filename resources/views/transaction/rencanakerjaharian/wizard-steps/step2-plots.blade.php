@@ -225,7 +225,6 @@
         </div>
       </div>
 
-      {{-- ✅ FIXED: Plots Grid - Show Correct Data from plotsData --}}
       <div class="p-3 max-h-[400px] overflow-y-auto">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
           <template x-for="plot in getPlotsForBlok(selectedBlokForPlots)" :key="plot.plot">
@@ -255,7 +254,6 @@
               <div class="pr-5">
                 <div class="text-sm font-bold text-gray-800 mb-1" x-text="plot.plot"></div>
                 
-                {{-- ✅ FIXED: Show luassisa from plotsData --}}
                 <div class="text-xs text-gray-600">
                   <span x-text="(parseFloat(plot.luassisa) || 0).toFixed(2)"></span>
                   <span class="text-gray-400"> Ha</span>

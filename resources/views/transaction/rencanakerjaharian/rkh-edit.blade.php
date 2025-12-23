@@ -859,7 +859,6 @@ window.bloksData = @json($bloks ?? []);
 window.masterlistData = @json($masterlist ?? []);
 window.herbisidaData = @json($herbisidagroups ?? []);
 window.absenData = @json($absentenagakerja ?? []);
-window.plotsData = @json($plotsData ?? []);
 window.activitiesData = @json($activities ?? []);
 window.vehiclesData = @json($vehiclesData ?? []);
 window.helpersData = @json($helpersData ?? []);
