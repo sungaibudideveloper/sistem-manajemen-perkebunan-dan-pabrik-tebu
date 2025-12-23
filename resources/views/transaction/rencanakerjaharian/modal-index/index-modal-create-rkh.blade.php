@@ -81,6 +81,59 @@
                 </div>
             </template>
 
+            <!-- ✅ NEW: UI Version Selection -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Pilih Tampilan <span class="text-red-500">*</span>
+                </label>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Classic Version -->
+                    <label class="relative flex cursor-pointer">
+                        <input type="radio" 
+                               x-model="selectedVersion" 
+                               value="v1" 
+                               class="sr-only peer">
+                        <div class="w-full p-4 border-2 rounded-lg transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blue-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-gray-800">Classic</span>
+                                <svg class="w-5 h-5 text-blue-600 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <p class="text-xs text-gray-600">Form tabel biasa</p>
+                            <div class="mt-2 flex items-center gap-1">
+                                <span class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[9px] font-medium rounded">Tabel</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- Wizard Version -->
+                    <label class="relative flex cursor-pointer">
+                        <input type="radio" 
+                               x-model="selectedVersion" 
+                               value="v2" 
+                               class="sr-only peer">
+                        <div class="w-full p-4 border-2 rounded-lg transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:border-purple-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-gray-800">Wizard</span>
+                                    <span class="px-1.5 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[9px] font-bold rounded">NEW</span>
+                                </div>
+                                <svg class="w-5 h-5 text-purple-600 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <p class="text-xs text-gray-600">Step-by-step modern</p>
+                            <div class="mt-2 flex items-center gap-1">
+                                <span class="px-2 py-0.5 bg-purple-200 text-purple-700 text-[9px] font-medium rounded">Multi-step</span>
+                                <span class="px-2 py-0.5 bg-pink-200 text-pink-700 text-[9px] font-medium rounded">Modern</span>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
         </div>
 
         <!-- Footer -->
@@ -249,6 +302,7 @@ function createRkhModal() {
         // Date & Mandor selection
         selectedDate: new Date().toISOString().split('T')[0],
         selectedMandor: { userid: '', name: '' },
+        selectedVersion: 'v1', // ✅ NEW: Default to classic
         
         // Modal states
         openMandorModal: false,
@@ -336,9 +390,14 @@ function createRkhModal() {
 
                 if (data.success && !data.hasOutstanding) {
                     Alpine.store('loading').start();
-                    window.location.href = `{{ route('transaction.rencanakerjaharian.create') }}?date=${this.selectedDate}&mandor_id=${this.selectedMandor.userid}`;
+                    
+                    // ✅ Route based on selected version
+                    const route = this.selectedVersion === 'v2' 
+                        ? '{{ route("transaction.rencanakerjaharian.create-v2") }}'
+                        : '{{ route("transaction.rencanakerjaharian.create") }}';
+                    
+                    window.location.href = `${route}?date=${this.selectedDate}&mandor_id=${this.selectedMandor.userid}`;
                 } else if (data.hasOutstanding) {
-                    // ✅ GANTI BARIS INI
                     this.$dispatch('show-outstanding-error', data.details);
                 } else {
                     alert(data.message || 'Terjadi kesalahan saat memeriksa RKH');
@@ -355,6 +414,7 @@ function createRkhModal() {
         closeModal() {
             this.showDateModal = false;
             this.selectedDate = new Date().toISOString().split('T')[0];
+            this.selectedVersion = 'v1'; // ✅ Reset to default
             if (!this.isMandorUser) {
                 this.selectedMandor = { userid: '', name: '' };
             }
