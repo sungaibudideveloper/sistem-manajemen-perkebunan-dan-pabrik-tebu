@@ -108,6 +108,7 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
             Route::controller(RkhController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('/create', 'create')->name('create');
+                Route::get('/create-v2', 'createV2')->name('create-v2');
                 Route::post('/store', 'store')->name('store');
                 Route::get('/{rkhno}/show', 'show')->name('show');
                 Route::get('/{rkhno}/edit', 'edit')->name('edit');

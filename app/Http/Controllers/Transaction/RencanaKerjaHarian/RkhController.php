@@ -346,4 +346,41 @@ class RkhController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Show create form V2 (Modern Wizard)
+     */
+    public function createV2(Request $request)
+{
+    try {
+        $companycode = Session::get('companycode');
+        $date = $request->input('date', date('Y-m-d'));
+        $mandorId = $request->input('mandor_id');
+
+        // ✅ Reuse existing service method
+        $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
+
+        // ✅ PENTING: Pastikan plotsData ada
+        \Log::info('RKH Create V2 Data Check', [
+            'activities_count' => count($data['activities'] ?? []),
+            'plots_count' => count($data['plotsData'] ?? []),  // ← CEK INI
+            'mandor_id' => $mandorId,
+            'date' => $date
+        ]);
+
+        return view('transaction.rencanakerjaharian.rkh-create-v2', array_merge($data, [
+            'title' => 'Create RKH (Modern Wizard)',
+            'navbar' => 'Transaction',
+            'nav' => 'Rencana Kerja Harian',
+        ]));
+
+    } catch (\Exception $e) {
+        \Log::error('RKH Create V2 Error', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+    }
+}
 }
