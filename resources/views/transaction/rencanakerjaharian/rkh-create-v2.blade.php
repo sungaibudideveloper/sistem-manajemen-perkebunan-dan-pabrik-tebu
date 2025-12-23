@@ -185,25 +185,178 @@
           {{-- Submit Button --}}
           <button 
             type="button"
-            @click="submitForm()" 
+            id="submit-btn"
+            @click="submitForm()"
             x-show="currentStep === 7"
             :disabled="isSubmitting"
-            class="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            :class="isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700 hover:shadow-lg'"
+            class="px-8 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md">
+            
+            {{-- Normal State Icon --}}
+            <svg 
+              x-show="!isSubmitting"
+              class="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
+            
+            {{-- Loading Spinner --}}
+            <svg 
+              x-show="isSubmitting"
+              class="animate-spin h-5 w-5" 
+              fill="none" 
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            
+            {{-- Button Text --}}
             <span x-show="!isSubmitting">Submit RKH</span>
-            <span x-show="isSubmitting">
-              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </span>
+            <span x-show="isSubmitting">Submitting...</span>
           </button>
 
         </div>
       </div>
 
+    </div>
+
+    {{-- SUCCESS MODAL - Add this after the validation modal in rkh-create-v2.blade.php --}}
+    <div 
+      x-data="{
+        showModal: false,
+        isRedirecting: false,
+        rkhNo: '',
+        mandorName: @js($selectedMandor->name ?? ''),
+        tanggal: @js(\Carbon\Carbon::parse($selectedDate)->format('d M Y')),
+        totalActivities: 0,
+        totalPlots: 0,
+        totalLuas: 0,
+        totalWorkers: 0,
+        
+        openModal(data) {
+          console.log('🎉 Opening modal with:', data);
+          this.rkhNo = data.rkhno || '-';
+          this.totalActivities = data.summary?.activities || 0;
+          this.totalPlots = data.summary?.plots || 0;
+          this.totalLuas = data.summary?.luas || 0;
+          this.totalWorkers = data.summary?.workers || 0;
+          this.showModal = true;
+        },
+        
+        redirectToIndex() {
+          this.isRedirecting = true;
+          setTimeout(() => {
+            window.location.href = @js(route('transaction.rencanakerjaharian.index'));
+          }, 300);
+        }
+      }"
+      @rkh-success.window="openModal($event.detail)"
+      x-show="showModal"
+      x-cloak
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+      style="display: none;"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+    >
+      <div 
+        @click.away="false"
+        class="bg-white rounded-lg shadow-2xl w-full max-w-lg border-2 border-gray-800"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 transform scale-95"
+        x-transition:enter-end="opacity-100 transform scale-100"
+      >
+        {{-- Header --}}
+        <div class="bg-gray-800 text-white px-6 py-4 border-b-2 border-gray-800">
+          <h2 class="text-lg font-bold text-center">RKH BERHASIL DIBUAT</h2>
+          <p class="text-center text-sm text-gray-300 mt-1">Daily Work Plan Created Successfully</p>
+        </div>
+
+        {{-- Content --}}
+        <div class="p-6">
+          {{-- Success Icon --}}
+          <div class="flex justify-center mb-4">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          </div>
+
+          {{-- RKH Number --}}
+          <div class="text-center mb-6">
+            <p class="text-sm text-gray-600 mb-2">Nomor RKH:</p>
+            <p class="text-2xl font-bold text-gray-800 font-mono tracking-wide" x-text="rkhNo"></p>
+          </div>
+
+          {{-- Summary --}}
+          <div class="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-6">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Mandor:</span>
+                <span class="font-semibold text-gray-800" x-text="mandorName"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Tanggal:</span>
+                <span class="font-semibold text-gray-800" x-text="tanggal"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Total Aktivitas:</span>
+                <span class="font-semibold text-gray-800" x-text="totalActivities"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Total Plot:</span>
+                <span class="font-semibold text-gray-800" x-text="totalPlots"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Total Luas:</span>
+                <span class="font-semibold text-gray-800" x-text="totalLuas + ' Ha'"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Total Pekerja:</span>
+                <span class="font-semibold text-gray-800" x-text="totalWorkers"></span>
+              </div>
+            </div>
+          </div>
+
+          {{-- Success Message --}}
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+            <div class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-green-800">
+                  Data RKH telah berhasil disimpan ke sistem
+                </p>
+                <p class="text-xs text-green-700 mt-1">
+                  Anda dapat melihat detail RKH di halaman daftar RKH
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="bg-gray-50 border-t border-gray-300 px-6 py-4">
+          <button
+            type="button"
+            @click="redirectToIndex()"
+            :disabled="isRedirecting"
+            class="w-full bg-gray-800 hover:bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <span x-show="!isRedirecting">OK, Kembali ke Daftar RKH</span>
+            <span x-show="isRedirecting" class="flex items-center gap-2">
+              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Redirecting...
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -224,6 +377,7 @@
   window.mandorId = '{{ $selectedMandor->userid ?? '' }}';
   window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
   window.PLOT_INFO_BASE_URL = "{{ url('transaction/kerjaharian/rencanakerjaharian/plot-info') }}";
+  window.RKH_SUBMISSION_LOCK = false;
 
   console.log('🔥 Global Data Loaded:', {
     activities: window.activitiesData?.length,
@@ -876,13 +1030,34 @@
         });
       },
 
-      // ==================== SUBMIT ====================
+      // ==================== SUBMIT WITH MULTIPLE PROTECTIONS ====================
       async submitForm() {
+        // PROTECTION 1: Check if already submitting
+        if (this.isSubmitting) {
+          console.warn('Submit blocked: Already submitting');
+          return false;
+        }
+
+        // PROTECTION 2: Check global lock
+        if (window.RKH_SUBMISSION_LOCK) {
+          console.warn('Submit blocked: Global lock active');
+          return false;
+        }
+
+        // PROTECTION 3: Disable submit button IMMEDIATELY
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+          if (submitBtn.disabled) {
+            console.warn('Submit blocked: Button already disabled');
+            return false;
+          }
+          submitBtn.disabled = true;
+        }
+
+        // ACTIVATE ALL LOCKS
         this.isSubmitting = true;
-        
+        window.RKH_SUBMISSION_LOCK = true;
         const payload = this.transformToBackendFormat();
-        
-        console.log('📤 Submitting:', payload);
         
         try {
           const response = await fetch('{{ route("transaction.rencanakerjaharian.store") }}', {
@@ -898,18 +1073,41 @@
           const result = await response.json();
           
           if (result.success) {
-            showToast('RKH berhasil dibuat!', 'success', 3000);
-            setTimeout(() => {
-              window.location.href = result.redirect_url;
-            }, 1000);
+            console.log('Submit successful:', result.rkhno);
+            
+            // Show success modal with data
+            window.dispatchEvent(new CustomEvent('rkh-success', {
+              detail: {
+                rkhno: result.rkhno || '-',
+                summary: {
+                  activities: Object.keys(this.selectedActivities).length,
+                  plots: this.getTotalPlotsCount(),
+                  luas: parseFloat(this.getTotalLuasAll()),
+                  workers: this.getTotalWorkers('total')
+                }
+              }
+            }));
+
           } else {
+            console.error('Submit failed:', result.message);
             showToast(result.message || 'Gagal submit RKH', 'error', 4000);
-            this.isSubmitting = false;
+            this.unlockSubmission();
           }
         } catch (error) {
           console.error('Submit error:', error);
           showToast('Terjadi kesalahan sistem', 'error', 4000);
-          this.isSubmitting = false;
+          this.unlockSubmission();
+        }
+      },
+
+      // Helper to unlock submission (only on errors)
+      unlockSubmission() {
+        this.isSubmitting = false;
+        window.RKH_SUBMISSION_LOCK = false;
+        
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+          submitBtn.disabled = false;
         }
       },
 

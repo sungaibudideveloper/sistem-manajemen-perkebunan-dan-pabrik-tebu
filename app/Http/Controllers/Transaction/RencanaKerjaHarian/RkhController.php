@@ -152,6 +152,7 @@ class RkhController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => $result['message'],
+                    'rkhno' => $result['rkhno'],
                     'redirect_url' => route('transaction.rencanakerjaharian.show', $result['rkhno'])
                 ]);
             }

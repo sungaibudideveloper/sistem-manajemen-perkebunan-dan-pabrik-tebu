@@ -214,24 +214,6 @@
       </div>
     </div>
 
-    {{-- Signature Section --}}
-    <div class="border-t border-gray-300 px-6 py-6">
-      <div class="grid grid-cols-3 gap-8 text-sm">
-        <div class="text-center">
-          <div class="text-gray-600 mb-12">Dibuat Oleh,</div>
-          <div class="border-t border-gray-400 pt-2 font-semibold text-gray-800">Mandor</div>
-        </div>
-        <div class="text-center">
-          <div class="text-gray-600 mb-12">Diperiksa Oleh,</div>
-          <div class="border-t border-gray-400 pt-2 font-semibold text-gray-800">Asisten</div>
-        </div>
-        <div class="text-center">
-          <div class="text-gray-600 mb-12">Disetujui Oleh,</div>
-          <div class="border-t border-gray-400 pt-2 font-semibold text-gray-800">Manager</div>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   {{-- Action Buttons --}}
