@@ -10,6 +10,7 @@
         tbody tr{transition:background-color .2s;}
         tbody tr:hover td{background:#1f6f3d  !important;color:#ffffff ;}
         tbody tr:hover td *{color:#ffffff !important;}
+        tbody tr:hover td * *{color:#000000 !important;}
          
         /* ✅ Sticky Vertical */
         .sticky-v{position:sticky;background:#166534;color:#fff;}
@@ -42,21 +43,22 @@
         #map{height:600px;width:100%;}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
     </style>
-    <div class="mx-auto px-6" x-data="{activeTab:'table',map:null,markers:[],polygons:[]}">
+    <div class="mx-auto px-6" x-data="{activeTab:'{{ request('tab','table') }}',map:null,markers:[],polygons:[]}">
+
         
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex space-x-4">
-                <a href="?crop=pc&activity={{$activityFilter}}" 
+                <a href="?crop=pc&activity={{$activityFilter}}&tab={{ request('tab','table') }}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data PC
                 </a>
                 
-                <a href="?crop=rc&activity={{$activityFilter}}" 
+                <a href="?crop=rc&activity={{$activityFilter}}&tab={{ request('tab','table') }}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data RC
                 </a>
                 
-                <a href="?crop=p&activity={{$activityFilter}}" 
+                <a href="?crop=p&activity={{$activityFilter}}&tab={{ request('tab','table') }}"
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='p'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  🌾 Data Panen
                 </a>
@@ -76,8 +78,8 @@
 </a>
 
     <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
-    <select 
-        onchange="window.location.href='?crop={{$cropType}}&activity=' + this.value"
+    <select onchange="window.location.href='{{ url()->current() }}?crop={{ $cropType }}&activity=' + this.value + '&tab=map'"
+
         class="py-1 px-3 rounded border border-gray-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
         <option value="all" {{$activityFilter==='all'?'selected':''}}>📋 Semua Activity</option>
         @foreach($activityMap as $code => $label)
@@ -303,7 +305,7 @@
                                     <tr class="hover:bg-green-50">
                                         <td class="border p-2 font-bold">{{ $plotCode }}</td>
                                         <td class="border p-2">
-                                            <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                                            <span class="px-2 py-1 rounded text-xs">
                                                 {{ $detail['lifecyclestatus'] ?? '-' }}
                                             </span>
                                         </td>
@@ -321,14 +323,18 @@
                                                     </summary>
                                                     <div class="mt-2 space-y-2 pl-2">
                                                         @foreach($detail['activities'] as $act)
-                                                            @php
-                                                                $actPct = $act['percentage'] ?? 0;
-                                                                $actColor = $actPct >= 100 ? 'text-green-600' : ($actPct > 0 ? 'text-orange-600' : 'text-gray-500');
-                                                            @endphp
+                                                        @php
+                                                        $isOk = ((float)($act['percentage'] ?? 0) >= 100);
+                                                        $lkhOk = collect($act['lkh_details'] ?? [])->filter(fn($x)=>($x['luas_hasil'] ?? 0) > 0)->count();
+                                                        $lkhTotal = (int)($act['lkh_total'] ?? count($act['lkh_details'] ?? []));
+                                                        $badge = $isOk ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
+                                                        @endphp
                                                             <div class="border-b pb-2">
                                                                 <div class="flex justify-between gap-2 mb-1">
                                                                     <span class="text-gray-700 font-semibold">{{ $act['code'] }} - {{ $act['label'] }}</span>
-                                                                    <span class="font-bold {{ $actColor }}">{{ number_format($actPct, 1) }}%</span>
+                                                                    <span class="px-2 py-0.5 rounded text-xs font-bold {{ $badge }}">
+                                                                        {{ $isOk ? '✔️ OK' : '✖️ NOT OK' }}
+                                                                    </span>
                                                                 </div>
                                                                 <div class="text-gray-500 text-xs mb-1">
                                                                     Luas: <strong>{{ number_format($act['luas_hasil'], 2) }} HA</strong> / {{ number_format($detail['luas_rkh'], 2) }} HA
@@ -402,6 +408,7 @@
     const plotHeaders = @json($plotHeadersForMap ?? []);
     const plotData = @json($plotData ?? []);
     const plotActivityDetails = @json($plotActivityDetails ?? []);
+    const activityFilter = @json($activityFilter ?? 'all');
         
     let map, markers = [], polygons = [];
 
@@ -498,21 +505,26 @@
                 };
 
                 // 🔑 warna marker berdasarkan umur, ZPK, panen
-                const color = getPlotColor(d);
-                        
+                const baseColor = getPlotColor(d);
+                const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
+                const color = isMatch ? baseColor : '#000000';
+                const opacity = isMatch ? 0.8 : 0.25;
+
                 const marker = new google.maps.Marker({
-                    position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
-                    map: map,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 25,
-                        fillColor: color,
-                        fillOpacity: 0.8,
-                        strokeColor: '#fff',
-                        strokeWeight: 3
-                    },
-                    label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
+                position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 25,
+                    fillColor: color,
+                    fillOpacity: opacity,
+                    strokeColor: '#fff',
+                    strokeWeight: 3
+                },
+                label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
                 });
+                //
+
 
                 let umurText = '-';
                 if (d.umur_hari > 0) {
@@ -602,17 +614,20 @@
                     is_panen: 0
                 };
 
-                const color = getPlotColor(d);
-                            
+                const baseColor = getPlotColor(d);
+                const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
+                const color = isMatch ? baseColor : '#000000';
+
                 polygons.push(new google.maps.Polygon({
-                    paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
-                    strokeColor: color,
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: color,
-                    fillOpacity: 0.18,
-                    map: map
+                paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
+                strokeColor: color,
+                strokeOpacity: isMatch ? 0.8 : 0.35,
+                strokeWeight: 2,
+                fillColor: color,
+                fillOpacity: isMatch ? 0.18 : 0.06,
+                map: map
                 }));
+
             });
             
             
