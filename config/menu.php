@@ -63,11 +63,6 @@ return [
                 'name' => 'Data Agronomi',
                 'children' => [
                     [
-                        'name' => 'Kategori',
-                        'route' => 'masterdata.kategori.index',
-                        'permission' => 'masterdata.kategori.view',
-                    ],
-                    [
                         'name' => 'Herbisida',
                         'route' => 'masterdata.herbisida.index',
                         'permission' => 'masterdata.herbisida.view',
