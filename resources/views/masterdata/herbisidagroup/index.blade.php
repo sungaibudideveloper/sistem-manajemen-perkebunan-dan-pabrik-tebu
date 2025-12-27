@@ -40,14 +40,14 @@
 
       <div class="flex items-center justify-between px-4 py-2">
           {{-- Create Button --}}
-          @if(hasPermission('Create Herbisida'))
+          @can('masterdata.herbisidagroup.create')
               <button @click="resetForm()"
                       class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                   </svg> New Group
               </button>
-          @endif
+          @endcan
 
           {{-- Search Form --}}
           <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
@@ -235,7 +235,7 @@
                                   @if($index === 0)
     <td class="py-2 px-4 border-b" rowspan="{{ $items->count() }}">
         <div class="flex items-center justify-center space-x-2">
-            @if(hasPermission('Edit Herbisida'))
+            @can('masterdata.herbisidagroup.edit')
             <button @click="
                 mode = 'edit';
                 form.herbisidagroupid = {{ json_encode($groupId) }};
@@ -250,9 +250,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
             </button>
-            @endif
+            @endcan
             
-            @if(hasPermission('Hapus Herbisida'))
+            @can('masterdata.herbisidagroup.delete')
             <form action="{{ url("masterdata/herbisida-group/{$groupId}") }}" 
                   method="POST"
                   onsubmit="return confirm('Yakin hapus group ini?');">
@@ -264,7 +264,7 @@
                     </svg>
                 </button>
             </form>
-            @endif
+            @endcan
         </div>
     </td>
 @endif

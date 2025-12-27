@@ -140,7 +140,7 @@
                 </div>
             </div>
             @if ($startDate && $endDate)
-                @if (hasPermission('Submit Posting'))
+                @can('process.posting.submit')
                     <div>
                         <form action="{{ route('process.posting.submit') }}" method="POST" id="post">
                             @csrf
@@ -163,7 +163,7 @@
                             </button>
                         </form>
                     </div>
-                @endif
+                @endcan
             @endif
         </div>
 

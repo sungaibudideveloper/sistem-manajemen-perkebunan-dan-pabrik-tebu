@@ -36,7 +36,7 @@
 
     <div class="flex items-center justify-between px-4 py-2">
 
-      @if(hasPermission('Create Dosis Herbisida'))
+      @can('masterdata.herbisidadosage.create')
         <button @click="resetForm()"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
                 <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -45,7 +45,7 @@
                             d="M5 12h14m-7 7V5" />
                     </svg> New Data
         </button>
-      @endif
+      @endcan
         
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
@@ -211,7 +211,7 @@
                             <td class="py-2 px-4 border-b">{{ $data->measure }}</td>
                               <td class="py-2 px-4 border-b">
                                 <div class="flex items-center justify-center space-x-2">
-                                  @if(hasPermission('Edit Dosis Herbisida'))
+                                  @can('masterdata.herbisidadosage.edit')
                                   {{-- Edit Button (Modal)--}}
                                   <button
                                     @click="
@@ -251,8 +251,8 @@
                                     </svg>
                                     <span class="w-0.5"></span>
                                   </button>
-                                  @endif
-                                  @if(hasPermission('Hapus Dosis Herbisida'))
+                                  @endcan
+                                  @can('masterdata.herbisidadosage.delete')
                                     <form 
                                       action="{{ url("masterdata/herbisida-dosage/{$data->companycode}/{$data->herbisidagroupid}/{$data->itemcode}") }}" 
                                       method="POST"
@@ -281,7 +281,7 @@
                                         </svg>
                                       </button>
                                     </form>
-                                  @endif
+                                  @endcan
                                 </div>
                               </td>
                         </tr>

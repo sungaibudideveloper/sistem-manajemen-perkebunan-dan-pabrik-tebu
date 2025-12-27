@@ -336,10 +336,6 @@ table th, table td {
             @endif
         </select>
         </div>
-
-
-
-        <!-- if(hasPermission('Menu Gudang')) -->
             <!-- Submit Button -->
             @if(strtoupper($details[0]->flagstatus) == 'ACTIVE' )
             <div class="flex justify-center mt-4">
@@ -352,7 +348,6 @@ table th, table td {
             </div>
             @endif
         </form>
-        <!-- endif -->
         
         <!-- Kembali Button - Moved inside container with closer spacing -->
         <div class="flex justify-center mt-3">

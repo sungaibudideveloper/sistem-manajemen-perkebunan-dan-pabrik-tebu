@@ -11,7 +11,7 @@
         <div class="flex mx-4 items-center gap-2 flex-wrap lg:justify-between justify-center">
             {{-- @if ($startDate && $endDate) --}}
             <div class="flex gap-2 text-sm">
-                @if (hasPermission('Excel ZPK'))
+                @can('report.zpk.export')
                     <button
                         class="bg-green-600 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-green-500 flex items-center space-x-2"
                         onclick="window.location.href='{{ route('report.report-zpk.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
@@ -23,7 +23,7 @@
                         </svg>
                         <span>Export to Excel</span>
                     </button>
-                @endif
+                @endcan
             </div>
             {{-- @endif --}}
 

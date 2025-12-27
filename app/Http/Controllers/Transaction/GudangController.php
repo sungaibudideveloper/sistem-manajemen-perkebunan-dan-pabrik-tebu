@@ -49,7 +49,6 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
-        // if (hasPermission('Menu Gudang')) {
             $usematerialhdr = new usematerialhdr;
             $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
@@ -123,9 +122,6 @@ class GudangController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate
             ]);
-        // } else {
-        //     return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
-        // }
     }
 
     public function detail(Request $request)

@@ -138,7 +138,7 @@
                 </div>
             </div>
             @if ($startDate && $endDate)
-                @if (hasPermission('Batal Posting'))
+                @can('process.unposting.submit')
                     <div>
                         <form action="{{ route('process.unposting.submit') }}" method="POST" id="unpost">
                             @csrf
@@ -158,7 +158,7 @@
                             </button>
                         </form>
                     </div>
-                @endif
+                @endcan
             @endif
         </div>
 
