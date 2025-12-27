@@ -5,7 +5,7 @@
     
     <div class="mx-auto py-4 bg-white rounded-md shadow-md">
         <div class="flex lg:justify-between items-end mx-4 gap-2 flex-wrap justify-center">
-            @if (hasPermission('Create Agronomi'))
+            @can('transaction.agronomi.create')
                 <a href="{{ route('transaction.agronomi.create') }}"
                     class="bg-blue-600 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-700 flex items-center gap-2">
                     <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -15,7 +15,7 @@
                     </svg>
                     <span>New Data</span>
                 </a>
-            @endif
+            @endcan
             <div class="flex justify-center items-end gap-2 flex-wrap">
                 <div class="flex gap-2 items-end flex-wrap justify-center">
                     <div id="ajax-data" data-url="{{ route('transaction.agronomi.handle') }}">
@@ -90,7 +90,7 @@
                         </div>
                     </div>
                 </div>
-                @if (hasPermission('Excel Agronomi'))
+                @can('transaction.agronomi.export')
                     <button data-export="agronomi"
                         class="bg-green-500 text-white px-4 py-2 rounded-md text-sm border border-transparent shadow-sm font-medium hover:bg-green-600 flex items-center space-x-2">
                         <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
@@ -102,7 +102,7 @@
                         </svg>
                         <span>Export to Excel</span>
                     </button>
-                @endif
+                @endcan
 
             </div>
         </div>
@@ -176,7 +176,7 @@
                                             </svg>
                                             <span class="w-2"></span>
                                         </button>
-                                        @if (hasPermission('Edit Agronomi'))
+                                        @can('transaction.agronomi.edit')
                                             @if ($item->status === 'Unposted')
                                                 <a href="{{ route('transaction.agronomi.edit', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggalpengamatan' => $item->tanggalpengamatan]) }}"
                                                     class="group flex items-center"><svg
@@ -202,8 +202,8 @@
                                                     <span class="w-0.5"></span>
                                                 </a>
                                             @endif
-                                        @endif
-                                        @if (hasPermission('Hapus Agronomi'))
+                                        @endcan
+                                        @can('transaction.agronomi.delete')
                                             @if ($item->status === 'Unposted')
                                                 <form
                                                     action="{{ route('transaction.agronomi.destroy', ['nosample' => $item->nosample, 'companycode' => $item->companycode, 'tanggalpengamatan' => $item->tanggalpengamatan]) }}"
@@ -230,7 +230,7 @@
                                                     </button>
                                                 </form>
                                             @endif
-                                        @endif
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
