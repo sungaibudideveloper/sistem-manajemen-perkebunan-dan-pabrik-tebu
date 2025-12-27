@@ -11,7 +11,6 @@ use App\Http\Controllers\MasterData\HerbisidaController;
 use App\Http\Controllers\MasterData\HerbisidaGroupController;
 use App\Http\Controllers\MasterData\HerbisidaDosageController;
 use App\Http\Controllers\MasterData\ApprovalController;
-use App\Http\Controllers\MasterData\KategoriController;
 use App\Http\Controllers\MasterData\VarietasController;
 use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
@@ -129,22 +128,6 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
 
     Route::middleware('permission:masterdata.approval.delete')->group(function () {
         Route::delete('approval/{companycode}/{category}', [ApprovalController::class, 'destroy'])->name('approval.destroy');
-    });
-
-    // ============================================================================
-    // KATEGORI
-    // ============================================================================
-    Route::middleware('permission:masterdata.kategori.view')->group(function () {
-        Route::get('kategori', [KategoriController::class, 'index'])->name('kategori.index');
-        Route::post('kategori', [KategoriController::class, 'store'])->name('kategori.store');
-    });
-
-    Route::middleware('permission:masterdata.kategori.edit')->group(function () {
-        Route::match(['put', 'patch'], 'kategori/{kodekategori}', [KategoriController::class, 'update'])->name('kategori.update');
-    });
-
-    Route::middleware('permission:masterdata.kategori.delete')->group(function () {
-        Route::delete('kategori/{kodekategori}', [KategoriController::class, 'destroy'])->name('kategori.destroy');
     });
 
     // ============================================================================
