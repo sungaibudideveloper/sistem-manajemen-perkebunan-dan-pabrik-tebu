@@ -634,17 +634,7 @@ class LkhService
             return null;
         }
 
-        return $this->formatLkhApprovalDetailData($lkh);
-    }
-
-    /**
-     * Format LKH approval detail data (PRIVATE HELPER)
-     * 
-     * @param object $lkh
-     * @return array
-     */
-    private function formatLkhApprovalDetailData($lkh)
-    {
+        // Format levels
         $levels = [];
         
         for ($i = 1; $i <= 3; $i++) {
@@ -678,10 +668,6 @@ class LkhService
             ];
         }
 
-        // Get plots for location display
-        $plots = $this->lkhRepo->getPlotsForLkh($companycode, $lkh->lkhno);
-        $location = $plots->map(fn($p) => $p->blok . '-' . $p->plot)->join(', ') ?: '-';
-
         return [
             'lkhno' => $lkh->lkhno,
             'rkhno' => $lkh->rkhno,
@@ -689,7 +675,7 @@ class LkhService
             'lkhdate_formatted' => \Carbon\Carbon::parse($lkh->lkhdate)->format('d/m/Y'),
             'mandor_nama' => $lkh->mandor_nama,
             'activityname' => $lkh->activityname ?? 'Unknown Activity',
-            'location' => $location,
+            'location' => $lkh->location ?? '-',
             'jumlah_approval' => $lkh->jumlahapproval ?? 0,
             'levels' => $levels
         ];
