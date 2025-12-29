@@ -310,20 +310,6 @@ class TenagaKerjaController extends Controller
                     continue;
                 }
 
-                // Validasi NIK harus angka dan panjang 16 digit (sesuai standar NIK Indonesia)
-                if (!empty($nik)) {
-                    if (!ctype_digit($nik)) {
-                        $errors[] = "Baris $rowNumber: NIK '$nik' harus berisi angka saja";
-                        $errorCount++;
-                        continue;
-                    }
-                    if (strlen($nik) != 16) {
-                        $errors[] = "Baris $rowNumber: NIK '$nik' harus 16 digit";
-                        $errorCount++;
-                        continue;
-                    }
-                }
-
                 if (!in_array($gender, ['L', 'P'])) {
                     $errors[] = "Baris $rowNumber: Gender harus L atau P";
                     $errorCount++;
@@ -410,18 +396,7 @@ class TenagaKerjaController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'nik' => [
-                'required',
-                'string',
-                'size:16',
-                'regex:/^[0-9]{16}$/',
-            ],
-        ], [
-            'nik.size' => 'NIK harus 16 digit',
-            'nik.regex' => 'NIK harus berisi angka saja',
-        ]);
+        
 
         $companycode = session('companycode');
 
@@ -468,23 +443,10 @@ class TenagaKerjaController extends Controller
      * Update the specified tenaga kerja in storage.
      */
     public function update(Request $request, $companycode, $id)
-    {
+    { 
         $tenagaKerja = TenagaKerja::where('companycode', $companycode)
             ->where('tenagakerjaid', $id)
             ->firstOrFail();
-
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'nik' => [
-                'required',
-                'string',
-                'size:16',
-                'regex:/^[0-9]{16}$/',
-            ],
-        ], [
-            'nik.size' => 'NIK harus 16 digit',
-            'nik.regex' => 'NIK harus berisi angka saja',
-        ]);
 
         // Check NIK yang sama tapi beda ID dan masih aktif
         $ceknik = TenagaKerja::where('nik', $request->nik)
