@@ -3,244 +3,259 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white shadow-md rounded-md">
+    <div class="mx-auto py-1 bg-white shadow-md rounded-md">
         
-        <div class="flex items-center justify-between mx-4 gap-2">
+        <div class="flex items-center justify-between px-4 py-2">
+            @can('masterdata.aktivitas.create')
                 <button onclick="openCreateModal()"
-                    class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                        width="24" height="24" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 12h14m-7 7V5" />
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5" />
                     </svg>
-                    <span class="text-sm">New Data</span>
+                    New Data
                 </button>
-            <form method="POST" action="{{ url()->current() }}" class="flex items-center justify-end gap-2">
-                @csrf
+            @endcan
+
+            {{-- Search Form --}}
+            <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
+                <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
+                <input type="text" name="search" id="search" value="{{ request('search') }}"
+                       placeholder="Kode, Nama, atau Group"
+                       class="text-xs mt-1 block w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       onkeydown="if(event.key==='Enter') this.form.submit()">
+            </form>
+
+            {{-- Items per page --}}
+            <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
                 <label for="perPage" class="text-xs font-medium text-gray-700">Items per page:</label>
-                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}" min="1"
-                    onchange="this.form.submit()" autocomplete="off"
-                    class="w-10 p-2 border border-gray-300 rounded-md text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                <select name="perPage" id="perPage" onchange="this.form.submit()"
+                        class="text-xs mt-1 block w-20 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="10" {{ (int)request('perPage', $perPage) === 10 ? 'selected' : '' }}>10</option>
+                    <option value="20" {{ (int)request('perPage', $perPage) === 20 ? 'selected' : '' }}>20</option>
+                    <option value="50" {{ (int)request('perPage', $perPage) === 50 ? 'selected' : '' }}>50</option>
+                    <option value="100" {{ (int)request('perPage', $perPage) === 100 ? 'selected' : '' }}>100</option>
+                </select>
             </form>
         </div>
-        <div class="mx-auto px-4 py-4">
+
+        <div class="mx-auto px-4 py-2">
             <div class="overflow-x-auto rounded-md border border-gray-300">
                 <table class="min-w-full bg-white text-sm">
                     <thead>
-                        <tr>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">GROUP</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">KODE</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">NAMA</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">ACCNO</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR1</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR2</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR3</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR4</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VAR5</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">MATERIAL</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">VEHICLE</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">JENIS TK</th>
-                          <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">ACTION</th>
+                        <tr class="bg-gray-100 text-gray-700">
+                            <th class="py-2 px-4 border-b">No.</th>
+                            <th class="py-2 px-4 border-b">GROUP</th>
+                            <th class="py-2 px-4 border-b">KODE</th>
+                            <th class="py-2 px-4 border-b">NAMA</th>
+                            <th class="py-2 px-4 border-b">VAR1</th>
+                            <th class="py-2 px-4 border-b">VAR2</th>
+                            <th class="py-2 px-4 border-b">VAR3</th>
+                            <th class="py-2 px-4 border-b">VAR4</th>
+                            <th class="py-2 px-4 border-b">VAR5</th>
+                            <th class="py-2 px-4 border-b">MATERIAL</th>
+                            <th class="py-2 px-4 border-b">VEHICLE</th>
+                            <th class="py-2 px-4 border-b">JENIS TK</th>
+                            <th class="py-2 px-4 border-b">ACTION</th>
                         </tr>
                     </thead>
                     <tbody>
-                      @foreach( $activities as $activity )
-                        <tr>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">{{ $activity->activitygroup }} - {{ $activity->group->groupname }}</td>
-                            <td class="text-center py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->activitycode }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->activityname }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->jurnalno }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var1 }} - {{ $activity->satuan1 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var2 }} - {{ $activity->satuan2 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var3 }} - {{ $activity->satuan3 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var4 }} - {{ $activity->satuan4 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->var5 }} - {{ $activity->satuan5 }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}"> {{ $activity->jenistenagakerja == 1 ? 'HARIAN' : 'BORONGAN' }}</td>
-                            <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300 w-36' }}">
-                                  <div class="flex items-center justify-center">
-                                          <button
-                                              onclick="openEditModal('{{ $activity->activitygroup }}','{{ $activity->activitycode }}', '{{ $activity->activityname }}', '{{ $activity->var1 }}', '{{ $activity->satuan1 }}', '{{ $activity->var2 }}', '{{ $activity->satuan2 }}', '{{ $activity->var3 }}', '{{ $activity->satuan3 }}', '{{ $activity->var4 }}', '{{ $activity->satuan4 }}', '{{ $activity->var5 }}', '{{ $activity->satuan5 }}', '{{ $activity->usingmaterial }}', '{{ $activity->usingvehicle }}', '{{ $activity->description }}', '{{ $activity->jenistenagakerja }}')"
-                                              class="group flex items-center edit-button"><svg
-                                                  class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                  width="24" height="24" fill="none"
-                                                  viewBox="0 0 24 24">
-                                                  <path stroke="currentColor" stroke-linecap="round"
-                                                      stroke-linejoin="round" stroke-width="2"
-                                                      d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
-                                              </svg>
-                                              <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                  width="24" height="24" fill="currentColor"
-                                                  viewBox="0 0 24 24">
-                                                  <path fill-rule="evenodd"
-                                                      d="M11.32 6.176H5c-1.105 0-2 .949-2 2.118v10.588C3 20.052 3.895 21 5 21h11c1.105 0 2-.948 2-2.118v-7.75l-3.914 4.144A2.46 2.46 0 0 1 12.81 16l-2.681.568c-1.75.37-3.292-1.263-2.942-3.115l.536-2.839c.097-.512.335-.983.684-1.352l2.914-3.086Z"
-                                                      clip-rule="evenodd" />
-                                                  <path fill-rule="evenodd"
-                                                      d="M19.846 4.318a2.148 2.148 0 0 0-.437-.692 2.014 2.014 0 0 0-.654-.463 1.92 1.92 0 0 0-1.544 0 2.014 2.014 0 0 0-.654.463l-.546.578 2.852 3.02.546-.579a2.14 2.14 0 0 0 .437-.692 2.244 2.244 0 0 0 0-1.635ZM17.45 8.721 14.597 5.7 9.82 10.76a.54.54 0 0 0-.137.27l-.536 2.84c-.07.37.239.696.588.622l2.682-.567a.492.492 0 0 0 .255-.145l4.778-5.06Z"
-                                                      clip-rule="evenodd" />
-                                              </svg>
-                                              <span class="w-0.5"></span>
-                                          </button>
-                                          <button type="button" class="group flex delete-button"
-                                              data-activitycode="{{ $activity->activitycode }}">
-                                              <svg class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                  width="24" height="24" fill="none"
-                                                  viewBox="0 0 24 24">
-                                                  <path stroke="currentColor" stroke-linecap="round"
-                                                      stroke-linejoin="round" stroke-width="2"
-                                                      d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
-                                              </svg>
-                                              <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                                  aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                  width="24" height="24" fill="currentColor"
-                                                  viewBox="0 0 24 24">
-                                                  <path fill-rule="evenodd"
-                                                      d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
-                                                      clip-rule="evenodd" />
-                                              </svg>
-                                          </button>
-                                  </div>
-                            </td>
-                        </tr>
-                      @endforeach
+                        @forelse($activities as $index => $activity)
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-4 border-b text-center">{{ $activities->firstItem() + $index }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->activitygroup }} - {{ $activity->group->groupname ?? '-' }}</td>
+                                <td class="py-2 px-4 border-b text-center">{{ $activity->activitycode }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->activityname }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->var1 ? $activity->var1 . ' - ' . $activity->satuan1 : '-' }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->var2 ? $activity->var2 . ' - ' . $activity->satuan2 : '-' }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->var3 ? $activity->var3 . ' - ' . $activity->satuan3 : '-' }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->var4 ? $activity->var4 . ' - ' . $activity->satuan4 : '-' }}</td>
+                                <td class="py-2 px-4 border-b">{{ $activity->var5 ? $activity->var5 . ' - ' . $activity->satuan5 : '-' }}</td>
+                                <td class="py-2 px-4 border-b text-center">{{ $activity->usingmaterial == 1 ? 'YA' : 'TIDAK' }}</td>
+                                <td class="py-2 px-4 border-b text-center">{{ $activity->usingvehicle == 1 ? 'YA' : 'TIDAK' }}</td>
+                                <td class="py-2 px-4 border-b text-center">{{ $activity->jenistenagakerja == 1 ? 'HARIAN' : 'BORONGAN' }}</td>
+                                <td class="py-2 px-4 border-b">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        @can('masterdata.aktivitas.edit')
+                                            <button onclick='openEditModal(@json($activity))'
+                                                class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm">
+                                                <svg class="w-6 h-6 text-blue-500 group-hover:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <use xlink:href="#icon-edit-outline"/>
+                                                </svg>
+                                                <svg class="w-6 h-6 text-blue-500 hidden group-hover:block" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                                    <use xlink:href="#icon-edit-solid"/>
+                                                </svg>
+                                            </button>
+                                        @endcan
+                                        @can('masterdata.aktivitas.delete')
+                                            <button type="button" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm delete-button"
+                                                data-activitycode="{{ $activity->activitycode }}">
+                                                <svg class="w-6 h-6 text-red-500 group-hover:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <use xlink:href="#icon-trash-outline"/>
+                                                </svg>
+                                                <svg class="w-6 h-6 text-red-500 hidden group-hover:block" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                                    <use xlink:href="#icon-trash-solid"/>
+                                                </svg>
+                                            </button>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="13" class="py-4 text-center text-gray-500">Tidak ada data</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
+
+        {{-- Pagination --}}
         <div class="mx-4 my-1">
-                <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-700">Showing <span class="font-medium"></span> of <span class="font-medium"></span> results</p>
-                </div>
+            {{ $activities->appends(['perPage' => $activities->perPage(), 'search' => $search])->links() }}
         </div>
     </div>
 
-    <div id="crud-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95" style="opacity: 0; transform: scale(0.95);">
-        <div class="relative p-4 w-full relative" style="max-width: 80rem">
-            <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700 transition-transform duration-300 ease-out transform">
-                <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">Create Data</h3>
+    {{-- Modal Form --}}
+    <div id="crud-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-gray-500 bg-opacity-75">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-4xl">
+                
+                {{-- Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900" id="modal-title">Create Data</h3>
                     <button type="button" onclick="closeModal()"
-                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white">
-                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 14 14">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                            class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        <span class="sr-only">Close modal</span>
                     </button>
                 </div>
-                <form class="p-4 md:p-5" id="crud-form" action="" method="POST">
+
+                {{-- Form --}}
+                <form id="crud-form" method="POST" class="px-6 py-4">
                     @csrf
                     <input type="hidden" id="crud-method" name="_method" value="POST">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="mb-4">
-                                <label class="block text-md">Grup Aktivitas</label>
-                                <select class="rounded-md p-2 w-full border border-gray-300" id="activitygroup" name="grupaktivitas">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Left Column --}}
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Grup Aktivitas <span class="text-red-500">*</span></label>
+                                <select name="grupaktivitas" required
+                                        class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Pilih Group --</option>
                                     @foreach($activityGroup as $group)
-                                        <option value="{{ $group->activitygroup }}" @if( old('activitygroup') == $group->activitygroup ) selected @endif>
-                                            {{ $group->activitygroup }} - {{ $group->groupname }}
-                                        </option>
+                                        <option value="{{ $group->activitygroup }}">{{ $group->activitygroup }} - {{ $group->groupname }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-md">Kode Aktivitas</label>
-                                <input type="text" name="kodeaktivitas" id="kodeaktivitas" maxlength="3"  @if(old('kodeaktivitas')) value="{{ old('kodeaktivitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Kode Aktivitas <span class="text-red-500">*</span></label>
+                                <input type="text" name="kodeaktivitas" maxlength="3" required
+                                       class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 uppercase"
+                                       placeholder="Max 3 karakter">
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-md">Nama Aktivitas</label>
-                                <input type="text" name="namaaktivitas" id="namaaktivitas" @if(old('namaaktivitas')) value="{{ old('namaaktivitas') }}" @endif class="rounded-md p-2 w-full border border-gray-300" required>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Nama Aktivitas <span class="text-red-500">*</span></label>
+                                <input type="text" name="namaaktivitas" required
+                                       class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-md">Menggunakan Material ?</label>
-                                <label><input type="radio" name="material" value="1" @if(old('material') == 1) checked @endif>Ya</label>
-                                <label><input type="radio" name="material" class="ml-6" value="0" @if(old('material') == 0) checked @else checked @endif>Tidak</label>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Keterangan</label>
+                                <textarea name="keterangan" rows="2" maxlength="150"
+                                       class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-md">Menggunakan Kendaraan ?</label>
-                                <label><input type="radio" name="vehicle" value="1" @if(old('vehicle') == 1) checked @endif>Ya</label>
-                                <label><input type="radio" name="vehicle" class="ml-6" value="0" @if(old('vehicle') == 0) checked @else checked @endif>Tidak</label>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Material? <span class="text-red-500">*</span></label>
+                                    <div class="flex gap-3">
+                                        <label class="inline-flex items-center text-sm">
+                                            <input type="radio" name="material" value="1" class="mr-1"> Ya
+                                        </label>
+                                        <label class="inline-flex items-center text-sm">
+                                            <input type="radio" name="material" value="0" checked class="mr-1"> Tidak
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Kendaraan? <span class="text-red-500">*</span></label>
+                                    <div class="flex gap-3">
+                                        <label class="inline-flex items-center text-sm">
+                                            <input type="radio" name="vehicle" value="1" class="mr-1"> Ya
+                                        </label>
+                                        <label class="inline-flex items-center text-sm">
+                                            <input type="radio" name="vehicle" value="0" checked class="mr-1"> Tidak
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-md">Jenis Tenaga Kerja</label>
-                                <label><input type="radio" name="jenistenagakerja" value="1" @if(old('jenistenagakerja') == 1) checked @else checked @endif>Harian</label>
-                                <label><input type="radio" name="jenistenagakerja" class="ml-6" value="2" @if(old('jenistenagakerja') == 2) checked @endif>Borongan</label>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Jenis TK <span class="text-red-500">*</span></label>
+                                <div class="flex gap-3">
+                                    <label class="inline-flex items-center text-sm">
+                                        <input type="radio" name="jenistenagakerja" value="1" checked class="mr-1"> Harian
+                                    </label>
+                                    <label class="inline-flex items-center text-sm">
+                                        <input type="radio" name="jenistenagakerja" value="2" class="mr-1"> Borongan
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
+                        {{-- Right Column - Variables --}}
                         <div>
-                            <div class="mb-4">
-                              <label class="block text-md">Keterangan Aktivitas</label>
-                              <input type="text" name="keterangan" id="keterangan" class="rounded-md p-2 w-full border border-gray-300" required>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs font-medium text-gray-700">Hasil Aktivitas (Max 5)</label>
+                                <button type="button" id="btn-tambah-variable"
+                                        class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Tambah
+                                </button>
                             </div>
-                            <div>
-                                <h4 class="text-2xl font-bold text-blue-800 text-center mb-4">Hasil Aktivitas</h4>
-                                <div class="div-variable">
-                                    <div class="flex flex-wrap gap-3 variable-row w-full mb-4">
-                                        <div class="flex-1 min-w-[150px] text-center">
-                                          <label class="block text-md">Var <span class="input-var">1</span></label>
-                                          <input type="text" name="var[]"
-                                                 class="rounded-md p-2 w-full border border-gray-300" required>
-                                        </div>
-
-                                        <!-- SATUAN 1 -->
-                                        <div class="flex-1 min-w-[150px] text-center">
-                                          <label class="block text-md">Satuan <span class="input-var">1</span></label>
-                                          <input type="text" name="satuan[]"
-                                                 class="rounded-md p-2 w-full border border-gray-300" required>
-                                        </div>
-
-                                        <!-- TOMBOL -->
-                                        <div class="flex items-end hidden item-end">
-                                          <button type="button" onclick="deleteAktivitasRow(this)"
-                                            class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
-                                            <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            
+                            <div class="div-variable space-y-2 max-h-80 overflow-y-auto pr-2">
+                                <div class="variable-row flex gap-2 items-start">
+                                    <div class="flex-1">
+                                        <label class="block text-xs text-gray-600 mb-1">Var <span class="input-var">1</span></label>
+                                        <input type="text" name="var[]" required
+                                               class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="block text-xs text-gray-600 mb-1">Satuan</label>
+                                        <input type="text" name="satuan[]" required
+                                               class="text-sm block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div class="pt-6 hidden item-end">
+                                        <button type="button" onclick="deleteAktivitasRow(this)"
+                                                class="text-red-600 hover:text-red-800 p-1">
+                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
-                                          </button>
-                                        </div>
-                                      </div>
-                                  </div>
-                                <div class="flex items-center gap-2 mb-4 text-center">
-                                  <button type="button" id="btn-tambah-variable"
-                                      class="bg-blue-500 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-600 flex items-center gap-2">
-                                      <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                          width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M5 12h14m-7 7V5" />
-                                      </svg>
-                                      Tambah Variable
-                                    </button>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-6 flex gap-2">
-                        <button type="submit"
-                            class="text-white inline-flex space-x-2 items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                            <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="M5 11.917 9.724 16.5 19 7.5" />
-                            </svg>
-                            <span>Save</span>
-                        </button>
+
+                    {{-- Footer --}}
+                    <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200">
                         <button type="button" onclick="closeModal()"
-                            class="text-white inline-flex space-x-2 items-center bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
-                            <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="M6 18 17.94 6M18 18 6.06 6" />
-                            </svg>
-                            <span>Cancel</span>
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            Save
                         </button>
                     </div>
                 </form>
@@ -248,199 +263,140 @@
         </div>
     </div>
 
-    <style>
-        .invisible {
-            visibility: hidden;
-            pointer-events: none;
-        }
+    {{-- Toast --}}
+    @if(session('success'))
+        <script>alert('{{ session('success') }}');</script>
+    @endif
 
-        .visible {
-            visibility: visible;
-            pointer-events: auto;
-        }
-    </style>
+    @if($errors->any())
+        <script>alert('{{ $errors->first() }}');</script>
+    @endif
 
     <script>
-        document.querySelectorAll('.delete-button').forEach(button => {
-            button.addEventListener('click', function() {
-                if (confirm('Yakin ingin menghapus data ini?')) {
-                  let activitycode = this.getAttribute('data-activitycode');
-                  fetch(`{{ route('masterdata.aktivitas.destroy', ['aktivitas' => '__activitycode__']) }}`
-                          .replace('__activitycode__', activitycode), {
-                              method: 'POST',
-                              headers: {
-                                  'X-CSRF-TOKEN': document.querySelector(
-                                          'meta[name="csrf-token"]')
-                                      .getAttribute('content'),
-                                  'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                  _method: 'DELETE'
-                              })
-                          })
-                      .then(response => response.json())
-                      .then(data => {
-                          if (data.success) {
-                              location.reload();
-                          } else {
-                              alert('Gagal menghapus data');
-                          }
-                      })
-                      .catch(error => console.error('Error:', error));
-                }
-            });
-        });
-    </script>
-    <script>
-        const modal = document.getElementById("crud-modal");
-        const form = document.getElementById("crud-form");
-        const modalTitle = document.getElementById("modal-title");
-        const crudMethod = document.getElementById("crud-method");
+        const modal = document.getElementById('crud-modal');
+        const form = document.getElementById('crud-form');
 
         function openCreateModal() {
             resetRow();
             resetForm();
-            modal.classList.remove("invisible");
-            modal.classList.add("visible");
-            modalTitle.textContent = "Create Data";
+            document.getElementById('modal-title').textContent = "Create Data";
             form.action = "{{ route('masterdata.aktivitas.store') }}";
-            crudMethod.value = "POST";
+            document.getElementById('crud-method').value = "POST";
             form.querySelector('input[name="kodeaktivitas"]').removeAttribute('readonly');
-            setTimeout(() => {
-                modal.style.opacity = "1";
-                modal.style.transform = "scale(1)";
-            }, 50);
+            modal.classList.remove('hidden');
         }
 
         function closeModal() {
-            modal.style.opacity = "0";
-            modal.style.transform = "scale(0.95)";
-
-            setTimeout(() => {
-                modal.classList.add("invisible");
-                modal.classList.remove("visible");
-            }, 300);
+            modal.classList.add('hidden');
         }
 
-        function openEditModal(activitygroup,activitycode,activityname,var1,satuan1,var2,satuan2,var3,satuan3,var4,satuan4,var5,satuan5,usingmaterial,usingvehicle,keterangan,jenistenagakerja) {
+        function openEditModal(activity) {
             resetRow();
-            modal.classList.remove("invisible");
-            modal.classList.add("visible");
-            modalTitle.textContent = "Edit Data";
-            var editRoute = "{{ route('masterdata.aktivitas.update', ['aktivitas' => '__activitycode__']) }}";
-            const form = $('#crud-form');
-            form.attr('action', editRoute.replace('__activitycode__', activitycode));
-            form.find('input[name="kodeaktivitas"]').attr('readonly','true');
-            form.find('input[name="_method"]').val('PUT');
-            form.find('select[name="grupaktivitas"]').val(activitygroup).trigger('change');
-            form.find('input[name="kodeaktivitas"]').val(activitycode)
-            form.find('input[name="namaaktivitas"]').val(activityname)
+            resetForm();
+            document.getElementById('modal-title').textContent = "Edit Data";
             
-            if( usingmaterial == 1 ){
-              form.find('input[name="material"][value="1"]').prop('checked', true)
-            }else{
-              form.find('input[name="material"][value="0"]').prop('checked', true)
-            }
-
-            if( usingvehicle == 1 ){
-              form.find('input[name="vehicle"][value="1"]').prop('checked', true)
-            }else{
-              form.find('input[name="vehicle"][value="0"]').prop('checked', true)
-            }
+            const editRoute = "{{ route('masterdata.aktivitas.update', ['aktivitas' => '__activitycode__']) }}";
+            form.action = editRoute.replace('__activitycode__', activity.activitycode);
+            document.getElementById('crud-method').value = 'PUT';
             
-            if( jenistenagakerja == 1 ){
-              form.find('input[name="jenistenagakerja"][value="1"]').prop('checked', true)
-            }else{
-              form.find('input[name="jenistenagakerja"][value="2"]').prop('checked', true)
-            }
+            form.querySelector('select[name="grupaktivitas"]').value = activity.activitygroup;
+            form.querySelector('input[name="kodeaktivitas"]').value = activity.activitycode;
+            form.querySelector('input[name="kodeaktivitas"]').setAttribute('readonly', 'true');
+            form.querySelector('input[name="namaaktivitas"]').value = activity.activityname;
+            form.querySelector('textarea[name="keterangan"]').value = activity.description || '';
             
-            form.find('input[name="keterangan"]').val(keterangan)
-            form.find('input[name="var[]"]').eq(0).val(var1)
-            form.find('input[name="satuan[]"]').eq(0).val(satuan1)
+            form.querySelector(`input[name="material"][value="${activity.usingmaterial}"]`).checked = true;
+            form.querySelector(`input[name="vehicle"][value="${activity.usingvehicle}"]`).checked = true;
+            form.querySelector(`input[name="jenistenagakerja"][value="${activity.jenistenagakerja}"]`).checked = true;
             
-            if( var2 != '' ){
-              $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(1).val(var2)
-              form.find('input[name="satuan[]"]').eq(1).val(satuan2)
-            }
-            if( var3 != '' ){
-              $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(2).val(var3)
-              form.find('input[name="satuan[]"]').eq(2).val(satuan3)
-            }
-
-            if( var4 != '' ){
-              $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(3).val(var4)
-              form.find('input[name="satuan[]"]').eq(3).val(satuan4)
-            }
-
-            if( var5 != '' ){
-              $('#btn-tambah-variable').click();
-              form.find('input[name="var[]"]').eq(4).val(var5)
-              form.find('input[name="satuan[]"]').eq(4).val(satuan5)
-            }
-
-            setTimeout(() => {
-                modal.style.opacity = "1";
-                modal.style.transform = "scale(1)";
-            }, 50);
+            const vars = [
+                {var: activity.var1, satuan: activity.satuan1},
+                {var: activity.var2, satuan: activity.satuan2},
+                {var: activity.var3, satuan: activity.satuan3},
+                {var: activity.var4, satuan: activity.satuan4},
+                {var: activity.var5, satuan: activity.satuan5}
+            ];
+            
+            vars.forEach((item, index) => {
+                if (item.var) {
+                    if (index > 0) document.getElementById('btn-tambah-variable').click();
+                    form.querySelectorAll('input[name="var[]"]')[index].value = item.var;
+                    form.querySelectorAll('input[name="satuan[]"]')[index].value = item.satuan;
+                }
+            });
+            
+            modal.classList.remove('hidden');
         }
 
-        function resetRow()
-        {
-          $('.variable-row').each(function(i, v){
-            if( i > 0 ){
-              $('.variable-row').eq(i).remove();
+        function resetRow() {
+            const rows = document.querySelectorAll('.variable-row');
+            rows.forEach((row, index) => { if (index > 0) row.remove(); });
+        }
+
+        function resetForm() {
+            form.reset();
+            form.querySelector('input[name="material"][value="0"]').checked = true;
+            form.querySelector('input[name="vehicle"][value="0"]').checked = true;
+            form.querySelector('input[name="jenistenagakerja"][value="1"]').checked = true;
+        }
+
+        document.getElementById('btn-tambah-variable').addEventListener('click', function() {
+            const rows = document.querySelectorAll('.variable-row');
+            if (rows.length < 5) {
+                const firstRow = document.querySelector('.variable-row');
+                const newRow = firstRow.cloneNode(true);
+                newRow.querySelector('.item-end').classList.remove('hidden');
+                newRow.querySelectorAll('input').forEach(input => input.value = '');
+                const count = rows.length + 1;
+                newRow.querySelectorAll('.input-var').forEach(span => span.textContent = count);
+                document.querySelector('.div-variable').appendChild(newRow);
+            } else {
+                alert('Maksimal 5 variable hasil aktivitas');
             }
-          })
+        });
+
+        function deleteAktivitasRow(btn) {
+            btn.closest('.variable-row').remove();
+            document.querySelectorAll('.variable-row').forEach((row, index) => {
+                row.querySelectorAll('.input-var').forEach(span => span.textContent = index + 1);
+            });
         }
 
-        function resetForm()
-        {
-            const form = $('#crud-form');
-            form[0].reset();
-            form.find('input[name="material"][value="0"]').prop('checked', true);
-            form.find('input[name="vehicle"][value="0"]').prop('checked', true);
-            form.find('input[name="jenistenagakerja"][value="1"]').prop('checked', true);
-        }
-
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const inputElement = document.getElementById("perPage");
-
-            inputElement.addEventListener("input", (event) => {
-                event.target.value = event.target.value.replace(/[^0-9]/g, '');
+        document.querySelectorAll('.delete-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (confirm('Yakin ingin menghapus data ini?')) {
+                    const activitycode = this.getAttribute('data-activitycode');
+                    const deleteRoute = "{{ route('masterdata.aktivitas.destroy', ['aktivitas' => '__activitycode__']) }}";
+                    
+                    fetch(deleteRoute.replace('__activitycode__', activitycode), {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({_method: 'DELETE'})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) location.reload();
+                        else alert(data.message || 'Gagal menghapus data');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Terjadi kesalahan saat menghapus data');
+                    });
+                }
             });
         });
 
-        $('#btn-tambah-variable').click(function(){
-          if( $('.variable-row').length < 5 ){
-            var temp = $('.div-variable .variable-row').first().clone();
-            $(temp).find('.item-end').removeClass('hidden');
-            $(temp).find('input').val('')
-            var count = $('.div-variable .variable-row').length+1;
-            $(temp).find('.input-var').html(count);
-            $('.div-variable').append(temp);
-          }else{
-            alert('Maximal 5, apabila membutuhkan lebih, hubungi IT');
-          }
+        // Auto uppercase
+        form.querySelector('input[name="kodeaktivitas"]').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
         });
 
-        function deleteAktivitasRow(div)
-        {
-          $(div).parent().parent().remove();
-          setVariableLable()
-        }
-
-
-        function setVariableLable()
-        {
-          let counter = $('.div-variable .variable-row').length;
-          $('.variable-row').each(function(i, v){
-            $(this).find('.input-var').html(i+1)
-          })
-        }
+        // Close modal on backdrop click
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
     </script>
-
 </x-layout>
