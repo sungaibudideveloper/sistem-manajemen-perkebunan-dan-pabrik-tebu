@@ -4,6 +4,7 @@ namespace App\Services\Transaction\RencanaKerjaHarian\Generator;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 /**
