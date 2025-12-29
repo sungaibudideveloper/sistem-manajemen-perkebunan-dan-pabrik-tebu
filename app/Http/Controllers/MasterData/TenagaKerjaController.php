@@ -333,7 +333,6 @@ class TenagaKerjaController extends Controller
                 // Check if mandor exists
                 $mandorExists = User::where('userid', $mandoruserid)
                     ->where('idjabatan', 5)
-                    ->where('companycode', $companycode)
                     ->exists();
 
                 if (!$mandorExists) {
@@ -419,9 +418,6 @@ class TenagaKerjaController extends Controller
                 'size:16',
                 'regex:/^[0-9]{16}$/',
             ],
-            'mandor' => 'required|exists:user,userid',
-            'gender' => 'required|in:L,P',
-            'jenis' => 'required|exists:jenistenagakerja,idjenistenagakerja',
         ], [
             'nik.size' => 'NIK harus 16 digit',
             'nik.regex' => 'NIK harus berisi angka saja',
@@ -472,7 +468,7 @@ class TenagaKerjaController extends Controller
      * Update the specified tenaga kerja in storage.
      */
     public function update(Request $request, $companycode, $id)
-    {
+    {dd($request->all());
         $tenagaKerja = TenagaKerja::where('companycode', $companycode)
             ->where('tenagakerjaid', $id)
             ->firstOrFail();
@@ -485,10 +481,6 @@ class TenagaKerjaController extends Controller
                 'size:16',
                 'regex:/^[0-9]{16}$/',
             ],
-            'mandor' => 'required|exists:user,userid',
-            'gender' => 'required|in:L,P',
-            'jenis' => 'required|exists:jenistenagakerja,idjenistenagakerja',
-            'isactive' => 'nullable|boolean'
         ], [
             'nik.size' => 'NIK harus 16 digit',
             'nik.regex' => 'NIK harus berisi angka saja',
