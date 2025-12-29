@@ -433,7 +433,10 @@ class ApprovalController extends Controller
 
     private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
     {
-        Log::info("STEP 0: Checking RKH approval status", ['rkhno' => $rkhno]);
+        Log::info("STEP 0: Checking RKH approval status", [
+            'rkhno' => $rkhno,
+            'companycode' => $companycode
+        ]);
         
         $updatedRkh = DB::table('rkhhdr')
             ->where('companycode', $companycode)
@@ -446,7 +449,11 @@ class ApprovalController extends Controller
         }
 
         // STEP 1: Generate LKH
-        Log::info("STEP 1: Starting LKH generation", ['rkhno' => $rkhno]);
+        Log::info("STEP 1: Starting LKH generation", [
+            'rkhno' => $rkhno,
+            'companycode' => $companycode
+        ]);
+        
         try {
             $lkhGenerator = new LkhGeneratorService();
             $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
@@ -470,7 +477,11 @@ class ApprovalController extends Controller
         }
         
         // STEP 2: Handle Planting Activities
-        Log::info("STEP 2: Checking planting activities", ['rkhno' => $rkhno]);
+        Log::info("STEP 2: Checking planting activities", [
+            'rkhno' => $rkhno,
+            'companycode' => $companycode
+        ]);
+        
         if ($this->hasPlantingActivities($rkhno, $companycode)) {
             try {
                 Log::info("STEP 2: Starting batch creation for planting", ['rkhno' => $rkhno]);
@@ -494,14 +505,23 @@ class ApprovalController extends Controller
         }
         
         // STEP 3: Generate Material Usage
-        Log::info("STEP 3: Checking material usage requirements", ['rkhno' => $rkhno]);
+        Log::info("STEP 3: Checking material usage requirements", [
+            'rkhno' => $rkhno,
+            'companycode' => $companycode
+        ]);
+        
         $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
         
         if ($needsMaterialUsage) {
             try {
-                Log::info("STEP 3: Starting material usage generation", ['rkhno' => $rkhno]);
+                Log::info("STEP 3: Starting material usage generation", [
+                    'rkhno' => $rkhno,
+                    'companycode' => $companycode
+                ]);
+                
                 $materialUsageGenerator = new MaterialUsageGeneratorService();
-                $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+                // PASS COMPANYCODE EXPLICITLY
+                $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno, $companycode);
                 
                 if (!$materialResult['success']) {
                     throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message']);

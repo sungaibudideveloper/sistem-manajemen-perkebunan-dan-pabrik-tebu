@@ -20,30 +20,49 @@ class MaterialUsageGeneratorService
     /**
      * Generate material usage data from approved RKH
      */
-    public function generateMaterialUsageFromRkh($rkhno)
+    public function generateMaterialUsageFromRkh($rkhno, $companycode = null)
     {
         try {
             Log::info("===== MaterialUsageGenerator START =====", [
                 'rkhno' => $rkhno,
+                'companycode_param' => $companycode,
                 'timestamp' => now()->toDateTimeString()
             ]);
             
-            // Step 1: Get RKH header data
-            Log::info("Step 1: Fetching RKH header", ['rkhno' => $rkhno]);
+            // PENTING: Gunakan companycode dari parameter
+            if (!$companycode) {
+                $companycode = session('companycode');
+            }
+            
+            if (!$companycode) {
+                throw new \Exception("Company code tidak ditemukan");
+            }
+            
+            Log::info("Using company code from parameter/session", ['companycode' => $companycode]);
+            
+            // Step 1: Get RKH header data - WITH COMPANYCODE FILTER
+            Log::info("Step 1: Fetching RKH header", [
+                'rkhno' => $rkhno,
+                'companycode' => $companycode
+            ]);
             
             $rkhHeader = DB::table('rkhhdr')
                 ->where('rkhno', $rkhno)
+                ->where('companycode', $companycode)  // PENTING: Filter by companycode
                 ->first();
                 
             if (!$rkhHeader) {
-                Log::error("Step 1 FAILED: RKH not found", ['rkhno' => $rkhno]);
-                throw new \Exception("RKH tidak ditemukan: {$rkhno}");
+                Log::error("Step 1 FAILED: RKH not found", [
+                    'rkhno' => $rkhno,
+                    'companycode' => $companycode
+                ]);
+                throw new \Exception("RKH tidak ditemukan: {$rkhno} untuk company {$companycode}");
             }
             
-            $companycode = $rkhHeader->companycode;
+            // Gunakan companycode dari parameter, BUKAN dari header
             Log::info("Step 1 SUCCESS: RKH header found", [
                 'rkhno' => $rkhno,
-                'companycode' => $companycode,
+                'companycode_used' => $companycode,
                 'rkhdate' => $rkhHeader->rkhdate,
                 'mandorid' => $rkhHeader->mandorid
             ]);
@@ -225,13 +244,12 @@ class MaterialUsageGeneratorService
                     "No matching material configuration found (check herbisidagroup and herbisidadosage data)" : 
                     implode('; ', $errors);
                     
-                Log::error("Step 9 WARNING: No items generated", [
+                Log::warning("Step 9 WARNING: No items generated", [
                     'error_detail' => $errorDetail,
                     'errors' => $errors
                 ]);
                 
-                // Don't throw error, just return success with 0 items
-                // This might happen if herbisida configuration is not complete
+                // Return success with 0 items (don't throw error)
                 return [
                     'success' => true,
                     'message' => 'Material usage header created but no items generated (check herbisida configuration)',
@@ -265,26 +283,11 @@ class MaterialUsageGeneratorService
         } catch (\Exception $e) {
             Log::error("===== MaterialUsageGenerator FAILED =====", [
                 'rkhno' => $rkhno,
+                'companycode' => $companycode ?? 'unknown',
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
-            // Cleanup header if exists and error occurred
-            try {
-                if (isset($companycode) && isset($rkhno)) {
-                    $deleted = DB::table('usematerialhdr')
-                        ->where('companycode', $companycode)
-                        ->where('rkhno', $rkhno)
-                        ->delete();
-                        
-                    if ($deleted) {
-                        Log::info("Cleanup: Header deleted due to error");
-                    }
-                }
-            } catch (\Exception $cleanupError) {
-                Log::error("Cleanup failed", ['error' => $cleanupError->getMessage()]);
-            }
             
             throw $e;
         }
