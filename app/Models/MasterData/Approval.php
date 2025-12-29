@@ -11,13 +11,14 @@ class Approval extends Model
     public $timestamps = false;
 
     protected $primaryKey = 'id';
-    public $incrementing = false;
+    public $incrementing = true;
     protected $keyType = 'int';
 
     protected $fillable = [
         'id',
         'companycode',
         'category',
+        'activitygroup',
         'jumlahapproval',
         'idjabatanapproval1',
         'idjabatanapproval2',
@@ -29,6 +30,7 @@ class Approval extends Model
     ];
 
     protected $casts = [
+        'id' => 'integer',
         'jumlahapproval' => 'integer',
         'idjabatanapproval1' => 'integer',
         'idjabatanapproval2' => 'integer',
@@ -37,14 +39,22 @@ class Approval extends Model
         'updatedat' => 'datetime',
     ];
 
+    // Relationships
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'companycode', 'companycode');
+    }
+
     public function jabatanApproval1()
     {
         return $this->belongsTo(Jabatan::class, 'idjabatanapproval1', 'idjabatan');
     }
+
     public function jabatanApproval2()
     {
         return $this->belongsTo(Jabatan::class, 'idjabatanapproval2', 'idjabatan');
     }
+
     public function jabatanApproval3()
     {
         return $this->belongsTo(Jabatan::class, 'idjabatanapproval3', 'idjabatan');
