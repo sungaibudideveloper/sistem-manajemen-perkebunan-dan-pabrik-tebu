@@ -7,9 +7,12 @@
       open: @json($errors->any()),
       mode: '{{ old('category') ? 'edit' : 'create' }}',
       form: {
-        companycode: 'TBL1',
-        activitycode: '',
-        jumlahapproval: '',
+        companycode: '',
+        companycodeoriginal: '',
+        category: '',
+        categoryoriginal: '',
+        activitygroup: '',
+        jumlahapproval: '1',
         idjabatanapproval1: '',
         idjabatanapproval2: '',
         idjabatanapproval3: ''
@@ -17,16 +20,35 @@
       resetForm() {
         this.mode = 'create';
         this.form = {
-          companycode: 'TBL1',
-          activitycode: '',
-          jumlahapproval: '',
+          companycode: '',
+          companycodeoriginal: '',
+          category: '',
+          categoryoriginal: '',
+          activitygroup: '',
+          jumlahapproval: '1',
           idjabatanapproval1: '',
           idjabatanapproval2: '',
           idjabatanapproval3: ''
         };
         this.open = true;
+      },
+      get showJabatan2() {
+        return parseInt(this.form.jumlahapproval) >= 2;
+      },
+      get showJabatan3() {
+        return parseInt(this.form.jumlahapproval) === 3;
       }
     }"
+    x-init="
+      if ({{ $errors->any() ? 'true' : 'false' }}) {
+        form.category = '{{ old('category') }}';
+        form.activitygroup = '{{ old('activitygroup') }}';
+        form.jumlahapproval = '{{ old('jumlahapproval', '1') }}';
+        form.idjabatanapproval1 = '{{ old('idjabatanapproval1') }}';
+        form.idjabatanapproval2 = '{{ old('idjabatanapproval2') }}';
+        form.idjabatanapproval3 = '{{ old('idjabatanapproval3') }}';
+      }
+    "
     class="mx-auto py-1 bg-white rounded-md shadow-md">
 
     <div class="flex items-center justify-between px-4 py-2">
@@ -44,6 +66,7 @@
       <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2">
         <label for="search" class="text-xs font-medium text-gray-700">Search:</label>
         <input type="text" name="search" id="search" value="{{ request('search') }}"
+               placeholder="Category atau Activity Group"
                class="text-xs mt-1 block w-64 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                onkeydown="if(event.key==='Enter') this.form.submit()">
       </form>
@@ -76,72 +99,90 @@
 
             <form method="POST"
                   :action="mode === 'edit'
-                    ? '{{ url('masterdata/approval') }}/' + form.companycodeoriginal + '/' + form.categoryoriginal
+                    ? '{{ url('masterdata/approval') }}/' + form.companycodeoriginal + '/' + encodeURIComponent(form.categoryoriginal)
                     : '{{ url('masterdata/approval') }}'"
                   class="bg-white px-4 pt-2 pb-4 sm:p-6 sm:pt-1 sm:pb-4 space-y-6">
               @csrf
               <template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PATCH"></template>
+              
               <div class="text-center sm:text-left">
                 <h3 class="text-lg font-medium text-gray-900" id="modal-title"
                     x-text="mode==='edit' ? 'Edit Approval' : 'Create Approval'"></h3>
                 <div class="mt-4 space-y-4">
-                  
-                  <div>
-                    <label for="companycode" class="block text-sm font-medium text-gray-700">Company Code</label>
-                    <select name="companycode" id="companycode" x-model="form.companycode" x-init="form.companycode = '{{ old('companycode') }}'"
-                            class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                      <option value="TBL1">TBL1</option>
-                      <option value="TBL2">TBL2</option>
-                      <option value="TBL3">TBL3</option>
-                    </select>
-                  </div>
 
                   <div>
-                    <label for="activitycode" class="block text-sm font-medium text-gray-700">Category</label>
-                    <input type="text" name="category" id="category" x-model="form.category" x-init="form.category = '{{ old('category') }}'"
+                    <label for="category" class="block text-sm font-medium text-gray-700">Category <span class="text-red-500">*</span></label>
+                    <input type="text" name="category" id="category" x-model="form.category" 
                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                           maxlength="50" required>
-                    @error('category')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                           maxlength="150" required>
+                    @error('category')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                   </div>
 
                   <div>
-                    <label for="jumlahapproval" class="block text-sm font-medium text-gray-700">Jumlah Approval</label>
-                    <input type="number" name="jumlahapproval" id="jumlahapproval" x-model="form.jumlahapproval" x-init="form.jumlahapproval = '{{ old('jumlahapproval') }}'"
+                    <label for="activitygroup" class="block text-sm font-medium text-gray-700">Activity Group</label>
+                    <input type="text" name="activitygroup" id="activitygroup" x-model="form.activitygroup"
+                           placeholder="Contoh: I, II, III, IV (opsional)"
                            class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                           min="1" value="1" required>
-                    @error('jumlahapproval')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                           maxlength="5">
+                    @error('activitygroup')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                   </div>
 
-                  <div class="grid grid-cols-3 gap-4">
+                  <div>
+                    <label for="jumlahapproval" class="block text-sm font-medium text-gray-700">Jumlah Approval <span class="text-red-500">*</span></label>
+                    <select name="jumlahapproval" id="jumlahapproval" x-model="form.jumlahapproval"
+                            class="mt-1 block w-1/3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            required>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                    </select>
+                    @error('jumlahapproval')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                  </div>
+
+                  <div class="space-y-3">
                     <div>
-                      <label for="idjabatanapproval1" class="block text-sm font-medium text-gray-700">Jabatan 1</label>
-                      <select name="idjabatanapproval1" id="idjabatanapproval1" x-model="form.idjabatanapproval1" x-init="form.idjabatanapproval1 = '{{ old('idjabatanapproval1') }}'"
-                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                             <option value="">-</option>
-                             @foreach( $jabatan as $item )
-                             <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
-                             @endforeach
+                      <label for="idjabatanapproval1" class="block text-sm font-medium text-gray-700">
+                        Jabatan Approval 1 <span class="text-red-500">*</span>
+                      </label>
+                      <select name="idjabatanapproval1" id="idjabatanapproval1" x-model="form.idjabatanapproval1"
+                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                             required>
+                        <option value="">-- Pilih Jabatan --</option>
+                        @foreach($jabatan as $item)
+                          <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                        @endforeach
                       </select>
+                      @error('idjabatanapproval1')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
-                    <div>
-                      <label for="idjabatanapproval2" class="block text-sm font-medium text-gray-700">Jabatan 2</label>
-                      <select name="idjabatanapproval2" id="idjabatanapproval2" x-model="form.idjabatanapproval2" x-init="form.idjabatanapproval2 = '{{ old('idjabatanapproval2') }}'"
-                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                               <option value="">-</option>
-                               @foreach( $jabatan as $item )
-                               <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
-                               @endforeach
+
+                    <div x-show="showJabatan2">
+                      <label for="idjabatanapproval2" class="block text-sm font-medium text-gray-700">
+                        Jabatan Approval 2 <span x-show="showJabatan2" class="text-red-500">*</span>
+                      </label>
+                      <select name="idjabatanapproval2" id="idjabatanapproval2" x-model="form.idjabatanapproval2"
+                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                             :required="showJabatan2">
+                        <option value="">-- Pilih Jabatan --</option>
+                        @foreach($jabatan as $item)
+                          <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                        @endforeach
                       </select>
+                      @error('idjabatanapproval2')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
-                    <div>
-                      <label for="idjabatanapproval3" class="block text-sm font-medium text-gray-700">Jabatan 3</label>
-                      <select name="idjabatanapproval3" id="idjabatanapproval3" x-model="form.idjabatanapproval3" x-init="form.idjabatanapproval3 = '{{ old('idjabatanapproval3') }}'"
-                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                               <option value="">-</option>
-                               @foreach( $jabatan as $item )
-                               <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
-                               @endforeach
+
+                    <div x-show="showJabatan3">
+                      <label for="idjabatanapproval3" class="block text-sm font-medium text-gray-700">
+                        Jabatan Approval 3 <span x-show="showJabatan3" class="text-red-500">*</span>
+                      </label>
+                      <select name="idjabatanapproval3" id="idjabatanapproval3" x-model="form.idjabatanapproval3"
+                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                             :required="showJabatan3">
+                        <option value="">-- Pilih Jabatan --</option>
+                        @foreach($jabatan as $item)
+                          <option value="{{ $item->idjabatan }}">{{ $item->namajabatan }}</option>
+                        @endforeach
                       </select>
+                      @error('idjabatanapproval3')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                   </div>
 
@@ -172,9 +213,9 @@
           <thead>
             <tr class="bg-gray-100 text-gray-700">
               <th class="py-2 px-4 border-b">No.</th>
-              <th class="py-2 px-4 border-b">Company Code</th>
+              <th class="py-2 px-4 border-b">Activity Group</th>
               <th class="py-2 px-4 border-b">Category</th>
-              <th class="py-2 px-4 border-b">Jumlah Approval</th>
+              <th class="py-2 px-4 border-b">Jumlah</th>
               <th class="py-2 px-4 border-b">Approval 1</th>
               <th class="py-2 px-4 border-b">Approval 2</th>
               <th class="py-2 px-4 border-b">Approval 3</th>
@@ -182,46 +223,44 @@
             </tr>
           </thead>
           <tbody>
-            @foreach($approval as $index => $data)
+            @forelse($approval as $index => $data)
               <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border-b">{{ $approval->firstItem() + $index }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->category }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->jumlahapproval }} </td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval1 }} - {{ optional($data->jabatanApproval1)->namajabatan }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval2 }} - {{ optional($data->jabatanApproval2)->namajabatan }}</td>
-                <td class="py-2 px-4 border-b">{{ $data->idjabatanapproval3 }} - {{ optional($data->jabatanApproval3)->namajabatan }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->activitygroup ?? '-' }}</td>
+                <td class="py-2 px-4 border-b text-left">{{ $data->category }}</td>
+                <td class="py-2 px-4 border-b">{{ $data->jumlahapproval }}</td>
+                <td class="py-2 px-4 border-b text-left">{{ optional($data->jabatanApproval1)->namajabatan ?? '-' }}</td>
+                <td class="py-2 px-4 border-b text-left">{{ optional($data->jabatanApproval2)->namajabatan ?? '-' }}</td>
+                <td class="py-2 px-4 border-b text-left">{{ optional($data->jabatanApproval3)->namajabatan ?? '-' }}</td>
                 <td class="py-2 px-4 border-b">
                   <div class="flex items-center justify-center space-x-2">
                     @can('masterdata.approval.edit')
                       <button @click="
                         mode='edit';
                         form.companycodeoriginal='{{ $data->companycode }}';
-                        form.companycode='{{ $data->companycode }}';
                         form.categoryoriginal='{{ $data->category }}';
                         form.category='{{ $data->category }}';
+                        form.activitygroup='{{ $data->activitygroup }}';
                         form.jumlahapproval='{{ $data->jumlahapproval }}';
                         form.idjabatanapproval1='{{ $data->idjabatanapproval1 }}';
                         form.idjabatanapproval2='{{ $data->idjabatanapproval2 }}';
                         form.idjabatanapproval3='{{ $data->idjabatanapproval3 }}';
                         open=true"
-                        class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm"
-                        >
+                        class="group flex items-center text-blue-600 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1 text-sm">
                         <svg class="w-6 h-6 text-blue-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <use xlink:href="#icon-edit-outline"/>
                         </svg>
                         <svg class="w-6 h-6 text-blue-500 hidden group-hover:block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                          <use xlink:href="#icon-edit-solid"/> <use xlink:href="#icon-edit-solid2" />
+                          <use xlink:href="#icon-edit-solid"/>
                         </svg>
                       </button>
                     @endcan
                     @can('masterdata.approval.delete')
-                      <form method="POST" action="{{ url('masterdata/approval/'.$data->companycode.'/'.$data->category) }}"
+                      <form method="POST" action="{{ url('masterdata/approval/'.$data->companycode.'/'.urlencode($data->category)) }}"
                             onsubmit="return confirm('Yakin ingin menghapus data ini?');">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm"
-                        >
+                        <button type="submit" class="group flex items-center text-red-600 hover:text-red-800 focus:ring-2 focus:ring-red-500 rounded-md px-2 py-1 text-sm">
                           <svg class="w-6 h-6 text-red-500 group-hover:hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <use xlink:href="#icon-trash-outline"/>
                           </svg>
@@ -234,7 +273,11 @@
                   </div>
                 </td>
               </tr>
-            @endforeach
+            @empty
+              <tr>
+                <td colspan="8" class="py-4 text-center text-gray-500">Tidak ada data</td>
+              </tr>
+            @endforelse
           </tbody>
         </table>
       </div>
