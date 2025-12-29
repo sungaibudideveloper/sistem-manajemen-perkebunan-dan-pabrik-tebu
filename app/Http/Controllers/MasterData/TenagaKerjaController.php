@@ -468,7 +468,7 @@ class TenagaKerjaController extends Controller
      * Update the specified tenaga kerja in storage.
      */
     public function update(Request $request, $companycode, $id)
-    {dd($request->all());
+    {
         $tenagaKerja = TenagaKerja::where('companycode', $companycode)
             ->where('tenagakerjaid', $id)
             ->firstOrFail();
