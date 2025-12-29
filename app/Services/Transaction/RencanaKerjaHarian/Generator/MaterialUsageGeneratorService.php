@@ -21,115 +21,110 @@ class MaterialUsageGeneratorService
      * Generate material usage data from approved RKH
      */
     public function generateMaterialUsageFromRkh($rkhno)
-    {
-        try {
-            DB::beginTransaction();
+{
+    try {
+        // Get RKH header data
+        $rkhHeader = DB::table('rkhhdr')
+            ->where('rkhno', $rkhno)
+            ->first();
             
-            // Get RKH header data
-            $rkhHeader = DB::table('rkhhdr')
-                ->where('rkhno', $rkhno)
-                ->first();
-                
-            if (!$rkhHeader) {
-                throw new \Exception("RKH tidak ditemukan: {$rkhno}");
-            }
+        if (!$rkhHeader) {
+            throw new \Exception("RKH tidak ditemukan: {$rkhno}");
+        }
+        
+        $companycode = $rkhHeader->companycode;
+        
+        // Check if material usage already exists
+        $existingUsage = DB::table('usematerialhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->first();
             
-            $companycode = $rkhHeader->companycode;
+        if ($existingUsage) {
+            throw new \Exception("Material usage sudah pernah di-generate untuk RKH: {$rkhno}");
+        }
+        
+        // Get LKH list untuk RKH ini
+        $lkhList = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->get();
             
-            // Check if material usage already exists
-            $existingUsage = DB::table('usematerialhdr')
-                ->where('companycode', $companycode)
-                ->where('rkhno', $rkhno)
-                ->first();
-                
-            if ($existingUsage) {
-                throw new \Exception("Material usage sudah pernah di-generate untuk RKH: {$rkhno}");
-            }
+        if ($lkhList->isEmpty()) {
+            throw new \Exception("Tidak ada LKH ditemukan untuk RKH: {$rkhno}. Generate LKH terlebih dahulu.");
+        }
+        
+        // Get RKH details that use material
+        $rkhDetails = DB::table('rkhlst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('usingmaterial', 1)
+            ->get();
             
-            // Get LKH list untuk RKH ini
-            $lkhList = DB::table('lkhhdr')
-                ->where('companycode', $companycode)
-                ->where('rkhno', $rkhno)
-                ->get();
-                
-            if ($lkhList->isEmpty()) {
-                throw new \Exception("Tidak ada LKH ditemukan untuk RKH: {$rkhno}. Generate LKH terlebih dahulu.");
-            }
-            
-            // Get RKH details that use material
-            $rkhDetails = DB::table('rkhlst')
-                ->where('companycode', $companycode)
-                ->where('rkhno', $rkhno)
-                ->where('usingmaterial', 1)
-                ->get();
-                
-            if ($rkhDetails->isEmpty()) {
-                return [
-                    'success' => true,
-                    'message' => 'Tidak ada aktivitas yang menggunakan material',
-                    'total_items' => 0
-                ];
-            }
-            
-            // Calculate total luas for header
-            $totalLuas = $rkhDetails->sum('luasarea');
-            
-            // Create material usage header
-            DB::table('usematerialhdr')->insert([
-                'companycode' => $companycode,
-                'rkhno' => $rkhno,
-                'totalluas' => $totalLuas,
-                'flagstatus' => 'ACTIVE',
-                'inputby' => auth()->user()->userid ?? 'system',
-                'createdat' => now(),
-                'updateby' => null,
-                'updatedat' => null
-            ]);
-            
-            $totalItemsInserted = 0;
-            $errors = [];
-            
-            // Process each LKH
-            foreach ($lkhList as $lkh) {
-                try {
-                    $itemsInserted = $this->processLkhMaterialUsagePerPlot($lkh, $companycode, $rkhno, $rkhDetails);
-                    $totalItemsInserted += $itemsInserted;
-                    
-                } catch (\Exception $e) {
-                    $errors[] = "Error processing LKH {$lkh->lkhno}: " . $e->getMessage();
-                }
-            }
-            
-            if ($totalItemsInserted === 0) {
-                $errorDetail = empty($errors) ? "No matching material configuration found" : implode('; ', $errors);
-                throw new \Exception("Tidak ada item material yang berhasil di-generate. Details: " . $errorDetail);
-            }
-            
-            DB::commit();
-            
-            $message = "Material usage berhasil di-generate per plot ({$totalItemsInserted} items)";
-            if (!empty($errors)) {
-                $message .= ". Warnings: " . implode('; ', $errors);
-            }
-            
+        if ($rkhDetails->isEmpty()) {
             return [
                 'success' => true,
-                'message' => $message,
-                'total_items' => $totalItemsInserted,
-                'total_lkh_processed' => $lkhList->count(),
-                'errors' => $errors
-            ];
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return [
-                'success' => false,
-                'message' => 'Gagal generate material usage: ' . $e->getMessage(),
+                'message' => 'Tidak ada aktivitas yang menggunakan material',
                 'total_items' => 0
             ];
         }
+        
+        // Calculate total luas for header
+        $totalLuas = $rkhDetails->sum('luasarea');
+        
+        // Create material usage header
+        DB::table('usematerialhdr')->insert([
+            'companycode' => $companycode,
+            'rkhno' => $rkhno,
+            'totalluas' => $totalLuas,
+            'flagstatus' => 'ACTIVE',
+            'inputby' => auth()->user()->userid ?? 'system',
+            'createdat' => now(),
+            'updateby' => null,
+            'updatedat' => null
+        ]);
+        
+        $totalItemsInserted = 0;
+        $errors = [];
+        
+        // Process each LKH
+        foreach ($lkhList as $lkh) {
+            try {
+                $itemsInserted = $this->processLkhMaterialUsagePerPlot($lkh, $companycode, $rkhno, $rkhDetails);
+                $totalItemsInserted += $itemsInserted;
+                
+            } catch (\Exception $e) {
+                $errors[] = "Error processing LKH {$lkh->lkhno}: " . $e->getMessage();
+            }
+        }
+        
+        if ($totalItemsInserted === 0) {
+            $errorDetail = empty($errors) ? "No matching material configuration found" : implode('; ', $errors);
+            throw new \Exception("Tidak ada item material yang berhasil di-generate. Details: " . $errorDetail);
+        }
+        
+        $message = "Material usage berhasil di-generate per plot ({$totalItemsInserted} items)";
+        if (!empty($errors)) {
+            $message .= ". Warnings: " . implode('; ', $errors);
+        }
+        
+        return [
+            'success' => true,
+            'message' => $message,
+            'total_items' => $totalItemsInserted,
+            'total_lkh_processed' => $lkhList->count(),
+            'errors' => $errors
+        ];
+        
+    } catch (\Exception $e) {
+        Log::error("Failed to generate material usage for RKH {$rkhno}: " . $e->getMessage(), [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        throw $e;
     }
+}
     
     /**
      * Process individual LKH to generate material usage items PER PLOT
