@@ -1,54 +1,62 @@
 <?php
 
-namespace App\Models\MasterData;;
+namespace App\Models\MasterData;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Activity extends Model
 {
     public $incrementing = false;
+    public $timestamps = false;
+    
     protected $table = 'activity';
-    protected $primaryKey = ['activitycode'];
+    protected $primaryKey = 'activitycode';
+    protected $keyType = 'string';
+    
     protected $fillable = [
         'activitycode',
         'activitygroup',
-        'tanggaltanam',
+        'activityname',
         'description',
         'jurnalno',
+        'accno',
         'jumlahvar',
         'var1',
         'satuan1',
         'var2',
-        'satuan1',
+        'satuan2',
         'var3',
-        'satuan1',
+        'satuan3',
         'var4',
-        'satuan1',
+        'satuan4',
         'var5',
         'satuan5',
+        'usingmaterial',
+        'usingvehicle',
+        'jenistenagakerja',
+        'isblokactivity',
         'createdat',
         'inputby',
         'updatedat',
         'updatedby',
-        'accno'
     ];
 
-    public function setCreatedAt($value)
-    {
-        $this->attributes['createdat'] = $value;
-    }
-
-    public function getCreatedAtAttribute()
-    {
-        return $this->attributes['createdat'];
-    }
+    protected $casts = [
+        'createdat' => 'datetime',
+        'updatedat' => 'datetime',
+        'jumlahvar' => 'integer',
+        'usingmaterial' => 'integer',
+        'usingvehicle' => 'integer',
+        'jenistenagakerja' => 'integer',
+        'isblokactivity' => 'integer',
+    ];
 
     public function group()
     {
         return $this->belongsTo(ActivityGroup::class, 'activitygroup', 'activitygroup');
     }
 
-    public function jenistenagakerja()
+    public function jenistenagakerjaRelation()
     {
         return $this->belongsTo(JenisTenagaKerja::class, 'jenistenagakerja', 'idjenistenagakerja');
     }
@@ -57,5 +65,4 @@ class Activity extends Model
     {
         return $this->hasOne(Accounting::class, 'activitycode', 'activitycode');
     }
-
 }
