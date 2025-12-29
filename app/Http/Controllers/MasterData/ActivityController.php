@@ -1,171 +1,200 @@
 <?php
 
 namespace App\Http\Controllers\MasterData;
-use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Controller;
 use App\Models\MasterData\Activity;
 use App\Models\MasterData\ActivityGroup;
-use App\Models\MasterData\Blok;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\DB;
 
 class ActivityController extends Controller
 {
-
-    public function __construct()
-    {
-        View::share([
-            'navbar' => 'Master',
-            'nav' => 'aktivitas',
-            'routeName' => route('masterdata.aktivitas.index'),
-        ]);
-    }
-
     public function index(Request $request)
     {
-        $title = "Daftar Aktivitas";
+        $perPage = (int) $request->input('perPage', 50);
+        $search = $request->input('search');
 
-        if ($request->isMethod('post')) {
-            $request->validate(['perPage' => 'required|integer|min:1']);
-            $request->session()->put('perPage', $request->input('perPage'));
+        $query = Activity::with('group');
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('activitycode', 'like', "%{$search}%")
+                  ->orWhere('activityname', 'like', "%{$search}%")
+                  ->orWhere('activitygroup', 'like', "%{$search}%");
+            });
         }
 
-        $perPage = $request->session()->get('perPage', 50);
-        $activities = Activity::with('group')->orderBy('activitycode', 'asc')->paginate($perPage);
-        $activityGroup = ActivityGroup::get();
+        $activities = $query
+            ->orderBy('activitygroup', 'asc')
+            ->orderBy('activitycode', 'asc')
+            ->paginate($perPage)
+            ->appends([
+                'perPage' => $perPage,
+                'search' => $search,
+            ]);
 
-        foreach ($activities as $index => $item) {
-            $item->no = ($activities->currentPage() - 1) * $activities->perPage() + $index + 1;
-        }
-        return view('masterdata.activity.index')->with([
-            'title'         => 'Daftar Aktivitas',
-            'perPage'       => $perPage,
-            'activities'    => $activities,
+        $activityGroup = ActivityGroup::orderBy('activitygroup', 'asc')->get();
+
+        return view('masterdata.activity.index', [
+            'title' => 'Daftar Aktivitas',
+            'navbar' => 'Master',
+            'nav' => 'aktivitas',
+            'perPage' => $perPage,
+            'search' => $search,
+            'activities' => $activities,
             'activityGroup' => $activityGroup
         ]);
     }
 
-
-    public function handle(Request $request)
-    {
-        if ($request->has('perPage')) {
-            return $this->index($request);
-        }
-
-        return $this->store($request);
-    }
-
-    protected function requestValidated(): array
-    {
-        return [
-          'kodeaktivitas' => 'required',
-          'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
-          'namaaktivitas' => 'required',
-          'keterangan' => 'max:150',
-          'jenistenagakerja' => 'required|in:1,2',
-          'var.*'       => 'required',
-          'satuan.*'    => 'required'
-        ];
-    }
-
     public function store(Request $request)
     {
-        $request->validate($this->requestValidated());
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
+        $request->validate([
+            'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
+            'kodeaktivitas' => 'required|string|max:3',
+            'namaaktivitas' => 'required|string|max:255',
+            'keterangan' => 'nullable|string|max:150',
+            'jenistenagakerja' => 'required|in:1,2',
+            'material' => 'required|in:0,1',
+            'vehicle' => 'required|in:0,1',
+            'var.*' => 'required|string|max:50',
+            'satuan.*' => 'required|string|max:20'
+        ], [
+            'kodeaktivitas.max' => 'Kode aktivitas maksimal 3 karakter',
+            'var.*.required' => 'Variable hasil aktivitas wajib diisi',
+            'satuan.*.required' => 'Satuan hasil aktivitas wajib diisi'
+        ]);
+
+        // Cek duplicate
+        $exists = Activity::where('activitycode', $request->kodeaktivitas)->exists();
 
         if ($exists) {
-            Parent::h_flash('Kode aktivitas sudah ada dalam database.','danger');
-            return redirect()->back()->withInput();
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['kodeaktivitas' => 'Kode aktivitas sudah ada dalam database']);
         }
 
-        $hasil = array();
-        $inputVar    = $request->var;
-        $inputSatuan = $request->satuan;
-        $input = [
-            'activitycode'  => $request->kodeaktivitas,
-            'activitygroup' => $request->grupaktivitas,
-            'activityname'  => $request->namaaktivitas,
-            'description'   => $request->keterangan,
-            'usingmaterial' => $request->material,
-            'usingvehicle'  => $request->vehicle,
-            'jenistenagakerja' => $request->jenistenagakerja,
-            'jumlahvar'     => count($request->var),
-            'createdat'     => date("Y-m-d H:i"),
-            'inputby'       => Auth::user()->userid
-        ];
-        foreach( $request->var as $index => $value ){
-            $hasil["var".($index+1)] =  $value;
-            $hasil["satuan".($index+1)] = $inputSatuan[$index];
+        // Validasi max 5 variables
+        if (count($request->var) > 5) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['var' => 'Maksimal 5 variable hasil aktivitas']);
         }
-
-        $input = array_merge($input, $hasil);
 
         try {
-          DB::transaction(function () use ($input) {
-              DB::table('activity')->insert($input);
-          });
-          Parent::h_flash('Berhasil menambahkan data.','success');
-          return redirect()->back();
-        } catch (\Exception $e) {
-          Parent::h_flash('Error pada database, hubungi IT.','danger');
-          return redirect()->back()->withInput();;
-        }
+            DB::transaction(function () use ($request) {
+                $data = [
+                    'activitycode' => $request->kodeaktivitas,
+                    'activitygroup' => $request->grupaktivitas,
+                    'activityname' => $request->namaaktivitas,
+                    'description' => $request->keterangan,
+                    'usingmaterial' => $request->material,
+                    'usingvehicle' => $request->vehicle,
+                    'jenistenagakerja' => $request->jenistenagakerja,
+                    'jumlahvar' => count($request->var),
+                    'inputby' => Auth::user()->userid,
+                    'createdat' => now(),
+                ];
 
-        return redirect()->back();
+                // Tambahkan var dan satuan
+                foreach ($request->var as $index => $value) {
+                    $data["var" . ($index + 1)] = $value;
+                    $data["satuan" . ($index + 1)] = $request->satuan[$index];
+                }
+
+                Activity::create($data);
+            });
+
+            return redirect()->back()->with('success', 'Data berhasil disimpan');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error pada database: ' . $e->getMessage()]);
+        }
     }
 
     public function update(Request $request, $activityCode)
     {
-        $request->validate($this->requestValidated());
+        $request->validate([
+            'grupaktivitas' => 'required|exists:activitygroup,activitygroup',
+            'kodeaktivitas' => 'required|string|max:3',
+            'namaaktivitas' => 'required|string|max:255',
+            'keterangan' => 'nullable|string|max:150',
+            'jenistenagakerja' => 'required|in:1,2',
+            'material' => 'required|in:0,1',
+            'vehicle' => 'required|in:0,1',
+            'var.*' => 'required|string|max:50',
+            'satuan.*' => 'required|string|max:20'
+        ], [
+            'kodeaktivitas.max' => 'Kode aktivitas maksimal 3 karakter',
+            'var.*.required' => 'Variable hasil aktivitas wajib diisi',
+            'satuan.*.required' => 'Satuan hasil aktivitas wajib diisi'
+        ]);
 
-        $exists = DB::table('activity')->where('activitycode', $request->kodeaktivitas)->exists();
+        $activity = Activity::where('activitycode', $activityCode)->firstOrFail();
 
-        if (!$exists) {
-            Parent::h_flash('Data Tidak Ditemukan.','danger');
-            return redirect()->back()->withInput();
+        // Validasi max 5 variables
+        if (count($request->var) > 5) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['var' => 'Maksimal 5 variable hasil aktivitas']);
         }
 
-        DB::transaction(function () use ($request, $activityCode) {
+        try {
+            DB::transaction(function () use ($request, $activity) {
+                $data = [
+                    'activitycode' => $request->kodeaktivitas,
+                    'activitygroup' => $request->grupaktivitas,
+                    'activityname' => $request->namaaktivitas,
+                    'description' => $request->keterangan,
+                    'usingmaterial' => $request->material,
+                    'usingvehicle' => $request->vehicle,
+                    'jenistenagakerja' => $request->jenistenagakerja,
+                    'jumlahvar' => count($request->var),
+                    'updateby' => Auth::user()->userid,
+                    'updatedat' => now(),
+                ];
 
-          $input = [
-              'activitycode'  => $request->kodeaktivitas,
-              'activitygroup' => $request->grupaktivitas,
-              'activityname'  => $request->namaaktivitas,
-              'description'   => $request->keterangan,
-              'jumlahvar'     => count($request->var),
-              'usingmaterial' => $request->material,
-              'usingvehicle'  => $request->vehicle,
-              'jenistenagakerja' => $request->jenistenagakerja,
-              'updatedat'     => date("Y-m-d H:i"),
-              'updatedby'     => Auth::user()->userid
-          ];
-          $hasil = array();
-          $inputSatuan = $request->satuan;
-          foreach( $request->var as $index => $value ){
-              $hasil["var".($index+1)] =  $value;
-              $hasil["satuan".($index+1)] = $inputSatuan[$index];
-          }
+                // Reset semua var dan satuan
+                for ($i = 1; $i <= 5; $i++) {
+                    $data["var$i"] = null;
+                    $data["satuan$i"] = null;
+                }
 
-          $input = array_merge($input, $hasil);
+                // Tambahkan var dan satuan yang ada
+                foreach ($request->var as $index => $value) {
+                    $data["var" . ($index + 1)] = $value;
+                    $data["satuan" . ($index + 1)] = $request->satuan[$index];
+                }
 
-          DB::table('activity')->where('activitycode', $activityCode)->update($input);
+                $activity->update($data);
+            });
 
-        });
-
-        return redirect()->route('masterdata.aktivitas.index')->with('success1', 'Data updated successfully.');
+            return redirect()->back()->with('success', 'Data berhasil di-update');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error pada database: ' . $e->getMessage()]);
+        }
     }
 
     public function destroy($activityCode)
     {
-        DB::transaction(function () use ($activityCode) {
-            DB::table('activity')->where('activitycode', $activityCode)->delete();
-        });
-        Parent::h_flash('Berhasil menghapus data.', 'success');
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus',
-        ]);
+        try {
+            DB::transaction(function () use ($activityCode) {
+                Activity::where('activitycode', $activityCode)->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berhasil dihapus',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
