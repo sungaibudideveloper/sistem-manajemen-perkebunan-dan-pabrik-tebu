@@ -136,7 +136,22 @@ class ApprovalController extends Controller
 
             // Handle post-approval actions if fully approved
             if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
-                $message = $this->handlePostApprovalActionsTransactional($rkhno, $message, $companycode);
+                Log::info("Starting post-approval actions", [
+                    'rkhno' => $rkhno,
+                    'companycode' => $companycode
+                ]);
+                
+                try {
+                    $message = $this->handlePostApprovalActionsTransactional($rkhno, $message, $companycode);
+                    Log::info("Post-approval actions completed successfully", ['rkhno' => $rkhno]);
+                } catch (\Exception $e) {
+                    Log::error("Post-approval actions failed", [
+                        'rkhno' => $rkhno,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e;
+                }
             }
 
             DB::commit();
@@ -418,53 +433,99 @@ class ApprovalController extends Controller
 
     private function handlePostApprovalActionsTransactional($rkhno, $responseMessage, $companycode)
     {
+        Log::info("STEP 0: Checking RKH approval status", ['rkhno' => $rkhno]);
+        
         $updatedRkh = DB::table('rkhhdr')
             ->where('companycode', $companycode)
             ->where('rkhno', $rkhno)
             ->first();
 
         if (!$this->isRkhFullyApproved($updatedRkh)) {
+            Log::warning("RKH not fully approved, skipping post-actions", ['rkhno' => $rkhno]);
             return $responseMessage;
         }
 
         // STEP 1: Generate LKH
-        $lkhGenerator = new LkhGeneratorService();
-        $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
-        
-        if (!$lkhResult['success']) {
-            throw new \Exception("LKH auto-generation gagal: " . ($lkhResult['message'] ?? 'Unknown error'));
+        Log::info("STEP 1: Starting LKH generation", ['rkhno' => $rkhno]);
+        try {
+            $lkhGenerator = new LkhGeneratorService();
+            $lkhResult = $lkhGenerator->generateLkhFromRkh($rkhno, $companycode);
+            
+            if (!$lkhResult['success']) {
+                throw new \Exception("LKH auto-generation gagal: " . ($lkhResult['message'] ?? 'Unknown error'));
+            }
+            
+            Log::info("STEP 1 SUCCESS: LKH generated", [
+                'rkhno' => $rkhno,
+                'total_lkh' => $lkhResult['total_lkh']
+            ]);
+            
+            $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
+        } catch (\Exception $e) {
+            Log::error("STEP 1 FAILED: LKH generation error", [
+                'rkhno' => $rkhno,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         }
         
-        $responseMessage .= '. LKH auto-generated (' . $lkhResult['total_lkh'] . ' LKH)';
-        
         // STEP 2: Handle Planting Activities
+        Log::info("STEP 2: Checking planting activities", ['rkhno' => $rkhno]);
         if ($this->hasPlantingActivities($rkhno, $companycode)) {
             try {
+                Log::info("STEP 2: Starting batch creation for planting", ['rkhno' => $rkhno]);
                 $createdBatches = $this->handlePlantingActivity($rkhno, $companycode);
                 if (!empty($createdBatches)) {
                     $responseMessage .= '. Batch penanaman dibuat: ' . implode(', ', $createdBatches);
+                    Log::info("STEP 2 SUCCESS: Batches created", [
+                        'rkhno' => $rkhno,
+                        'batches' => $createdBatches
+                    ]);
                 }
             } catch (\Exception $e) {
+                Log::error("STEP 2 FAILED: Batch creation error", [
+                    'rkhno' => $rkhno,
+                    'error' => $e->getMessage()
+                ]);
                 throw new \Exception('Batch creation gagal: ' . $e->getMessage());
             }
+        } else {
+            Log::info("STEP 2 SKIPPED: No planting activities", ['rkhno' => $rkhno]);
         }
         
         // STEP 3: Generate Material Usage
+        Log::info("STEP 3: Checking material usage requirements", ['rkhno' => $rkhno]);
         $needsMaterialUsage = $this->checkIfRkhNeedsMaterialUsage($rkhno, $companycode);
         
         if ($needsMaterialUsage) {
-            $materialUsageGenerator = new MaterialUsageGeneratorService();
-            $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
-            
-            if (!$materialResult['success']) {
-                throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message']);
+            try {
+                Log::info("STEP 3: Starting material usage generation", ['rkhno' => $rkhno]);
+                $materialUsageGenerator = new MaterialUsageGeneratorService();
+                $materialResult = $materialUsageGenerator->generateMaterialUsageFromRkh($rkhno);
+                
+                if (!$materialResult['success']) {
+                    throw new \Exception('Material usage auto-generation gagal: ' . $materialResult['message']);
+                }
+                
+                if (($materialResult['total_items'] ?? 0) > 0) {
+                    $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items)';
+                    Log::info("STEP 3 SUCCESS: Material usage generated", [
+                        'rkhno' => $rkhno,
+                        'total_items' => $materialResult['total_items']
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error("STEP 3 FAILED: Material usage generation error", [
+                    'rkhno' => $rkhno,
+                    'error' => $e->getMessage()
+                ]);
+                throw $e;
             }
-            
-            if (($materialResult['total_items'] ?? 0) > 0) {
-                $responseMessage .= '. Material usage auto-generated (' . $materialResult['total_items'] . ' items)';
-            }
+        } else {
+            Log::info("STEP 3 SKIPPED: No material usage needed", ['rkhno' => $rkhno]);
         }
         
+        Log::info("All post-approval steps completed", ['rkhno' => $rkhno]);
         return $responseMessage;
     }
 
