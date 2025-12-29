@@ -152,7 +152,7 @@ class ActivityController extends Controller
                     'usingvehicle' => $request->vehicle,
                     'jenistenagakerja' => $request->jenistenagakerja,
                     'jumlahvar' => count($request->var),
-                    'updateby' => Auth::user()->userid,
+                    'updatedby' => Auth::user()->userid,
                     'updatedat' => now(),
                 ];
 
