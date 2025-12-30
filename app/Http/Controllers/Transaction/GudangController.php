@@ -49,6 +49,7 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
+        // if (hasPermission('Menu Gudang')) {
             $usematerialhdr = new usematerialhdr;
             $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
@@ -122,6 +123,9 @@ class GudangController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate
             ]);
+        // } else {
+        //     return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
+        // }
     }
 
     public function detail(Request $request)
@@ -253,7 +257,7 @@ class GudangController extends Controller
             'currcode' => 'IDR',
             'itemnote' => $first->itemname,
             'qtybpb' => $first->qtyretur,
-            'Keterangan' => 'Rkhno: ' . $first->rkhno . ', Mandor: ' . $hfirst->mandorname ?? '',
+            'Keterangan' => 'Rkhno: ' . $first->rkhno . ', Mandor: ' . ($hfirst->mandorname ?? ''). ' | rkhno:' . $first->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
             'flagstatus' => 'ACTIVE'
         ]);
@@ -475,7 +479,7 @@ public function submit(Request $request)
             'currcode' => 'IDR',
             'itemnote' => $detail->herbisidagroupname,
             'qtybpb' => round($totalQty, 3),
-            'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
+            'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name. ' | rkhno:' . $request->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
             'flagstatus' => $detail->flagstatus,
             'qtydigunakan' => $detail->qtydigunakan
