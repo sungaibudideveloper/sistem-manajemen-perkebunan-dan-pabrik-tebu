@@ -40,7 +40,6 @@ class TimelineController extends Controller
     $tab      = $request->get('tab', 'table');  // table|map (dari view)
     $isExport = $request->get('export') === 'excel';
 
-
     $plotHeaders = DB::table('batch as b')  // ✅ GANTI: Mulai dari batch
     ->join('masterlist as m', function($join) {
         $join->on('b.batchno', '=', 'm.activebatchno')
@@ -235,36 +234,37 @@ foreach ($lkhDetails as $plotCode => $byAct) {
                 $subCodes = $activityGrouping[$mainCode];
                 
                 $combinedLuas = 0;
-                $combinedPercentage = 0;
-                $subCount = 0;
-                $latestDate = null;
-                
+                $latestDate   = null;
+
                 foreach ($subCodes as $subCode) {
                     $subActivity = $activityDataRaw->first(function($item) use ($plot, $subCode) {
                         return $item->plot === $plot->plot && $item->activitycode === $subCode;
                     });
-                    
+
                     if ($subActivity) {
-                        $combinedLuas += $subActivity->total_luas;
-                        $combinedPercentage += $subActivity->avg_percentage;
-                        $subCount++;
-                        
-                        if ($subActivity->tanggal_terbaru) {
+                        $combinedLuas += (float)$subActivity->total_luas;
+
+                        if (!empty($subActivity->tanggal_terbaru)) {
                             if (!$latestDate || $subActivity->tanggal_terbaru > $latestDate) {
                                 $latestDate = $subActivity->tanggal_terbaru;
                             }
                         }
                     }
                 }
-                
+
                 if ($combinedLuas > 0) {
+                    $batchArea = (float)($plot->batcharea ?? 0);
+                    $pct = $batchArea > 0 ? min(($combinedLuas / $batchArea) * 100, 100) : 0;
+
                     $plotActivities->put($mainCode, (object)[
                         'activitycode' => $mainCode,
                         'total_luas' => $combinedLuas,
-                        'avg_percentage' => $subCount > 0 ? $combinedPercentage / $subCount : 0,
+                        'avg_percentage' => $pct,
                         'tanggal_terbaru' => $latestDate
                     ]);
                 }
+
+
             } else {
                 $activity = $activityDataRaw->first(function($item) use ($plot, $mainCode) {
                     return $item->plot === $plot->plot && $item->activitycode === $mainCode;
@@ -391,10 +391,13 @@ if ($activities && $luasRkh > 0) {
     }
     
     $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
+    // dd($stageCount, $stagePct, $doneCount);
     //
     
     $plotActivityDetails[$plotCode] = [
         'activities' => $activityList,
+        'stage_total' => $stageCount,
+        'stage_done' => $doneCount,
         'stage_percentage' => $stagePct,
         'avg_percentage' => $avgPercentage,
         'marker_color' => $markerColor,
@@ -414,6 +417,8 @@ if ($activities && $luasRkh > 0) {
 
     $plotActivityDetails[$plotCode] = [
         'activities' => [],
+        'stage_total' => count($activityMap),
+        'stage_done' => 0,
         'stage_percentage' => 0,
         'avg_percentage' => 0,
         'marker_color' => $markerColor,
@@ -615,17 +620,17 @@ if ($isExport) {
 
                 $sheet->setCellValue($col++ . $row, $totalRealisasiPlot > 0 ? (float)$totalRealisasiPlot : 0);
 
-                $totalPercentage = 0;
-                $activityCount = 0;
-                foreach ($activityMap as $activitycode => $label) {
-                    $activity = $activityData->get($plot->plot)?->get($activitycode);
-                    if ($activity) {
-                        $totalPercentage += $activity->avg_percentage ?? 0;
-                        $activityCount++;
-                    }
+                $stageCount = count($activityMap);
+                $doneCount  = 0;
+                
+                foreach ($activityMap as $code => $label) {
+                    $a = $activityData->get($plot->plot)?->get($code);
+                    $pct = (float)($a->avg_percentage ?? 0);
+                    if ($pct >= 100) $doneCount++;
                 }
-                $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
-                $sheet->setCellValue($col++ . $row, (float)$avgPersen);
+                
+                $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
+                $sheet->setCellValue($col++ . $row, (float)$stagePct);                
 
                 $row++;
             }
