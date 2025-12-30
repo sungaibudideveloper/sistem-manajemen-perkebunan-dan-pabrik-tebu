@@ -257,7 +257,7 @@ class GudangController extends Controller
             'currcode' => 'IDR',
             'itemnote' => $first->itemname,
             'qtybpb' => $first->qtyretur,
-            'Keterangan' => 'Rkhno: ' . $first->rkhno . ', Mandor: ' . ($hfirst->mandorname ?? ''). ' | rkhno:' . $first->rkhno . ' company:' . session('companycode'),
+            'Keterangan' => '.Rkhno: ' . $first->rkhno . ', Mandor: ' . ($hfirst->mandorname ?? ''). ' | rkhno:' . $first->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
             'flagstatus' => 'ACTIVE'
         ]);
