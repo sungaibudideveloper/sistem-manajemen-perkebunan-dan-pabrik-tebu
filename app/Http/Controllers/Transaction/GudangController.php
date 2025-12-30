@@ -266,6 +266,8 @@ class GudangController extends Controller
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
                 'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
+                'companytebu'  => session('companycode'),  // ✅ tambah (atau sumber yg benar)
+                'rkhno'        => $request->rkhno,
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,
                 'userid' => auth::user()->userid,
@@ -530,6 +532,8 @@ public function submit(Request $request)
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
                 'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
+                'companytebu'  => session('companycode'),  // ✅ tambah (atau sumber yg benar)
+                'rkhno'        => $request->rkhno,
                 'factory' => $first->factoryinv,
                 'costcenter' => $request->costcenter,
                 'isi' => array_values($apiPayload),

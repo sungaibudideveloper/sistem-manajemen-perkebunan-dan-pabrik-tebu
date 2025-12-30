@@ -40,7 +40,6 @@ class TimelineController extends Controller
     $tab      = $request->get('tab', 'table');  // table|map (dari view)
     $isExport = $request->get('export') === 'excel';
 
-
     $plotHeaders = DB::table('batch as b')  // ✅ GANTI: Mulai dari batch
     ->join('masterlist as m', function($join) {
         $join->on('b.batchno', '=', 'm.activebatchno')
@@ -110,6 +109,15 @@ if ($cropType === 'rc') {
         $activityFilter = 'all';
     }
     
+    // dd([
+    //     'FULL_URL' => $request->fullUrl(),
+    //     'QUERY' => $request->query(),
+    //     'tab_raw' => $request->query('tab'),
+    //     'tab_var' => $tab,
+    //     'activity' => $activityFilter,
+    //     'crop' => $cropType,
+    //   ]);
+
     // ✅ Activity yang perlu digabung (berlaku untuk semua crop type)
     $activityGrouping = [
         '2.1.11' => ['2.1.11a', '2.1.11b'],
@@ -152,11 +160,12 @@ $activityDataRaw = DB::table('lkhdetailplot as ldp')
     'ldp.plot', 
     'lh.activitycode', 
     DB::raw('SUM(ldp.luashasil) as total_luas'),
-    DB::raw('(SUM(ldp.luashasil) / MAX(b.batcharea)) * 100 as avg_percentage'),  // ✅ Pakai batcharea
+    DB::raw('LEAST((SUM(ldp.luashasil) / MAX(b.batcharea)) * 100, 100) as avg_percentage'),  // ✅ Pakai batcharea
     DB::raw('MAX(lh.lkhdate) as tanggal_terbaru')
 )
 ->groupBy('ldp.plot', 'lh.activitycode')
 ->get();
+
 
 // ✅ Query 2: Detail per LKH dengan persentase
 $activityDetailRaw = DB::table('lkhdetailplot as ldp')
@@ -180,7 +189,7 @@ $activityDetailRaw = DB::table('lkhdetailplot as ldp')
     'lh.lkhno',
     'ldp.luashasil',
     'lh.lkhdate',
-    DB::raw('(ldp.luashasil / b.batcharea) * 100 as percentage')  // ✅ Pakai batcharea
+    DB::raw('LEAST((ldp.luashasil / b.batcharea) * 100, 100) as percentage')  // ✅ Pakai batcharea
 )
 ->orderBy('ldp.plot')
 ->orderBy('lh.activitycode')
@@ -198,6 +207,22 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
 ];
 }
 
+
+foreach ($lkhDetails as $plotCode => $byAct) {
+    foreach ($activityGrouping as $mainCode => $subCodes) {
+        $merged = [];
+        foreach ($subCodes as $sub) {
+            if (!empty($lkhDetails[$plotCode][$sub])) {
+                $merged = array_merge($merged, $lkhDetails[$plotCode][$sub]);
+            }
+        }
+        if (!empty($merged)) {
+            usort($merged, fn($a,$b) => strcmp($b['tanggal'], $a['tanggal']));
+            $lkhDetails[$plotCode][$mainCode] = $merged;
+        }
+    }
+}
+
     // ✅ Gabungkan activity yang dipecah
     $activityData = collect();
     
@@ -209,36 +234,37 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
                 $subCodes = $activityGrouping[$mainCode];
                 
                 $combinedLuas = 0;
-                $combinedPercentage = 0;
-                $subCount = 0;
-                $latestDate = null;
-                
+                $latestDate   = null;
+
                 foreach ($subCodes as $subCode) {
                     $subActivity = $activityDataRaw->first(function($item) use ($plot, $subCode) {
                         return $item->plot === $plot->plot && $item->activitycode === $subCode;
                     });
-                    
+
                     if ($subActivity) {
-                        $combinedLuas += $subActivity->total_luas;
-                        $combinedPercentage += $subActivity->avg_percentage;
-                        $subCount++;
-                        
-                        if ($subActivity->tanggal_terbaru) {
+                        $combinedLuas += (float)$subActivity->total_luas;
+
+                        if (!empty($subActivity->tanggal_terbaru)) {
                             if (!$latestDate || $subActivity->tanggal_terbaru > $latestDate) {
                                 $latestDate = $subActivity->tanggal_terbaru;
                             }
                         }
                     }
                 }
-                
+
                 if ($combinedLuas > 0) {
+                    $batchArea = (float)($plot->batcharea ?? 0);
+                    $pct = $batchArea > 0 ? min(($combinedLuas / $batchArea) * 100, 100) : 0;
+
                     $plotActivities->put($mainCode, (object)[
                         'activitycode' => $mainCode,
                         'total_luas' => $combinedLuas,
-                        'avg_percentage' => $subCount > 0 ? $combinedPercentage / $subCount : 0,
+                        'avg_percentage' => $pct,
                         'tanggal_terbaru' => $latestDate
                     ]);
                 }
+
+
             } else {
                 $activity = $activityDataRaw->first(function($item) use ($plot, $mainCode) {
                     return $item->plot === $plot->plot && $item->activitycode === $mainCode;
@@ -255,12 +281,14 @@ $lkhDetails[$detail->plot][$detail->activitycode][] = [
         }
     }
 
-    if ( $activityFilter !== 'all' ) {
+    // ✅ Filter plot hanya untuk TAB TABLE
+    if ($activityFilter !== 'all' && $tab !== 'map') {
         $plotHeaders = $plotHeaders->filter(function($plot) use ($activityData, $activityFilter) {
-            return $activityData->has($plot->plot) && 
-                   $activityData->get($plot->plot)->has($activityFilter);
+            return $activityData->has($plot->plot) &&
+                $activityData->get($plot->plot)->has($activityFilter);
         });
     }
+
 
     $filteredPlots = $plotHeaders->pluck('plot')->toArray();
 
@@ -301,6 +329,11 @@ $umurHari = $plotInfo->umur_hari ?? 0;
 $hasPanen  = !empty($plotInfo->tanggalpanen);
 $lastPanen = $plotInfo->tanggalpanen ?? null;
 
+$match = 1;
+if ($activityFilter !== 'all') {
+    $match = ($activities && $activities->has($activityFilter)) ? 1 : 0;
+}
+
 if ($activities && $luasRkh > 0) {
     $activityList = [];
     $totalPercentage = 0;
@@ -310,29 +343,29 @@ if ($activities && $luasRkh > 0) {
     $hasActivity = false;
     
     foreach ($activities as $actCode => $act) {
-        $luasHasil = $act->total_luas ?? 0;
-        $percentage = $act->avg_percentage ?? 0;
-        
+        $luasHasil  = (float)($act->total_luas ?? 0);
+        $percentage = (float)($act->avg_percentage ?? 0); // ✅ pakai % luas (sudah clamp max 100)
+        $lkhList    = $lkhDetails[$plotCode][$actCode] ?? [];
+    
         $activityList[] = [
-            'code' => $actCode,
-            'label' => $activityMap[$actCode] ?? $actCode,
-            'luas_hasil' => $luasHasil,
-            'percentage' => $percentage,
-            'tanggal' => $act->tanggal_terbaru ?? null,
-            'lkh_details' => $lkhDetails[$plotCode][$actCode] ?? []
+            'code'        => $actCode,
+            'label'       => $activityMap[$actCode] ?? $actCode,
+            'luas_hasil'  => $luasHasil,
+            'percentage'  => $percentage,
+            'tanggal'     => $act->tanggal_terbaru ?? null,
+            'lkh_details' => $lkhList,
         ];
-        
+    
         $totalPercentage += $percentage;
-        $totalLuasHasil += $luasHasil;
+        $totalLuasHasil  += $luasHasil;
         $activityCount++;
         $hasActivity = true;
-        
-        if ($percentage < 100) {
-            $allComplete = false;
-        }
+    
+        if ($percentage < 100) $allComplete = false;
     }
     
     $avgPercentage = $activityCount > 0 ? ($totalPercentage / $activityCount) : 0;
+    // $avgPercentage = $activityCount > 0 ? (($totalPercentage / $activityCount) * 100) : 0;
     
     if (!$hasActivity || $avgPercentage == 0) {
         $markerColor = 'black';
@@ -341,9 +374,31 @@ if ($activities && $luasRkh > 0) {
     } else {
         $markerColor = 'orange';
     }
+
+    if ($tab === 'map' && $activityFilter !== 'all' && $match === 0) {
+        $markerColor = 'black'; // atau '#6b7280'
+    }
+
+    // tambahan persentase realisasi
+    $stageCount = count($activityMap);
+    $doneCount  = 0;
+    
+    // hitung berdasarkan activityMap (bukan $activities) biar konsisten 0/20 dst
+    foreach ($activityMap as $code => $label) {
+        $a = $activities?->get($code);
+        $pct = (float)($a->avg_percentage ?? 0);
+        if ($pct >= 100) $doneCount++;
+    }
+    
+    $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
+    // dd($stageCount, $stagePct, $doneCount);
+    //
     
     $plotActivityDetails[$plotCode] = [
         'activities' => $activityList,
+        'stage_total' => $stageCount,
+        'stage_done' => $doneCount,
+        'stage_percentage' => $stagePct,
         'avg_percentage' => $avgPercentage,
         'marker_color' => $markerColor,
         'luas_rkh' => $luasRkh,
@@ -351,19 +406,31 @@ if ($activities && $luasRkh > 0) {
         'lifecyclestatus' => $lifecycleStatus,  
         'umur_hari' => $umurHari,                
         'is_panen'                 => $hasPanen ? 1 : 0,          
-        'tanggal_panen_terakhir'   => $lastPanen
+        'tanggal_panen_terakhir'   => $lastPanen,
+        'is_match' => $match
     ];
 } else {
+    $markerColor = 'black';
+    if ($tab === 'map' && $activityFilter !== 'all' && $match === 0) {
+        $markerColor = 'black'; // atau '#6b7280'
+    }
+
     $plotActivityDetails[$plotCode] = [
         'activities' => [],
+        'stage_total' => count($activityMap),
+        'stage_done' => 0,
+        'stage_percentage' => 0,
         'avg_percentage' => 0,
-        'marker_color' => 'black',
+        'marker_color' => $markerColor,
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => 0,
         'lifecyclestatus' => $lifecycleStatus,  
         'umur_hari' => $umurHari,               
-        'is_panen'                 => $hasPanen ? 1 : 0,          
-        'tanggal_panen_terakhir'   => $lastPanen
+        'is_panen' => $hasPanen ? 1 : 0,          
+        'tanggal_panen_terakhir' => $lastPanen,
+
+        // ✅ tambahin ini
+        'is_match' => $match,
     ];
 }
 }
@@ -384,7 +451,7 @@ if ($isExport) {
 
         // Header (plot info + activity + lkh)
         $sheet->fromArray([[
-            'Plot','Blok','CenterLat','CenterLng',
+            'Plot','Blok',
             'Luas RKH (HA)','Total Hasil (HA)','Progress (%)','Marker',
             'Status','Umur (hari)','Is Panen','Tgl Panen Terakhir',
             'Activity Code','Activity Label','Activity Luas (HA)','Activity (%)','Activity Tanggal',
@@ -417,8 +484,6 @@ if ($isExport) {
             $base = [
                 $plotCode,
                 $blok,
-                $h->centerlatitude,
-                $h->centerlongitude,
                 (float)($detail['luas_rkh'] ?? 0),
                 (float)($detail['total_luas_hasil'] ?? 0),
                 (float)($detail['avg_percentage'] ?? 0),
@@ -473,8 +538,8 @@ if ($isExport) {
             }
         }
 
-        // Autosize (A..U, aman)
-        foreach (range('A','U') as $col) {
+        // Autosize (A..S, aman)
+        foreach (range('A','S') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -555,17 +620,17 @@ if ($isExport) {
 
                 $sheet->setCellValue($col++ . $row, $totalRealisasiPlot > 0 ? (float)$totalRealisasiPlot : 0);
 
-                $totalPercentage = 0;
-                $activityCount = 0;
-                foreach ($activityMap as $activitycode => $label) {
-                    $activity = $activityData->get($plot->plot)?->get($activitycode);
-                    if ($activity) {
-                        $totalPercentage += $activity->avg_percentage ?? 0;
-                        $activityCount++;
-                    }
+                $stageCount = count($activityMap);
+                $doneCount  = 0;
+                
+                foreach ($activityMap as $code => $label) {
+                    $a = $activityData->get($plot->plot)?->get($code);
+                    $pct = (float)($a->avg_percentage ?? 0);
+                    if ($pct >= 100) $doneCount++;
                 }
-                $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
-                $sheet->setCellValue($col++ . $row, (float)$avgPersen);
+                
+                $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
+                $sheet->setCellValue($col++ . $row, (float)$stagePct);                
 
                 $row++;
             }

@@ -10,6 +10,7 @@
         tbody tr{transition:background-color .2s;}
         tbody tr:hover td{background:#1f6f3d  !important;color:#ffffff ;}
         tbody tr:hover td *{color:#ffffff !important;}
+        tbody tr:hover td * *{color:#000000 !important;}
          
         /* ✅ Sticky Vertical */
         .sticky-v{position:sticky;background:#166534;color:#fff;}
@@ -42,21 +43,22 @@
         #map{height:600px;width:100%;}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
     </style>
-    <div class="mx-auto px-6" x-data="{activeTab:'table',map:null,markers:[],polygons:[]}">
+    <div class="mx-auto px-6" x-data="{activeTab:'{{ request('tab','table') }}',map:null,markers:[],polygons:[]}">
+
         
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex space-x-4">
-                <a href="?crop=pc&activity={{$activityFilter}}" 
+                <a href="?crop=pc&activity={{$activityFilter}}&tab={{ request('tab','table') }}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='pc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data PC
                 </a>
                 
-                <a href="?crop=rc&activity={{$activityFilter}}" 
+                <a href="?crop=rc&activity={{$activityFilter}}&tab={{ request('tab','table') }}" 
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='rc'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  📊 Data RC
                 </a>
                 
-                <a href="?crop=p&activity={{$activityFilter}}" 
+                <a href="?crop=p&activity={{$activityFilter}}&tab={{ request('tab','table') }}"
                 class="py-2 px-4 border-b-2 font-medium text-sm {{$cropType==='p'?'border-blue-600 text-blue-600':'border-transparent text-gray-500 hover:text-gray-700'}}">
                  🌾 Data Panen
                 </a>
@@ -70,14 +72,16 @@
             
                 
 <div class="ml-auto flex items-center gap-3">
-<a :href="'?crop={{ $cropType }}&activity={{ $activityFilter }}&fill={{ $fillFilter ?? 'all' }}&export=excel&tab=' + activeTab"
-  class="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-sm flex items-center gap-2">
-  📊 Export Excel
-</a>
+    <button type="button"
+    @click="window.location.href='{{ url()->current() }}?crop={{ $cropType }}&activity={{ $activityFilter }}&fill={{ $fillFilter ?? 'all' }}&export=excel&tab=' + activeTab"
+    class="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-sm flex items-center gap-2">
+    📊 Export Excel
+  </button>
+  
 
     <label class="text-sm font-medium text-gray-700">Filter Activity:</label>
-    <select 
-        onchange="window.location.href='?crop={{$cropType}}&activity=' + this.value"
+    <select onchange="window.location.href='{{ url()->current() }}?crop={{ $cropType }}&activity=' + this.value + '&tab=map'"
+
         class="py-1 px-3 rounded border border-gray-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
         <option value="all" {{$activityFilter==='all'?'selected':''}}>📋 Semua Activity</option>
         @foreach($activityMap as $code => $label)
@@ -165,7 +169,7 @@
                                 
                                 // Calculate average percentage for total
                                 $avgPercentage = $plotCount > 0 ? $totalPercentage / $plotCount : 0;
-                                $percentageColor = $avgPercentage >= 100 ? '#22c55e' : ($avgPercentage > 0 ? '#f97316' : '#6b7280');
+                                $percentageColor = $avgPercentage >= 100 ? '#22c55e' : ($avgPercentage > 0 ? '#dc2626' : '#6b7280');
                             @endphp
                         
                                 <td style="text-align:right;">{{ $totalActivity > 0 ? number_format($totalActivity, 2) : '-' }}</td>
@@ -212,7 +216,7 @@
                                         $tanggal = $activity->tanggal_terbaru ?? null;
                                         $totalRealisasiPlot += $value;
                                         
-                                        $percentageColor = $percentage >= 100 ? '#22c55e' : ($percentage > 0 ? '#f97316' : '#6b7280');
+                                        $percentageColor = $percentage >= 100 ? '#22c55e' : ($percentage > 0 ? '#dc2626' : '#6b7280');
                                     @endphp
                                     
                                     <td style="text-align:right;">{{ $value > 0 ? number_format($value, 2) : '-' }}</td>
@@ -229,25 +233,12 @@
                                     {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
                                 </td>
                                 
-                                {{-- Persentase --}}
+                                {{-- Persentase (stage: 1/total activity) --}}
                                 <td style="text-align:right;">
                                     @php
-                                        // ✅ Hitung rata-rata persentase per activity
-                                        $totalPercentage = 0;
-                                        $activityCount = 0;
-                                        
-                                        foreach($activityMap as $activitycode => $label) {
-                                            $activity = $activityData->get($plot->plot)?->get($activitycode);
-                                            if ($activity) {
-                                                $percentage = $activity->avg_percentage ?? 0;
-                                                $totalPercentage += $percentage;
-                                                $activityCount++;
-                                            }
-                                        }
-                                        
-                                        $avgPersen = $activityCount > 0 ? $totalPercentage / $activityCount : 0;
+                                        $stagePct = $plotActivityDetails[$plot->plot]['stage_percentage'] ?? 0;
                                     @endphp
-                                    {{ number_format($avgPersen, 2) }}%
+                                    {{ number_format($stagePct, 2) }}%
                                 </td>
                             </tr>
                         @endforeach
@@ -261,7 +252,48 @@
             <!-- MAP SECTION (EXISTING) -->
             <h3 class="text-xl font-bold mb-4">Peta Lokasi Plot</h3>
             <div id="map" class="border border-gray-300 rounded-lg"></div>
-            
+
+<!-- LEGEND -->
+<div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+  <!-- Fill legend -->
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:2px solid #fff;"></span>
+    <span>Belum ada activity (fill cream)</span>
+  </div>
+
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#86efac;border:2px solid #fff;"></span>
+    <span>Sudah ada activity, belum selesai (fill hijau muda)</span>
+  </div>
+
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#14532d;border:2px solid #fff;"></span>
+    <span>Semua stage selesai (fill hijau tua)</span>
+  </div>
+
+  <!-- Ring legend -->
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:3px solid #f97316;"></span>
+    <span>Ring orange: sudah ZPK &gt; 35 hari</span>
+  </div>
+
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:3px solid #facc15;"></span>
+    <span>Ring kuning: sudah ZPK &lt; 25 hari</span>
+  </div>
+
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:3px solid #dc2626;"></span>
+    <span>Ring merah: umur ≥ 9 bulan & belum ZPK</span>
+  </div>
+
+  <!-- Filter legend -->
+  <div class="flex items-center gap-2 bg-white border rounded px-2 py-1 md:col-span-3">
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#000;border:2px solid #fff;opacity:.30;"></span>
+    <span>Hitam redup: plot tidak match dengan filter activity</span>
+  </div>
+</div>
+
 
 
             <!-- DATATABLE SECTION (BARU) -->
@@ -303,7 +335,7 @@
                                     <tr class="hover:bg-green-50">
                                         <td class="border p-2 font-bold">{{ $plotCode }}</td>
                                         <td class="border p-2">
-                                            <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                                            <span class="px-2 py-1 rounded text-xs">
                                                 {{ $detail['lifecyclestatus'] ?? '-' }}
                                             </span>
                                         </td>
@@ -321,14 +353,18 @@
                                                     </summary>
                                                     <div class="mt-2 space-y-2 pl-2">
                                                         @foreach($detail['activities'] as $act)
-                                                            @php
-                                                                $actPct = $act['percentage'] ?? 0;
-                                                                $actColor = $actPct >= 100 ? 'text-green-600' : ($actPct > 0 ? 'text-orange-600' : 'text-gray-500');
-                                                            @endphp
+                                                        @php
+                                                        $isOk = ((float)($act['percentage'] ?? 0) >= 100);
+                                                        $lkhOk = collect($act['lkh_details'] ?? [])->filter(fn($x)=>($x['luas_hasil'] ?? 0) > 0)->count();
+                                                        $lkhTotal = (int)($act['lkh_total'] ?? count($act['lkh_details'] ?? []));
+                                                        $badge = $isOk ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
+                                                        @endphp
                                                             <div class="border-b pb-2">
                                                                 <div class="flex justify-between gap-2 mb-1">
                                                                     <span class="text-gray-700 font-semibold">{{ $act['code'] }} - {{ $act['label'] }}</span>
-                                                                    <span class="font-bold {{ $actColor }}">{{ number_format($actPct, 1) }}%</span>
+                                                                    <span class="px-2 py-0.5 rounded text-xs font-bold {{ $badge }}">
+                                                                        {{ $isOk ? '✔️ OK' : '✖️ NOT OK' }}
+                                                                    </span>
                                                                 </div>
                                                                 <div class="text-gray-500 text-xs mb-1">
                                                                     Luas: <strong>{{ number_format($act['luas_hasil'], 2) }} HA</strong> / {{ number_format($detail['luas_rkh'], 2) }} HA
@@ -402,72 +438,75 @@
     const plotHeaders = @json($plotHeadersForMap ?? []);
     const plotData = @json($plotData ?? []);
     const plotActivityDetails = @json($plotActivityDetails ?? []);
+    const activityFilter = @json($activityFilter ?? 'all');
         
     let map, markers = [], polygons = [];
 
     // 🔑 Tentukan warna plot berdasarkan umur, ZPK, dan panen
     function getPlotColor(d) {
-        const umurHari  = d.umur_hari || 0;
-        const umurBulan = umurHari / 30;
+    const stage = parseFloat(d.stage_percentage ?? 0);
 
-        // status panen dari backend (batch aktif + tanggalpanen)
-        const isPanen = d.is_panen === 1 || d.is_panen === true;
+    // Deteksi ada activity atau tidak (buat cream)
+    const hasAnyActivity = Array.isArray(d.activities) && d.activities.length > 0;
 
-        // cari activity ZPK (4.2.1)
-        let hasZpk = false;
-        let daysSinceZpk = null;
+    // --- ZPK logic (tetap) ---
+    let hasZpk = false;
+    let daysSinceZpk = null;
 
-        if (Array.isArray(d.activities)) {
-            const zpkAct = d.activities.find(a => a.code === '4.2.1');
-            if (zpkAct && zpkAct.tanggal) {
-                hasZpk = true;
-                const zpkDate = new Date(zpkAct.tanggal);
-                const today   = new Date();
-                const diffMs  = today - zpkDate;
-                daysSinceZpk  = diffMs / (1000 * 60 * 60 * 24); // dalam hari
-            }
+    if (Array.isArray(d.activities)) {
+        const zpkAct = d.activities.find(a => a.code === '4.2.1');
+        if (zpkAct && zpkAct.tanggal) {
+            hasZpk = true;
+            const zpkDate = new Date(zpkAct.tanggal);
+            const today   = new Date();
+            const diffMs  = today - zpkDate;
+            daysSinceZpk  = diffMs / (1000 * 60 * 60 * 24);
         }
-
-        // Aturan warna:
-        // - Hijau muda       : umur 0–6 bulan
-        // - Hijau lebih tua  : umur 6–9 bulan
-        // - Orange           : umur ≥ 9 bln & belum ZPK
-        // - Kuning muda      : sudah ZPK, < 25 hari
-        // - Merah            : sudah ZPK, > 35 hari
-        // - Hijau tua        : sedang panen (is_panen = 1)
-
-        // 1) Hijau tua → sedang panen
-        if (isPanen) {
-            return '#14532d';
-        }
-
-        // 2) Merah → sudah ZPK > 35 hari
-        if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) {
-            return '#dc2626';
-        }
-
-        // 3) Kuning muda → sudah ZPK < 25 hari
-        if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) {
-            return '#facc15';
-        }
-
-        // 4) Orange → umur ≥ 9 bulan & belum ZPK
-        if (!hasZpk && umurBulan >= 9) {
-            return '#f97316';
-        }
-
-        // 5) Hijau lebih tua → umur 6–9 bulan
-        if (umurBulan >= 6 && umurBulan < 9) {
-            return '#16a34a';
-        }
-
-        // 6) Hijau muda → umur 0–6 bulan
-        if (umurBulan >= 0 && umurBulan < 6) {
-            return '#32f175ff';
-        }
-
-        return '#6b7280'; // fallback abu
     }
+
+    // --- aturan utama dulu: selesai/ada/belum ada ---
+    if (!hasAnyActivity) return '#fef3c7';   // cream (belum ada activity)
+    if (stage >= 100) return '#14532d';      // hijau tua (semua stage selesai)
+
+    // --- override ZPK (kalau sudah ada activity tapi belum selesai) ---
+    // merah kalau ZPK sudah lewat 35 hari
+    if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) return '#f97316';
+    // kuning kalau ZPK masih < 25 hari
+    if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) return '#facc15';
+
+    // default progress (belum selesai) → hijau muda
+    return '#86efac';
+}
+
+function getRingColor(d) {
+  const umurHari  = d.umur_hari || 0;
+  const umurBulan = umurHari / 30;
+
+  // cari activity ZPK (4.2.1)
+  let hasZpk = false;
+  let daysSinceZpk = null;
+
+  if (Array.isArray(d.activities)) {
+    const zpkAct = d.activities.find(a => a.code === '4.2.1');
+    if (zpkAct && zpkAct.tanggal) {
+      hasZpk = true;
+      const zpkDate = new Date(zpkAct.tanggal);
+      const today   = new Date();
+      const diffMs  = today - zpkDate;
+      daysSinceZpk  = diffMs / (1000 * 60 * 60 * 24);
+    }
+  }
+
+  // RULE
+  if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) return '#f97316';
+  if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) return '#facc15';
+  if (!hasZpk && umurBulan >= 9) return '#dc2626';
+  if (umurBulan >= 6 && umurBulan < 9) return '#16a34a';
+  if (umurBulan >= 0 && umurBulan < 6) return '#32f175ff';
+
+  return '#ffffff'; // default ring putih
+}
+
         
     function initMapIfNeeded() {
         if (window.mapInitialized) return;
@@ -498,21 +537,27 @@
                 };
 
                 // 🔑 warna marker berdasarkan umur, ZPK, panen
-                const color = getPlotColor(d);
-                        
+                const baseColor = getPlotColor(d);
+                ringColor = getRingColor(d);
+                const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
+                const color = isMatch ? baseColor : '#000000';
+                const opacity = isMatch ? 0.95 : 0.75;
+
                 const marker = new google.maps.Marker({
-                    position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
-                    map: map,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 25,
-                        fillColor: color,
-                        fillOpacity: 0.8,
-                        strokeColor: '#fff',
-                        strokeWeight: 3
-                    },
-                    label: {text: h.plot, color: '#fff', fontSize: '11px', fontWeight: 'bold'}
+                position: {lat: parseFloat(h.centerlatitude), lng: parseFloat(h.centerlongitude)},
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 25,
+                    fillColor: color,
+                    fillOpacity: opacity,
+                    strokeColor: '#fff',
+                    strokeWeight: 3
+                },
+                label: {text: h.plot, color: '#000', fontSize: '11px', fontWeight: 'bold'}
                 });
+                //
+
 
                 let umurText = '-';
                 if (d.umur_hari > 0) {
@@ -524,7 +569,7 @@
             acts = `<div style="margin-top:10px;border-top:1px solid #ddd;padding-top:10px"><strong>Activities (${d.activities.length}):</strong><div style="max-height:200px;overflow-y:auto;margin-top:5px">`;
             d.activities.forEach((a,i) => {
                 const p = parseFloat(a.percentage).toFixed(2);
-                const c = p >= 100 ? '#22c55e' : p > 0 ? '#f97316' : '#6b7280';
+                const c = p >= 100 ? '#22c55e' : p > 0 ? '#dc2626' : '#6b7280';
                 
                 acts += `<div style="margin:5px 0;padding:8px;background:#f9fafb;border-radius:4px;border-left:3px solid ${c}">
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px">
@@ -577,7 +622,7 @@
                         </div>
                         <div style="background:linear-gradient(135deg,${color}22,${color}11);padding:10px;border-radius:6px;border:2px solid ${color};margin-bottom:8px;text-align:center">
                             <div style="color:#6b7280;font-size:10px;font-weight:600;text-transform:uppercase;margin-bottom:4px">Progress</div>
-                            <div style="color:${color};font-weight:700;font-size:24px">${parseFloat(d.avg_percentage).toFixed(1)}%</div>
+                            <div style="color:#000;font-weight:700;font-size:24px">${parseFloat(d.stage_percentage ?? 0).toFixed(1)}%</div>
                         </div>
                         ${acts}
                     </div>`
@@ -602,36 +647,48 @@
                     is_panen: 0
                 };
 
-                const color = getPlotColor(d);
-                            
-                polygons.push(new google.maps.Polygon({
-                    paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
-                    strokeColor: color,
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: color,
-                    fillOpacity: 0.18,
-                    map: map
-                }));
-            });
-            
-            
-            // ✅ Zoom fokus ke area plot
-            const bounds = new google.maps.LatLngBounds();
-            plotHeaders.forEach(h => {
-                bounds.extend(new google.maps.LatLng(parseFloat(h.centerlatitude), parseFloat(h.centerlongitude)));
-            });
+                const baseColor = getPlotColor(d);
+                const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
+                const color = isMatch ? baseColor : '#000000';
 
-            if (plotHeaders.length > 0) {
-                map.fitBounds(bounds);
-                
-                // ✅ Limit zoom level agar tidak terlalu dekat/jauh
-                google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
-                    const z = map.getZoom();
-                    if (z > 15) map.setZoom(15);  // Tidak terlalu dekat
-                    if (z < 14) map.setZoom(14);  // Tidak terlalu jauh (NAIKKAN dari 12 ke 14)
-                });
-            }
+                polygons.push(new google.maps.Polygon({
+                paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
+                strokeColor: '#374151',
+                strokeOpacity: isMatch ? 0.8 : 0.35,
+                strokeWeight: 2,
+                fillColor: color,
+                fillOpacity: isMatch ? 0.18 : 0.06,
+                map: map
+                }));
+
+            });
+            
+            
+        // ✅ Zoom fokus ke area plot
+        const bounds = new google.maps.LatLngBounds();
+        plotHeaders.forEach(h => {
+            bounds.extend(new google.maps.LatLng(parseFloat(h.centerlatitude), parseFloat(h.centerlongitude)));
+        });
+
+        if (plotHeaders.length > 0) {
+            map.fitBounds(bounds);
+
+            // ✅ TAMBAHAN: map sering salah hitung kalau sebelumnya hidden (tab x-show)
+            setTimeout(() => {
+                google.maps.event.trigger(map, "resize");
+                map.fitBounds(bounds); // hitung ulang setelah resize
+            }, 80);
+
+            // ✅ Limit zoom level agar tidak terlalu dekat/jauh
+            google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+                const z = map.getZoom();
+                if (z > 15) map.setZoom(15);  // Tidak terlalu dekat
+
+                // ✅ GANTI: jangan paksa 14, cukup "floor" lebih wajar
+                if (z < 12) map.setZoom(12);  // Tidak terlalu jauh
+            });
+        }
+
 
 
         }
