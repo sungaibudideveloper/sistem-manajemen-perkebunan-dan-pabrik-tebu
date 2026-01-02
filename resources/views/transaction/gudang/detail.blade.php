@@ -153,6 +153,12 @@ table th, table td {
                     </tr>
                 </thead>
                 <tbody class="text-gray-600">
+    @php
+    $stdDosage = collect($itemlist)->mapWithKeys(fn($x) => [
+        ($x->itemcode.'|'.$x->activitycode) => (float)$x->dosageperha
+    ]);
+    @endphp
+                  
     @foreach ($detailmaterial as $d)
     @php
         // Hitung total luas semua blok untuk lkhno ini
@@ -175,6 +181,13 @@ table th, table td {
                 } else {
                     $activitycode = $d->activitycode;
                 }
+
+            $stdKey = $d->itemcode.'|'.$activitycode;
+            $std    = round((float)($stdDosage[$stdKey] ?? 0), 4);
+            $actual = round((float)($d->dosageperha ?? 0), 4);
+            $isStandard = ($std > 0) ? (abs($actual - $std) < 0.00001) : false;
+            // exact
+            // $isStandard = $std > 0 ? (abs($actual - $std) <= ($std * 0.05)) : true; // ±5%
             @endphp
         
             <select
@@ -217,10 +230,19 @@ table th, table td {
 
         <td class="py-2 px-2">
             <div class="flex justify-end items-center">
-                <input type="text"name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
-                    value="{{ number_format($d->dosageperha, 2) }}"
-                    class="w-full selected-dosage border-none bg-yellow-100 text-xs text-right w-20">
-                <span class="ml-2 w-8 text-left">{{ $d->unit }}</span>
+                <input type="text" name="dosage[{{ $d->lkhno }}][{{ $d->itemcode }}][{{ $d->plot }}]"
+                value="{{ number_format($d->dosageperha, 2) }}"
+                data-orig="{{ number_format($d->dosageperha, 2, '.', '') }}"
+                class="w-full selected-dosage border-none bg-yellow-100 text-xs text-right w-20">
+
+                <span class="ml-2 text-[10px] font-semibold text-red-600 {{ $isStandard ? 'hidden' : '' }}">
+                •
+                </span>
+                @if(!$isStandard && $std > 0)
+                <span class="ml-2 text-[10px] text-red-600">(Std {{ number_format($std, 2) }})</span>
+                @endif
+                    
+
             </div>
         </td>
 
