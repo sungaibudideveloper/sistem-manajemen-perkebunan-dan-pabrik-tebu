@@ -43,7 +43,7 @@
 
     {{-- Activities Detail --}}
     <div class="p-6">
-      <template x-for="(activity, actCode, actIndex) in selectedActivities" :key="actCode">
+      <template x-for="([actCode, activity], actIndex) in Object.entries(selectedActivities)" :key="actCode">
         <div class="mb-6 last:mb-0">
           
           {{-- Activity Header --}}

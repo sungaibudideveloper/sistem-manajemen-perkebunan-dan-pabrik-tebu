@@ -81,13 +81,17 @@
                   {{-- Column 2: Luas Plot (Fixed Width) --}}
                   <div class="px-4 py-3 w-24 min-w-[6rem] flex-shrink-0 text-center">
                     <p class="text-[10px] text-gray-500 mb-0.5">Luas Plot</p>
-                    <p class="text-sm font-bold text-gray-800" x-text="parseFloat(plotInfo.luasplot || 0).toFixed(2) + ' Ha'"></p>
+                    <p class="text-sm font-bold text-gray-800" 
+                      x-text="plotInfo.luasplot === '-' ? '-' : parseFloat(plotInfo.luasplot || 0).toFixed(2) + ' Ha'">
+                    </p>
                   </div>
 
                   {{-- Column 3: Luas Sisa (Fixed Width) --}}
                   <div class="px-4 py-3 w-24 min-w-[6rem] flex-shrink-0 text-center">
                     <p class="text-[10px] text-gray-500 mb-0.5">Luas Sisa</p>
-                    <p class="text-sm font-bold text-green-600" x-text="parseFloat(plotInfo.luassisa || 0).toFixed(2) + ' Ha'"></p>
+                    <p class="text-sm font-bold text-green-600" 
+                      x-text="plotInfo.luassisa === '-' ? '-' : parseFloat(plotInfo.luassisa || 0).toFixed(2) + ' Ha'">
+                    </p>
                   </div>
 
                   {{-- Column 4: Luas Rencana Kerja Input (Fixed Width) --}}
@@ -109,7 +113,9 @@
                       </div>
                     </div>
                     <p class="text-[9px] text-gray-500 mt-0.5">
-                      Max: <span class="font-semibold" x-text="parseFloat(plotInfo.luassisa || 0).toFixed(2)"></span> Ha
+                      Max: <span class="font-semibold" 
+                          x-text="plotInfo.luassisa === '-' ? parseFloat(plotInfo.luasplot || 0).toFixed(2) : parseFloat(plotInfo.luassisa || 0).toFixed(2)">
+                      </span> Ha
                     </p>
                   </div>
 
@@ -222,13 +228,13 @@
 </div>
 
 <script>
-// ✅ Plot Detail Card Component with FIXED Input Handling
 function plotDetailCard(actCode, plot) {
   return {
     actCode: actCode,
     plot: plot,
     isLoading: false,
     isPanenActivity: false,
+    isPiasActivity: false,
     plotInfo: {
       luasplot: plot.luasplot || 0,
       luassisa: plot.luassisa || plot.luasplot || 0,
@@ -246,6 +252,7 @@ function plotDetailCard(actCode, plot) {
 
     init() {
       this.isPanenActivity = window.PANEN_ACTIVITIES.includes(this.actCode);
+      this.isPiasActivity = window.PIAS_ACTIVITIES.includes(this.actCode);
       this.fetchPlotInfo();
     },
 
@@ -260,11 +267,10 @@ function plotDetailCard(actCode, plot) {
         if (data.success) {
           this.plotInfo = {
             luasplot: parseFloat(data.luasplot || 0).toFixed(2),
-            luassisa: parseFloat(data.luassisa || 0).toFixed(2),
+            luassisa: this.isPiasActivity ? '-' : parseFloat(data.luassisa || 0).toFixed(2), // Override kalau PIAS
             batchno: data.batchinfo?.batchno || data.activebatchno || '',
             lifecyclestatus: data.batchinfo?.lifecyclestatus || this.plot.lifecyclestatus || '',
             tanggal: data.tanggal || '',
-            // ✅ FALLBACK ke plot data dari Step 2
             last_activitycode: data.last_activitycode || this.plot.last_activitycode || '',
             last_activityname: data.last_activityname || this.plot.last_activityname || '',
             last_activity_date: data.last_activity_date || this.plot.last_activity_date || '',
@@ -273,10 +279,9 @@ function plotDetailCard(actCode, plot) {
             zpk_status: data.batchinfo?.zpk_status || ''
           };
           
-          // Auto-fill luas sisa
-          this.luasKerja = parseFloat(this.plotInfo.luassisa).toFixed(2);
+          // PIAS: Auto-fill 0.00, Non-PIAS: luas sisa
+          this.luasKerja = this.isPiasActivity ? '0.00' : parseFloat(this.plotInfo.luassisa).toFixed(2);
           
-          // Update parent component
           this.updateParentLuas(this.luasKerja);
         }
       } catch (error) {
@@ -286,14 +291,9 @@ function plotDetailCard(actCode, plot) {
       }
     },
 
-    // ✅ NEW: Handle input as user types (allow any input)
     handleLuasInput(event) {
       let value = event.target.value;
-      
-      // Allow only numbers, dots, and one decimal point
       value = value.replace(/[^\d.]/g, '');
-      
-      // Prevent multiple decimal points
       const parts = value.split('.');
       if (parts.length > 2) {
         value = parts[0] + '.' + parts.slice(1).join('');
@@ -301,7 +301,18 @@ function plotDetailCard(actCode, plot) {
       
       this.luasKerja = value;
       
-      // Only validate if user typed a complete number
+      // PIAS: Validate against luasplot, not luassisa
+      if (this.isPiasActivity) {
+        if (value && !value.endsWith('.')) {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue)) {
+            this.validateAndUpdate(numValue, event.target);
+          }
+        }
+        return;
+      }
+      
+      // Normal validation
       if (value && !value.endsWith('.')) {
         const numValue = parseFloat(value);
         if (!isNaN(numValue)) {
@@ -310,7 +321,6 @@ function plotDetailCard(actCode, plot) {
       }
     },
 
-    // ✅ NEW: Format on blur (when user leaves input)
     formatLuasOnBlur(event) {
       let value = parseFloat(this.luasKerja);
       
@@ -318,7 +328,11 @@ function plotDetailCard(actCode, plot) {
         value = 0;
       }
       
-      const maxLuas = parseFloat(this.plotInfo.luassisa);
+      // PIAS: Max = luasplot
+      const maxLuas = this.isPiasActivity ? 
+        parseFloat(this.plotInfo.luasplot) : 
+        parseFloat(this.plotInfo.luassisa);
+      
       if (value > maxLuas) {
         value = maxLuas;
         showToast(`Luas tidak boleh melebihi ${maxLuas.toFixed(2)} Ha`, 'warning', 3000);
@@ -329,13 +343,15 @@ function plotDetailCard(actCode, plot) {
         }, 2000);
       }
       
-      // Format to 2 decimals
       this.luasKerja = value.toFixed(2);
       this.updateParentLuas(this.luasKerja);
     },
 
     validateAndUpdate(value, inputElement) {
-      const maxLuas = parseFloat(this.plotInfo.luassisa);
+      // PIAS: Max = luasplot
+      const maxLuas = this.isPiasActivity ? 
+        parseFloat(this.plotInfo.luasplot) : 
+        parseFloat(this.plotInfo.luassisa);
       
       if (value > maxLuas) {
         showToast(`Luas tidak boleh melebihi ${maxLuas.toFixed(2)} Ha`, 'warning', 2000);
@@ -356,7 +372,6 @@ function plotDetailCard(actCode, plot) {
       }
     },
 
-    // ✅ Calculate days gap (same as Step 2)
     getDaysGap(lastActivityDate) {
       if (!lastActivityDate || !window.rkhDate) return 0;
       
@@ -368,7 +383,6 @@ function plotDetailCard(actCode, plot) {
       return diffDays;
     },
 
-    // ✅ Format date to dd-mm-yy
     formatDateDMY(dateString) {
       if (!dateString) return '-';
       
