@@ -233,6 +233,7 @@ table th, table td {
             <span class="labelqty">{{ $d->qty }}</span>
             @php
             // (ini hanya kalau kamu sudah punya $stdDosage & $activitycode)
+            // tinggal panggil • ({{ number_format($exp, 2) }})
             $exp = (((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0)
                   ? max(0.25, round((((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25)) * 0.25)
                   : 0;
@@ -242,7 +243,7 @@ table th, table td {
           
           <span class="ml-2 text-[10px] font-semibold
             {{ abs($diff) > 0.00001 ? ($diff > 0 ? 'text-orange-600' : 'text-green-600') : 'hidden' }}">
-            • ({{ number_format($exp, 2) }})
+            • 
           </span>
                     
         </td>
