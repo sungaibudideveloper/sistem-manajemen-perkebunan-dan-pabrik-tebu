@@ -20,6 +20,7 @@ use App\Http\Controllers\MasterData\KendaraanController;
 use App\Http\Controllers\MasterData\KontraktorController;
 use App\Http\Controllers\MasterData\SubkontraktorController;
 use App\Http\Controllers\MasterData\SplitMergePlotController;
+use App\Http\Controllers\MasterData\OpenReworkController;
 
 Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(function () {
 
@@ -206,6 +207,16 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
         Route::post('split-merge-plot/merge', [SplitMergePlotController::class, 'merge'])->name('split-merge-plot.merge');
         Route::delete('split-merge-plot/{transactionNumber}', [SplitMergePlotController::class, 'destroy'])->name('split-merge-plot.destroy');
     });
+
+    Route::middleware('permission:masterdata.open-rework.view')->group(function () {
+        Route::get('open-rework', [OpenReworkController::class, 'index'])->name('open-rework.index');
+        Route::post('open-rework/get-lkh-list', [OpenReworkController::class, 'getLkhList'])->name('open-rework.get-lkh-list');
+        Route::get('open-rework/lkh-detail/{lkhno}', [OpenReworkController::class, 'getLkhDetailPlots'])->name('open-rework.lkh-detail');
+        Route::get('open-rework/approval/{approvalno}', [OpenReworkController::class, 'getApprovalDetail'])->name('open-rework.approval-detail');
+        Route::post('open-rework', [OpenReworkController::class, 'store'])->name('open-rework.store');
+    });
+
+    
 
     // ============================================================================
     // MANDOR

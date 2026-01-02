@@ -326,76 +326,128 @@
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                     Level {{ $approval->approval_level }}
                                 </span>
+                                @if($approval->transactiontype)
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $approval->transactiontype === 'SPLIT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
                                     {{ $approval->transactiontype }}
                                 </span>
+                                @else
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                    REWORK
+                                </span>
+                                @endif
                             </div>
                         </div>
                     </div>
 
                     <!-- Card Body -->
                     <div class="px-4 py-2.5 space-y-2">
-                        <!-- Source Plots/Batches -->
-                        <div class="text-sm">
-                            <span class="text-gray-600 font-medium">{{ $approval->transactiontype === 'SPLIT' ? 'Plot Asal:' : 'Plot yang di-Merge:' }}</span>
-                            <div class="mt-1 flex flex-wrap gap-1">
-                                @if(isset($approval->sourceplots_array))
-                                    @foreach($approval->sourceplots_array as $plot)
-                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                                            {{ $plot }}
-                                            {{-- Gunakan real_batch_areas dari batch aktif --}}
-                                            @if(isset($approval->real_batch_areas[$plot]))
-                                                <span class="text-gray-500">({{ number_format($approval->real_batch_areas[$plot], 2) }} Ha)</span>
-                                            @elseif(isset($approval->areamap_array[$plot]))
-                                                <span class="text-gray-500">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
-                                            @endif
-                                        </span>
-                                    @endforeach
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Arrow Icon - Ke Bawah -->
-                        <div class="flex justify-left">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                            </svg>
-                        </div>
-
-                        <!-- Result Plots/Batches -->
-                        <div class="text-sm">
-                            <span class="text-gray-600 font-medium">Plot Hasil:</span>
-                            <div class="mt-1 flex flex-wrap gap-1">
-                                @if(isset($approval->resultplots_array))
-                                    @foreach($approval->resultplots_array as $plot)
-                                        <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
-                                            {{ $plot }}
-                                            @if(isset($approval->areamap_array[$plot]))
-                                                <span class="text-purple-600">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
-                                            @endif
-                                        </span>
-                                    @endforeach
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Dominant Plot & Reason -->
-                        <div class="grid grid-cols-2 gap-2 pt-2 border-t">
+                        @if($approval->transactiontype)
+                            {{-- SPLIT/MERGE TRANSACTION --}}
+                            <!-- Source Plots/Batches -->
                             <div class="text-sm">
-                                <span class="text-gray-600">Dominant Plot:</span>
-                                <span class="ml-1 font-semibold text-gray-900">{{ $approval->dominantplot }}</span>
+                                <span class="text-gray-600 font-medium">{{ $approval->transactiontype === 'SPLIT' ? 'Plot Asal:' : 'Plot yang di-Merge:' }}</span>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @if(isset($approval->sourceplots_array))
+                                        @foreach($approval->sourceplots_array as $plot)
+                                            <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                                                {{ $plot }}
+                                                @if(isset($approval->real_batch_areas[$plot]))
+                                                    <span class="text-gray-500">({{ number_format($approval->real_batch_areas[$plot], 2) }} Ha)</span>
+                                                @elseif(isset($approval->areamap_array[$plot]))
+                                                    <span class="text-gray-500">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
+                                                @endif
+                                            </span>
+                                        @endforeach
+                                    @endif
+                                </div>
                             </div>
-                            <div class="text-sm">
-                                <span class="text-gray-600">Input By:</span>
-                                <span class="ml-1 font-medium text-gray-900">{{ $approval->inputby_name ?? $approval->inputby }}</span>
-                            </div>
-                        </div>
 
-                        @if($approval->splitmergedreason)
-                        <div class="text-sm pt-1">
-                            <span class="text-gray-600">Alasan:</span>
-                            <p class="mt-0.5 text-xs text-gray-700 italic">{{ $approval->splitmergedreason }}</p>
-                        </div>
+                            <!-- Arrow Icon -->
+                            <div class="flex justify-left">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                                </svg>
+                            </div>
+
+                            <!-- Result Plots/Batches -->
+                            <div class="text-sm">
+                                <span class="text-gray-600 font-medium">Plot Hasil:</span>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @if(isset($approval->resultplots_array))
+                                        @foreach($approval->resultplots_array as $plot)
+                                            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                                                {{ $plot }}
+                                                @if(isset($approval->areamap_array[$plot]))
+                                                    <span class="text-purple-600">({{ number_format($approval->areamap_array[$plot], 2) }} Ha)</span>
+                                                @endif
+                                            </span>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Dominant Plot & Reason -->
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t">
+                                <div class="text-sm">
+                                    <span class="text-gray-600">Dominant Plot:</span>
+                                    <span class="ml-1 font-semibold text-gray-900">{{ $approval->dominantplot }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="text-gray-600">Input By:</span>
+                                    <span class="ml-1 font-medium text-gray-900">{{ $approval->inputby_name ?? $approval->inputby }}</span>
+                                </div>
+                            </div>
+
+                            @if($approval->splitmergedreason)
+                            <div class="text-sm pt-1">
+                                <span class="text-gray-600">Alasan:</span>
+                                <p class="mt-0.5 text-xs text-gray-700 italic">{{ $approval->splitmergedreason }}</p>
+                            </div>
+                            @endif
+                        @else
+                            {{-- OPEN REWORK TRANSACTION --}}
+                            <!-- Plot List -->
+                            <div class="text-sm">
+                                <span class="text-gray-600 font-medium">Plot yang akan Dirework:</span>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @if(isset($approval->plots_array))
+                                        @foreach($approval->plots_array as $plot)
+                                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                                {{ $plot }}
+                                            </span>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Activity List -->
+                            <div class="text-sm">
+                                <span class="text-gray-600 font-medium">Activity:</span>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @if(isset($approval->activities_array))
+                                        @foreach($approval->activities_array as $activity)
+                                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                                {{ $activity }}
+                                            </span>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Input By & Reason -->
+                            <div class="grid grid-cols-1 gap-2 pt-2 border-t">
+                                <div class="text-sm">
+                                    <span class="text-gray-600">Input By:</span>
+                                    <span class="ml-1 font-medium text-gray-900">{{ $approval->inputby_name ?? $approval->inputby }}</span>
+                                </div>
+                            </div>
+
+                            @if(isset($approval->rework_reason) && $approval->rework_reason)
+                                <div class="text-sm pt-1">
+                                    <span class="text-gray-600">Alasan:</span>
+                                    <p class="mt-0.5 text-xs text-gray-700 italic">{{ $approval->rework_reason }}</p>
+                                </div>
+                            @endif
                         @endif
                     </div>
 

@@ -201,6 +201,7 @@ class MasterlistBatchRepository
             ->where('ldp.plot', $plot)
             ->where('lh.activitycode', $activitycode)
             ->where('lh.approvalstatus', '1')
+            ->where('ldp.rework', 0)
             ->whereDate('lh.lkhdate', '<', $beforeDate);
 
         if ($batchno) {
