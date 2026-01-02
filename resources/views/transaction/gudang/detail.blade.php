@@ -230,7 +230,6 @@ table th, table td {
         </td>
 
         <td class="py-2 px-2 text-center text-right">
-            <span class="labelqty">{{ $d->qty }}</span>
             @php
             // (ini hanya kalau kamu sudah punya $stdDosage & $activitycode)
             // tinggal panggil • ({{ number_format($exp, 2) }})
@@ -245,6 +244,7 @@ table th, table td {
             {{ abs($diff) > 0.00001 ? ($diff > 0 ? 'text-orange-600' : 'text-green-600') : 'hidden' }}">
             • 
           </span>
+          <span class="labelqty">{{ $d->qty }}</span>
                     
         </td>
 
