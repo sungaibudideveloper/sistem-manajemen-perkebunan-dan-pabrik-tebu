@@ -368,7 +368,7 @@
   // ============================================================
   window.activitiesData = @json($activities ?? []);
   window.bloksData = @json($bloks ?? []);
-  window.masterlistData = @json($masterlist ?? []); // ✅ Batch info source
+  window.masterlistData = @json($masterlist ?? []); // Batch info source
   window.herbisidaData = @json($herbisidagroups ?? []);
   window.vehiclesData = @json($vehiclesData ?? []);
   window.helpersData = @json($helpersData ?? []);
@@ -376,10 +376,11 @@
   window.rkhDate = '{{ $selectedDate }}';
   window.mandorId = '{{ $selectedMandor->userid ?? '' }}';
   window.PANEN_ACTIVITIES = ['4.3.3', '4.4.3', '4.5.2'];
+  window.PIAS_ACTIVITIES = ['5.2.1'];
   window.PLOT_INFO_BASE_URL = "{{ url('transaction/kerjaharian/rencanakerjaharian/plot-info') }}";
   window.RKH_SUBMISSION_LOCK = false;
 
-  console.log('🔥 Global Data Loaded:', {
+  console.log('Global Data Loaded:', {
     activities: window.activitiesData?.length,
     masterlist: window.masterlistData?.length,
     vehicles: window.vehiclesData?.length,
@@ -389,7 +390,7 @@
 
 <script>
   // ============================================================
-  // ✅ MAIN RKH WIZARD APP - COMPLETE
+  // MAIN RKH WIZARD APP - COMPLETE
   // ============================================================
   document.addEventListener('alpine:init', () => {
     Alpine.data('rkhWizardApp', () => ({
@@ -425,7 +426,7 @@
       plotSearchQuery: '',
 
       init() {
-        console.log('🚀 RKH Wizard Initialized');
+        console.log('RKH Wizard Initialized');
         
         this.$watch('selectedActivities', (activities) => {
           const actCodes = Object.keys(activities);
