@@ -55,6 +55,11 @@ return [
                         'route' => 'masterdata.split-merge-plot.index',
                         'permission' => 'masterdata.splitmergeplot.view',
                     ],
+                    [
+                        'name' => 'Buka Kerja Ulang',
+                        'route' => 'masterdata.open-rework.index',
+                        'permission' => 'masterdata.open-rework.view',
+                    ],
                 ],
             ],
             

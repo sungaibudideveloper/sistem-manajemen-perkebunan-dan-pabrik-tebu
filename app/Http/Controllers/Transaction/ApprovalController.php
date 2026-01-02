@@ -699,6 +699,10 @@ class ApprovalController extends Controller
                 $join->on('at.transactionnumber', '=', 'pt.transactionnumber')
                     ->where('pt.companycode', '=', $companycode);
             })
+            ->leftJoin('openrework as rw', function($join) use ($companycode) {
+                $join->on('at.transactionnumber', '=', 'rw.transactionnumber')
+                    ->where('rw.companycode', '=', $companycode);
+            })
             ->leftJoin('user as u', 'at.inputby', '=', 'u.userid')
             ->where('at.companycode', $companycode)
             ->where(function($query) use ($currentUser) {
@@ -727,7 +731,10 @@ class ApprovalController extends Controller
                 'pt.areamap',
                 'pt.dominantplot',
                 'pt.splitmergedreason',
-                DB::raw("DATE_FORMAT(pt.transactiondate, '%d/%m/%Y') as formatted_date"),
+                'rw.plots as rework_plots',
+                'rw.activities as rework_activities',
+                'rw.reason as rework_reason',
+                DB::raw("DATE_FORMAT(COALESCE(pt.transactiondate, rw.requestdate), '%d/%m/%Y') as formatted_date"),
                 DB::raw('CASE 
                     WHEN at.approval1idjabatan = '.$currentUser->idjabatan.' AND at.approval1flag IS NULL THEN 1
                     WHEN at.approval2idjabatan = '.$currentUser->idjabatan.' AND at.approval1flag = "1" AND at.approval2flag IS NULL THEN 2
@@ -740,6 +747,7 @@ class ApprovalController extends Controller
 
         // Decode JSON for display dan ambil area REAL dari batch
         return $results->map(function($approval) use ($companycode) {
+            // Split/Merge data
             if ($approval->sourceplots) {
                 $approval->sourceplots_array = json_decode($approval->sourceplots, true);
             }
@@ -749,7 +757,7 @@ class ApprovalController extends Controller
             if ($approval->sourcebatches) {
                 $approval->sourcebatches_array = json_decode($approval->sourcebatches, true);
                 
-                // TAMBAHAN: Fetch REAL batch area dari database
+                // Fetch REAL batch area dari database
                 $batchAreas = [];
                 foreach ($approval->sourcebatches_array as $batchno) {
                     $batch = DB::table('batch')
@@ -770,6 +778,15 @@ class ApprovalController extends Controller
             if ($approval->areamap) {
                 $approval->areamap_array = json_decode($approval->areamap, true);
             }
+            
+            // Open Rework data
+            if ($approval->rework_plots) {
+                $approval->plots_array = json_decode($approval->rework_plots, true);
+            }
+            if ($approval->rework_activities) {
+                $approval->activities_array = json_decode($approval->rework_activities, true);
+            }
+            
             return $approval;
         });
     }
@@ -827,34 +844,62 @@ class ApprovalController extends Controller
     /**
      * Execute post-approval actions for other approvals
      */
+    // Di dalam method executeOtherApprovalActions() di ApprovalController
+
     private function executeOtherApprovalActions($approval, $responseMessage, $companycode)
     {
-        // Get transaction data
+        // Check if it's Split/Merge transaction
         $transaction = DB::table('plottransaction')
             ->where('companycode', $companycode)
             ->where('transactionnumber', $approval->transactionnumber)
             ->first();
 
-        if (!$transaction) {
-            throw new \Exception("Transaction {$approval->transactionnumber} tidak ditemukan");
-        }
+        if ($transaction) {
+            // Execute Split/Merge
+            $service = new SplitMergePlotService();
 
-        // Execute based on transaction type
-        $service = new SplitMergePlotService();
-
-        if ($transaction->transactiontype === 'SPLIT') {
-            $result = $service->executeSplit($approval->transactionnumber, $companycode);
-            if ($result['success']) {
-                $responseMessage .= '. ' . $result['message'];
-            } else {
-                throw new \Exception($result['message']);
+            if ($transaction->transactiontype === 'SPLIT') {
+                $result = $service->executeSplit($approval->transactionnumber, $companycode);
+                if ($result['success']) {
+                    $responseMessage .= '. ' . $result['message'];
+                } else {
+                    throw new \Exception($result['message']);
+                }
+            } elseif ($transaction->transactiontype === 'MERGE') {
+                $result = $service->executeMerge($approval->transactionnumber, $companycode);
+                if ($result['success']) {
+                    $responseMessage .= '. ' . $result['message'];
+                } else {
+                    throw new \Exception($result['message']);
+                }
             }
-        } elseif ($transaction->transactiontype === 'MERGE') {
-            $result = $service->executeMerge($approval->transactionnumber, $companycode);
-            if ($result['success']) {
-                $responseMessage .= '. ' . $result['message'];
-            } else {
-                throw new \Exception($result['message']);
+        } else {
+            // Check if it's Open Rework transaction
+            $reworkRequest = DB::table('openrework')
+                ->where('companycode', $companycode)
+                ->where('transactionnumber', $approval->transactionnumber)
+                ->first();
+            
+            if ($reworkRequest) {
+                // Decode plots and activities
+                $plots = json_decode($reworkRequest->plots, true);
+                $activities = json_decode($reworkRequest->activities, true);
+                
+                // Update rework flag in lkhdetailplot for all LKH matching the criteria
+                $affectedRows = DB::table('lkhdetailplot as ldp')
+                    ->join('lkhhdr as lh', function($join) use ($companycode) {
+                        $join->on('ldp.lkhno', '=', 'lh.lkhno')
+                            ->where('lh.companycode', '=', $companycode);
+                    })
+                    ->where('ldp.companycode', $companycode)
+                    ->whereIn('ldp.plot', $plots)
+                    ->whereIn('lh.activitycode', $activities)
+                    ->update(['ldp.rework' => 1]);
+                
+                $plotCount = count($plots);
+                $activityCount = count($activities);
+                
+                $responseMessage .= ". Rework telah dibuka untuk {$plotCount} plot dan {$activityCount} activity. {$affectedRows} LKH detail diupdate.";
             }
         }
 
