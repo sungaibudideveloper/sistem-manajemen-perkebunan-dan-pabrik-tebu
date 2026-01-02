@@ -153,6 +153,11 @@ table th, table td {
                     </tr>
                 </thead>
                 <tbody class="text-gray-600">
+    @php
+    $stdDosage = collect($itemlist)->mapWithKeys(fn($x)=>[
+        ($x->itemcode.'|'.$x->activitycode) => (float)$x->dosageperha
+    ]);
+    @endphp
     @foreach ($detailmaterial as $d)
     @php
         // Hitung total luas semua blok untuk lkhno ini
@@ -227,16 +232,16 @@ table th, table td {
         <td class="py-2 px-2 text-center text-right">
             <span class="labelqty">{{ $d->qty }}</span>
             <span class="ml-2 text-[10px] font-semibold text-red-600
-            {{ abs(((float)($d->qty ?? 0)) - ( ((float)($d->dosageperha ?? 0) * (float)($d->luasrkh ?? 0)) > 0
-                ? max(0.25, round(((float)($d->dosageperha ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
+            {{ abs(((float)($d->qty ?? 0)) - ( ((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0
+                ? max(0.25, round(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
                 : 0
               )) > 0.00001 ? '' : 'hidden' }}">
-            •
-            (
-             Exp={{ number_format(((float)($d->dosageperha ?? 0) * (float)($d->luasrkh ?? 0)) > 0
-                ? max(0.25, round(((float)($d->dosageperha ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
-                : 0, 3) }})
-          </span>
+              •
+              (
+               Exp={{ number_format(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0
+                    ? max(0.25, round(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
+                    : 0, 3) }})
+            </span>            
         </td>
 
         <td class="py-2 px-2 text-center text-right">
