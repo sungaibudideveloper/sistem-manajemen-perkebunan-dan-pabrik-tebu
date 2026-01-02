@@ -231,17 +231,20 @@ table th, table td {
 
         <td class="py-2 px-2 text-center text-right">
             <span class="labelqty">{{ $d->qty }}</span>
-            <span class="ml-2 text-[10px] font-semibold text-red-600
-            {{ abs(((float)($d->qty ?? 0)) - ( ((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0
-                ? max(0.25, round(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
-                : 0
-              )) > 0.00001 ? '' : 'hidden' }}">
-              •
-              (
-               Exp={{ number_format(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0
-                    ? max(0.25, round(((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25) * 0.25)
-                    : 0, 3) }})
-            </span>            
+            @php
+            // (ini hanya kalau kamu sudah punya $stdDosage & $activitycode)
+            $exp = (((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) > 0)
+                  ? max(0.25, round((((float)($stdDosage[$d->itemcode.'|'.$activitycode] ?? 0) * (float)($d->luasrkh ?? 0)) / 0.25)) * 0.25)
+                  : 0;
+            $qty = (float)($d->qty ?? 0);
+            $diff = $qty - $exp;
+            @endphp
+          
+          <span class="ml-2 text-[10px] font-semibold
+            {{ abs($diff) > 0.00001 ? ($diff > 0 ? 'text-orange-600' : 'text-green-600') : 'hidden' }}">
+            • ({{ number_format($exp, 2) }})
+          </span>
+                    
         </td>
 
         <td class="py-2 px-2 text-center text-right">
