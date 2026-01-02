@@ -76,7 +76,7 @@ public function selectusematerial($companycode, $rkhno = 0)
     JOIN herbisidadosage AS d ON d.companycode = a.companycode AND d.herbisidagroupid = a.herbisidagroupid
     JOIN usemateriallst AS u ON u.rkhno = b.rkhno AND u.itemcode = d.itemcode AND u.companycode = b.companycode
     JOIN herbisida AS c ON c.companycode = a.companycode AND c.itemcode = d.itemcode
-    JOIN lkhhdr AS l ON u.lkhno = l.lkhno
+    JOIN lkhhdr AS l ON u.lkhno = l.lkhno AND u.companycode = l.companycode
     JOIN user AS us ON us.userid =  l.mandorid
     JOIN lkhdetailplot AS lk ON lk.lkhno = u.lkhno AND lk.blok = a.blok AND lk.plot = a.plot
     JOIN company AS com ON com.companycode = a.companycode
