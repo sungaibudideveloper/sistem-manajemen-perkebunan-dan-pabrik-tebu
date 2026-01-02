@@ -349,6 +349,15 @@ public function submit(Request $request)
     $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
     $first = $details->first();
 
+    Log::info('SUBMIT DEBUG FIRST:', [
+        'session_company' => session('companycode'),
+        'rkhno' => $request->rkhno,
+        'first_company' => $first->companycode ?? null,
+        'first_factory' => $first->factoryinv ?? null,
+        'first_flagstatus' => $first->flagstatus ?? null,
+        'details_count' => $details->count(),
+    ]);
+
     $roundingByGroup = DB::table('herbisidagroup')
     ->pluck('rounddosage', 'herbisidagroupid');
 
