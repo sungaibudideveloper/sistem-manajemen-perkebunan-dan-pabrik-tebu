@@ -7,6 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->user()->userid ?? '' }}">
+    <meta name="app-url" content="{{ url('/') }}">
     <meta name="current-username" content="{{ Auth::user()->name ?? '' }}">
     <meta name="theme-color" content="#3b82f6">
 

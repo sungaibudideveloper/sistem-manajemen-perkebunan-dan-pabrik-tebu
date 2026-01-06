@@ -61,38 +61,4 @@ Route::middleware(['auth', 'mandor.access'])->group(function () {
         })->name('export.kml.view');
         Route::post('/export-kml', [GPXController::class, 'export'])->name('export.kml');
     });
-
-    // ============================================================================
-    // UTILITY DEPLOYMENT (Development Only - Remove in Production!)
-    // ============================================================================
-    Route::get('utility/deploy', function () {
-        if (config('app.env') !== 'local') {
-            abort(403, 'Not allowed in production');
-        }
-
-        $output = [];
-        $results = [];
-
-        chdir(base_path());
-        exec('git pull origin main 2>&1', $output);
-        $results['git_pull'] = implode("\n", $output);
-
-        $output = [];
-        exec('npm run build 2>&1', $output);
-        $results['npm_build'] = implode("\n", $output);
-
-        Artisan::call('config:clear');
-        Artisan::call('cache:clear');
-        Artisan::call('route:clear');
-        Artisan::call('view:clear');
-        $results['cache'] = 'All caches cleared';
-
-        $html = '<h3>Deployment Completed!</h3>';
-        $html .= '<h4>1. Git Pull:</h4><pre>' . $results['git_pull'] . '</pre>';
-        $html .= '<h4>2. NPM Build:</h4><pre>' . $results['npm_build'] . '</pre>';
-        $html .= '<h4>3. Cache Cleared:</h4><pre>' . $results['cache'] . '</pre>';
-
-        return $html;
-    })->name('utility.deploy');
-
 });
