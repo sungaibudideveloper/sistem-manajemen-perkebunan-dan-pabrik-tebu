@@ -128,8 +128,10 @@ class GudangController extends Controller
         // }
     }
 
+    
+
     public function report(Request $request)
-{ 
+{
     $title = "Gudang - Report";
 
     $search    = $request->input('search');
@@ -138,78 +140,88 @@ class GudangController extends Controller
 
     $company = session('companycode');
 
-    // Ambil master item (nama/unit) biar report enak dibaca
     $itemMaster = Herbisida::where('companycode', $company)
         ->select('itemcode', 'itemname', 'measure')
         ->get()
         ->keyBy('itemcode');
 
-    // 1) OUT (USE) -> group by nouse + itemcode (1 dokumen = 1 baris)
-    $out = usemateriallst::query()
-        ->where('companycode', $company)
-        ->whereNotNull('nouse')
-        ->whereDate('tgluse', '>=', $startDate)
-        ->whereDate('tgluse', '<=', $endDate)
-        ->when($search, function($q) use ($search) {
-            $q->where('rkhno', 'like', "%{$search}%")
-              ->orWhere('nouse', 'like', "%{$search}%");
+    // OUT (USE) -> tanggal pakai rkhhdr.rkhdate
+    $out = usemateriallst::from('usemateriallst as u')
+        ->join('rkhhdr as b', function($join){
+            $join->on('u.rkhno','=','b.rkhno')
+                 ->on('u.companycode','=','b.companycode');
         })
-        ->groupBy('itemcode', 'nouse')
-        ->selectRaw('itemcode, nouse as docno, MIN(tgluse) as dt, SUM(qty) as qty')
+        ->where('u.companycode', $company)
+        ->whereNotNull('u.nouse')
+        ->whereDate('b.rkhdate', '>=', $startDate)
+        ->whereDate('b.rkhdate', '<=', $endDate)
+        ->when($search, function($q) use ($search){
+            $q->where('u.rkhno', 'like', "%{$search}%")
+              ->orWhere('u.nouse', 'like', "%{$search}%");
+        })
+        ->groupBy('u.itemcode', 'u.nouse')
+        ->selectRaw("
+            u.itemcode,
+            u.nouse as docno,
+            MIN(b.rkhdate) as dt,
+            SUM(u.qty) as qty
+        ")
         ->get()
         ->map(fn($r) => (object)[
             'itemcode' => $r->itemcode,
-            'type'     => 'U',               // keluar
+            'type'     => 'U',
             'docno'    => $r->docno,
             'dt'       => $r->dt,
-            'masuk'    => 0,
+            'masuk'    => null,
             'keluar'   => (float)$r->qty,
         ]);
 
-    // 2) IN (RETUR) -> group by noretur + itemcode
-    $in = usemateriallst::query()
-        ->where('companycode', $company)
-        ->whereNotNull('noretur')
-        ->whereDate('tglretur', '>=', $startDate)
-        ->whereDate('tglretur', '<=', $endDate)
-        ->when($search, function($q) use ($search) {
-            $q->where('rkhno', 'like', "%{$search}%")
-              ->orWhere('noretur', 'like', "%{$search}%");
+    // IN (RETUR) -> tanggal pakai rkhhdr.rkhdate
+    $in = usemateriallst::from('usemateriallst as u')
+        ->join('rkhhdr as b', function($join){
+            $join->on('u.rkhno','=','b.rkhno')
+                 ->on('u.companycode','=','b.companycode');
         })
-        ->groupBy('itemcode', 'noretur')
-        ->selectRaw('itemcode, noretur as docno, MIN(tglretur) as dt, SUM(qtyretur) as qty')
+        ->where('u.companycode', $company)
+        ->whereNotNull('u.noretur')
+        ->whereDate('b.rkhdate', '>=', $startDate)
+        ->whereDate('b.rkhdate', '<=', $endDate)
+        ->when($search, function($q) use ($search){
+            $q->where('u.rkhno', 'like', "%{$search}%")
+              ->orWhere('u.noretur', 'like', "%{$search}%");
+        })
+        ->groupBy('u.itemcode', 'u.noretur')
+        ->selectRaw("
+            u.itemcode,
+            u.noretur as docno,
+            MIN(b.rkhdate) as dt,
+            SUM(u.qtyretur) as qty
+        ")
         ->get()
         ->map(fn($r) => (object)[
             'itemcode' => $r->itemcode,
-            'type'     => 'R',               // masuk
+            'type'     => 'R',
             'docno'    => $r->docno,
             'dt'       => $r->dt,
             'masuk'    => (float)$r->qty,
-            'keluar'   => 0,
+            'keluar'   => null,
         ]);
 
-    // Gabung event
     $events = $out->concat($in);
 
-    // 3) Itemcode yang muncul di range
-    $itemcodes = $events->pluck('itemcode')->unique()->values();
-
-    // 4) Saldo awal: ambil endstock terakhir sebelum startDate per item
-    $saldoAwalByItem = [];
-    foreach ($itemcodes as $code) {
-        $last = usemateriallst::query()
-            ->where('companycode', $company)
-            ->where('itemcode', $code)
-            ->whereNotNull('endstock')
-            ->whereDate('tgluse', '<', $startDate)
-            ->orderBy('tgluse', 'desc')
-            ->select('endstock')
-            ->first();
-
-        $saldoAwalByItem[$code] = (float)($last->endstock ?? 0);
+    // kalau tidak ada data, langsung return kosong
+    if ($events->isEmpty()) {
+        return view('transaction.gudang.report')->with([
+            'title' => $title,
+            'report' => [],
+            'search' => $search,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ]);
     }
 
-    // 5) Bentuk report per itemcode (saldo jalan)
+    $itemcodes = $events->pluck('itemcode')->unique()->values();
+
     $report = [];
 
     foreach ($itemcodes as $code) {
@@ -217,21 +229,8 @@ class GudangController extends Controller
             ->sortBy('dt')
             ->values();
 
-        $saldo = $saldoAwalByItem[$code] ?? 0;
-
         $rows = [];
-        $rows[] = (object)[
-            'no'     => null,
-            'ket'    => 'Saldo Awal',
-            'masuk'  => null,
-            'keluar' => null,
-            'saldo'  => $saldo,
-            'dt'     => null,
-            'type'   => null,
-        ];
-
-        $uNo = 0;
-        $rNo = 0;
+        $uNo = 0; $rNo = 0;
 
         foreach ($itemEvents as $ev) {
             if ($ev->type === 'U') $uNo++;
@@ -239,21 +238,18 @@ class GudangController extends Controller
 
             $no = $ev->type === 'U' ? "U-{$uNo}" : "R-{$rNo}";
 
-            // saldo jalan: masuk tambah, keluar kurang
-            $saldo = $saldo + $ev->masuk - $ev->keluar;
-
             $rows[] = (object)[
                 'no'     => $no,
-                'ket'    => $ev->docno,      // bisa tampil docno (nouse/noretur) atau kosong
-                'masuk'  => $ev->masuk ?: null,
-                'keluar' => $ev->keluar ?: null,
-                'saldo'  => $saldo,
-                'dt'     => $ev->dt,
+                'tgl'    => $ev->dt,
+                'ket'    => $ev->docno,
+                'masuk'  => $ev->masuk,
+                'keluar' => $ev->keluar,
                 'type'   => $ev->type,
             ];
         }
 
         $meta = $itemMaster->get($code);
+
         $report[] = (object)[
             'itemcode' => $code,
             'itemname' => $meta->itemname ?? '-',
@@ -262,9 +258,8 @@ class GudangController extends Controller
         ];
     }
 
-    // Urutkan itemcode biar rapih
     usort($report, fn($a,$b) => strcmp($a->itemcode, $b->itemcode));
-    // transaction.gudang.detail
+
     return view('transaction.gudang.report')->with([
         'title' => $title,
         'report' => $report,
@@ -273,6 +268,7 @@ class GudangController extends Controller
         'endDate' => $endDate,
     ]);
 }
+
 
 
     public function detail(Request $request)
