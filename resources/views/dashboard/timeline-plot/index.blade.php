@@ -100,7 +100,7 @@
         </div>
         
         <div x-show="activeTab==='table'" x-transition>
-            <div style="height:90vh;overflow:auto;">
+            <div style="height: calc(100vh - 220px); overflow: auto;">
                 <table>
                     <thead>
                         <tr>
@@ -127,7 +127,9 @@
                             
                             {{-- 2 Kolom Terakhir --}}
                             <th class="sticky-v" rowspan="2">Realisasi<br>Tanam<br><small>HA</small></th>
+                            @if($cropType !== 'p')
                             <th class="sticky-v" rowspan="2">%</th>
+                            @endif
                         </tr>
                     </thead>
                     
@@ -187,6 +189,7 @@
                             </td>
                             
                             {{-- Total Persentase --}}
+                            @if($cropType !== 'p')
                             <td style="text-align:right;">
                                 @php
                                     $totalSaldo = $plotHeaders->sum('batcharea');
@@ -194,6 +197,7 @@
                                 @endphp
                                 {{ number_format($persenTotal, 2) }}%
                             </td>
+                            @endif
                         </tr>
                         
                         {{-- DATA PER PLOT --}}
@@ -232,7 +236,8 @@
                                 <td style="text-align:right;">
                                     {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
                                 </td>
-                                
+
+                                @if($cropType !== 'p')
                                 {{-- Persentase (stage: 1/total activity) --}}
                                 <td style="text-align:right;">
                                     @php
@@ -240,6 +245,7 @@
                                     @endphp
                                     {{ number_format($stagePct, 2) }}%
                                 </td>
+                                @endif
                             </tr>
                         @endforeach
                         @endforeach
@@ -327,7 +333,7 @@
                                         $detail = $plotActivityDetails[$plotCode] ?? null;
                                         if (!$detail) continue; // Skip kalau tidak ada data
                                         
-                                        $umurText = ($detail['umur_hari'] ?? 0) > 0 ? ($detail['umur_hari'] . ' hari') : '-';
+                                        $umurText = ($detail['umur_bulan'] ?? 0) >= 0 ? (($detail['umur_bulan'] ?? 0) . ' bln') : '-';
                                         $avgPct = $detail['avg_percentage'] ?? 0;
                                         $pctColor = $avgPct >= 100 ? 'text-green-600' : ($avgPct > 0 ? 'text-orange-600' : 'text-gray-500');
                                     @endphp
@@ -475,7 +481,7 @@
 
 function getRingColor(d) {
   const umurHari  = d.umur_hari || 0;
-  const umurBulan = umurHari / 30;
+  const umurBulan = (d.umur_bulan ?? 0);
 
   // cari activity ZPK (4.2.1)
   let hasZpk = false;
@@ -544,7 +550,7 @@ function getRingColor(d) {
                     scale: 25,
                     fillColor: color,
                     fillOpacity: opacity,
-                    strokeColor: ringColor,
+                    strokeColor: '#ffffff',
                     strokeWeight: 3
                 },
                 label: {text: h.plot, color: '#000', fontSize: '11px', fontWeight: 'bold'}
@@ -553,9 +559,10 @@ function getRingColor(d) {
 
 
                 let umurText = '-';
-                if (d.umur_hari > 0) {
-                    umurText = `${d.umur_hari} hari`;
+                if (d.umur_bulan !== undefined && d.umur_bulan !== null) {
+                    umurText = `${d.umur_bulan} bulan`;
                 }
+
 
                 let acts = '';
         if (d.activities?.length > 0) {
@@ -641,18 +648,23 @@ function getRingColor(d) {
                 };
 
                 const baseColor = getPlotColor(d);
+                const zpkColor  = getRingColor(d);
                 const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
                 const color = isMatch ? baseColor : '#000000';
 
+                const hasZpkWarning = (zpkColor !== '#ffffff'); 
+                const fillColor = !isMatch ? '#000000' : (hasZpkWarning ? zpkColor : baseColor);
+
                 polygons.push(new google.maps.Polygon({
                 paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
-                strokeColor: '#374151',
+                strokeColor: isMatch ? (hasZpkWarning ? zpkColor : '#374151') : '#000000',
                 strokeOpacity: isMatch ? 0.8 : 0.35,
                 strokeWeight: 2,
-                fillColor: color,
+                fillColor: fillColor, // <-- PAKAI fillColor (bukan "color")
                 fillOpacity: isMatch ? 0.18 : 0.06,
                 map: map
                 }));
+
 
             });
             

@@ -54,7 +54,8 @@ class TimelineController extends Controller
         'b.batchdate',
         'b.tanggalpanen',
         'b.isactive',
-        DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari')
+        DB::raw('DATEDIFF(CURDATE(), b.batchdate) as umur_hari'),
+        DB::raw('TIMESTAMPDIFF(MONTH, b.batchdate, CURDATE()) as umur_bulan')
     )
     ->orderBy('b.plot')
     ->get();
@@ -326,6 +327,7 @@ $luasRkh = $plotInfo->batcharea ?? 0;  // ✅ GANTI: Pakai batcharea (bukan luas
 // ✅ Pindahkan ke luar if untuk efisiensi
 $lifecycleStatus = $plotInfo->lifecyclestatus ?? '-';
 $umurHari = $plotInfo->umur_hari ?? 0;
+$umurBulan = $plotInfo->umur_bulan ?? 0;
 
 $hasPanen  = !empty($plotInfo->tanggalpanen);
 $lastPanen = $plotInfo->tanggalpanen ?? null;
@@ -405,7 +407,8 @@ if ($activities && $luasRkh > 0) {
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => $totalLuasHasil,
         'lifecyclestatus' => $lifecycleStatus,  
-        'umur_hari' => $umurHari,                
+        'umur_hari' => $umurHari,          
+        'umur_bulan' => $umurBulan,      
         'is_panen'                 => $hasPanen ? 1 : 0,          
         'tanggal_panen_terakhir'   => $lastPanen,
         'is_match' => $match
@@ -426,7 +429,8 @@ if ($activities && $luasRkh > 0) {
         'luas_rkh' => $luasRkh,
         'total_luas_hasil' => 0,
         'lifecyclestatus' => $lifecycleStatus,  
-        'umur_hari' => $umurHari,               
+        'umur_hari' => $umurHari,        
+        'umur_bulan' => $umurBulan,               
         'is_panen' => $hasPanen ? 1 : 0,          
         'tanggal_panen_terakhir' => $lastPanen,
 
@@ -490,7 +494,7 @@ if ($isExport) {
                 (float)($detail['avg_percentage'] ?? 0),
                 $detail['marker_color'] ?? 'black',
                 $detail['lifecyclestatus'] ?? '-',
-                (int)($detail['umur_hari'] ?? 0),
+                (int)($detail['umur_bulan'] ?? 0),
                 (int)($detail['is_panen'] ?? 0),
                 $tglPanen ? \Carbon\Carbon::parse($tglPanen)->format('Y-m-d') : '-',
             ];
@@ -576,7 +580,9 @@ if ($isExport) {
     }
 
     $sheet->setCellValue($col++ . '1', 'Realisasi Tanam (HA)');
+    if ($cropType !== 'p') {
     $sheet->setCellValue($col++ . '1', 'Persentase (%)');
+    }
 
     // ========== STYLE HEADER ==========
     $lastCol = $sheet->getHighestColumn();
@@ -621,17 +627,17 @@ if ($isExport) {
 
                 $sheet->setCellValue($col++ . $row, $totalRealisasiPlot > 0 ? (float)$totalRealisasiPlot : 0);
 
-                $stageCount = count($activityMap);
-                $doneCount  = 0;
-                
-                foreach ($activityMap as $code => $label) {
-                    $a = $activityData->get($plot->plot)?->get($code);
-                    $pct = (float)($a->avg_percentage ?? 0);
-                    if ($pct >= 100) $doneCount++;
+                if ($cropType !== 'p') {
+                    $stageCount = count($activityMap);
+                    $doneCount  = 0;
+                    foreach ($activityMap as $code => $label) {
+                        $a = $activityData->get($plot->plot)?->get($code);
+                        $pct = (float)($a->avg_percentage ?? 0);
+                        if ($pct >= 100) $doneCount++;
+                    }
+                    $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
+                    $sheet->setCellValue($col++ . $row, (float)$stagePct);                
                 }
-                
-                $stagePct = $stageCount > 0 ? ($doneCount / $stageCount) * 100 : 0;
-                $sheet->setCellValue($col++ . $row, (float)$stagePct);                
 
                 $row++;
             }

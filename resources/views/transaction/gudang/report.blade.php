@@ -82,10 +82,11 @@
           <table class="min-w-full text-sm">
             <thead class="bg-gray-100">
               <tr>
-                <th class="py-2 px-3 border border-gray-300">Tanggal</th>
-                <th class="py-2 px-3 border border-gray-300">Ket</th>
-                <th class="py-2 px-3 border border-gray-300 text-right">Masuk</th>
-                <th class="py-2 px-3 border border-gray-300 text-right">Keluar</th>
+                <th class="py-2 px-3 border border-gray-300">TANGGAL</th>
+                <th class="py-2 px-3 border border-gray-300 text-center">RT/USE</th>
+                <th class="py-2 px-3 border border-gray-300">KET</th>
+                <th class="py-2 px-3 border border-gray-300 text-right">MASUK</th>
+                <th class="py-2 px-3 border border-gray-300 text-right">KELUAR</th>
               </tr>
             </thead>
   
@@ -95,7 +96,13 @@
                   <td class="py-2 px-3 border border-gray-300 text-center">
                     {{ !empty($r->tgl) ? date('d M Y', strtotime($r->tgl)) : '' }}
                   </td>
-  
+                  
+                  <td class="py-2 px-3 border border-gray-300 text-center font-semibold
+                  {{ strtoupper(trim($r->type ?? '')) === 'R' ? 'text-green-700' : (strtoupper(trim($r->type ?? '')) === 'U' ? 'text-red-700' : 'text-gray-600') }}">
+                  {{ strtoupper(trim($r->type ?? '')) === 'R' ? 'RT' : (strtoupper(trim($r->type ?? '')) === 'U' ? 'USE' : '') }}
+                  </td>
+                           
+
                   <td class="py-2 px-3 border border-gray-300">
                     {{ $r->ket ?? '' }}
                   </td>
@@ -113,7 +120,7 @@
   
             <tfoot>
               <tr class="bg-gray-100 font-semibold">
-                <td class="py-2 px-3 border border-gray-300 text-right" colspan="2">TOTAL</td>
+                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">TOTAL</td>
                 <td class="py-2 px-3 border border-gray-300 text-right text-green-800">
                   {{ number_format($totalMasuk, 2) }}
                 </td>
@@ -123,8 +130,8 @@
               </tr>
   
               <tr class="bg-white font-semibold">
-                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">SALDO</td>
-                <td class="py-2 px-3 border border-gray-300 text-right text-gray-900">
+                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">Selisih</td>
+                <td class="py-2 px-3 border border-gray-300 text-right text-gray-900" colspan="2">
                   {{ number_format($saldo, 2) }}
                 </td>
               </tr>
