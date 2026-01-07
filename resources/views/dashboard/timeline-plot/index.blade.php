@@ -30,14 +30,14 @@
         .total-row td:not(.sticky-h){min-width:70px;}
 
         /* ✅ Khusus blok */
-        .sticky-h.blok{background:#14532d;color:white;text-align:center;}
-        tbody .sticky-h.blok{background:#14532d;}
+        .sticky-h.blok{background:#0f766e;color:white;text-align:center;}
+        tbody .sticky-h.blok{background:#0f766e;}
         
         /* ✅ Total row - nempel di bawah header */
         .total-row{position:sticky;top:52px;z-index:15;}
         .total-row td{background:#166534;color:white;font-weight:bold;}
         .total-row .sticky-h{z-index:19;}
-        .total-row .sticky-h.blok{background:#14532d;}
+        .total-row .sticky-h.blok{background:#0f766e;}
         
         tbody td{background:#fff;}
         #map{height:600px;width:100%;}
@@ -100,7 +100,7 @@
         </div>
         
         <div x-show="activeTab==='table'" x-transition>
-            <div style="height:90vh;overflow:auto;">
+            <div style="height: calc(100vh - 220px); overflow: auto;">
                 <table>
                     <thead>
                         <tr>
@@ -127,7 +127,9 @@
                             
                             {{-- 2 Kolom Terakhir --}}
                             <th class="sticky-v" rowspan="2">Realisasi<br>Tanam<br><small>HA</small></th>
+                            @if($cropType !== 'p')
                             <th class="sticky-v" rowspan="2">%</th>
+                            @endif
                         </tr>
                     </thead>
                     
@@ -187,6 +189,7 @@
                             </td>
                             
                             {{-- Total Persentase --}}
+                            @if($cropType !== 'p')
                             <td style="text-align:right;">
                                 @php
                                     $totalSaldo = $plotHeaders->sum('batcharea');
@@ -194,6 +197,7 @@
                                 @endphp
                                 {{ number_format($persenTotal, 2) }}%
                             </td>
+                            @endif
                         </tr>
                         
                         {{-- DATA PER PLOT --}}
@@ -232,7 +236,8 @@
                                 <td style="text-align:right;">
                                     {{ $totalRealisasiPlot > 0 ? number_format($totalRealisasiPlot, 2) : '-' }}
                                 </td>
-                                
+
+                                @if($cropType !== 'p')
                                 {{-- Persentase (stage: 1/total activity) --}}
                                 <td style="text-align:right;">
                                     @php
@@ -240,6 +245,7 @@
                                     @endphp
                                     {{ number_format($stagePct, 2) }}%
                                 </td>
+                                @endif
                             </tr>
                         @endforeach
                         @endforeach
@@ -267,7 +273,7 @@
   </div>
 
   <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
-    <span class="inline-block w-4 h-4 rounded-full" style="background:#14532d;border:2px solid #fff;"></span>
+    <span class="inline-block w-4 h-4 rounded-full" style="background:#0f766e;border:2px solid #fff;"></span>
     <span>Semua stage selesai (fill hijau tua)</span>
   </div>
 
@@ -276,7 +282,7 @@
     <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:3px solid #f97316;"></span>
     <span>Ring orange: sudah ZPK &gt; 35 hari</span>
   </div>
-
+  
   <div class="flex items-center gap-2 bg-white border rounded px-2 py-1">
     <span class="inline-block w-4 h-4 rounded-full" style="background:#fef3c7;border:3px solid #facc15;"></span>
     <span>Ring kuning: sudah ZPK &lt; 25 hari</span>
@@ -327,7 +333,7 @@
                                         $detail = $plotActivityDetails[$plotCode] ?? null;
                                         if (!$detail) continue; // Skip kalau tidak ada data
                                         
-                                        $umurText = ($detail['umur_hari'] ?? 0) > 0 ? ($detail['umur_hari'] . ' hari') : '-';
+                                        $umurText = ($detail['umur_bulan'] ?? 0) >= 0 ? (($detail['umur_bulan'] ?? 0) . ' bln') : '-';
                                         $avgPct = $detail['avg_percentage'] ?? 0;
                                         $pctColor = $avgPct >= 100 ? 'text-green-600' : ($avgPct > 0 ? 'text-orange-600' : 'text-gray-500');
                                     @endphp
@@ -466,21 +472,16 @@
 
     // --- aturan utama dulu: selesai/ada/belum ada ---
     if (!hasAnyActivity) return '#fef3c7';   // cream (belum ada activity)
-    if (stage >= 100) return '#14532d';      // hijau tua (semua stage selesai)
+    if (stage >= 100) return '#0f766e';      // hijau tua (semua stage selesai)
 
     // --- override ZPK (kalau sudah ada activity tapi belum selesai) ---
-    // merah kalau ZPK sudah lewat 35 hari
-    if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) return '#f97316';
-    // kuning kalau ZPK masih < 25 hari
-    if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) return '#facc15';
-
     // default progress (belum selesai) → hijau muda
     return '#86efac';
 }
 
 function getRingColor(d) {
   const umurHari  = d.umur_hari || 0;
-  const umurBulan = umurHari / 30;
+  const umurBulan = (d.umur_bulan ?? 0);
 
   // cari activity ZPK (4.2.1)
   let hasZpk = false;
@@ -501,8 +502,6 @@ function getRingColor(d) {
   if (hasZpk && daysSinceZpk !== null && daysSinceZpk > 35) return '#f97316';
   if (hasZpk && daysSinceZpk !== null && daysSinceZpk < 25) return '#facc15';
   if (!hasZpk && umurBulan >= 9) return '#dc2626';
-  if (umurBulan >= 6 && umurBulan < 9) return '#16a34a';
-  if (umurBulan >= 0 && umurBulan < 6) return '#32f175ff';
 
   return '#ffffff'; // default ring putih
 }
@@ -551,7 +550,7 @@ function getRingColor(d) {
                     scale: 25,
                     fillColor: color,
                     fillOpacity: opacity,
-                    strokeColor: '#fff',
+                    strokeColor: '#ffffff',
                     strokeWeight: 3
                 },
                 label: {text: h.plot, color: '#000', fontSize: '11px', fontWeight: 'bold'}
@@ -560,9 +559,10 @@ function getRingColor(d) {
 
 
                 let umurText = '-';
-                if (d.umur_hari > 0) {
-                    umurText = `${d.umur_hari} hari`;
+                if (d.umur_bulan !== undefined && d.umur_bulan !== null) {
+                    umurText = `${d.umur_bulan} bulan`;
                 }
+
 
                 let acts = '';
         if (d.activities?.length > 0) {
@@ -648,18 +648,23 @@ function getRingColor(d) {
                 };
 
                 const baseColor = getPlotColor(d);
+                const zpkColor  = getRingColor(d);
                 const isMatch = (activityFilter === 'all') ? true : (d.is_match === 1 || d.is_match === true);
                 const color = isMatch ? baseColor : '#000000';
 
+                const hasZpkWarning = (zpkColor !== '#ffffff'); 
+                const fillColor = !isMatch ? '#000000' : (hasZpkWarning ? zpkColor : baseColor);
+
                 polygons.push(new google.maps.Polygon({
                 paths: pts.map(p => ({lat: parseFloat(p.latitude), lng: parseFloat(p.longitude)})),
-                strokeColor: '#374151',
+                strokeColor: isMatch ? (hasZpkWarning ? zpkColor : '#374151') : '#000000',
                 strokeOpacity: isMatch ? 0.8 : 0.35,
                 strokeWeight: 2,
-                fillColor: color,
+                fillColor: fillColor, // <-- PAKAI fillColor (bukan "color")
                 fillOpacity: isMatch ? 0.18 : 0.06,
                 map: map
                 }));
+
 
             });
             
@@ -682,10 +687,10 @@ function getRingColor(d) {
             // ✅ Limit zoom level agar tidak terlalu dekat/jauh
             google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
                 const z = map.getZoom();
-                if (z > 15) map.setZoom(15);  // Tidak terlalu dekat
+                if (z > 15) map.setZoom(16);  // Tidak terlalu dekat
 
                 // ✅ GANTI: jangan paksa 14, cukup "floor" lebih wajar
-                if (z < 12) map.setZoom(12);  // Tidak terlalu jauh
+                if (z < 12) map.setZoom(15);  // Tidak terlalu jauh
             });
         }
 

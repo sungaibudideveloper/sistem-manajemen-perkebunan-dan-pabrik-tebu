@@ -4,26 +4,26 @@
     <x-slot:nav>{{ $nav }}</x-slot:nav>
   
     <style>
-      /* Print rules */
       @media print {
         .no-print { display: none !important; }
   
-        /* satu item per "section", mulai halaman baru */
-        .item-section { page-break-after: always; break-after: page; }
+        /* satu item = section; mulai halaman baru */
+        .item-section { 
+          page-break-after: always; 
+          break-after: page;
+          /* ✅ paksa "enter" di setiap halaman */
+          padding-top: 14mm;
+        }
         .item-section:last-child { page-break-after: auto; break-after: auto; }
   
-        /* jangan pecah row di tengah halaman */
         tr { page-break-inside: avoid; break-inside: avoid; }
   
-        /* header table tetap muncul tiap halaman */
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
   
-        /* biar header item tetap terlihat */
         .item-header { position: static !important; }
       }
   
-      /* Screen sticky header agar enak scroll */
       @media screen {
         .item-header {
           position: sticky;
@@ -35,11 +35,11 @@
   
     <div class="p-4 max-w-6xl mx-auto">
   
-      {{-- Top info (tanpa border) --}}
+      {{-- Top info --}}
+      
       <div class="flex items-start justify-between mb-4 no-print">
         <div class="text-sm text-gray-700 leading-6">
           <div>Company: <b>{{ session('companycode') }}</b></div>
-          <div>Periode: <b>{{ $startDate }}</b> s/d <b>{{ $endDate }}</b></div>
           @if($search) <div>Filter: <b>{{ $search }}</b></div> @endif
         </div>
   
@@ -58,26 +58,35 @@
           $saldo = $totalMasuk - $totalKeluar;
         @endphp
   
-        <div class="item-section bg-white border border-gray-300 rounded shadow-sm mb-6 overflow-x-auto">
+        {{-- ✅ Border atas dihilangkan: no outer border, no header border --}}
+        <div class="item-section bg-white rounded shadow-sm mb-6 overflow-x-auto">
   
-          {{-- Header item (sticky di screen, normal di print) --}}
-          <div class="item-header bg-gray-50 border-b border-gray-300 px-4 py-3">
-            <div class="text-sm text-gray-900">
-              <b>{{ $block->itemcode }}</b> — {{ $block->itemname }} ({{ $block->unit }})
-            </div>
-            <div class="text-xs text-gray-600 mt-1">
-              Periode: {{ $startDate }} s/d {{ $endDate }}
-              @if($search) • Filter: {{ $search }} @endif
+          {{-- Header item: tanpa border dan tanpa background berat --}}
+          <div class="item-header px-4 py-3">
+            <div class="flex items-start justify-between gap-4">
+              <div class="text-sm text-gray-900 min-w-0">
+                <b>{{ $block->itemcode }}</b> — {{ $block->itemname }} ({{ $block->unit }})
+              </div>
+          
+              <div class="text-xs text-gray-600 text-right whitespace-nowrap">
+                Periode: {{ $startDate }} s/d {{ $endDate }}
+                @if($search)
+                  <span class="text-gray-400"> • </span>
+                  Filter: {{ $search }}
+                @endif
+              </div>
             </div>
           </div>
+          
   
           <table class="min-w-full text-sm">
             <thead class="bg-gray-100">
               <tr>
-                <th class="py-2 px-3 border border-gray-300">Tanggal</th>
-                <th class="py-2 px-3 border border-gray-300">Ket</th>
-                <th class="py-2 px-3 border border-gray-300 text-right">Masuk</th>
-                <th class="py-2 px-3 border border-gray-300 text-right">Keluar</th>
+                <th class="py-2 px-3 border border-gray-300">TANGGAL</th>
+                <th class="py-2 px-3 border border-gray-300 text-center">RT/USE</th>
+                <th class="py-2 px-3 border border-gray-300">KET</th>
+                <th class="py-2 px-3 border border-gray-300 text-right">MASUK</th>
+                <th class="py-2 px-3 border border-gray-300 text-right">KELUAR</th>
               </tr>
             </thead>
   
@@ -87,17 +96,21 @@
                   <td class="py-2 px-3 border border-gray-300 text-center">
                     {{ !empty($r->tgl) ? date('d M Y', strtotime($r->tgl)) : '' }}
                   </td>
-  
+                  
+                  <td class="py-2 px-3 border border-gray-300 text-center font-semibold
+                  {{ strtoupper(trim($r->type ?? '')) === 'R' ? 'text-green-700' : (strtoupper(trim($r->type ?? '')) === 'U' ? 'text-red-700' : 'text-gray-600') }}">
+                  {{ strtoupper(trim($r->type ?? '')) === 'R' ? 'RT' : (strtoupper(trim($r->type ?? '')) === 'U' ? 'USE' : '') }}
+                  </td>
+                           
+
                   <td class="py-2 px-3 border border-gray-300">
                     {{ $r->ket ?? '' }}
                   </td>
   
-                  {{-- Masuk: hijau halus --}}
                   <td class="py-2 px-3 border border-gray-300 text-right font-medium text-green-700">
                     {{ is_null($r->masuk) ? '' : number_format($r->masuk, 2) }}
                   </td>
   
-                  {{-- Keluar: merah halus --}}
                   <td class="py-2 px-3 border border-gray-300 text-right font-medium text-red-700">
                     {{ is_null($r->keluar) ? '' : number_format($r->keluar, 2) }}
                   </td>
@@ -107,7 +120,7 @@
   
             <tfoot>
               <tr class="bg-gray-100 font-semibold">
-                <td class="py-2 px-3 border border-gray-300 text-right" colspan="2">TOTAL</td>
+                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">TOTAL</td>
                 <td class="py-2 px-3 border border-gray-300 text-right text-green-800">
                   {{ number_format($totalMasuk, 2) }}
                 </td>
@@ -117,8 +130,8 @@
               </tr>
   
               <tr class="bg-white font-semibold">
-                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">SALDO</td>
-                <td class="py-2 px-3 border border-gray-300 text-right text-gray-900">
+                <td class="py-2 px-3 border border-gray-300 text-right" colspan="3">Selisih</td>
+                <td class="py-2 px-3 border border-gray-300 text-right text-gray-900" colspan="2">
                   {{ number_format($saldo, 2) }}
                 </td>
               </tr>
