@@ -13,6 +13,8 @@ class LkhFotoLampiranController extends Controller
     /**
      * Upload foto lampiran LKH
      * POST /api/fileupload/lkh-foto-lampiran
+     * 
+     * Struktur folder: lkh-lampiran/YYYY/MM/DD/COMPANY/filename.jpg
      */
     public function upload(Request $request)
     {
@@ -45,11 +47,12 @@ class LkhFotoLampiranController extends Controller
             
             $lkhhdrid = $lkhhdr->id;
             
-            // Generate S3 path
+            // Generate S3 path dengan struktur: TAHUN/BULAN/TANGGAL/COMPANY
             $year = $now->format('Y');
             $month = $now->format('m');
             $day = $now->format('d');
             
+            // Build filename dengan blok-plot jika ada
             $blokPlot = '';
             if (!empty($validated['blok'])) {
                 $blokPlot = '_' . $validated['blok'];
@@ -58,6 +61,7 @@ class LkhFotoLampiranController extends Controller
                 }
             }
             
+            // Format: LKHNO_BLOK_PLOT_YYYYMMDDHHmmss_RANDOM.ext
             $filename = sprintf(
                 '%s%s_%s_%s.%s',
                 $validated['lkhno'],
@@ -67,10 +71,13 @@ class LkhFotoLampiranController extends Controller
                 $file->getClientOriginalExtension()
             );
             
+            // Path structure: lkh-lampiran/YYYY/MM/DD/COMPANY/filename.jpg
             $path = sprintf(
                 'lkh-lampiran/%s/%s/%s/%s/%s',
+                $year,
+                $month,
+                $day,
                 $validated['companycode'],
-                $year, $month, $day,
                 $filename
             );
             
@@ -103,11 +110,15 @@ class LkhFotoLampiranController extends Controller
                     'id' => $photoId,
                     'lkhno' => $validated['lkhno'],
                     'lkhhdrid' => $lkhhdrid,
+                    'companycode' => $validated['companycode'],
                     'path' => $path,
                     'url' => $url,
                     'filename' => $filename,
                     'blok' => $validated['blok'] ?? null,
                     'plot' => $validated['plot'] ?? null,
+                    'latitude' => $validated['latitude'] ?? null,
+                    'longitude' => $validated['longitude'] ?? null,
+                    'accuracy' => $validated['accuracy'] ?? null,
                     'uploaded_at' => $now->toIso8601String()
                 ]
             ], 200);
@@ -116,12 +127,14 @@ class LkhFotoLampiranController extends Controller
             DB::rollBack();
             return response()->json([
                 'status' => 0,
-                'description' => $e->errors()
+                'description' => 'Validation error',
+                'errors' => $e->errors()
             ], 422);
             
         } catch (\Exception $e) {
             DB::rollBack();
             
+            // Rollback S3 upload jika sudah ter-upload
             if (isset($path) && Storage::disk('s3')->exists($path)) {
                 Storage::disk('s3')->delete($path);
             }
@@ -135,6 +148,131 @@ class LkhFotoLampiranController extends Controller
             return response()->json([
                 'status' => 0,
                 'description' => 'Upload failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get all photos for specific LKH
+     * GET /api/fileupload/lkh-foto-lampiran/{lkhno}
+     */
+    public function getPhotos(Request $request, string $lkhno)
+    {
+        try {
+            $companycode = $request->query('companycode');
+            
+            if (!$companycode) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'Company code is required'
+                ], 400);
+            }
+            
+            $photos = DB::table('lkhfotolampiran')
+                ->where('lkhno', $lkhno)
+                ->where('companycode', $companycode)
+                ->orderBy('createdat', 'desc')
+                ->get();
+            
+            // Generate URLs for all photos
+            $photosWithUrls = $photos->map(function ($photo) {
+                return [
+                    'id' => $photo->id,
+                    'lkhno' => $photo->lkhno,
+                    'blok' => $photo->blok,
+                    'plot' => $photo->plot,
+                    'photopath' => $photo->photopath,
+                    'url' => Storage::disk('s3')->url($photo->photopath),
+                    'latitude' => $photo->latitude,
+                    'longitude' => $photo->longitude,
+                    'accuracy' => $photo->accuracy,
+                    'uploadfrom' => $photo->uploadfrom,
+                    'created_at' => $photo->createdat
+                ];
+            });
+            
+            return response()->json([
+                'status' => 1,
+                'description' => 'Success',
+                'data' => [
+                    'lkhno' => $lkhno,
+                    'total' => $photos->count(),
+                    'photos' => $photosWithUrls
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error getting LKH photos', [
+                'error' => $e->getMessage(),
+                'lkhno' => $lkhno
+            ]);
+            
+            return response()->json([
+                'status' => 0,
+                'description' => 'Failed to get photos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Delete specific photo
+     * DELETE /api/fileupload/lkh-foto-lampiran/{id}
+     */
+    public function delete(Request $request, int $id)
+    {
+        DB::beginTransaction();
+        
+        try {
+            $companycode = $request->query('companycode');
+            
+            if (!$companycode) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'Company code is required'
+                ], 400);
+            }
+            
+            $photo = DB::table('lkhfotolampiran')
+                ->where('id', $id)
+                ->where('companycode', $companycode)
+                ->first();
+            
+            if (!$photo) {
+                throw new \Exception('Photo not found');
+            }
+            
+            // Delete from S3
+            if (Storage::disk('s3')->exists($photo->photopath)) {
+                Storage::disk('s3')->delete($photo->photopath);
+            }
+            
+            // Delete from database
+            DB::table('lkhfotolampiran')
+                ->where('id', $id)
+                ->delete();
+            
+            DB::commit();
+            
+            return response()->json([
+                'status' => 1,
+                'description' => 'Photo deleted successfully',
+                'data' => [
+                    'id' => $id,
+                    'lkhno' => $photo->lkhno
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            \Log::error('Error deleting LKH photo', [
+                'error' => $e->getMessage(),
+                'photo_id' => $id
+            ]);
+            
+            return response()->json([
+                'status' => 0,
+                'description' => 'Delete failed: ' . $e->getMessage()
             ], 500);
         }
     }
