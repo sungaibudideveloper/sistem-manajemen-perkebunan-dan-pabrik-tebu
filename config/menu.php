@@ -215,6 +215,11 @@ return [
         'permission' => 'report.menu.view',
         'children' => [
             [
+                'name' => 'Absen',
+                'route' => 'report.absen.index',
+                'permission' => 'report.absen.view',
+            ],
+            [
                 'name' => 'Agronomi',
                 'route' => 'report.agronomi.index',
                 'permission' => 'report.agronomi.view',

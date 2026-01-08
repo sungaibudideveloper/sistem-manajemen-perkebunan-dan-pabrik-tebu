@@ -1,6 +1,6 @@
 <?php
 
-// routes\report.php
+// routes/report.php
 
 use App\Http\Controllers\Transaction\HPTController;
 use App\Http\Controllers\Transaction\AgronomiController;
@@ -13,8 +13,19 @@ use App\Http\Controllers\Report\SuratJalanReportController;
 use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
 use App\Http\Controllers\Report\PanenTrackPlotReportController;
 use App\Http\Controllers\Report\SaldoPanenReportController;
+use App\Http\Controllers\Report\AbsenReportController;
 
 Route::middleware('auth')->prefix('report')->name('report.')->group(function () {
+
+    // ============================================================================
+    // ABSEN
+    // ============================================================================
+    Route::middleware('permission:report.absen.view')->group(function () {
+        Route::get('absen', [AbsenReportController::class, 'index'])->name('absen.index');
+        Route::get('absen/{absenno}', [AbsenReportController::class, 'show'])->name('absen.show');
+        Route::get('absen/{absenno}/gallery', [AbsenReportController::class, 'gallery'])->name('absen.gallery');
+        Route::get('absen/export/excel', [AbsenReportController::class, 'exportExcel'])->name('absen.excel');
+    });
 
     // ============================================================================
     // AGRONOMI
