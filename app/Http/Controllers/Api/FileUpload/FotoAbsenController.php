@@ -47,6 +47,12 @@ class FotoAbsenController extends Controller
             $file = $request->file('foto');
             $now = now();
             
+            // Get extension dengan fallback
+            $extension = $file->getClientOriginalExtension();
+            if (empty($extension)) {
+                $extension = $file->guessExtension() ?? 'jpg';
+            }
+            
             // Cek record berdasarkan absenno, tenagakerjaid, companycode
             $absen = DB::table('absenlst')
                 ->where('absenno', $validated['absenno'])
@@ -79,7 +85,7 @@ class FotoAbsenController extends Controller
                 $tipeAbsen,
                 date('Ymd', strtotime($tanggal)),
                 Str::random(6),
-                $file->getClientOriginalExtension()
+                $extension
             );
             
             // Path structure: absensi/YYYY/MM/DD/COMPANY/filename.jpg

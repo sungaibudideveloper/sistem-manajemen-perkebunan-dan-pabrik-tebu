@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\Approval\RkhApprovalRepository;
 use App\Repositories\Approval\LkhApprovalRepository;
 use App\Repositories\Approval\OtherApprovalRepository;
+use App\Repositories\Approval\AbsenApprovalRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -22,15 +23,18 @@ class ApprovalDashboardController extends Controller
     protected $rkhRepository;
     protected $lkhRepository;
     protected $otherRepository;
+    protected $absenRepository;
 
     public function __construct(
         RkhApprovalRepository $rkhRepository,
         LkhApprovalRepository $lkhRepository,
-        OtherApprovalRepository $otherRepository
+        OtherApprovalRepository $otherRepository,
+        AbsenApprovalRepository $absenRepository
     ) {
         $this->rkhRepository = $rkhRepository;
         $this->lkhRepository = $lkhRepository;
         $this->otherRepository = $otherRepository;
+        $this->absenRepository = $absenRepository;
     }
 
     /**
@@ -65,6 +69,7 @@ class ApprovalDashboardController extends Controller
         $pendingRKH = $this->getPendingRKHWithDetails($companycode, $currentUser, $filters);
         $pendingLKH = $this->getPendingLKHWithDetails($companycode, $currentUser, $filters);
         $pendingOther = $this->getPendingOtherWithDetails($companycode, $currentUser, $filters);
+        $pendingAbsen = $this->getPendingAbsenWithDetails($companycode, $currentUser, $filters);
 
         return view('approval.index', [
             'title' => 'Approval Center',
@@ -73,6 +78,7 @@ class ApprovalDashboardController extends Controller
             'pendingRKH' => $pendingRKH,
             'pendingLKH' => $pendingLKH,
             'pendingOther' => $pendingOther,
+            'pendingAbsen' => $pendingAbsen,
             'userInfo' => $this->getUserInfo($currentUser),
             'filterDate' => $filterDate,
             'allDate' => $allDate
@@ -221,5 +227,22 @@ class ApprovalDashboardController extends Controller
             'idjabatan' => $currentUser->idjabatan,
             'jabatan_name' => $jabatan ? $jabatan->namajabatan : 'Unknown'
         ];
+    }
+    
+    /**
+     * Get pending absen approvals with additional details
+     * 
+     * @param string $companycode
+     * @param object $currentUser
+     * @param array $filters
+     * @return \Illuminate\Support\Collection
+     */
+    private function getPendingAbsenWithDetails($companycode, $currentUser, array $filters)
+    {
+        return $this->absenRepository->getPendingApprovals(
+            $companycode,
+            $currentUser->idjabatan,
+            $filters
+        );
     }
 }

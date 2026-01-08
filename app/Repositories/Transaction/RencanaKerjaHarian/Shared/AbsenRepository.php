@@ -9,7 +9,9 @@ use Carbon\Carbon;
  * AbsenRepository
  * 
  * Handles ALL absen-related queries (APPROVED only).
- * RULE: Only APPROVED absen (approval_status = 'APPROVED').
+ * RULE: Only query APPROVED absen (h.approvalstatus = '1').
+ * 
+ * UPDATED: Changed from l.approval_status to h.approvalstatus
  */
 class AbsenRepository
 {
@@ -32,7 +34,7 @@ class AbsenRepository
                     ->where('t.isactive', '=', 1);
             })
             ->where('h.companycode', $companycode)
-            ->where('l.approval_status', 'APPROVED')
+            ->where('h.approvalstatus', '1') // FIXED: Changed from l.approval_status to h.approvalstatus
             ->whereDate('h.uploaddate', Carbon::parse($date));
 
         if ($mandorId) {
@@ -63,6 +65,7 @@ class AbsenRepository
         return DB::table('absenhdr as h')
             ->join('user as u', 'h.mandorid', '=', 'u.userid')
             ->where('h.companycode', $companycode)
+            ->where('h.approvalstatus', '1') // FIXED: Added approval filter
             ->whereDate('h.uploaddate', Carbon::parse($date))
             ->select('h.mandorid', 'u.name as mandor_name')
             ->distinct()
@@ -90,7 +93,7 @@ class AbsenRepository
             ->leftJoin('user as m', 'h.mandorid', '=', 'm.userid')
             ->leftJoin('jenistenagakerja as jtk', 't.jenistenagakerja', '=', 'jtk.idjenistenagakerja')
             ->where('h.companycode', $companycode)
-            ->where('l.approval_status', 'APPROVED');
+            ->where('h.approvalstatus', '1'); // FIXED: Changed from l.approval_status to h.approvalstatus
 
         if ($date) {
             $query->whereDate('h.uploaddate', Carbon::parse($date));

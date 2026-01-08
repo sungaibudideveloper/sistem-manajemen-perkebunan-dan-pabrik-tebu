@@ -6,6 +6,7 @@ use App\Http\Controllers\Approval\ApprovalDashboardController;
 use App\Http\Controllers\Approval\RkhApprovalController;
 use App\Http\Controllers\Approval\LkhApprovalController;
 use App\Http\Controllers\Approval\OtherApprovalController;
+use App\Http\Controllers\Approval\AbsenApprovalController;
 
 Route::middleware('auth')->prefix('approval')->name('approval.')->group(function () {
     
@@ -44,6 +45,17 @@ Route::middleware('auth')->prefix('approval')->name('approval.')->group(function
         Route::post('/process', [OtherApprovalController::class, 'process'])->name('process');
         Route::get('/{approvalno}/detail', [OtherApprovalController::class, 'detail'])->name('detail');
         Route::get('/{approvalno}/history', [OtherApprovalController::class, 'history'])->name('history');
+    });
+    
+    // ============================================================================
+    // ABSEN APPROVAL
+    // Attendance approval (header + individual foto approval)
+    // ============================================================================
+    Route::prefix('absen')->name('absen.')->group(function () {
+        Route::post('/process', [AbsenApprovalController::class, 'process'])->name('process');
+        Route::post('/foto/process', [AbsenApprovalController::class, 'processFoto'])->name('foto.process');
+        Route::get('/{absenno}/detail', [AbsenApprovalController::class, 'detail'])->name('detail');
+        Route::get('/{absenno}/history', [AbsenApprovalController::class, 'history'])->name('history');
     });
     
     // ============================================================================
