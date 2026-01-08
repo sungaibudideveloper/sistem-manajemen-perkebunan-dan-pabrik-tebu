@@ -215,6 +215,24 @@ class RkhRepository
     }
 
     /**
+     * Get RKH by mandor and date
+     * 
+     * @param string $companycode
+     * @param string $mandorId
+     * @param string $date
+     * @return object|null
+     */
+    public function getRkhByMandorAndDate($companycode, $mandorId, $date)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('mandorid', $mandorId)
+            ->whereDate('rkhdate', $date)
+            ->whereNull('deleted_at')
+            ->first(['rkhno', 'rkhdate', 'status']);
+    }
+
+    /**
      * Insert RKH header and return surrogate ID
      * 
      * @param array $data

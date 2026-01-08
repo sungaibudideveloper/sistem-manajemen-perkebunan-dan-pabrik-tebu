@@ -157,6 +157,41 @@ class RkhUtilityService
     }
 
     /**
+     * Check if RKH already exists for mandor on specific date
+     * 
+     * @param string $companycode
+     * @param string $mandorId
+     * @param string $date
+     * @return array
+     */
+    public function checkDuplicateRkh($companycode, $mandorId, $date)
+    {
+        try {
+            // Use repository to check existing RKH
+            $existing = $this->rkhRepo->getRkhByMandorAndDate($companycode, $mandorId, $date);
+
+            if ($existing) {
+                return [
+                    'exists' => true,
+                    'rkhno' => $existing->rkhno,
+                    'rkhdate' => Carbon::parse($existing->rkhdate)->format('d/m/Y'),
+                    'status' => $existing->status
+                ];
+            }
+
+            return ['exists' => false];
+
+        } catch (\Exception $e) {
+            \Log::error("Error checking duplicate RKH for mandor {$mandorId} on date {$date}: " . $e->getMessage());
+            
+            return [
+                'exists' => false,
+                'error' => 'Gagal memeriksa duplikasi RKH'
+            ];
+        }
+    }
+
+    /**
      * Get surat jalan for plot + subkontraktor
      * 
      * @param string $companycode
