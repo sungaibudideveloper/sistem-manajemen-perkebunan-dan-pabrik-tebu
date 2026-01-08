@@ -25,7 +25,7 @@
         <!-- Date Filter Section -->
         <div class="bg-white border-b shadow-sm">
             <div class="max-w-4xl mx-auto px-4 py-3">
-                <form action="{{ route('transaction.approval.index') }}" method="GET" id="filterForm" class="flex items-center gap-3">
+                <form action="{{ route('approval.index') }}" method="GET" id="filterForm" class="flex items-center gap-3">
                     <div class="flex-1 flex items-center gap-2">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -177,7 +177,7 @@
                     </div>
 
                     <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
-                        <form action="{{ route('transaction.approval.processRKH') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.rkh.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="rkhno" value="{{ $rkh->rkhno }}">
                             <input type="hidden" name="action" value="approve">
@@ -188,7 +188,7 @@
                                 Approve
                             </button>
                         </form>
-                        <form action="{{ route('transaction.approval.processRKH') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.rkh.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="rkhno" value="{{ $rkh->rkhno }}">
                             <input type="hidden" name="action" value="decline">
@@ -268,7 +268,7 @@
                     </div>
 
                     <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
-                        <form action="{{ route('transaction.approval.processLKH') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.lkh.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="lkhno" value="{{ $lkh->lkhno }}">
                             <input type="hidden" name="action" value="approve">
@@ -279,7 +279,7 @@
                                 Approve
                             </button>
                         </form>
-                        <form action="{{ route('transaction.approval.processLKH') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.lkh.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="lkhno" value="{{ $lkh->lkhno }}">
                             <input type="hidden" name="action" value="decline">
@@ -453,7 +453,7 @@
 
                     <!-- Card Actions -->
                     <div class="px-4 py-2.5 bg-gray-50 border-t flex space-x-2">
-                        <form action="{{ route('transaction.approval.processOther') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.other.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="approvalno" value="{{ $approval->approvalno }}">
                             <input type="hidden" name="action" value="approve">
@@ -467,7 +467,7 @@
                                 Approve
                             </button>
                         </form>
-                        <form action="{{ route('transaction.approval.processOther') }}" method="POST" class="flex-1">
+                        <form action="{{ route('approval.other.process') }}" method="POST" class="flex-1">
                             @csrf
                             <input type="hidden" name="approvalno" value="{{ $approval->approvalno }}">
                             <input type="hidden" name="action" value="decline">
@@ -560,7 +560,7 @@
                             formData.append('action', 'approve');
                             formData.append('level', rkhData.approval_level);
 
-                            const response = await fetch('{{ route("transaction.approval.processRKH") }}', {
+                            const response = await fetch('{{ route('approval.rkh.process') }}', {
                                 method: 'POST',
                                 body: formData
                             });
@@ -600,7 +600,7 @@
                             formData.append('action', 'decline');
                             formData.append('level', rkhData.approval_level);
 
-                            const response = await fetch('{{ route("transaction.approval.processRKH") }}', {
+                            const response = await fetch('{{ route('approval.rkh.process') }}', {
                                 method: 'POST',
                                 body: formData
                             });
@@ -641,7 +641,7 @@
                             formData.append('action', 'approve');
                             formData.append('level', lkhData.approval_level);
 
-                            const response = await fetch('{{ route("transaction.approval.processLKH") }}', {
+                            const response = await fetch('{{ route('approval.lkh.process') }}', {
                                 method: 'POST',
                                 body: formData
                             });
@@ -681,7 +681,7 @@
                             formData.append('action', 'decline');
                             formData.append('level', lkhData.approval_level);
 
-                            const response = await fetch('{{ route("transaction.approval.processLKH") }}', {
+                            const response = await fetch('{{ route('approval.lkh.process') }}', {
                                 method: 'POST',
                                 body: formData
                             });
