@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/user-management.php'));
             Route::middleware('web')->group(base_path('routes/pabrik.php'));
             Route::middleware('web')->group(base_path('routes/infoupdates.php'));
+            Route::middleware('web')->group(base_path('routes/approval.php'));
             
             Route::middleware('api')
                 ->prefix('api')

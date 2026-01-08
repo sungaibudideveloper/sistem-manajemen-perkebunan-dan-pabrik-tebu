@@ -34,18 +34,6 @@ Route::middleware(['auth', 'mandor.access'])->group(function () {
     Route::get('/chat/messages', [LiveChatController::class, 'getMessages'])->name('chat.messages');
 
     // ============================================================================
-    // APPROVAL (Mobile View - Traditional Blade)
-    // ============================================================================
-    Route::middleware('permission:transaction.approval.view')->group(function () {
-        Route::prefix('transaction/approval')->name('transaction.approval.')->controller(\App\Http\Controllers\Transaction\ApprovalController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('/process-rkh', 'processRKHApproval')->name('processRKH');
-            Route::post('/process-lkh', 'processLKHApproval')->name('processLKH');
-            Route::post('/process-other', 'processOtherApproval')->name('processOther');
-        });
-    });
-
-    // ============================================================================
     // GPX/KML FILE MANAGEMENT
     // ============================================================================
     Route::middleware('permission:process.uploadgpx.view')->group(function () {
