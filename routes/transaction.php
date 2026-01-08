@@ -201,6 +201,7 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
         Route::post('gudang/submit', [GudangController::class, 'submit'])->name('gudang.submit');
         Route::any('gudang/retur', [GudangController::class, 'retur'])->name('gudang.retur');
         Route::any('gudang/returall', [GudangController::class, 'returAll'])->name('gudang.returall');
+        Route::get('gudang/report', [GudangController::class, 'report'])->name('gudang.report');
     });
 
     // ============================================================================

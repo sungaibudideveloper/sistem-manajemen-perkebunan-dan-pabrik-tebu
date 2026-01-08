@@ -1,0 +1,47 @@
+name: Auto Tag Version (patch)
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  tag_patch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push next patch tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags
+
+          LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+          if [ -z "${LAST_TAG:-}" ]; then
+            NEW_TAG="v1.0.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LAST_TAG#v}"
+            PATCH=$((PATCH+1))
+            NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+          fi
+
+          echo "Last tag: ${LAST_TAG:-<none>}"
+          echo "New tag:  $NEW_TAG"
+
+          # Avoid failing if tag already exists (rare race)
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEW_TAG already exists. Skipping."
+            exit 0
+          fi
+
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"

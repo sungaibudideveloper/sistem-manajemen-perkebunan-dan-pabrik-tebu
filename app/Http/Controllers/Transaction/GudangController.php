@@ -49,6 +49,7 @@ class GudangController extends Controller
 
     public function home(Request $request)
     {
+        // if (hasPermission('Menu Gudang')) {
             $usematerialhdr = new usematerialhdr;
             $usehdr2 = $usematerialhdr->selectuse(session('companycode'));
 
@@ -122,7 +123,153 @@ class GudangController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate
             ]);
+        // } else {
+        //     return redirect()->back()->with('error', 'Tidak Memiliki Izin Menu!');
+        // }
     }
+
+    
+
+    public function report(Request $request)
+{
+    $title = "Gudang - Report";
+
+    $search    = $request->input('search');
+    $startDate = $request->input('start_date', now()->subDays(7)->format('Y-m-d'));
+    $endDate   = $request->input('end_date', now()->format('Y-m-d'));
+
+    $company = session('companycode');
+
+    $itemMaster = Herbisida::where('companycode', $company)
+        ->select('itemcode', 'itemname', 'measure')
+        ->get()
+        ->keyBy('itemcode');
+
+    // OUT (USE) -> tanggal pakai rkhhdr.rkhdate
+    $out = usemateriallst::from('usemateriallst as u')
+        ->join('rkhhdr as b', function($join){
+            $join->on('u.rkhno','=','b.rkhno')
+                 ->on('u.companycode','=','b.companycode');
+        })
+        ->where('u.companycode', $company)
+        ->whereNotNull('u.nouse')
+        ->whereDate('b.rkhdate', '>=', $startDate)
+        ->whereDate('b.rkhdate', '<=', $endDate)
+        ->when($search, function($q) use ($search){
+            $q->where('u.rkhno', 'like', "%{$search}%")
+              ->orWhere('u.nouse', 'like', "%{$search}%");
+        })
+        ->groupBy('u.itemcode', 'u.nouse')
+        ->selectRaw("
+            u.itemcode,
+            u.nouse as docno,
+            MIN(b.rkhdate) as dt,
+            SUM(u.qty) as qty
+        ")
+        ->get()
+        ->map(fn($r) => (object)[
+            'itemcode' => $r->itemcode,
+            'type'     => 'U',
+            'docno'    => $r->docno,
+            'dt'       => $r->dt,
+            'masuk'    => null,
+            'keluar'   => (float)$r->qty,
+        ]);
+
+    // IN (RETUR) -> tanggal pakai rkhhdr.rkhdate
+    $in = usemateriallst::from('usemateriallst as u')
+        ->join('rkhhdr as b', function($join){
+            $join->on('u.rkhno','=','b.rkhno')
+                 ->on('u.companycode','=','b.companycode');
+        })
+        ->where('u.companycode', $company)
+        ->whereNotNull('u.noretur')
+        ->whereDate('b.rkhdate', '>=', $startDate)
+        ->whereDate('b.rkhdate', '<=', $endDate)
+        ->when($search, function($q) use ($search){
+            $q->where('u.rkhno', 'like', "%{$search}%")
+              ->orWhere('u.noretur', 'like', "%{$search}%");
+        })
+        ->groupBy('u.itemcode', 'u.noretur')
+        ->selectRaw("
+            u.itemcode,
+            u.noretur as docno,
+            MIN(b.rkhdate) as dt,
+            SUM(u.qtyretur) as qty
+        ")
+        ->get()
+        ->map(fn($r) => (object)[
+            'itemcode' => $r->itemcode,
+            'type'     => 'R',
+            'docno'    => $r->docno,
+            'dt'       => $r->dt,
+            'masuk'    => (float)$r->qty,
+            'keluar'   => null,
+        ]);
+
+    $events = $out->concat($in);
+
+    // kalau tidak ada data, langsung return kosong
+    if ($events->isEmpty()) {
+        return view('transaction.gudang.report')->with([
+            'title' => $title,
+            'report' => [],
+            'search' => $search,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ]);
+    }
+
+    $itemcodes = $events->pluck('itemcode')->unique()->values();
+
+    $report = [];
+
+    foreach ($itemcodes as $code) {
+        $itemEvents = $events->where('itemcode', $code)
+            ->sortBy('dt')
+            ->values();
+
+        $rows = [];
+        $uNo = 0; $rNo = 0;
+
+        foreach ($itemEvents as $ev) {
+            if ($ev->type === 'U') $uNo++;
+            if ($ev->type === 'R') $rNo++;
+
+            $no = $ev->type === 'U' ? "U-{$uNo}" : "R-{$rNo}";
+
+            $rows[] = (object)[
+                'no'     => $no,
+                'tgl'    => $ev->dt,
+                'ket'    => $ev->docno,
+                'masuk'  => $ev->masuk,
+                'keluar' => $ev->keluar,
+                'type'   => $ev->type,
+            ];
+        }
+
+        $meta = $itemMaster->get($code);
+
+        $report[] = (object)[
+            'itemcode' => $code,
+            'itemname' => $meta->itemname ?? '-',
+            'unit'     => $meta->measure ?? '-',
+            'rows'     => $rows,
+        ];
+    }
+
+    usort($report, fn($a,$b) => strcmp($a->itemcode, $b->itemcode));
+
+    return view('transaction.gudang.report')->with([
+        'title' => $title,
+        'report' => $report,
+        'search' => $search,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+    ]);
+}
+
+
 
     public function detail(Request $request)
     {
@@ -253,7 +400,7 @@ class GudangController extends Controller
             'currcode' => 'IDR',
             'itemnote' => $first->itemname,
             'qtybpb' => $first->qtyretur,
-            'Keterangan' => 'Rkhno: ' . $first->rkhno . ', Mandor: ' . $hfirst->mandorname ?? '',
+            'Keterangan' => 'Rkhno: ' . $first->rkhno . ', Mandor: ' . ($hfirst->mandorname ?? ''). ' | rkhno:' . $first->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
             'flagstatus' => 'ACTIVE'
         ]);
@@ -266,6 +413,8 @@ class GudangController extends Controller
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/returuse_api', [
                 'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
+                'companytebu'  => session('companycode'),  // ✅ tambah (atau sumber yg benar)
+                'rkhno'        => $request->rkhno,
                 'factory' => $hfirst->factoryinv,
                 'isi' => $isi,
                 'userid' => auth::user()->userid,
@@ -342,6 +491,15 @@ public function submit(Request $request)
     // Validasi basic
     $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
     $first = $details->first();
+
+    Log::info('SUBMIT DEBUG FIRST:', [
+        'session_company' => session('companycode'),
+        'rkhno' => $request->rkhno,
+        'first_company' => $first->companycode ?? null,
+        'first_factory' => $first->factoryinv ?? null,
+        'first_flagstatus' => $first->flagstatus ?? null,
+        'details_count' => $details->count(),
+    ]);
 
     $roundingByGroup = DB::table('herbisidagroup')
     ->pluck('rounddosage', 'herbisidagroupid');
@@ -473,7 +631,7 @@ public function submit(Request $request)
             'currcode' => 'IDR',
             'itemnote' => $detail->herbisidagroupname,
             'qtybpb' => round($totalQty, 3),
-            'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name,
+            'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name. ' | rkhno:' . $request->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
             'flagstatus' => $detail->flagstatus,
             'qtydigunakan' => $detail->qtydigunakan
@@ -530,6 +688,8 @@ public function submit(Request $request)
             ->post('https://rosebrand.sungaibudigroup.com/app/im-purchasing/purchasing/bpb/use_api', [
                 'connection' => $koneksi,
                 'company' => $companyinv->companyinventory,
+                'companytebu'  => session('companycode'),  // ✅ tambah (atau sumber yg benar)
+                'rkhno'        => $request->rkhno,
                 'factory' => $first->factoryinv,
                 'costcenter' => $request->costcenter,
                 'isi' => array_values($apiPayload),
