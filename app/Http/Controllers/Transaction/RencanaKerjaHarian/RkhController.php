@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhService;
 use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhValidationService;
 use App\Services\Transaction\RencanaKerjaHarian\Rkh\RkhNumberGeneratorService;
+use App\Services\Transaction\RencanaKerjaHarian\Utility\RkhUtilityService;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -15,15 +17,18 @@ class RkhController extends Controller
     protected $rkhService;
     protected $validationService;
     protected $numberGenerator;
+    protected $utilityService;
 
     public function __construct(
         RkhService $rkhService,
         RkhValidationService $validationService,
-        RkhNumberGeneratorService $numberGenerator
+        RkhNumberGeneratorService $numberGenerator,
+        RkhUtilityService $utilityService
     ) {
         $this->rkhService = $rkhService;
         $this->validationService = $validationService;
         $this->numberGenerator = $numberGenerator;
+        $this->utilityService = $utilityService;
     }
 
     /**
@@ -89,6 +94,47 @@ class RkhController extends Controller
             $date = $request->input('date', date('Y-m-d'));
             $mandorId = $request->input('mandor_id');
 
+            // VALIDATION 1: Date Range (Today to +7 days)
+            $today = date('Y-m-d');
+            $maxDate = date('Y-m-d', strtotime('+7 days'));
+            
+            if ($date < $today) {
+                return redirect()
+                    ->route('transaction.rencanakerjaharian.index')
+                    ->with('error', 'Tidak dapat membuat RKH untuk tanggal yang sudah lewat.');
+            }
+            
+            if ($date > $maxDate) {
+                return redirect()
+                    ->route('transaction.rencanakerjaharian.index')
+                    ->with('error', 'Tidak dapat membuat RKH lebih dari 7 hari ke depan.');
+            }
+
+            // VALIDATION 2: Check Outstanding RKH
+            if ($mandorId) {
+                $outstandingCheck = $this->utilityService->checkOutstandingRkh($companycode, $mandorId);
+                
+                if ($outstandingCheck['hasOutstanding']) {
+                    return redirect()
+                        ->route('transaction.rencanakerjaharian.index')
+                        ->with('error', 'Tidak dapat membuat RKH baru. Mandor ' . $mandorId . ' masih memiliki RKH outstanding: ' . $outstandingCheck['details']['rkhno'])
+                        ->with('outstanding_details', $outstandingCheck['details']);
+                }
+            }
+
+            // VALIDATION 3: Check Duplicate RKH for Same Date & Mandor
+            if ($mandorId && $date) {
+                $duplicateCheck = $this->utilityService->checkDuplicateRkh($companycode, $mandorId, $date);
+                
+                if ($duplicateCheck['exists']) {
+                    return redirect()
+                        ->route('transaction.rencanakerjaharian.index')
+                        ->with('error', 'RKH untuk Mandor ' . $mandorId . ' pada tanggal ' . date('d/m/Y', strtotime($date)) . ' sudah ada (No: ' . $duplicateCheck['rkhno'] . ')')
+                        ->with('duplicate_rkhno', $duplicateCheck['rkhno']);
+                }
+            }
+
+            // Load page data
             $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
 
             return view('transaction.rencanakerjaharian.rkh-create', array_merge($data, [
@@ -99,6 +145,78 @@ class RkhController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('RKH Create Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function createV2(Request $request)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            $date = $request->input('date', date('Y-m-d'));
+            $mandorId = $request->input('mandor_id');
+
+            // VALIDATION 1: Date Range (Today to +7 days)
+            $today = date('Y-m-d');
+            $maxDate = date('Y-m-d', strtotime('+7 days'));
+            
+            if ($date < $today) {
+                return redirect()
+                    ->route('transaction.rencanakerjaharian.index')
+                    ->with('error', 'Tidak dapat membuat RKH untuk tanggal yang sudah lewat.');
+            }
+            
+            if ($date > $maxDate) {
+                return redirect()
+                    ->route('transaction.rencanakerjaharian.index')
+                    ->with('error', 'Tidak dapat membuat RKH lebih dari 7 hari ke depan.');
+            }
+
+            // VALIDATION 2: Check Outstanding RKH
+            if ($mandorId) {
+                $outstandingCheck = $this->utilityService->checkOutstandingRkh($companycode, $mandorId);
+                
+                if ($outstandingCheck['hasOutstanding']) {
+                    return redirect()
+                        ->route('transaction.rencanakerjaharian.index')
+                        ->with('error', 'Tidak dapat membuat RKH baru. Mandor ' . $mandorId . ' masih memiliki RKH outstanding: ' . $outstandingCheck['details']['rkhno'])
+                        ->with('outstanding_details', $outstandingCheck['details']);
+                }
+            }
+
+            // VALIDATION 3: Check Duplicate RKH for Same Date & Mandor
+            if ($mandorId && $date) {
+                $duplicateCheck = $this->utilityService->checkDuplicateRkh($companycode, $mandorId, $date);
+                
+                if ($duplicateCheck['exists']) {
+                    return redirect()
+                        ->route('transaction.rencanakerjaharian.index')
+                        ->with('error', 'RKH untuk Mandor ' . $mandorId . ' pada tanggal ' . date('d/m/Y', strtotime($date)) . ' sudah ada (No: ' . $duplicateCheck['rkhno'] . ')')
+                        ->with('duplicate_rkhno', $duplicateCheck['rkhno']);
+                }
+            }
+
+            // Load page data
+            $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
+
+            \Log::info('RKH Create V2 Data Check', [
+                'activities_count' => count($data['activities'] ?? []),
+                'mandor_id' => $mandorId,
+                'date' => $date
+            ]);
+
+            return view('transaction.rencanakerjaharian.rkh-create-v2', array_merge($data, [
+                'title' => 'Create RKH (Modern Wizard)',
+                'navbar' => 'Transaction',
+                'nav' => 'Rencana Kerja Harian',
+            ]));
+
+        } catch (\Exception $e) {
+            \Log::error('RKH Create V2 Error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -347,39 +465,4 @@ class RkhController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Show create form V2 (Modern Wizard)
-     */
-    public function createV2(Request $request)
-{
-    try {
-        $companycode = Session::get('companycode');
-        $date = $request->input('date', date('Y-m-d'));
-        $mandorId = $request->input('mandor_id');
-
-        // ✅ Reuse existing service method
-        $data = $this->rkhService->getCreatePageData($date, $mandorId, $companycode);
-
-        \Log::info('RKH Create V2 Data Check', [
-            'activities_count' => count($data['activities'] ?? []),
-            'mandor_id' => $mandorId,
-            'date' => $date
-        ]);
-
-        return view('transaction.rencanakerjaharian.rkh-create-v2', array_merge($data, [
-            'title' => 'Create RKH (Modern Wizard)',
-            'navbar' => 'Transaction',
-            'nav' => 'Rencana Kerja Harian',
-        ]));
-
-    } catch (\Exception $e) {
-        \Log::error('RKH Create V2 Error', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-    }
-}
 }
