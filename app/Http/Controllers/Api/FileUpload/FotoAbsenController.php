@@ -31,6 +31,10 @@ class FotoAbsenController extends Controller
     /**
      * Private method untuk handle upload
      * Struktur folder: absensi/YYYY/MM/DD/COMPANY/filename.jpg
+     * 
+     * FIXED:
+     * - Allow re-upload (delete old photo first)
+     * - Use absen date for folder structure (not upload date)
      */
     private function uploadFoto(Request $request, string $tipeAbsen)
     {
@@ -67,23 +71,32 @@ class FotoAbsenController extends Controller
             // Tentukan kolom
             $columnName = $tipeAbsen === 'masuk' ? 'fotoabsenmasuk' : 'fotoabsenpulang';
             
-            // Cek apakah sudah upload
+            // FIX: Jika sudah ada foto lama, hapus dulu dari S3
+            $isReupload = false;
             if (!empty($absen->$columnName)) {
-                throw new \Exception('Foto absen ' . $tipeAbsen . ' sudah pernah diupload');
+                $isReupload = true;
+                if (Storage::disk('s3')->exists($absen->$columnName)) {
+                    Storage::disk('s3')->delete($absen->$columnName);
+                    \Log::info('Deleted old photo from S3', [
+                        'path' => $absen->$columnName,
+                        'absenno' => $validated['absenno'],
+                        'tipe' => $tipeAbsen
+                    ]);
+                }
             }
             
-            // Generate S3 path dengan struktur: TAHUN/BULAN/TANGGAL/COMPANY
-            $tanggal = $absen->absenmasuk ?? $now;
-            $year = date('Y', strtotime($tanggal));
-            $month = date('m', strtotime($tanggal));
-            $day = date('d', strtotime($tanggal));
+            // FIX: Generate S3 path menggunakan tanggal absen (bukan tanggal upload)
+            $tanggalAbsen = $absen->absenmasuk ?? $now;
+            $year = date('Y', strtotime($tanggalAbsen));
+            $month = date('m', strtotime($tanggalAbsen));
+            $day = date('d', strtotime($tanggalAbsen));
             
             // Format filename: TENAGAKERJAID_TIPE_YYYYMMDD_RANDOM.ext
             $filename = sprintf(
                 '%s_%s_%s_%s.%s',
                 $validated['tenagakerjaid'],
                 $tipeAbsen,
-                date('Ymd', strtotime($tanggal)),
+                date('Ymd', strtotime($tanggalAbsen)),
                 Str::random(6),
                 $extension
             );
@@ -116,7 +129,9 @@ class FotoAbsenController extends Controller
             
             return response()->json([
                 'status' => 1,
-                'description' => 'Foto absen ' . $tipeAbsen . ' berhasil diupload',
+                'description' => $isReupload 
+                    ? 'Foto absen ' . $tipeAbsen . ' berhasil diupdate (menggantikan foto lama)'
+                    : 'Foto absen ' . $tipeAbsen . ' berhasil diupload',
                 'data' => [
                     'absenno' => $validated['absenno'],
                     'tenagakerjaid' => $validated['tenagakerjaid'],
@@ -125,6 +140,7 @@ class FotoAbsenController extends Controller
                     'path' => $path,
                     'url' => $url,
                     'filename' => $filename,
+                    'is_reupload' => $isReupload,
                     'uploaded_at' => $now->toIso8601String()
                 ]
             ], 200);
