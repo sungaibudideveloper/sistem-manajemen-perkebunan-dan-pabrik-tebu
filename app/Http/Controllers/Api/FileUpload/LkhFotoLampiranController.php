@@ -15,6 +15,10 @@ class LkhFotoLampiranController extends Controller
      * POST /api/fileupload/lkh-foto-lampiran
      * 
      * Struktur folder: lkh-lampiran/YYYY/MM/DD/COMPANY/filename.jpg
+     * 
+     * FIXED:
+     * - Add extension fallback to 'jpg'
+     * - Use LKH date for folder structure (not upload date)
      */
     public function upload(Request $request)
     {
@@ -35,7 +39,13 @@ class LkhFotoLampiranController extends Controller
             $file = $request->file('foto');
             $now = now();
             
-            // Get lkhhdrid from lkhhdr
+            // FIX: Get extension dengan fallback
+            $extension = $file->getClientOriginalExtension();
+            if (empty($extension)) {
+                $extension = $file->guessExtension() ?? 'jpg';
+            }
+            
+            // Get lkhhdrid dan tanggal LKH from lkhhdr
             $lkhhdr = DB::table('lkhhdr')
                 ->where('lkhno', $validated['lkhno'])
                 ->where('companycode', $validated['companycode'])
@@ -47,10 +57,12 @@ class LkhFotoLampiranController extends Controller
             
             $lkhhdrid = $lkhhdr->id;
             
-            // Generate S3 path dengan struktur: TAHUN/BULAN/TANGGAL/COMPANY
-            $year = $now->format('Y');
-            $month = $now->format('m');
-            $day = $now->format('d');
+            // FIX: Generate S3 path menggunakan tanggal LKH (bukan tanggal upload)
+            // Gunakan lkhdate dari tabel lkhhdr
+            $tanggalLkh = $lkhhdr->lkhdate ?? $lkhhdr->createdat ?? $now;
+            $year = date('Y', strtotime($tanggalLkh));
+            $month = date('m', strtotime($tanggalLkh));
+            $day = date('d', strtotime($tanggalLkh));
             
             // Build filename dengan blok-plot jika ada
             $blokPlot = '';
@@ -68,7 +80,7 @@ class LkhFotoLampiranController extends Controller
                 $blokPlot,
                 $now->format('YmdHis'),
                 Str::random(6),
-                $file->getClientOriginalExtension()
+                $extension
             );
             
             // Path structure: lkh-lampiran/YYYY/MM/DD/COMPANY/filename.jpg
