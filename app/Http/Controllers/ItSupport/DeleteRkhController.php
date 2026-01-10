@@ -15,6 +15,9 @@ class DeleteRkhController extends Controller
      */
     public function index()
     {
+        if (Auth::user()->idjabatan !== 17) {
+            abort(403, 'Akses ditolak. Hanya untuk IT Support.');
+        }
         return view('it-support.delete-rkh.index', [
             'title' => 'Delete RKH',
             'navbar' => 'IT Support',
