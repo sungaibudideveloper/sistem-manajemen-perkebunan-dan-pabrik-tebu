@@ -25,13 +25,11 @@
 
     <!-- Critical CSS inline - Load FIRST before anything -->
     <style>
-        /* Hide everything initially */
         body {
             visibility: hidden;
             opacity: 0;
         }
 
-        /* Base layout styles to prevent flash */
         .layout-container {
             display: flex;
             min-height: 100vh;
@@ -44,25 +42,23 @@
             transition: width 0.3s ease;
         }
 
-        /* Desktop: Reserve sidebar space */
+        /* Desktop: Reserve sidebar space - FIXED WIDTH */
         @media (min-width: 1024px) {
             .sidebar-wrapper {
-                width: 18rem;
+                width: 240px;  /* ✅ Changed from 18rem (288px) */
             }
 
             .sidebar-minimized .sidebar-wrapper {
-                width: 4rem;
+                width: 64px;   /* ✅ Changed from 4rem to match w-16 */
             }
         }
 
         .main-wrapper {
             flex: 1;
-            margin-left: 0;
-            max-width: calc(100%-4rem);
             min-width: 0;
+            /* ❌ REMOVE: margin-left: 0; dan max-width - tidak perlu */
         }
 
-        /* Show body after state determined */
         body.ready {
             visibility: visible;
             opacity: 1;
@@ -74,7 +70,6 @@
         }
 
         @media print {
-
             .sidebar-wrapper,
             aside,
             header,

@@ -2,21 +2,10 @@
 
 /**
  * Navigation Menu Configuration
- * 
- * BEST PRACTICE: Config-based menu (no database queries)
- * Used by: NavigationComposer, Sidebar component
- * 
- * Structure:
- * - Each menu item can have unlimited children (nested)
- * - 'permission' links to permission table (module.resource.action)
- * - 'route' is the Laravel route name
- * - 'icon' is the icon identifier (lucide icons)
- */
+*/
 
 return [
     
-    
-
     // ============================================
     // MASTER DATA
     // ============================================
@@ -30,8 +19,6 @@ return [
                 'route' => 'masterdata.company.index',
                 'permission' => 'masterdata.company.view',
             ],
-            
-            // Manajemen Lahan (Group)
             [
                 'name' => 'Manajemen Lahan',
                 'children' => [
@@ -62,8 +49,6 @@ return [
                     ],
                 ],
             ],
-            
-            // Data Agronomi (Group)
             [
                 'name' => 'Data Agronomi',
                 'children' => [
@@ -89,8 +74,6 @@ return [
                     ],
                 ],
             ],
-            
-            // Manajemen Personel & Aset (Group)
             [
                 'name' => 'Manajemen Personel & Aset',
                 'children' => [
@@ -121,7 +104,6 @@ return [
                     ],
                 ],
             ],
-            
             [
                 'name' => 'Approval',
                 'route' => 'masterdata.approval.index',
@@ -150,7 +132,7 @@ return [
     // ============================================
     [
         'name' => 'Transaction',
-        'icon' => 'file-edit',
+        'icon' => 'edit',  // ✅ Changed from file-edit
         'permission' => 'transaction.menu.view',
         'children' => [
             [
@@ -211,7 +193,7 @@ return [
     // ============================================
     [
         'name' => 'Report',
-        'icon' => 'file-text',
+        'icon' => 'report',
         'permission' => 'report.menu.view',
         'children' => [
             [
@@ -272,13 +254,12 @@ return [
         ],
     ],
 
-
     // ============================================
     // DASHBOARD
     // ============================================
     [
         'name' => 'Dashboard',
-        'icon' => 'layout-dashboard',
+        'icon' => 'dashboard',
         'permission' => 'dashboard.menu.view',
         'children' => [
             [
@@ -366,8 +347,6 @@ return [
         ],
     ],
 
-
-    
     // ============================================
     // USER MANAGEMENT
     // ============================================
@@ -414,6 +393,23 @@ return [
         ],
     ],
 
+    // ============================================
+    // IT SUPPORT
+    // ============================================
+    [
+        'name' => 'IT Support',
+        'icon' => 'wrench',
+        'permission' => 'it-support.menu.view',
+        'children' => [
+            [
+                'name' => 'Delete RKH',
+                'route' => 'it-support.delete-rkh.index',
+                'permission' => 'it-support.delete-rkh.view',
+            ],
+        ],
+    ],
+
+    // ============================================
     // INFO & UPDATES
     // ============================================
     [
@@ -433,6 +429,4 @@ return [
             ],
         ],
     ],
-
-    
 ];
