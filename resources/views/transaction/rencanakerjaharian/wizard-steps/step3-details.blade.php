@@ -279,8 +279,10 @@ function plotDetailCard(actCode, plot) {
             zpk_status: data.batchinfo?.zpk_status || ''
           };
           
-          // PIAS: Auto-fill 0.00, Non-PIAS: luas sisa
-          this.luasKerja = this.isPiasActivity ? '0.00' : parseFloat(this.plotInfo.luassisa).toFixed(2);
+          // PIAS: Auto-fill luas plot, Non-PIAS: luas sisa
+          this.luasKerja = this.isPiasActivity ? 
+            parseFloat(this.plotInfo.luasplot).toFixed(2) : 
+            parseFloat(this.plotInfo.luassisa).toFixed(2);
           
           this.updateParentLuas(this.luasKerja);
         }
