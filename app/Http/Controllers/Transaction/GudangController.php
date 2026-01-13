@@ -272,7 +272,12 @@ class GudangController extends Controller
 
 
     public function detail(Request $request)
-    {
+    {   
+        $host = request()->getHost(); // contoh: localhost / 127.0.0.1 / domain
+        if(auth::user()->userid == 'Admin'){
+        dd(in_array($host, ['localhost', '127.0.0.1', '::1']),'islokal');}
+
+        dd(app(), app()->environment('local'));
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
@@ -506,7 +511,7 @@ public function submit(Request $request)
 
     if (strtoupper($first->flagstatus) != 'ACTIVE') {
         Cache::forget($lockKey);
-        throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
+        throw new \Exception('Tidak dapat submit. Status dokumen: ' . $first->flagstatus);
     }
     if ($details->whereNotNull('nouse')->count() >= 1) {
         Cache::forget($lockKey);
@@ -583,7 +588,7 @@ public function submit(Request $request)
                 $luas = $request->luas[$lkhno][$itemcode][$key] ?? 0;
                 $qtyraw = $luas * $dosage ?? 0;
 
-                //cek dosage standard
+                //tambahan cek standar cek dosage standard 
                 $groupId = $detail->herbisidagroupid ?? null;
                 if ($groupId) {
                     $kstd = $groupId.'|'.$itemcode;
@@ -664,7 +669,7 @@ public function submit(Request $request)
         }
     }
 
-    //cek is approval
+    //tambahan cek standar cek is approval
     // =====================================
     // STOP & CREATE APPROVAL DOC
     // =====================================
@@ -686,6 +691,19 @@ public function submit(Request $request)
             $approvalNo = $this->generateApprovalNo($companycode, now());
 
             DB::beginTransaction();
+
+            $pending = DB::table('approvaltransaction')
+                ->where('companycode', $companycode)
+                ->where('transactionnumber', $request->rkhno)
+                ->whereNull('approvalstatus')
+                ->exists();
+
+            if ($pending) {
+                DB::rollBack();
+                Cache::forget($lockKey);
+                return back()->with('warning', 'Sudah ada approval pending untuk RKH ini.');
+            }
+
 
             // 1) insert approvaltransaction (workflow)
             DB::table('approvaltransaction')->insert([
@@ -721,6 +739,14 @@ public function submit(Request $request)
                 ];
             }
             DB::table('usematerialapproval')->insert($rows);
+
+            usematerialhdr::where('companycode', $companycode)
+            ->where('rkhno', $request->rkhno)
+            ->update([
+                'flagstatus' => 'WAIT_APPROVAL',
+                'updatedat' => now(),
+                'updateby' => Auth::user()->userid
+            ]);
 
             DB::commit();
             Cache::forget($lockKey);
@@ -911,6 +937,7 @@ public function submit(Request $request)
     }
 }
 
+//tambahan cek standar
     private function generateApprovalNo($companycode, $date)
     {
         $dateStr = $date->format('ymd');
@@ -921,7 +948,7 @@ public function submit(Request $request)
 
         return "APV{$dateStr}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
     }
-
+//
 
 
     public function handle(Request $request)
