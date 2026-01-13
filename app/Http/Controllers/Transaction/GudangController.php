@@ -273,7 +273,7 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){$islokal = 'TESTING';}else{$islokal = 'LIVE';}
+        if( request()->getHost() == 'sugarcane.sblampung.com' ){$islokal = 'LIVE';}else{$islokal = 'TESTING';}
 
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
@@ -409,7 +409,7 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
@@ -683,7 +683,7 @@ public function submit(Request $request)
     // ✅ API Call - SETELAH COMMIT
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
