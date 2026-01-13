@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <!-- Plot Details Section - REVISED: Progress column removed -->
+        <!-- Plot Details Section -->
         @if($lkhPlotDetails && $lkhPlotDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -117,7 +117,7 @@
         </div>
         @endif
 
-        <!-- Worker Details Section - REVISED: Jam formatting changed from 8.0h to 8 jam -->
+        <!-- Worker Details Section - FIXED: Akses langsung dari query result -->
         @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -132,6 +132,7 @@
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-8">No</th>
+                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Kode Pekerja</th>
                             <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-40">Nama Pekerja</th>
                             <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-32">NIK</th>
                             @if($lkhData->jenistenagakerja == 1)
@@ -154,11 +155,14 @@
                         @foreach($lkhWorkerDetails as $index => $worker)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
+                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono text-center">
+                                {{ $worker->tenagakerjaid ?? '-' }}
+                            </td>
                             <td class="border border-gray-300 px-2 py-2 text-sm font-medium">
-                                {{ $worker->tenagakerja->nama ?? $worker->tenagakerjaid ?? 'N/A' }}
+                                {{ $worker->nama ?? '-' }}
                             </td>
                             <td class="border border-gray-300 px-2 py-2 text-sm font-mono">
-                                {{ $worker->tenagakerja->nik ?? '-' }}
+                                {{ $worker->nik ?? '-' }}
                             </td>
                             @if($lkhData->jenistenagakerja == 1)
                                 <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
@@ -202,7 +206,7 @@
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
                             @if($lkhData->jenistenagakerja == 1)
-                                <td colspan="9" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
+                                <td colspan="10" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm">
                                     Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}
                                 </td>
@@ -210,7 +214,7 @@
                                     Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
                                 </td>
                             @else
-                                <td colspan="4" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
+                                <td colspan="5" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
                                     Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
                                 </td>
@@ -399,49 +403,29 @@
 
     <style>
         @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            body {
-                font-size: 12px;
-            }
-            
-            table {
-                font-size: 10px;
-            }
-            
-            .action-buttons {
-                display: none;
-            }
+            .no-print { display: none !important; }
+            body { font-size: 12px; }
+            table { font-size: 10px; }
+            .action-buttons { display: none; }
         }
     </style>
 
     <script>
         function handlePrint() {
-            // Hide all navigation elements before printing
             const elementsToHide = [
                 '.sidebar', '.navbar', '.header', '.nav', '.breadcrumb', 
                 '.footer', 'nav', '#sidebar', '#header', '#navbar'
             ];
             
             elementsToHide.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(el => {
-                    el.style.display = 'none';
-                });
+                document.querySelectorAll(selector).forEach(el => el.style.display = 'none');
             });
             
-            // Print
             window.print();
             
-            // Restore elements after print (optional)
             setTimeout(() => {
                 elementsToHide.forEach(selector => {
-                    const elements = document.querySelectorAll(selector);
-                    elements.forEach(el => {
-                        el.style.display = '';
-                    });
+                    document.querySelectorAll(selector).forEach(el => el.style.display = '');
                 });
             }, 1000);
         }
