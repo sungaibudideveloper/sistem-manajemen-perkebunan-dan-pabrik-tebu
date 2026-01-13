@@ -14,6 +14,7 @@ use App\Http\Controllers\Report\SuratJalanTimbanganReportController;
 use App\Http\Controllers\Report\PanenTrackPlotReportController;
 use App\Http\Controllers\Report\SaldoPanenReportController;
 use App\Http\Controllers\Report\AbsenReportController;
+use App\Http\Controllers\Report\TrackPiasReportController;
 
 Route::middleware('auth')->prefix('report')->name('report.')->group(function () {
 
@@ -127,6 +128,14 @@ Route::middleware('auth')->prefix('report')->name('report.')->group(function () 
     Route::middleware('permission:report.pivot.view')->group(function () {
         Route::get('agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi');
         Route::get('hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT');
+    });
+
+    // ============================================================================
+    // TRACK PIAS
+    // ============================================================================
+    Route::middleware('permission:report.track-pias.view')->group(function () {
+        Route::get('track-pias', [TrackPiasReportController::class, 'index'])->name('track-pias.index');
+        Route::post('track-pias/data', [TrackPiasReportController::class, 'getData'])->name('track-pias.data');
     });
 
 });
