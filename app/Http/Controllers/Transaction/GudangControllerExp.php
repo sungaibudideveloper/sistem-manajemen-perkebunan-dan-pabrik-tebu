@@ -273,7 +273,7 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        $host = request()->getHost(); // contoh: localhost / 127.0.0.1 / domain
+        // contoh: localhost / 127.0.0.1 / domain
         if(auth::user()->userid == 'Admin'){
         dd(in_array($host, ['localhost', '127.0.0.1', '::1']),'islokal');}
 
