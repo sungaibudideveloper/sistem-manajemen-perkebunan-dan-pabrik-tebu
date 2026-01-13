@@ -277,7 +277,7 @@ class GudangController extends Controller
         if(auth::user()->userid == 'Admin'){
         dd(in_array($host, ['localhost', '127.0.0.1', '::1']),'islokal');}
 
-        dd(app(), app()->environment('local'));
+        // dd(app(), app()->environment('local'));
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
