@@ -343,7 +343,7 @@ class GudangController extends Controller
             'itemlist' => $itemlist,
             'costcenter' => $costcenter,
             'detailmaterial' => $detailmaterial,
-            'islokal' => $islokal
+            'islokal' => $islokal=request()->getHost()
         ]);
     }
 
