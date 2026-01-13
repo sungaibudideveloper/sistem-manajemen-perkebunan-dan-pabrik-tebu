@@ -273,7 +273,8 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){ $islokal='LOKAL'; }else{ $islokal='LIVE'; }
+        // if(auth::user()->userid == 'Admin'){
+        //     dd(in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']),'islokal');}
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
@@ -336,7 +337,6 @@ class GudangController extends Controller
 
         return view('transaction.gudang.detail')->with([
             'title' => 'Gudang',
-            'islokal' => $islokal,
             'details' => $details,
             'dosage' => $dosage,
             'lst' => $lst,
@@ -408,7 +408,7 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
@@ -682,7 +682,7 @@ public function submit(Request $request)
     // ✅ API Call - SETELAH COMMIT
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()

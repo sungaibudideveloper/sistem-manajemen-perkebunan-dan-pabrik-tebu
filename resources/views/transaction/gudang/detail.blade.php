@@ -86,7 +86,6 @@ table th, table td {
                                 <div class="grid grid-cols-3 gap-4">
                                     <span class="text-left"><b>Company:</b> {{session('companycode')}} </span>
                                     <span class="text-center"><b>RKH:</b> {{ $details[0]->rkhno }}</span>
-                                    <span class="text-center"><b>Inventory:</b> {{ $islokalrkhno }}</span>
                                     {{-- <span class="text-right"><b>Tanggal:</b> {{ \Carbon\Carbon::parse($details[0]->createdat)->format('d/m/y') }}</span> --}}
                                 </div>
                                 <div class="grid grid-cols-3 gap-4">
