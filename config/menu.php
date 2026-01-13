@@ -142,7 +142,7 @@ return [
     // ============================================
     [
         'name' => 'Transaction',
-        'icon' => 'edit',  // ✅ Changed from file-edit
+        'icon' => 'edit',
         'permission' => 'transaction.menu.view',
         'children' => [
             [
@@ -260,6 +260,11 @@ return [
                 'name' => 'Trash',
                 'route' => 'report.trash-report.index',
                 'permission' => 'report.trash.view',
+            ],
+            [
+                'name' => 'Track Waktu Pias',
+                'route' => 'report.track-pias.index',
+                'permission' => 'report.track-pias.view',
             ],
         ],
     ],
