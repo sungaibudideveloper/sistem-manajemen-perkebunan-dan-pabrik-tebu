@@ -273,8 +273,7 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        // if(auth::user()->userid == 'Admin'){
-        //     dd(in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']),'islokal');}
+        if( in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1']) ){ $islokal='LOKAL'; }else{ $islokal='LIVE'; }
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
@@ -337,6 +336,7 @@ class GudangController extends Controller
 
         return view('transaction.gudang.detail')->with([
             'title' => 'Gudang',
+            'islokal' => $islokal,
             'details' => $details,
             'dosage' => $dosage,
             'lst' => $lst,
