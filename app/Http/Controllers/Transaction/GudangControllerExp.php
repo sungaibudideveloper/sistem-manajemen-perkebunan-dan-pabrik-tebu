@@ -411,7 +411,7 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        // if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
