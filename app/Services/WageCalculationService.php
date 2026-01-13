@@ -2,17 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\MasterData\Upah;
-use App\Models\MasterData\Activity;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
- * WageCalculationService
+ * WageCalculationService (FIXED VERSION)
  * 
  * Handles all wage calculations for different scenarios:
- * - Harian (daily wages with weekday/weekend/overtime rates)
- * - Borongan (piece rate based on hectares or weight)
+ * - Harian (daily wages with weekday/weekend/overtime rates) → reads from `upah` table
+ * - Borongan (piece rate based on hectares or weight) → reads from `upahborongan` table
  * - Special conditions (sick leave, early departure, etc.)
  */
 class WageCalculationService
@@ -44,7 +43,7 @@ class WageCalculationService
                 return $this->calculateHarianWage($companycode, $activitygroup, $workDate, $workerData);
             } elseif ($jenistenagakerja == 2) {
                 // Borongan
-                return $this->calculateBoronganWage($companycode, $activitygroup, $activitycode, $workDate, $workerData, $plotData);
+                return $this->calculateBoronganWage($companycode, $activitycode, $workDate, $workerData, $plotData);
             }
 
             throw new \Exception("Invalid jenistenagakerja: {$jenistenagakerja}");
@@ -63,6 +62,7 @@ class WageCalculationService
 
     /**
      * Calculate Harian wage (daily/hourly with overtime)
+     * ✅ READS FROM: `upah` table (by activitygroup + wagetype)
      *
      * @param string $companycode
      * @param string $activitygroup
@@ -73,7 +73,7 @@ class WageCalculationService
     private function calculateHarianWage($companycode, $activitygroup, $workDate, $workerData)
     {
         $dayType = $this->getDayType($workDate);
-        $wageRates = Upah::getWageRates($companycode, $activitygroup, $workDate);
+        $wageRates = $this->getHarianWageRates($companycode, $activitygroup, $workDate);
         
         $totalHours = $workerData['totaljamkerja'] ?? 0;
         $overtimeHours = $workerData['overtimehours'] ?? 0;
@@ -117,56 +117,66 @@ class WageCalculationService
 
     /**
      * Calculate Borongan wage (piece rate based on area or weight)
+     * ✅ READS FROM: `upahborongan` table (by activitycode)
      *
      * @param string $companycode
-     * @param string $activitygroup
      * @param string $activitycode
      * @param string $workDate
      * @param array $workerData
      * @param array $plotData
      * @return array
      */
-    private function calculateBoronganWage($companycode, $activitygroup, $activitycode, $workDate, $workerData, $plotData)
+    private function calculateBoronganWage($companycode, $activitycode, $workDate, $workerData, $plotData)
     {
-        $wageRates = Upah::getWageRates($companycode, $activitygroup, $workDate);
         $premi = $workerData['premi'] ?? 0;
         
+        // Get borongan rate from upahborongan table
+        $boronganRate = $this->getBoronganRate($companycode, $activitycode, $workDate);
+        
+        if ($boronganRate === 0) {
+            Log::warning("No borongan rate found for activity", [
+                'companycode' => $companycode,
+                'activitycode' => $activitycode,
+                'workDate' => $workDate
+            ]);
+        }
+        
         // Determine calculation type based on activity group
-        if ($activitygroup === 'VI') {
-            // Panen - could be harvest or transport
-            return $this->calculatePanenWage($companycode, $activitycode, $workDate, $workerData, $plotData, $premi);
+        $activitygroup = $this->getActivityGroup($activitycode);
+        
+        if ($activitygroup === 'IV') {
+            // Panen - calculate by weight (kg)
+            return $this->calculatePanenWage($companycode, $activitycode, $workDate, $plotData, $premi);
         } else {
-            // Regular borongan (per hectare)
-            return $this->calculatePerHectareWage($wageRates, $plotData, $premi);
+            // Regular borongan - calculate by area (hectare)
+            return $this->calculatePerHectareWage($boronganRate, $plotData, $premi, $activitycode);
         }
     }
 
     /**
      * Calculate Panen wage (harvest + transport)
      * UPDATED: Use new column names (luashasil for weight in panen)
+     * ✅ READS FROM: `upahborongan` table
      *
      * @param string $companycode
      * @param string $activitycode
      * @param string $workDate
-     * @param array $workerData
      * @param array $plotData
      * @param float $premi
      * @return array
      */
-    private function calculatePanenWage($companycode, $activitycode, $workDate, $workerData, $plotData, $premi)
+    private function calculatePanenWage($companycode, $activitycode, $workDate, $plotData, $premi)
     {
-        // Get harvest rate
-        $harvestRate = Upah::getCurrentRate($companycode, 'VI', 'PER_KG', $workDate, 'HARVEST');
+        // Get harvest & transport rates from upahborongan table
+        // Assuming separate activity codes for harvest and transport
+        $harvestRate = $this->getBoronganRate($companycode, $activitycode, $workDate);
         
-        // Get transport rate
-        $transportRate = Upah::getCurrentRate($companycode, 'VI', 'PER_KG', $workDate, 'TRANSPORT');
-        
-        // Total weight from plot data - CHANGED: use luashasil for weight in panen
+        // Total weight from plot data - use luashasil for weight in panen
         $totalWeight = collect($plotData)->sum('luashasil');
         
-        // Calculate wages
+        // Calculate wages (simplified - using single rate)
         $harvestWage = $totalWeight * $harvestRate;
-        $transportWage = $totalWeight * $transportRate;
+        $transportWage = 0; // If needed, get from separate activity code
         $totalBorongan = $harvestWage + $transportWage;
         $totalUpah = $totalBorongan + $premi;
         
@@ -175,7 +185,7 @@ class WageCalculationService
             'calculation_method' => 'panen_per_kg',
             'total_weight' => $totalWeight,
             'harvest_rate' => $harvestRate,
-            'transport_rate' => $transportRate,
+            'transport_rate' => 0,
             'harvest_wage' => $harvestWage,
             'transport_wage' => $transportWage,
             'upahharian' => 0,
@@ -184,24 +194,24 @@ class WageCalculationService
             'premi' => $premi,
             'upahborongan' => $totalBorongan,
             'totalupah' => $totalUpah,
-            'notes' => "Panen: {$totalWeight} kg × Rp " . number_format($harvestRate + $transportRate, 0, ',', '.') . " = Rp " . number_format($totalBorongan, 0, ',', '.')
+            'notes' => "Panen: {$totalWeight} kg × Rp " . number_format($harvestRate, 0, ',', '.') . " = Rp " . number_format($totalBorongan, 0, ',', '.')
         ];
     }
 
     /**
      * Calculate per hectare wage
      * UPDATED: Use new column names (luashasil instead of luasactual)
+     * ✅ READS FROM: `upahborongan` table
      *
-     * @param array $wageRates
+     * @param float $perHectareRate
      * @param array $plotData
      * @param float $premi
+     * @param string $activitycode
      * @return array
      */
-    private function calculatePerHectareWage($wageRates, $plotData, $premi)
+    private function calculatePerHectareWage($perHectareRate, $plotData, $premi, $activitycode)
     {
-        $perHectareRate = $wageRates['PER_HECTARE'] ?? 0;
-        
-        // Total area from plot data - CHANGED: use luashasil instead of luasactual
+        // Total area from plot data - use luashasil
         $totalArea = collect($plotData)->sum('luashasil');
         
         // Calculate wage
@@ -211,6 +221,7 @@ class WageCalculationService
         return [
             'success' => true,
             'calculation_method' => 'per_hectare',
+            'activity_code' => $activitycode,
             'total_area' => $totalArea,
             'per_hectare_rate' => $perHectareRate,
             'upahharian' => 0,
@@ -219,8 +230,70 @@ class WageCalculationService
             'premi' => $premi,
             'upahborongan' => $boronganWage,
             'totalupah' => $totalUpah,
-            'notes' => "Borongan: {$totalArea} ha × Rp " . number_format($perHectareRate, 0, ',', '.') . " = Rp " . number_format($boronganWage, 0, ',', '.')
+            'notes' => "Borongan [{$activitycode}]: {$totalArea} ha × Rp " . number_format($perHectareRate, 0, ',', '.') . " = Rp " . number_format($boronganWage, 0, ',', '.')
         ];
+    }
+
+    /**
+     * Get Harian wage rates from `upah` table
+     * ✅ Reads effectivedate & enddate to determine active wage
+     *
+     * @param string $companycode
+     * @param string $activitygroup
+     * @param string $workDate
+     * @return array
+     */
+    private function getHarianWageRates($companycode, $activitygroup, $workDate)
+    {
+        $workDate = Carbon::parse($workDate)->format('Y-m-d');
+        
+        $rates = DB::table('upah')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $activitygroup)
+            ->where('effectivedate', '<=', $workDate)
+            ->where(function ($q) use ($workDate) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', $workDate);
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->get();
+        
+        $wageRates = [];
+        
+        foreach ($rates as $rate) {
+            if (!isset($wageRates[$rate->wagetype])) {
+                $wageRates[$rate->wagetype] = $rate->amount;
+            }
+        }
+        
+        return $wageRates;
+    }
+
+    /**
+     * Get Borongan rate from `upahborongan` table
+     * ✅ Reads effectivedate & enddate to determine active wage
+     *
+     * @param string $companycode
+     * @param string $activitycode
+     * @param string $workDate
+     * @return float
+     */
+    private function getBoronganRate($companycode, $activitycode, $workDate)
+    {
+        $workDate = Carbon::parse($workDate)->format('Y-m-d');
+        
+        $rate = DB::table('upahborongan')
+            ->where('companycode', $companycode)
+            ->where('activitycode', $activitycode)
+            ->where('effectivedate', '<=', $workDate)
+            ->where(function ($q) use ($workDate) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', $workDate);
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->value('amount');
+        
+        return $rate ?? 0;
     }
 
     /**
@@ -281,8 +354,9 @@ class WageCalculationService
      */
     private function getActivityGroup($activitycode)
     {
-        $activity = Activity::where('activitycode', $activitycode)->first();
-        return $activity ? $activity->activitygroup : null;
+        return DB::table('activity')
+            ->where('activitycode', $activitycode)
+            ->value('activitygroup');
     }
 
     /**

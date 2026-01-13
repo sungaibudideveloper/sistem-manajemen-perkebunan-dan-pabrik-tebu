@@ -116,8 +116,18 @@ return [
             ],
             [
                 'name' => 'Upah',
-                'route' => 'masterdata.upah.index',
-                'permission' => 'masterdata.upah.view',
+                'children' => [
+                    [
+                        'name' => 'Upah Harian',
+                        'route' => 'masterdata.upah.index',
+                        'permission' => 'masterdata.upah.view',
+                    ],
+                    [
+                        'name' => 'Upah Borongan',
+                        'route' => 'masterdata.upah-borongan.index',
+                        'permission' => 'masterdata.upah.view',
+                    ],
+                ]
             ],
             [
                 'name' => 'Accounting',

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterData\Upah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -25,7 +24,7 @@ class PerhitunganUpahApiMobile extends Controller
                 'tenagakerjaid' => 'required|string',
                 'tenagakerjaurutan' => 'required|integer',
                 'activitycode' => 'required|string',
-                'jenistenagakerja' => 'required|integer|in:1,2,3,4,5', // ✅ Accept 1,2,3,4,5
+                'jenistenagakerja' => 'required|integer|in:1,2,3,4,5',
                 'lkhdate' => 'required|date',
                 'jammulai' => 'required|date_format:H:i:s',
                 'jamselesai' => 'required|date_format:H:i:s',
@@ -150,7 +149,6 @@ class PerhitunganUpahApiMobile extends Controller
 
     /**
      * ✅ SYNC LKH HEADER TOTALS DENGAN DETAIL DATA
-     * Method baru untuk sinkronisasi header
      */
     private function syncLkhHeaderTotals($companycode, $lkhno)
     {
@@ -181,7 +179,6 @@ class PerhitunganUpahApiMobile extends Controller
                     'updatedat' => now()
                 ]);
 
-            // Log untuk debugging
             \Log::info('LKH Header synced via API', [
                 'companycode' => $companycode,
                 'lkhno' => $lkhno,
@@ -197,14 +194,12 @@ class PerhitunganUpahApiMobile extends Controller
                 'lkhno' => $lkhno,
                 'error' => $e->getMessage()
             ]);
-            
-            // Tidak throw exception agar API tetap return success
-            // karena update worker sudah berhasil
         }
     }
     
     /**
      * Calculate wage based on validated input
+     * ✅ FIXED: Harian reads from `upah`, Borongan reads from `upahborongan`
      */
     private function calculateWage($data, $totalJamKerja)
     {
@@ -221,12 +216,12 @@ class PerhitunganUpahApiMobile extends Controller
         ];
         
         if ($data['jenistenagakerja'] == 1) {
-            // Harian calculation
+            // ✅ HARIAN: Read from `upah` table
             if ($totalJamKerja >= 8) {
-                $dailyRate = Upah::getCurrentRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
+                $dailyRate = $this->getHarianRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
                 $wageData['upahharian'] = $dailyRate ?: 115722.8;
             } else {
-                $hourlyRate = Upah::getCurrentRate($data['companycode'], $activityGroup, 'HOURLY', $data['lkhdate']);
+                $hourlyRate = $this->getHarianRate($data['companycode'], $activityGroup, 'HOURLY', $data['lkhdate']);
                 $wageData['upahperjam'] = $hourlyRate ?: 16532;
                 $wageData['upahharian'] = $totalJamKerja * $wageData['upahperjam'];
             }
@@ -234,18 +229,17 @@ class PerhitunganUpahApiMobile extends Controller
             // Overtime
             $overtimeHours = $data['overtimehours'] ?? 0;
             if ($overtimeHours > 0) {
-                $overtimeRate = Upah::getCurrentRate($data['companycode'], $activityGroup, 'OVERTIME', $data['lkhdate']);
+                $overtimeRate = $this->getHarianRate($data['companycode'], $activityGroup, 'OVERTIME', $data['lkhdate']);
                 $wageData['upahlembur'] = $overtimeHours * ($overtimeRate ?: 12542);
             }
             
             $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'];
             
         } else {
-            // Borongan calculation
-            $wageType = $this->getBoronganWageType($data['activitycode']);
-            $boronganRate = Upah::getCurrentRate($data['companycode'], $activityGroup, $wageType, $data['lkhdate']);
+            // ✅ BORONGAN: Read from `upahborongan` table
+            $boronganRate = $this->getBoronganRate($data['companycode'], $data['activitycode'], $data['lkhdate']);
             
-            if ($wageType === 'PER_HECTARE' && isset($data['luashasil'])) {
+            if (isset($data['luashasil']) && $data['luashasil'] > 0) {
                 $wageData['upahborongan'] = $boronganRate * $data['luashasil'];
             } else {
                 $wageData['upahborongan'] = $boronganRate ?: 140000;
@@ -256,8 +250,62 @@ class PerhitunganUpahApiMobile extends Controller
         
         return $wageData;
     }
+
+    /**
+     * ✅ Get Harian rate from `upah` table (by activitygroup + wagetype)
+     * Reads effectivedate & enddate
+     *
+     * @param string $companycode
+     * @param string $activitygroup
+     * @param string $wagetype
+     * @param string $workDate
+     * @return float
+     */
+    private function getHarianRate($companycode, $activitygroup, $wagetype, $workDate)
+    {
+        $workDate = Carbon::parse($workDate)->format('Y-m-d');
+        
+        return DB::table('upah')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $activitygroup)
+            ->where('wagetype', $wagetype)
+            ->where('effectivedate', '<=', $workDate)
+            ->where(function ($q) use ($workDate) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', $workDate);
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->value('amount') ?? 0;
+    }
+
+    /**
+     * ✅ Get Borongan rate from `upahborongan` table (by activitycode)
+     * Reads effectivedate & enddate
+     *
+     * @param string $companycode
+     * @param string $activitycode
+     * @param string $workDate
+     * @return float
+     */
+    private function getBoronganRate($companycode, $activitycode, $workDate)
+    {
+        $workDate = Carbon::parse($workDate)->format('Y-m-d');
+        
+        return DB::table('upahborongan')
+            ->where('companycode', $companycode)
+            ->where('activitycode', $activitycode)
+            ->where('effectivedate', '<=', $workDate)
+            ->where(function ($q) use ($workDate) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', $workDate);
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->value('amount') ?? 0;
+    }
     
-    // Helper methods (same as before)
+    /**
+     * Calculate work hours (with break deduction)
+     */
     private function calculateWorkHours($jamMasuk, $jamSelesai)
     {
         $start = Carbon::createFromFormat('H:i:s', $jamMasuk);
@@ -289,6 +337,9 @@ class PerhitunganUpahApiMobile extends Controller
         return $totalHours - $breakDeduction;
     }
     
+    /**
+     * Determine day type (DAILY, WEEKEND_SATURDAY, WEEKEND_SUNDAY)
+     */
     private function getDayType($workDate)
     {
         $dayOfWeek = Carbon::parse($workDate)->dayOfWeek;
@@ -302,19 +353,25 @@ class PerhitunganUpahApiMobile extends Controller
         return 'DAILY';
     }
     
+    /**
+     * Get activity group from activity code
+     */
     private function getActivityGroupFromCode($activitycode)
     {
+        // Try to get from database first
+        $activitygroup = DB::table('activity')
+            ->where('activitycode', $activitycode)
+            ->value('activitygroup');
+        
+        if ($activitygroup) {
+            return $activitygroup;
+        }
+        
+        // Fallback: Extract from activity code pattern
         if (preg_match('/^([IVX]+)/', $activitycode, $matches)) {
             return $matches[1];
         }
-        return 'V';
-    }
-    
-    private function getBoronganWageType($activitycode)
-    {
-        if (strpos($activitycode, 'VI') === 0) {
-            return 'PER_KG';
-        }
-        return 'PER_HECTARE';
+        
+        return 'V'; // Default fallback
     }
 }

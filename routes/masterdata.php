@@ -16,6 +16,7 @@ use App\Http\Controllers\MasterData\AccountingController;
 use App\Http\Controllers\MasterData\MandorController;
 use App\Http\Controllers\MasterData\TenagaKerjaController;
 use App\Http\Controllers\MasterData\UpahController;
+use App\Http\Controllers\MasterData\UpahBoronganController;
 use App\Http\Controllers\MasterData\KendaraanController;
 use App\Http\Controllers\MasterData\KontraktorController;
 use App\Http\Controllers\MasterData\SubkontraktorController;
@@ -266,6 +267,16 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
 
     Route::middleware('permission:masterdata.upah.delete')->group(function () {
         Route::delete('upah/{id}', [UpahController::class, 'destroy'])->name('upah.destroy');
+    });
+
+    // UPAH BORONGAN
+    Route::middleware('permission:masterdata.upah.view')->group(function () {
+        Route::get('upah-borongan', [UpahBoronganController::class, 'index'])->name('upah-borongan.index');
+        Route::get('upah-borongan/activities-by-group', [UpahBoronganController::class, 'getActivitiesByGroup'])->name('upah-borongan.activities-by-group');
+        Route::get('upah-borongan/current-wage', [UpahBoronganController::class, 'getCurrentWage'])->name('upah-borongan.current-wage');
+        Route::post('upah-borongan', [UpahBoronganController::class, 'store'])->name('upah-borongan.store');
+        Route::put('upah-borongan/{id}', [UpahBoronganController::class, 'update'])->name('upah-borongan.update');
+        Route::delete('upah-borongan/{id}', [UpahBoronganController::class, 'destroy'])->name('upah-borongan.destroy');
     });
 
     // ============================================================================

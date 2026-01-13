@@ -7,19 +7,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\Controller;
-
-use App\Models\Menu;
-use App\Models\Submenu;
-use App\Models\MasterData\Upah;
 use App\Models\User;
 
 class UpahController extends Controller
 {
     public function index(Request $request)
     {
-        // Query dengan struktur tabel yang benar
-        $query = DB::table('upah')
-            ->select('*');
+        $query = DB::table('upah')->select('*');
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -29,7 +23,6 @@ class UpahController extends Controller
             });
         }
 
-        // Filter berdasarkan company user
         $query->where('companycode', Session::get('companycode'));
 
         $perPage = $request->get('perPage', 10);
@@ -38,7 +31,6 @@ class UpahController extends Controller
         $user = Auth::user()->userid;
         $userdata = User::where('userid', $user)->firstOrFail();
 
-        // Daftar activity group dan wage type untuk dropdown
         $activityGroups = DB::table('upah')
             ->select('activitygroup')
             ->where('companycode', Session::get('companycode'))
@@ -56,9 +48,9 @@ class UpahController extends Controller
         ];
 
         return view('masterdata.upah.index', [
-            'title' => 'Menu',
-            'navbar' => 'Aplikasi', 
-            'nav' => 'Menu',
+            'title' => 'Upah',
+            'navbar' => 'Master Data', 
+            'nav' => 'Upah',
             'data' => $data,
             'perPage' => $perPage,
             'userdata' => $userdata,
@@ -69,108 +61,126 @@ class UpahController extends Controller
 
     public function store(Request $request)
     {
-        if (Auth::user()->userid && in_array('Create Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
+        $request->validate([
+            'activitygroup' => 'required',
+            'wagetype' => 'required',
+            'amount' => 'required|numeric|min:0',
+            'effectivedate' => 'required|date',
+            'enddate' => 'nullable|date|after_or_equal:effectivedate',
+        ], [
+            'activitygroup.required' => 'Grup aktivitas harus diisi',
+            'wagetype.required' => 'Jenis upah harus dipilih',
+            'amount.required' => 'Nominal upah harus diisi',
+            'amount.numeric' => 'Nominal upah harus berupa angka',
+            'amount.min' => 'Nominal upah tidak boleh negatif',
+            'effectivedate.required' => 'Tanggal mulai berlaku harus diisi',
+            'enddate.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai berlaku',
+        ]);
 
-            // Validasi duplikasi data
-            $cek = DB::table('upah')
-                ->where('companycode', Session::get('companycode'))
-                ->where('activitygroup', $request->activitygroup)
-                ->where('wagetype', $request->wagetype)
-                ->where('effectivedate', $request->effectivedate)
-                ->where('parameter', $request->parameter)
-                ->exists();
+        $companycode = Session::get('companycode');
 
-            if ($cek) {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
-            }
+        // Validasi duplikasi data
+        $cek = DB::table('upah')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $request->activitygroup)
+            ->where('wagetype', $request->wagetype)
+            ->where('effectivedate', $request->effectivedate)
+            ->where('parameter', $request->parameter)
+            ->exists();
 
-            $upah = new Upah();
-            $upah->companycode = Session::get('companycode');
-            $upah->activitygroup = $request->activitygroup;
-            $upah->wagetype = $request->wagetype;
-            $upah->amount = $request->amount;
-            $upah->effectivedate = $request->effectivedate;
-            $upah->enddate = $request->enddate;
-            $upah->parameter = $request->parameter;
-            $upah->inputby = Auth::user()->userid;
-            $upah->createdat = now();
-            $upah->save();
-
+        if ($cek) {
             return redirect()->route('masterdata.upah.index')
-                ->with('success', 'Data upah berhasil ditambahkan');
-        } else {
-            return redirect()->route('masterdata.upah.index')
-                ->with('error', 'Anda tidak memiliki izin untuk menambah data upah.');
+                ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
         }
+
+        DB::table('upah')->insert([
+            'companycode' => $companycode,
+            'activitygroup' => $request->activitygroup,
+            'wagetype' => $request->wagetype,
+            'amount' => $request->amount,
+            'effectivedate' => $request->effectivedate,
+            'enddate' => $request->enddate,
+            'parameter' => $request->parameter,
+            'inputby' => Auth::user()->userid,
+            'createdat' => now(),
+        ]);
+
+        return redirect()->route('masterdata.upah.index')
+            ->with('success', 'Data upah berhasil ditambahkan');
     }
 
     public function update(Request $request, $id)
     {
-        if (Auth::user()->userid && in_array('Edit Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
-            $company = Session::get('companycode');
+        $request->validate([
+            'activitygroup' => 'required',
+            'wagetype' => 'required',
+            'amount' => 'required|numeric|min:0',
+            'effectivedate' => 'required|date',
+            'enddate' => 'nullable|date|after_or_equal:effectivedate',
+        ], [
+            'activitygroup.required' => 'Grup aktivitas harus diisi',
+            'wagetype.required' => 'Jenis upah harus dipilih',
+            'amount.required' => 'Nominal upah harus diisi',
+            'amount.numeric' => 'Nominal upah harus berupa angka',
+            'amount.min' => 'Nominal upah tidak boleh negatif',
+            'effectivedate.required' => 'Tanggal mulai berlaku harus diisi',
+            'enddate.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai berlaku',
+        ]);
 
-            // Validasi duplikasi data (kecuali data yang sedang diedit)
-            $validasi = DB::table('upah')
-                ->where('companycode', $company)
-                ->where('activitygroup', $request->activitygroup)
-                ->where('wagetype', $request->wagetype)
-                ->where('effectivedate', $request->effectivedate)
-                ->where('parameter', $request->parameter)
-                ->where('id', '!=', $id)
-                ->exists();
+        $companycode = Session::get('companycode');
 
-            if ($validasi) {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
-            }
+        // Validasi duplikasi data (kecuali data yang sedang diedit)
+        $validasi = DB::table('upah')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $request->activitygroup)
+            ->where('wagetype', $request->wagetype)
+            ->where('effectivedate', $request->effectivedate)
+            ->where('parameter', $request->parameter)
+            ->where('id', '!=', $id)
+            ->exists();
 
-            $updated = DB::table('upah')
-                ->where('id', $id)
-                ->where('companycode', $company)
-                ->update([
-                    'activitygroup' => $request->activitygroup,
-                    'wagetype' => $request->wagetype,
-                    'amount' => $request->amount,
-                    'effectivedate' => $request->effectivedate,
-                    'enddate' => $request->enddate,
-                    'parameter' => $request->parameter,
-                    'updatedat' => now(),
-                ]);
-
-            if ($updated) {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('success', 'Data upah berhasil diupdate');
-            } else {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('error', 'Data upah tidak ditemukan.');
-            }
-        } else {
+        if ($validasi) {
             return redirect()->route('masterdata.upah.index')
-                ->with('error', 'Anda tidak memiliki izin untuk mengedit data upah.');
+                ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
         }
+
+        $updated = DB::table('upah')
+            ->where('id', $id)
+            ->where('companycode', $companycode)
+            ->update([
+                'activitygroup' => $request->activitygroup,
+                'wagetype' => $request->wagetype,
+                'amount' => $request->amount,
+                'effectivedate' => $request->effectivedate,
+                'enddate' => $request->enddate,
+                'parameter' => $request->parameter,
+                'updatedat' => now(),
+            ]);
+
+        if ($updated) {
+            return redirect()->route('masterdata.upah.index')
+                ->with('success', 'Data upah berhasil diupdate');
+        }
+
+        return redirect()->route('masterdata.upah.index')
+            ->with('error', 'Data upah tidak ditemukan.');
     }
 
     public function destroy($id)
     {
-        if (Auth::user()->userid && in_array('Hapus Upah', json_decode(Auth::user()->permissions ?? '[]'))) {
-            $company = Session::get('companycode');
+        $companycode = Session::get('companycode');
 
-            $deleted = DB::table('upah')
-                ->where('id', $id)
-                ->where('companycode', $company)
-                ->delete();
+        $deleted = DB::table('upah')
+            ->where('id', $id)
+            ->where('companycode', $companycode)
+            ->delete();
 
-            if ($deleted) {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('success', 'Data berhasil dihapus.');
-            } else {
-                return redirect()->route('masterdata.upah.index')
-                    ->with('error', 'Data upah tidak ditemukan.');
-            }
-        } else {
+        if ($deleted) {
             return redirect()->route('masterdata.upah.index')
-                ->with('error', 'Anda tidak memiliki izin untuk menghapus data upah.');
+                ->with('success', 'Data berhasil dihapus.');
         }
+
+        return redirect()->route('masterdata.upah.index')
+            ->with('error', 'Data upah tidak ditemukan.');
     }
 }
