@@ -318,7 +318,16 @@ class GudangController extends Controller
                     ->on('usemateriallst.companycode', '=', 'lkhdetailplot.companycode');
             })
             ->where('rkhno', $request->rkhno)->where('usemateriallst.companycode', session('companycode'))->orderBy('lkhno')->orderBy('plot')->get());
+            //group
+            $groupMap = $details->mapWithKeys(fn($x)=>[
+                $x->lkhno.'|'.$x->plot => $x->herbisidagroupid
+            ]);
 
+            $detailmaterial = $detailmaterial->map(function($d) use ($groupMap) {
+                $d->herbisidagroupid = $groupMap[$d->lkhno.'|'.$d->plot] ?? null;
+                return $d;
+            });
+            //
         $groupIds = $details->pluck('herbisidagroupid')->unique();
         $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get();
 
