@@ -273,11 +273,6 @@ class GudangController extends Controller
 
     public function detail(Request $request)
     {   
-        // contoh: localhost / 127.0.0.1 / domain
-        if(auth::user()->userid == 'Admin'){
-        dd(in_array($host, ['localhost', '127.0.0.1', '::1']),'islokal');}
-
-        // dd(app(), app()->environment('local'));
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
@@ -411,7 +406,7 @@ class GudangController extends Controller
         ]);
         
         $companyinv = company::where('companycode', session('companycode'))->first();
-        // if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if(request()->getHost() == 'sugarcane.sblampung.com'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
@@ -621,8 +616,8 @@ public function submit(Request $request)
                         }
                     }
                 }
-                
                 //
+                
                 // ambil group & flag rounding
                 $rounddosage = $groupId !== null ? ($roundingByGroup[$groupId] ?? 1) : 1; // default: masih rounded seperti lama
 
@@ -828,7 +823,7 @@ public function submit(Request $request)
     // ✅ API Call - SETELAH COMMIT
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
-        if($companyinv->companyinventory=='TBL4'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
+        if(request()->getHost() == 'sugarcane.sblampung.com'){$koneksi = 'TESTING';}else{$koneksi = '172.17.1.39';}
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
