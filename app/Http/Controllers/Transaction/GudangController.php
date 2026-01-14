@@ -547,16 +547,16 @@ public function submit(Request $request)
     }
 
     //tambahan cek standar
-    $stdMap = DB::table('herbisidadosage')
-    ->where('companycode', session('companycode'))
-    ->select('herbisidagroupid','itemcode','dosageperha')
-    ->get()
-    ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
-    ->all();
+    // $stdMap = DB::table('herbisidadosage')
+    // ->where('companycode', session('companycode'))
+    // ->select('herbisidagroupid','itemcode','dosageperha')
+    // ->get()
+    // ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
+    // ->all();
 
-    $EPS = 0.0001;
-    $isApproval = false;
-    $approvalReasons = [];
+    // $EPS = 0.0001;
+    // $isApproval = false;
+    // $approvalReasons = [];
     //
 
     // Validasi duplikat: lkhno + plot + itemcode
@@ -608,38 +608,38 @@ public function submit(Request $request)
                 $qtyraw = $luas * $dosage ?? 0;
 
                 //tambahan cek standar cek dosage standard 
-                $groupId = $detail->herbisidagroupid ?? null;
-                if ($groupId) {
-                    $kstd = $groupId.'|'.$itemcode;
+                // $groupId = $detail->herbisidagroupid ?? null;
+                // if ($groupId) {
+                //     $kstd = $groupId.'|'.$itemcode;
                 
-                    // itemcode tidak ada di standar untuk group tsb
-                    if (!isset($stdMap[$kstd])) {
-                        $isApproval = true;
-                        $approvalReasons[] = [
-                            'type' => 'INVALID_ITEMCODE',
-                            'lkhno' => $lkhno,
-                            'plot' => $key,
-                            'group' => $groupId,
-                            'itemcode' => $itemcode,
-                            'dosage_input' => $dosage,
-                        ];
-                    } else {
-                        // dosage berbeda dari standar
-                        $stdDos = (float)$stdMap[$kstd];
-                        if (abs($dosage - $stdDos) > $EPS) {
-                            $isApproval = true;
-                            $approvalReasons[] = [
-                                'type' => 'DOSAGE_CHANGED',
-                                'lkhno' => $lkhno,
-                                'plot' => $key,
-                                'group' => $groupId,
-                                'itemcode' => $itemcode,
-                                'dosage_input' => $dosage,
-                                'dosage_std' => $stdDos,
-                            ];
-                        }
-                    }
-                }
+                //     // itemcode tidak ada di standar untuk group tsb
+                //     if (!isset($stdMap[$kstd])) {
+                //         $isApproval = true;
+                //         $approvalReasons[] = [
+                //             'type' => 'INVALID_ITEMCODE',
+                //             'lkhno' => $lkhno,
+                //             'plot' => $key,
+                //             'group' => $groupId,
+                //             'itemcode' => $itemcode,
+                //             'dosage_input' => $dosage,
+                //         ];
+                //     } else {
+                //         // dosage berbeda dari standar
+                //         $stdDos = (float)$stdMap[$kstd];
+                //         if (abs($dosage - $stdDos) > $EPS) {
+                //             $isApproval = true;
+                //             $approvalReasons[] = [
+                //                 'type' => 'DOSAGE_CHANGED',
+                //                 'lkhno' => $lkhno,
+                //                 'plot' => $key,
+                //                 'group' => $groupId,
+                //                 'itemcode' => $itemcode,
+                //                 'dosage_input' => $dosage,
+                //                 'dosage_std' => $stdDos,
+                //             ];
+                //         }
+                //     }
+                // }
                 //
 
                 // ambil group & flag rounding
@@ -694,96 +694,96 @@ public function submit(Request $request)
     // STOP & CREATE APPROVAL DOC
     // =====================================
 
-    if ($isApproval) {
-        try {
-            $companycode = session('companycode');
+    // if ($isApproval) {
+    //     try {
+    //         $companycode = session('companycode');
 
-            // ambil master approval
-            $approvalMaster = DB::table('approval')
-                ->where('companycode', $companycode)
-                ->where('category', 'Use Material') // pastikan sama persis
-                ->first();
+    //         // ambil master approval
+    //         $approvalMaster = DB::table('approval')
+    //             ->where('companycode', $companycode)
+    //             ->where('category', 'Use Material') // pastikan sama persis
+    //             ->first();
 
-            if (!$approvalMaster) {
-                Cache::forget($lockKey);
-                return back()->with('error', 'Approval master "Use Material" belum di-setup');
-            }
+    //         if (!$approvalMaster) {
+    //             Cache::forget($lockKey);
+    //             return back()->with('error', 'Approval master "Use Material" belum di-setup');
+    //         }
 
-            $approvalNo = $this->generateApprovalNo($companycode, now());
+    //         $approvalNo = $this->generateApprovalNo($companycode, now());
             
-            DB::beginTransaction();
+    //         DB::beginTransaction();
 
-            $pending = DB::table('approvaltransaction')
-                ->where('companycode', $companycode)
-                ->where('transactionnumber', $request->rkhno)
-                ->whereNull('approvalstatus')
-                ->exists();
+    //         $pending = DB::table('approvaltransaction')
+    //             ->where('companycode', $companycode)
+    //             ->where('transactionnumber', $request->rkhno)
+    //             ->whereNull('approvalstatus')
+    //             ->exists();
 
-            if ($pending) {
-                DB::rollBack();
-                Cache::forget($lockKey);
-                return back()->with('warning', 'Sudah ada approval pending untuk RKH ini.');
-            }
+    //         if ($pending) {
+    //             DB::rollBack();
+    //             Cache::forget($lockKey);
+    //             return back()->with('warning', 'Sudah ada approval pending untuk RKH ini.');
+    //         }
 
 
-            // 1) insert approvaltransaction (workflow)
-            DB::table('approvaltransaction')->insert([
-                'approvalno' => $approvalNo,
-                'companycode' => $companycode,
-                'approvalcategoryid' => $approvalMaster->id,
-                'transactionnumber' => $request->rkhno, // tampil di approval center
-                'jumlahapproval' => $approvalMaster->jumlahapproval,
-                'approval1idjabatan' => $approvalMaster->idjabatanapproval1,
-                'approval2idjabatan' => $approvalMaster->idjabatanapproval2,
-                'approval3idjabatan' => $approvalMaster->idjabatanapproval3,
-                'approvalstatus' => null,
-                'inputby' => Auth::user()->userid,
-                'createdat' => now(),
-            ]);
+    //         // 1) insert approvaltransaction (workflow)
+    //         DB::table('approvaltransaction')->insert([
+    //             'approvalno' => $approvalNo,
+    //             'companycode' => $companycode,
+    //             'approvalcategoryid' => $approvalMaster->id,
+    //             'transactionnumber' => $request->rkhno, // tampil di approval center
+    //             'jumlahapproval' => $approvalMaster->jumlahapproval,
+    //             'approval1idjabatan' => $approvalMaster->idjabatanapproval1,
+    //             'approval2idjabatan' => $approvalMaster->idjabatanapproval2,
+    //             'approval3idjabatan' => $approvalMaster->idjabatanapproval3,
+    //             'approvalstatus' => null,
+    //             'inputby' => Auth::user()->userid,
+    //             'createdat' => now(),
+    //         ]);
             
 
-            // 2) insert snapshot ke usematerialapproval (detail-only)
-            $rows = [];
-            foreach ($insertData as $row) {
-                $rows[] = [
-                    'companycode' => $companycode,
-                    'approvalno' => $approvalNo,
-                    'rkhno' => $request->rkhno,
-                    'lkhno' => $row['lkhno'],
-                    'plot' => $row['plot'],
-                    'itemcode' => $row['itemcode'],
-                    'dosageperha' => $row['dosageperha'],
-                    'unit' => $row['unit'],
-                    'qty' => $row['qty'],
-                    'flagstatus' => 'WAIT_APPROVAL',
-                    'costcenter' => $request->costcenter,
-                    'createdat' => now(),
-                ];
-            }
-            DB::table('usematerialapproval')->insert($rows);
+    //         // 2) insert snapshot ke usematerialapproval (detail-only)
+    //         $rows = [];
+    //         foreach ($insertData as $row) {
+    //             $rows[] = [
+    //                 'companycode' => $companycode,
+    //                 'approvalno' => $approvalNo,
+    //                 'rkhno' => $request->rkhno,
+    //                 'lkhno' => $row['lkhno'],
+    //                 'plot' => $row['plot'],
+    //                 'itemcode' => $row['itemcode'],
+    //                 'dosageperha' => $row['dosageperha'],
+    //                 'unit' => $row['unit'],
+    //                 'qty' => $row['qty'],
+    //                 'flagstatus' => 'WAIT_APPROVAL',
+    //                 'costcenter' => $request->costcenter,
+    //                 'createdat' => now(),
+    //             ];
+    //         }
+    //         DB::table('usematerialapproval')->insert($rows);
 
-            usematerialhdr::where('companycode', $companycode)
-            ->where('rkhno', $request->rkhno)
-            ->update([
-                'flagstatus' => 'WAIT_APPROVAL',
-                'updatedat' => now(),
-                'updateby' => Auth::user()->userid
-            ]);
+    //         usematerialhdr::where('companycode', $companycode)
+    //         ->where('rkhno', $request->rkhno)
+    //         ->update([
+    //             'flagstatus' => 'WAIT_APPROVAL',
+    //             'updatedat' => now(),
+    //             'updateby' => Auth::user()->userid
+    //         ]);
 
-            DB::commit();
-            Cache::forget($lockKey);
+    //         DB::commit();
+    //         Cache::forget($lockKey);
 
-            // optional: tampilkan alasan ringkas
-            $msg = "Butuh approval. ApprovalNo: {$approvalNo}";
-            return back()->with('warning', $msg);
+    //         // optional: tampilkan alasan ringkas
+    //         $msg = "Butuh approval. ApprovalNo: {$approvalNo}";
+    //         return back()->with('warning', $msg);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Cache::forget($lockKey);
-            Log::error('Create approval failed', ['error' => $e->getMessage(),'trace' => $e->getTraceAsString(),]);
-            return back()->with('error', 'Gagal membuat approval: ' . $e->getMessage());
-        }
-    }
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Cache::forget($lockKey);
+    //         Log::error('Create approval failed', ['error' => $e->getMessage(),'trace' => $e->getTraceAsString(),]);
+    //         return back()->with('error', 'Gagal membuat approval: ' . $e->getMessage());
+    //     }
+    // }
     //
 
     foreach ($qtyByItemcode as $itemcode => $totalQty) {
@@ -959,16 +959,16 @@ public function submit(Request $request)
 }
 
     //tambahan cek standar
-    private function generateApprovalNo($companycode, $date)
-    {
-        $dateStr = $date->format('ymd');
-        $sequence = DB::table('approvaltransaction')
-            ->where('companycode', $companycode)
-            ->whereDate('createdat', $date)
-            ->count() + 1;
+    // private function generateApprovalNo($companycode, $date)
+    // {
+    //     $dateStr = $date->format('ymd');
+    //     $sequence = DB::table('approvaltransaction')
+    //         ->where('companycode', $companycode)
+    //         ->whereDate('createdat', $date)
+    //         ->count() + 1;
 
-        return "APV{$dateStr}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
-    }
+    //     return "APV{$dateStr}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+    // }
     //
 
     public function handle(Request $request)
