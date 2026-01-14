@@ -69,6 +69,11 @@ table th, table td {
                 <div class="bg-green-100 text-green-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-circle me-1"></i>Barang Retur Sudah Diterima.
                 </div>
+            @elseif(strtoupper($details[0]->flagstatus) == 'WAIT_APPROVAL')
+                <div class="bg-yellow-100 text-yellow-800 px-3 mr-2 py-1 rounded shadow text-sm no-print">WAIT APPROVAL</div>
+                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded shadow text-sm no-print">
+                    <i class="bi bi-clock me-1"></i>Menunggu Approval (Use Material)
+                </div>
             @else
                 <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded shadow text-sm no-print">
                     <i class="bi bi-check-all me-1"></i>Dokumen RKH Herbisida Telah Diselesaikan
@@ -192,7 +197,7 @@ table th, table td {
             > 
                 @foreach ($itemlist as $item) 
                     <option value="{{ $item->itemcode }}" 
-                            {{ $item->itemcode == $d->itemcode && $item->dosageperha == $d->dosageperha && $item->activitycode == $activitycode ? 'selected' : '' }}
+                            {{ $item->itemcode == $d->itemcode && $item->activitycode == $activitycode ? 'selected' : '' }}
                             data-dosage="{{$item->dosageperha}}" 
                             data-measure="{{ $item->measure }}" 
                             data-itemname="{{ $item->itemname }}"
