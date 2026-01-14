@@ -7,6 +7,7 @@
     <style>
         @media print {
 
+            /* Reset dasar untuk print */
             html,
             body {
                 height: auto !important;
@@ -24,11 +25,175 @@
                 min-height: 0 !important;
                 overflow: visible !important;
             }
+
+            /* Ukuran kertas A4 dan F4 */
+            @page {
+                size: A4;
+                margin: 8mm 8mm 8mm 8mm;
+            }
+
+            /* Hide elemen yang tidak perlu dicetak */
+            .no-print {
+                display: none !important;
+            }
+
+            /* Container utama */
+            .print-container {
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Remove extra spacing */
+            .overflow-x-auto,
+            .mb-4 {
+                margin-bottom: 8px !important;
+            }
+
+            /* Header report - lebih kompak */
+            .text-center.mb-6 {
+                margin-bottom: 8px !important;
+            }
+
+            .text-center.mb-6 h1 {
+                font-size: 14pt !important;
+                margin-bottom: 4px !important;
+            }
+
+            .text-center.mb-6 h2,
+            .text-center.mb-6 h3 {
+                font-size: 11pt !important;
+                margin-bottom: 2px !important;
+            }
+
+            /* Voucher section */
+            .mb-2 {
+                margin-bottom: 6px !important;
+                font-size: 10pt !important;
+            }
+
+            /* Table styling */
+            table {
+                width: 100% !important;
+                font-size: 8pt !important;
+                border-collapse: collapse !important;
+                page-break-inside: auto !important;
+            }
+
+            thead {
+                display: table-header-group !important;
+            }
+
+            tbody {
+                display: table-row-group !important;
+            }
+
+            tr {
+                page-break-inside: auto !important;
+                page-break-after: auto !important;
+            }
+
+            /* Hindari page break pada row header kegiatan dan subtotal */
+            tr.bg-blue-50,
+            tr.bg-yellow-50,
+            tr.bg-green-100 {
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+            }
+
+            /* Hindari page break antara header kegiatan dan row pertamanya */
+            tr.bg-blue-50+tr {
+                page-break-before: avoid !important;
+            }
+
+            th,
+            td {
+                padding: 3px 4px !important;
+                font-size: 8pt !important;
+                line-height: 1.3 !important;
+                word-wrap: break-word !important;
+            }
+
+            th {
+                font-weight: 600 !important;
+                background-color: #f3f4f6 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Activity header row */
+            .bg-blue-50 {
+                background-color: #eff6ff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Subtotal row untuk Harian */
+            .bg-yellow-50 {
+                background-color: #fefce8 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Total keseluruhan row */
+            .bg-green-100 {
+                background-color: #dcfce7 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Footer - lebih kecil */
+            .text-right.text-sm {
+                font-size: 8pt !important;
+                margin-top: 8px !important;
+            }
+
+            /* Shadow dan rounded hilang saat print */
+            .shadow-md,
+            .rounded-lg {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+
+            /* Overflow handling */
+            .overflow-x-auto {
+                overflow: visible !important;
+            }
+
+            /* Ensure borders are visible */
+            .border {
+                border: 1px solid #000 !important;
+            }
+
+            /* Fix untuk border pada merged cells */
+            td[rowspan] {
+                border-bottom: 1px solid #000 !important;
+                box-decoration-break: clone !important;
+                -webkit-box-decoration-break: clone !important;
+            }
+
+            /* Adjustments untuk kolom yang terlalu panjang */
+            td {
+                max-width: none !important;
+            }
+
+            /* Alternatif: hindari page break pada merged cells */
+            tr:has(td[rowspan]) {
+                page-break-inside: avoid !important;
+            }
+        }
+
+        /* Screen view - tetap normal */
+        @media screen {
+            .max-w-full {
+                max-width: 100%;
+            }
         }
     </style>
 
     <div class="max-w-full mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-        <!-- Header dengan tombol print saja -->
+        <!-- Header dengan tombol print -->
         <div
             class="no-print bg-gradient-to-r from-green-600 to-emerald-500 text-white p-4 flex justify-between items-center">
             <h1 class="text-xl font-bold">Preview Rekap Upah Mingguan</h1>
@@ -40,15 +205,13 @@
                         <path stroke="currentColor" stroke-linejoin="round" stroke-width="2"
                             d="M16.444 18H19a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.556M17 11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v6h10ZM7 15h10v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4Z" />
                     </svg>
-                    <span>
-                        Print
-                    </span>
+                    <span>Print</span>
                 </button>
             </div>
         </div>
 
         <!-- Container untuk konten yang akan dicetak -->
-        <div id="print-container" class="print-container p-8 bg-white">
+        <div id="print-container" class="print-container p-8 pb-4 bg-white">
             <!-- Header Report -->
             <div class="text-center mb-6">
                 <h1 class="text-xl font-bold mb-2">Rekap Upah Mingguan</h1>
@@ -56,12 +219,8 @@
                 </h2>
                 <h2 class="text-lg">Divisi {{ session('companycode') }}</h2>
                 @php
-                    // Backup current locale
                     $currentLocale = \Carbon\Carbon::getLocale();
-
-                    // Set locale ke Indonesia hanya untuk proses ini
                     \Carbon\Carbon::setLocale('id');
-
                     $start = \Carbon\Carbon::parse($startDate);
                     $end = \Carbon\Carbon::parse($endDate);
                 @endphp
@@ -75,134 +234,218 @@
                 </h3>
 
                 @php
-                    // Restore original locale
                     \Carbon\Carbon::setLocale($currentLocale);
                 @endphp
             </div>
 
             <div class="mb-2">
-                <span class="font-medium">
-                    No. Voucher:
-                </span>
+                <span class="font-medium">No. Voucher:</span>
             </div>
 
-            <!-- Tabel Data dengan wrapper untuk scroll horizontal di screen -->
-            <div class="overflow-x-auto">
-                <table class="w-full border-collapse border border-gray-300 mb-4" style="min-width: 100%;">
+            <!-- Tabel Data -->
+            <div class="overflow-x-auto mb-4">
+                <table class="w-full border-collapse border border-gray-300">
                     <thead>
                         <tr class="bg-gray-100">
                             <th class="border border-gray-300 px-2 py-2" style="width: 4%;">No.</th>
-                            <th class="border border-gray-300 px-2 py-2" style="width: 16%;">Kegiatan</th>
                             @if (session('tenagakerjarum') == 'Harian')
-                                <th class="border border-gray-300 px-2 py-2" style="width: 12%;">Tenaga Kerja</th>
+                                <th class="border border-gray-300 px-2 py-2" style="width: 14%;">Tenaga Kerja</th>
                             @endif
-                            @if (session('tenagakerjarum') != 'Harian')
-                                <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Plot</th>
-                                <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Luas (Ha)</th>
-                                <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Status Tanam</th>
-                                <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Hasil (Ha)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Plot</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Luas (Ha)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Status Tanam</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 8%;">Hasil (Ha)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Tanggal Kegiatan</th>
+                            @if (session('tenagakerjarum') == 'Harian')
+                                <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Cost/Unit</th>
                             @endif
-                            <th class="border border-gray-300 px-2 py-2" style="width: 10%;">Cost/Unit</th>
-                            <th class="border border-gray-300 px-2 py-2" style="width: 17%;">Biaya (Rp)</th>
+                            <th class="border border-gray-300 px-2 py-2" style="width: 14%;">Biaya (Rp)</th>
                         </tr>
                     </thead>
                     <tbody>
                         @php
-                            // Group data by activityname
-                            $groupedData = [];
+                            // Group data by activityname first, then by lkhno
+                            $groupedByActivity = [];
                             $totalKeseluruhan = 0;
 
                             if (isset($data) && count($data) > 0) {
                                 foreach ($data as $item) {
                                     $activityName = $item->activityname;
-                                    if (!isset($groupedData[$activityName])) {
-                                        $groupedData[$activityName] = [];
+                                    $lkhno = $item->lkhno;
+
+                                    if (!isset($groupedByActivity[$activityName])) {
+                                        $groupedByActivity[$activityName] = [];
                                     }
-                                    $groupedData[$activityName][] = $item;
+                                    if (!isset($groupedByActivity[$activityName][$lkhno])) {
+                                        $groupedByActivity[$activityName][$lkhno] = [];
+                                    }
+                                    $groupedByActivity[$activityName][$lkhno][] = $item;
                                 }
                             }
 
                             $rowNumber = 1;
                         @endphp
 
-                        @if (count($groupedData) > 0)
-                            @foreach ($groupedData as $activityName => $items)
+                        @if (count($groupedByActivity) > 0)
+                            @foreach ($groupedByActivity as $activityName => $lkhGroups)
                                 @php
-                                    $subtotal = 0;
-                                    $itemCount = count($items);
+                                    $activitySubtotal = 0;
                                 @endphp
 
-                                @foreach ($items as $index => $item)
-                                    <tr>
-                                        <td class="border border-gray-300 px-2 py-2 text-center">{{ $rowNumber++ }}.
-                                        </td>
-
-                                        <!-- Merge kolom kegiatan dengan rowspan -->
-                                        @if ($index === 0)
-                                            <td class="border border-gray-300 px-2 py-2 font-semibold bg-gray-50"
-                                                rowspan="{{ $itemCount }}">
-                                                {{ $item->activityname }}
-                                            </td>
-                                        @endif
-
-                                        @if (session('tenagakerjarum') == 'Harian')
-                                            <td class="border border-gray-300 px-2 py-2">{{ $item->namatenagakerja }}
-                                            </td>
-                                        @endif
-                                        @if (session('tenagakerjarum') != 'Harian')
-                                            <td class="border border-gray-300 px-2 py-2">{{ $item->plot }}</td>
-                                            <td class="border border-gray-300 px-2 py-2 text-right">
-                                                {{ number_format($item->luasan, 2) }}</td>
-                                            <td class="border border-gray-300 px-2 py-2">
-                                                {{ $item->batchdate }}/{{ $item->lifecyclestatus }}</td>
-                                            <td class="border border-gray-300 px-2 py-2 text-right">
-                                                {{ number_format($item->hasil, 2) }}</td>
-                                        @endif
-                                        <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->upah }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-2 text-right">{{ $item->total }}
-                                        </td>
-                                    </tr>
-                                    @php
-                                        // Konversi nilai total ke numeric
-                                        // Hapus semua karakter kecuali angka, koma, dan titik
-                                        $cleanTotal = preg_replace('/[^\d,.]/', '', $item->total);
-
-                                        // Jika format Indonesia (1.000.000,00), ubah ke format standar
-                                        if (strpos($cleanTotal, ',') !== false && strpos($cleanTotal, '.') !== false) {
-                                            // Format: 1.000.000,00 -> hapus titik, ganti koma dengan titik
-                                            $cleanTotal = str_replace('.', '', $cleanTotal);
-                                            $cleanTotal = str_replace(',', '.', $cleanTotal);
-                                        } elseif (strpos($cleanTotal, ',') !== false) {
-                                            // Format: 1000000,00 -> ganti koma dengan titik
-                                            $cleanTotal = str_replace(',', '.', $cleanTotal);
-                                        }
-
-                                        $totalValue = floatval($cleanTotal);
-                                        $subtotal += $totalValue;
-                                    @endphp
-                                @endforeach
-
-                                <!-- Row Subtotal untuk setiap kegiatan -->
-                                <tr class="bg-yellow-50 font-bold">
-                                    <td class="border border-gray-300 px-2 py-2 text-center"
-                                        colspan="{{ session('tenagakerjarum') == 'Harian' ? '4' : '7' }}">
-                                        Subtotal {{ $activityName }}
-                                    </td>
-                                    <td class="border border-gray-300 px-2 py-2 text-right">
-                                        Rp {{ number_format($subtotal, 2, ',', '.') }}
+                                <!-- Row Header Kegiatan -->
+                                <tr class="bg-blue-50">
+                                    <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '7' }}"
+                                        class="border border-gray-300 px-3 py-2 font-bold text-left">
+                                        Kegiatan: {{ $activityName }}
                                     </td>
                                 </tr>
 
+                                @foreach ($lkhGroups as $lkhno => $items)
+                                    @php
+                                        $subtotal = 0;
+                                        $itemCount = count($items);
+                                        $firstItem = $items[0];
+
+                                        // Cek berapa baris yang memiliki plot yang sama secara berurutan
+                                        $plotSpans = [];
+                                        $currentPlot = null;
+                                        $spanStart = 0;
+
+                                        foreach ($items as $idx => $item) {
+                                            if ($currentPlot === null || $currentPlot !== $item->plot) {
+                                                if ($currentPlot !== null) {
+                                                    $plotSpans[] = [
+                                                        'plot' => $currentPlot,
+                                                        'start' => $spanStart,
+                                                        'count' => $idx - $spanStart,
+                                                    ];
+                                                }
+                                                $currentPlot = $item->plot;
+                                                $spanStart = $idx;
+                                            }
+                                        }
+                                        // Tambahkan span terakhir
+                                        if ($currentPlot !== null) {
+                                            $plotSpans[] = [
+                                                'plot' => $currentPlot,
+                                                'start' => $spanStart,
+                                                'count' => count($items) - $spanStart,
+                                            ];
+                                        }
+                                    @endphp
+
+                                    @foreach ($items as $index => $item)
+                                        @php
+                                            // Cari apakah index ini adalah start dari plot span
+                                            $isPlotStart = false;
+                                            $plotRowspan = 1;
+                                            foreach ($plotSpans as $span) {
+                                                if ($span['start'] === $index) {
+                                                    $isPlotStart = true;
+                                                    $plotRowspan = $span['count'];
+                                                    break;
+                                                }
+                                            }
+                                        @endphp
+
+                                        <tr>
+                                            <td class="border border-gray-300 px-2 py-2 text-center">
+                                                {{ $rowNumber++ }}.</td>
+
+                                            @if (session('tenagakerjarum') == 'Harian')
+                                                <td class="border border-gray-300 px-2 py-2">
+                                                    {{ $item->namatenagakerja }}</td>
+                                            @endif
+
+                                            @if ($isPlotStart)
+                                                <td class="border border-gray-300 px-2 py-2 bg-gray-50"
+                                                    rowspan="{{ $plotRowspan }}">{{ $item->plot }}</td>
+                                            @endif
+
+                                            <td class="border border-gray-300 px-2 py-2 text-right">
+                                                {{ number_format($item->luasan, 2, ',', '.') }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-2">
+                                                {{ $item->batchdate }}/{{ $item->lifecyclestatus }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-2 text-right">
+                                                {{ number_format($item->hasil, 2, ',', '.') }}
+                                            </td>
+
+                                            @if (session('tenagakerjarum') == 'Borongan')
+                                                @if ($index === 0)
+                                                    <td class="border border-gray-300 px-2 py-2 text-center bg-gray-50"
+                                                        rowspan="{{ $itemCount }}">
+                                                        {{ \Carbon\Carbon::parse($item->lkhdate)->format('Y-m-d') }}
+                                                    </td>
+                                                    <td class="border border-gray-300 px-2 py-2 text-right bg-white"
+                                                        rowspan="{{ $itemCount }}">
+                                                        {{ $item->totalupahall }}
+                                                    </td>
+                                                @endif
+                                            @else
+                                                <td class="border border-gray-300 px-2 py-2 text-center">
+                                                    {{ \Carbon\Carbon::parse($item->lkhdate)->format('Y-m-d') }}
+                                                </td>
+                                                <td class="border border-gray-300 px-2 py-2 text-right">
+                                                    {{ $item->upah }}
+                                                </td>
+                                                <td class="border border-gray-300 px-2 py-2 text-right">
+                                                    {{ $item->total }}</td>
+                                            @endif
+                                        </tr>
+
+                                        @php
+                                            if (session('tenagakerjarum') == 'Harian') {
+                                                $cleanTotal = preg_replace('/[^\d,.]/', '', $item->total);
+                                            } else {
+                                                if ($index === 0) {
+                                                    $cleanTotal = preg_replace('/[^\d,.]/', '', $item->totalupahall);
+                                                } else {
+                                                    $cleanTotal = '0';
+                                                }
+                                            }
+
+                                            if (
+                                                strpos($cleanTotal, ',') !== false &&
+                                                strpos($cleanTotal, '.') !== false
+                                            ) {
+                                                $cleanTotal = str_replace('.', '', $cleanTotal);
+                                                $cleanTotal = str_replace(',', '.', $cleanTotal);
+                                            } elseif (strpos($cleanTotal, ',') !== false) {
+                                                $cleanTotal = str_replace(',', '.', $cleanTotal);
+                                            }
+
+                                            $totalValue = floatval($cleanTotal);
+                                            $subtotal += $totalValue;
+                                        @endphp
+                                    @endforeach
+
+                                    @php
+                                        $activitySubtotal += $subtotal;
+                                    @endphp
+                                @endforeach
+
+                                <tr class="bg-yellow-50 font-bold">
+                                    <td class="border border-gray-300 px-2 py-2 text-center"
+                                        colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '6' }}">
+                                        Subtotal {{ $activityName }}
+                                    </td>
+                                    <td class="border border-gray-300 px-2 py-2 text-right">
+                                        Rp {{ number_format($activitySubtotal, 2, ',', '.') }}
+                                    </td>
+                                </tr>
+
+
                                 @php
-                                    $totalKeseluruhan += $subtotal;
+                                    $totalKeseluruhan += $activitySubtotal;
                                 @endphp
                             @endforeach
 
                             <!-- Row Total Keseluruhan -->
                             <tr class="bg-green-100 font-bold text-base">
                                 <td class="border border-gray-300 px-2 py-2 text-center"
-                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '4' : '7' }}">
+                                    colspan="{{ session('tenagakerjarum') == 'Harian' ? '8' : '6' }}">
                                     TOTAL KESELURUHAN
                                 </td>
                                 <td class="border border-gray-300 px-2 py-2 text-right">
@@ -211,7 +454,7 @@
                             </tr>
                         @else
                             <tr>
-                                <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '5' : '8' }}"
+                                <td colspan="{{ session('tenagakerjarum') == 'Harian' ? '9' : '7' }}"
                                     class="border border-gray-300 px-2 py-2 text-center">
                                     Tidak ada data
                                 </td>
@@ -222,7 +465,7 @@
             </div>
 
             <!-- Footer dengan tanggal cetak -->
-            <div class="text-right text-sm text-gray-500">
+            <div class="text-right text-sm text-gray-500" style="margin-top: 8px; margin-bottom: 0;">
                 Dicetak pada: {{ now()->format('d/m/Y H:i') }}
             </div>
         </div>
@@ -230,7 +473,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Fungsi untuk mencetak
             document.getElementById('print-btn').addEventListener('click', function() {
                 window.print();
             });

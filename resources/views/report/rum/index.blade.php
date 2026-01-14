@@ -99,8 +99,6 @@
                             placeholder="Search Kegiatan..." />
                     </div>
 
-                    <!-- TOMBOL PREVIEW REPORT - BUKA TAB BARU -->
-                    <!-- TOMBOL PREVIEW REPORT - BUKA TAB BARU DENGAN PARAMETER TANGGAL -->
                     <div class="flex items-end gap-2">
                         <button type="button" onclick="openPreviewReport()"
                             class="bg-gradient-to-r from-blue-600 to-sky-600 hover:bg-gradient-to-r hover:from-blue-700 hover:to-sky-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
@@ -144,9 +142,9 @@
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">LKH No.</th>
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kegiatan</th>
-                            @if (session('tenagakerjarum' != 'Harian'))
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
-                            @endif
+
+                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
+
                             <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tanggal
                                 Kegiatan
                             </th>
@@ -173,10 +171,10 @@
                                         {{ $item->lkhno }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->activityname }}</td>
-                                    @if (session('tenagakerjarum') != 'Harian')
-                                        <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                            {{ $item->plots }}</td>
-                                    @endif
+
+                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
+                                        {{ $item->plots }}</td>
+
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
                                         {{ $item->lkhdate }}</td>
                                     <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
@@ -235,12 +233,14 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal dengan tinggi maksimal responsif -->
     <div id="listModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95 p-4"
         style="opacity: 0; transform: scale(0.95);">
-        <div class="bg-white w-11/12 p-4 rounded shadow-lg transition-transform duration-300 ease-out transform">
-            <div class="flex items-center justify-between mb-4">
+        <div
+            class="bg-white w-11/12 max-w-7xl max-h-[90vh] flex flex-col rounded shadow-lg transition-transform duration-300 ease-out transform">
+            <!-- Header Modal - Fixed -->
+            <div class="flex items-center justify-between p-4 border-b border-gray-300 flex-shrink-0">
                 <h2 class="text-lg font-bold">Daftar List</h2>
                 <button onclick="closeModal()" class="p-2 hover:bg-gray-200 rounded-md">
                     <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
@@ -252,33 +252,42 @@
                 </button>
             </div>
 
-            <div class="overflow-auto overflow-y-auto max-h-[100vh] text-sm rounded border border-gray-300">
-                <table class="min-w-full bg-white">
-                    <thead>
-                        <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kegiatan</th>
-                            @if (session('tenagakerjarum') == 'Harian')
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Tenaga Kerja</th>
-                            @endif
-                            @if (session('tenagakerjarum') != 'Harian')
+            <!-- Content Modal - Scrollable -->
+            <div class="overflow-auto flex-1 p-4">
+                <div class="rounded border border-gray-300">
+                    <table class="min-w-full bg-white text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
+                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kegiatan</th>
+                                @if (session('tenagakerjarum') == 'Harian')
+                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Tenaga Kerja</th>
+                                @endif
+
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luasan (Ha)</th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Status Tanam</th>
                                 <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Hasil (Ha)</th>
-                            @endif
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Cost/Unit</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Biaya (Rp)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listTableBody">
-                    </tbody>
-                </table>
+
+                                @if (session('tenagakerjarum') == 'Harian')
+                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Cost/Unit</th>
+                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Biaya (Rp)</th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody id="listTableBody">
+                            <tr>
+                                <td colspan="10" class="text-center py-4">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <style>
+        /* Modal styling */
         .invisible {
             visibility: hidden;
             pointer-events: none;
@@ -289,6 +298,7 @@
             pointer-events: auto;
         }
 
+        /* Table styling */
         th,
         td {
             white-space: nowrap;
@@ -296,28 +306,24 @@
             text-overflow: ellipsis;
         }
 
-        .max-h-96 {
-            max-height: 24rem;
-            overflow-x: auto;
-            overflow-y: hidden;
+        /* Custom scrollbar untuk modal */
+        .overflow-auto::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
 
-        /* Style untuk dot list */
-        .dot-list {
-            list-style-type: none;
-            padding-left: 0;
-            margin: 0;
+        .overflow-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
         }
 
-        .dot-list li {
-            padding-left: 1em;
-            text-indent: -0.7em;
-            margin-bottom: 0.25em;
+        .overflow-auto::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
         }
 
-        .dot-list li:before {
-            content: "•";
-            padding-right: 0.5em;
+        .overflow-auto::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 
@@ -348,44 +354,63 @@
                     }
 
                     const data = response.data || response;
-                    const total = response.total || null;
 
                     if (!data || data.length === 0) {
                         tableBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Tidak ada data</td></tr>';
                         return;
                     }
 
+                    // Variabel untuk menghitung total biaya
+                    let totalBiaya = 0;
+
                     data.forEach(item => {
+                        @if (session('tenagakerjarum') == 'Harian')
+                            const biaya = item.total || '0';
+                            const biayaNumeric = parseFloat(biaya.toString().replace(/[^0-9,-]/g, '').replace(
+                                ',', '.')) || 0;
+                            totalBiaya += biayaNumeric;
+                        @endif
+
                         const row = `
-                            <tr class="text-center">
-                                <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.activityname || ''}</td>
-                                @if (session('tenagakerjarum') == 'Harian')
-                                    <td class="py-2 px-4 border-b border-gray-300">${item.namatenagakerja}</td>
-                                @endif
-                                @if (session('tenagakerjarum') != 'Harian')
-                                <td class="py-2 px-4 border-b border-gray-300">${item.plot || ''}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.luasrkh || ''}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}/${item.lifecyclestatus}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.luashasil || ''}</td>
-                                @endif
-                                <td class="py-2 px-4 border-b border-gray-300">${item.upah || '-'}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.total || '-'}</td>
-                            </tr>
-                        `;
+                    <tr class="text-center">
+                        <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
+                        <td class="py-2 px-4 border-b border-gray-300">${item.activityname || ''}</td>
+                        @if (session('tenagakerjarum') == 'Harian')
+                            <td class="py-2 px-4 border-b border-gray-300">${item.namatenagakerja}</td>
+                        @endif
+                        
+                        <td class="py-2 px-4 border-b border-gray-300">${item.plot || ''}</td>
+                        <td class="py-2 px-4 border-b border-gray-300">${item.luasrkh || ''}</td>
+                        <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}/${item.lifecyclestatus}</td>
+                        <td class="py-2 px-4 border-b border-gray-300">${item.luashasil || ''}</td>
+                        
+                        @if (session('tenagakerjarum') == 'Harian')
+                            <td class="py-2 px-4 border-b border-gray-300">${item.upah || '-'}</td>
+                            <td class="py-2 px-4 border-b border-gray-300">${item.total || '-'}</td>
+                        @endif
+                    </tr>
+                `;
                         tableBody.innerHTML += row;
                     });
 
-                    // Tambahkan baris total jika ada
-                    if (total) {
+                    // Tambahkan baris total jika tenaga kerja adalah Harian
+                    @if (session('tenagakerjarum') == 'Harian')
+                        // Format total biaya ke format Rupiah dengan ,00 di belakang
+                        const totalFormatted = new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR',
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }).format(totalBiaya);
+
                         const totalRow = `
-                            <tr class="text-center font-bold bg-gray-50">
-                                <td colspan="7" class="py-2 px-4 border-t-2 border-gray-400 text-right">Total :</td>
-                                <td class="py-2 px-4 border-t-2 border-gray-400">${total}</td>
-                            </tr>
-                        `;
+                    <tr class="text-center font-bold bg-gray-50">
+                        <td colspan="8" class="py-2 px-4 border-t-2 border-gray-400 text-right">Total Biaya:</td>
+                        <td class="py-2 px-4 border-t-2 border-gray-400">${totalFormatted}</td>
+                    </tr>
+                `;
                         tableBody.innerHTML += totalRow;
-                    }
+                    @endif
 
                     modal.classList.remove('invisible');
                     modal.classList.add('visible');
