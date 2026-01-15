@@ -3,279 +3,313 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $title }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white rounded-md shadow-md w-full">
-        <div class="flex mx-4 items-center gap-2 flex-wrap lg:justify-between justify-center">
-            <div class="flex gap-2 text-sm">
-                <button type="button" id="openModalBtn"
-                    class="bg-blue-600 text-white px-4 py-2 text-sm border border-transparent shadow-sm font-medium rounded-md hover:bg-blue-700 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                        width="24" height="24" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 12h14m-7 7V5" />
-                    </svg>
-                    <span>Create RKM</span>
-                </button>
-                <button
-                    class="bg-green-600 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-green-500 flex items-center space-x-2"
-                    onclick="window.location.href='{{ route('transaction.rencana-kerja-mingguan.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
-                    <svg class="w-5 h-5 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                        width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+    <div class="mx-auto py-4">
+        <!-- Header Card with Gradient -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-white mb-2">Rencana Kerja Mingguan</h1>
+                    <p class="text-blue-100 text-sm">Kelola dan pantau rencana kerja mingguan Anda</p>
+                </div>
+                <div class="hidden md:block">
+                    <svg class="w-16 h-16 text-blue-300 opacity-50" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                         <path fill-rule="evenodd"
-                            d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v9.293l-2-2a1 1 0 0 0-1.414 1.414l.293.293h-6.586a1 1 0 1 0 0 2h6.586l-.293.293A1 1 0 0 0 18 16.707l2-2V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Z"
+                            d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span>Export to Excel</span>
-                </button>
+                </div>
             </div>
+        </div>
 
-            <form method="POST" action="{{ route('transaction.rencana-kerja-mingguan.index') }}">
-                @csrf
-                <div class="flex items-center gap-2 flex-wrap justify-center">
-                    <div id="ajax-data" data-url="{{ route('transaction.rencana-kerja-mingguan.index') }}">
-                        <div class="flex items-center gap-2 w-full">
-                            <div>
-                                <label for="perPage" class="text-sm font-medium text-gray-700">Items per
-                                    page:</label>
-                                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
-                                    min="1" autocomplete="off"
-                                    class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-blue-500 focus:border-blue-500" />
-                            </div>
-                        </div>
+        <!-- Main Content Card -->
+        <div class="bg-white rounded-xl shadow-lg overflow-visible">
+            <!-- Action Bar -->
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-4 rounded-t-lg">
+                <div class="flex flex-wrap items-center gap-3 lg:justify-between justify-center">
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
+                        <button type="button" id="openModalBtn"
+                            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Create RKM</span>
+                        </button>
+                        <button
+                            class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 py-2.5 text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+                            onclick="window.location.href='{{ route('transaction.rencana-kerja-mingguan.exportExcel', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path fill-rule="evenodd"
+                                    d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v9.293l-2-2a1 1 0 0 0-1.414 1.414l.293.293h-6.586a1 1 0 1 0 0 2h6.586l-.293.293A1 1 0 0 0 18 16.707l2-2V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Export Excel</span>
+                        </button>
                     </div>
-                    <div>
-                        <div class="relative inline-block text-left w-full">
-                            <div>
+
+                    <!-- Filters Form -->
+                    <form method="POST" action="{{ route('transaction.rencana-kerja-mingguan.index') }}">
+                        @csrf
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <!-- Items per page -->
+                            <div
+                                class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm">
+                                <label for="perPage"
+                                    class="text-xs font-medium text-gray-600 whitespace-nowrap">Items:</label>
+                                <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
+                                    class="w-12 p-1.5 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                            </div>
+
+                            <!-- Date Filter Dropdown -->
+                            <div class="relative">
                                 <button type="button"
-                                    class="inline-flex justify-center w-full items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    id="menu-button" aria-expanded="false" aria-haspopup="true"
-                                    onclick="toggleDropdown()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-                                        class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20" fill="currentColor">
+                                    class="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                                    id="menu-button" onclick="toggleDropdown()">
+                                    <svg class="h-4 w-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd"
                                             d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
                                             clip-rule="evenodd" />
                                     </svg>
                                     <span>Date Filter</span>
-                                    <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </button>
-                            </div>
 
-                            <div class="absolute z-10 mt-1 w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
-                                id="menu-dropdown">
-                                <div class="py-1 px-4" role="menu" aria-orientation="vertical"
-                                    aria-labelledby="menu-button">
-                                    <div class="py-2">
-                                        <label for="start_date" class="block text-sm font-medium text-gray-700">Start
-                                            Date</label>
-                                        <input type="date" id="start_date" name="start_date"
-                                            value="{{ old('start_date', $startDate ?? '') }}"
-                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                    </div>
-
-                                    <div class="py-2">
-                                        <label for="end_date" class="block text-sm font-medium text-gray-700">End
-                                            Date</label>
-                                        <input type="date" id="end_date" name="end_date"
-                                            value="{{ old('end_date', $endDate ?? '') }}"
-                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                <div class="absolute z-10 mt-2 w-72 rounded-lg bg-white border border-gray-200 shadow-xl hidden"
+                                    id="menu-dropdown">
+                                    <div class="p-4 space-y-3">
+                                        <div>
+                                            <label for="start_date"
+                                                class="block text-sm font-semibold text-gray-700 mb-1.5">Start
+                                                Date</label>
+                                            <input type="date" id="start_date" name="start_date"
+                                                value="{{ old('start_date', $startDate ?? now()->startOfWeek()->format('Y-m-d')) }}"
+                                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label for="end_date"
+                                                class="block text-sm font-semibold text-gray-700 mb-1.5">End
+                                                Date</label>
+                                            <input type="date" id="end_date" name="end_date"
+                                                value="{{ old('end_date', $endDate ?? now()->endOfWeek()->format('Y-m-d')) }}"
+                                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 text-sm" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
-                            </svg>
-                        </div>
-                        <input type="text" id="search" autocomplete="off" name="search"
-                            value="{{ old('search', $search) }}"
-                            class="block w-[350px] p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                            placeholder="Search No.RKM, or Activity Code..." />
-                    </div>
-                </div>
-            </form>
-        </div>
 
-        <div class="mx-auto px-4 py-4">
-            <div class="overflow-x-auto rounded-md border border-gray-300">
-                <table class="min-w-full bg-white text-sm text-center" id="tables">
-                    <thead>
+                            <!-- Search Box -->
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                                    </svg>
+                                </div>
+                                <input type="text" id="search" name="search" value="{{ old('search', $search) }}"
+                                    class="w-80 pl-10 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                    placeholder="Search No.RKM, or Activity Code..." />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="ajax-data" data-url="{{ route('transaction.rencana-kerja-mingguan.index') }}"></div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto" id="tables">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
                         <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">No. RKM</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">RKM Date</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Start Date</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">End Date</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kode Aktivitas
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No.
                             </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Nama Aktivitas
-                            </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Input By</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Aksi</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No.
+                                RKM</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                RKM Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Start Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                End Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Kode Aktivitas</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Nama Aktivitas</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Input By</th>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach ($rkm as $item)
-                            <tr>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
-                                    {{ $item->no }}.</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->rkmno }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->rkmdate }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->startdate ?? '' }}
-                                </td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->enddate ?? '' }}
-                                </td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->activitycode ?? '' }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->activityname ?? '' }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                    {{ $item->inputby ?? '' }}</td>
-                                <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
-                                    <div class="flex items-center justify-center">
-                                        <button class="group flex items-center"
-                                            onclick="showList('{{ $item->rkmno }}')"><svg
-                                                class="w-6 h-6 text-gray-500 dark:text-white group-hover:hidden"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-width="2"
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse ($rkm as $item)
+                            <tr class="hover:bg-blue-50 transition-colors duration-150">
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ $item->no }}.</td>
+                                <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $item->rkmno }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->rkmdate }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->startdate ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->enddate ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->activitycode ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->activityname ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $item->inputby ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button onclick="showList('{{ $item->rkmno }}')"
+                                            class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                            title="View Details">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                <path stroke-width="2"
                                                     d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z" />
-                                                <path stroke="currentColor" stroke-width="2"
-                                                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                             </svg>
-                                            <svg class="w-6 h-6 text-gray-500 dark:text-white hidden group-hover:block"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="currentColor" viewBox="0 0 24 24">
-                                                <path fill-rule="evenodd"
-                                                    d="M4.998 7.78C6.729 6.345 9.198 5 12 5c2.802 0 5.27 1.345 7.002 2.78a12.713 12.713 0 0 1 2.096 2.183c.253.344.465.682.618.997.14.286.284.658.284 1.04s-.145.754-.284 1.04a6.6 6.6 0 0 1-.618.997 12.712 12.712 0 0 1-2.096 2.183C17.271 17.655 14.802 19 12 19c-2.802 0-5.27-1.345-7.002-2.78a12.712 12.712 0 0 1-2.096-2.183 6.6 6.6 0 0 1-.618-.997C2.144 12.754 2 12.382 2 12s.145-.754.284-1.04c.153-.315.365-.653.618-.997A12.714 12.714 0 0 1 4.998 7.78ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                                                    clip-rule="evenodd" />
-                                            </svg>
-                                            <span class="w-2"></span>
                                         </button>
-
                                         <a href="{{ route('transaction.rencana-kerja-mingguan.edit', ['rkmno' => $item->rkmno]) }}"
-                                            class="group flex items-center"><svg
-                                                class="w-6 h-6 text-blue-500 dark:text-white group-hover:hidden"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                    stroke-linejoin="round" stroke-width="2"
+                                            class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                            title="Edit">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
                                             </svg>
-                                            <svg class="w-6 h-6 text-blue-500 dark:text-white hidden group-hover:block"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
-                                                height="24" fill="currentColor" viewBox="0 0 24 24">
-                                                <path fill-rule="evenodd"
-                                                    d="M11.32 6.176H5c-1.105 0-2 .949-2 2.118v10.588C3 20.052 3.895 21 5 21h11c1.105 0 2-.948 2-2.118v-7.75l-3.914 4.144A2.46 2.46 0 0 1 12.81 16l-2.681.568c-1.75.37-3.292-1.263-2.942-3.115l.536-2.839c.097-.512.335-.983.684-1.352l2.914-3.086Z"
-                                                    clip-rule="evenodd" />
-                                                <path fill-rule="evenodd"
-                                                    d="M19.846 4.318a2.148 2.148 0 0 0-.437-.692 2.014 2.014 0 0 0-.654-.463 1.92 1.92 0 0 0-1.544 0 2.014 2.014 0 0 0-.654.463l-.546.578 2.852 3.02.546-.579a2.14 2.14 0 0 0 .437-.692 2.244 2.244 0 0 0 0-1.635ZM17.45 8.721 14.597 5.7 9.82 10.76a.54.54 0 0 0-.137.27l-.536 2.84c-.07.37.239.696.588.622l2.682-.567a.492.492 0 0 0 .255-.145l4.778-5.06Z"
-                                                    clip-rule="evenodd" />
-                                            </svg>
-                                            <span class="w-0.5"></span>
                                         </a>
-
                                         <form
                                             action="{{ route('transaction.rencana-kerja-mingguan.destroy', ['rkmno' => $item->rkmno]) }}"
-                                            method="POST" class="inline">@csrf @method('DELETE')
-                                            <button type="submit" class="group flex"
-                                                onclick="return confirm('Yakin ingin menghapus data ini?')"><svg
-                                                    class="w-6 h-6 text-red-500 dark:text-white group-hover:hidden"
-                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                    width="24" height="24" fill="none"
+                                            method="POST" class="inline">
+                                            @csrf @method('DELETE')
+                                            <button type="submit"
+                                                class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                                                onclick="return confirm('Yakin ingin menghapus data ini?')"
+                                                title="Delete">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
-                                                    <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="2"
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
                                                         d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
                                                 </svg>
-                                                <svg class="w-6 h-6 text-red-500 dark:text-white hidden group-hover:block"
-                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                    width="24" height="24" fill="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path fill-rule="evenodd"
-                                                        d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                                <span class="w-0.5"></span>
                                             </button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="9" class="px-4 py-12">
+                                    <div class="flex flex-col items-center justify-center text-center">
+                                        <svg class="w-20 h-20 text-gray-300 mb-4" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Tidak Ada Aktivitas Minggu
+                                            Ini</h3>
+                                        <p class="text-gray-500 text-sm mb-4">Belum ada rencana kerja mingguan yang
+                                            sesuai dengan filter Anda</p>
+                                        <button type="button"
+                                            onclick="document.getElementById('openModalBtn').click()"
+                                            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            <span>Buat RKM Baru</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        <div class="mx-4 mt-1" id="pagination-links">
-            @if ($rkm->hasPages())
-                {{ $rkm->appends(['perPage' => $rkm->perPage()])->links() }}
-            @else
-                <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-600">
-                        Showing <span class="font-medium">{{ $rkm->count() }}</span> of <span
-                            class="font-medium">{{ $rkm->total() }}</span> results
-                    </p>
-                </div>
-            @endif
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 rounded-b-lg" id="pagination-links">
+                @if ($rkm->hasPages())
+                    {{ $rkm->appends(['perPage' => $rkm->perPage()])->links() }}
+                @else
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-600">
+                            Showing <span class="font-semibold text-gray-900">{{ $rkm->count() }}</span> of
+                            <span class="font-semibold text-gray-900">{{ $rkm->total() }}</span> results
+                        </p>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
-    <!-- Modal -->
-    <div id="targetDateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="modal-content bg-white rounded-lg shadow-lg w-11/12 md:w-1/3">
-            <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
+    <!-- Create RKM Modal -->
+    <div id="targetDateModal"
+        class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 invisible transition-all duration-300">
+        <div
+            class="modal-content bg-white rounded-2xl shadow-2xl w-11/12 md:w-1/3 transform scale-95 transition-transform duration-300">
+            <div
+                class="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            </path>
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <h2 class="text-lg font-semibold text-gray-900">Create RKM Baru</h2>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Create RKM Baru</h2>
+                        <p class="text-sm text-gray-600">Pilih tanggal untuk memulai</p>
+                    </div>
                 </div>
                 <button id="closeModalBtn"
-                    class="text-gray-600 hover:text-gray-800 text-2xl leading-none">&times;</button>
+                    class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-all duration-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
 
             <form id="targetDateForm">
                 <div class="p-6 space-y-4">
                     <div>
-                        <label for="targetDate" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
-                            RKM:</label>
+                        <label for="targetDate" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Tanggal RKM <span class="text-red-500">*</span>
+                        </label>
                         <input type="date" id="targetDate" name="targetDate" required
-                            class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                        <p class="text-xs text-gray-500 mt-1">Pilih tanggal untuk membuat RKM (maksimal 7 hari ke
-                            depan)</p>
-                        <p id="errorMessage" class="text-red-500 text-xs mt-1 hidden">Silakan pilih tanggal terlebih
-                            dahulu</p>
+                            class="w-full border-2 border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Pilih tanggal untuk membuat RKM (maksimal 7 hari ke depan)
+                        </p>
+                        <p id="errorMessage" class="text-red-500 text-sm mt-2 hidden">
+                            <span class="flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                Silakan pilih tanggal terlebih dahulu
+                            </span>
+                        </p>
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-2 p-4 border-t bg-gray-50">
+                <div class="flex justify-end space-x-3 p-6 border-t bg-gray-50 rounded-b-2xl">
                     <button type="button" id="cancelBtn"
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-sm rounded-lg transition-colors">
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200">
                         Cancel
                     </button>
                     <button type="submit" id="submitBtn"
-                        class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 text-sm rounded-lg transition-colors">
+                        class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-2.5 text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
                         Lanjutkan
                     </button>
                 </div>
@@ -283,44 +317,78 @@
         </div>
     </div>
 
+    <!-- List Detail Modal -->
     <div id="listModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95"
-        style="opacity: 0; transform: scale(0.95);">
-        <div class="bg-white w-11/12 p-4 rounded shadow-lg transition-transform duration-300 ease-out transform">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold">Daftar List</h2>
-                <button onclick="closeListModal()" class="p-2 hover:bg-gray-200 rounded-md">
-                    <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                        viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18 17.94 6M18 18 6.06 6" />
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm invisible opacity-0 transition-all duration-300">
+        <div
+            class="bg-white w-11/12 max-w-6xl rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300">
+            <div
+                class="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path fill-rule="evenodd"
+                                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">Detail Daftar List</h2>
+                </div>
+                <button onclick="closeListModal()"
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <div class="overflow-auto text-sm rounded border border-gray-300">
-                <table class="min-w-full bg-white">
-                    <thead>
-                        <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No. RKM</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Blok</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luas Plot (Ha)</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Estimasi Pengerjaan (Ha)</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Aktual Pengerjaan (Ha)</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Sisa (Ha)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listTableBody">
-                    </tbody>
-                </table>
+            <div class="p-6 max-h-[70vh] overflow-auto">
+                <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gradient-to-r from-gray-100 to-gray-200 sticky top-0">
+                            <tr>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    No.</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    No. RKM</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Blok</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Plot</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Luas Plot (Ha)</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Estimasi (Ha)</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Aktual (Ha)</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Sisa (Ha)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadData();
+        });
+
         function toggleDropdown() {
             const dropdown = document.getElementById('menu-dropdown');
             dropdown.classList.toggle('hidden');
@@ -334,8 +402,100 @@
                 dropdown.classList.add("hidden");
             }
         });
-    </script>
-    <script>
+
+        function loadData() {
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            const ajaxData = document.getElementById('ajax-data');
+            const url = ajaxData.dataset.url;
+
+            fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const newTableBody = doc.querySelector('#tables tbody');
+                    const currentTableBody = document.querySelector('#tables tbody');
+                    if (newTableBody && currentTableBody) {
+                        currentTableBody.innerHTML = newTableBody.innerHTML;
+                    }
+
+                    const newPagination = doc.querySelector('#pagination-links');
+                    const currentPagination = document.querySelector('#pagination-links');
+                    if (newPagination && currentPagination) {
+                        currentPagination.innerHTML = newPagination.innerHTML;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        document.getElementById('perPage').addEventListener('input', function() {
+            loadData();
+        });
+
+        let searchTimeout;
+        document.getElementById('search').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadData();
+            }, 500);
+        });
+
+        document.getElementById('start_date').addEventListener('change', function() {
+            loadData();
+        });
+
+        document.getElementById('end_date').addEventListener('change', function() {
+            loadData();
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#pagination-links a')) {
+                e.preventDefault();
+                const url = e.target.closest('a').href;
+
+                const form = document.querySelector('form');
+                const formData = new FormData(form);
+
+                fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        const newTableBody = doc.querySelector('#tables tbody');
+                        const currentTableBody = document.querySelector('#tables tbody');
+                        if (newTableBody && currentTableBody) {
+                            currentTableBody.innerHTML = newTableBody.innerHTML;
+                        }
+
+                        const newPagination = doc.querySelector('#pagination-links');
+                        const currentPagination = document.querySelector('#pagination-links');
+                        if (newPagination && currentPagination) {
+                            currentPagination.innerHTML = newPagination.innerHTML;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        });
+
         const modal = document.getElementById('targetDateModal');
         const openModalBtn = document.getElementById('openModalBtn');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -360,7 +520,12 @@
         }
 
         openModalBtn.addEventListener('click', () => {
-            modal.classList.add('show');
+            modal.classList.remove('invisible');
+            modal.classList.add('visible');
+            setTimeout(() => {
+                modal.style.opacity = "1";
+                modal.querySelector('.modal-content').style.transform = "scale(1)";
+            }, 10);
             const today = new Date();
             targetDateInput.value = today.toISOString().split('T')[0];
             errorMessage.classList.add('hidden');
@@ -369,7 +534,12 @@
         });
 
         function closeModal() {
-            modal.classList.remove('show');
+            modal.style.opacity = "0";
+            modal.querySelector('.modal-content').style.transform = "scale(0.95)";
+            setTimeout(() => {
+                modal.classList.remove('visible');
+                modal.classList.add('invisible');
+            }, 300);
         }
 
         closeModalBtn.addEventListener('click', closeModal);
@@ -393,14 +563,13 @@
             errorMessage.classList.add('hidden');
             updateSubmitButton();
         });
-    </script>
 
-    <script>
         function showList(rkmno, companycode) {
             const modal = document.getElementById('listModal');
             const tableBody = document.getElementById('listTableBody');
 
-            tableBody.innerHTML = '';
+            tableBody.innerHTML =
+                '<tr><td colspan="8" class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div></td></tr>';
 
             const url =
                 `{{ route('transaction.rencana-kerja-mingguan.show', ['rkmno' => '__rkmno__', 'companycode' => '__companycode__']) }}`
@@ -410,82 +579,63 @@
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    data.forEach(item => {
+                    tableBody.innerHTML = '';
 
-                        const row = `
-                            <tr class="text-center">
-                                <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.rkmno}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.blok}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.plot}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.totalluasactual}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.totalestimasi}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.hasil ?? 0}</td>
-                                <td class="py-2 px-4 border-b border-gray-300">${item.sisa ?? 0}</td>
+                    if (data.length === 0) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="px-4 py-12">
+                                    <div class="flex flex-col items-center justify-center text-center">
+                                        <svg class="w-16 h-16 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <h3 class="text-base font-semibold text-gray-700 mb-1">Tidak Ada Detail</h3>
+                                        <p class="text-gray-500 text-sm">Belum ada data detail untuk RKM ini</p>
+                                    </div>
+                                </td>
                             </tr>
                         `;
-                        tableBody.innerHTML += row;
-                    });
+                    } else {
+                        data.forEach((item, index) => {
+                            const row = `
+                                <tr class="hover:bg-blue-50 transition-colors duration-150">
+                                    <td class="px-4 py-3 text-sm text-gray-900">${item.no}.</td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${item.rkmno}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.blok}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.plot}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.totalluasactual}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.totalestimasi}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.hasil ?? 0}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.sisa ?? 0}</td>
+                                </tr>
+                            `;
+                            tableBody.innerHTML += row;
+                        });
+                    }
 
                     modal.classList.remove('invisible');
                     modal.classList.add('visible');
                     setTimeout(() => {
                         modal.style.opacity = "1";
-                        modal.style.transform = "scale(1)";
-                    }, 50);
+                        modal.querySelector('.bg-white').style.transform = "scale(1)";
+                    }, 10);
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
-                    alert('Gagal memuat data list.');
+                    tableBody.innerHTML =
+                        '<tr><td colspan="8" class="text-center py-8 text-red-600">Gagal memuat data. Silakan coba lagi.</td></tr>';
                 });
         }
 
         function closeListModal() {
             const modal = document.getElementById('listModal');
-
             modal.style.opacity = "0";
-            modal.style.transform = "scale(0.95)";
-
+            modal.querySelector('.bg-white').style.transform = "scale(0.95)";
             setTimeout(() => {
                 modal.classList.remove('visible');
                 modal.classList.add('invisible');
             }, 300);
         }
     </script>
-
-    <style>
-        /* --- Fade in/out animation --- */
-        #targetDateModal {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-        }
-
-        #targetDateModal.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal-content {
-            transform: translateY(-20px);
-            transition: all 0.3s ease-in-out;
-        }
-
-        #targetDateModal.show .modal-content {
-            transform: translateY(0);
-        }
-
-        th,
-        td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .max-h-96 {
-            max-height: 24rem;
-            overflow-x: auto;
-            overflow-y: hidden;
-        }
-    </style>
 </x-layout>

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Report;
 
 use NumberFormatter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Number;
+use Symfony\Component\Clock\now;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\View;
@@ -41,8 +43,8 @@ class RekapUpahMingguanController extends Controller
             session(['tenagakerjarum' => $request->tenagakerjarum]);
         }
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', Carbon::now()->startOfWeek()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::now()->endOfWeek()->format('Y-m-d'));
         $perPage = $request->session()->get('perPage', 10);
         $tenagakerjarum = session('tenagakerjarum');
         $tk = $tenagakerjarum === 'Harian' ? 1 : 2;
