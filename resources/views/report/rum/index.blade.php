@@ -3,281 +3,350 @@
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $title }}</x-slot:nav>
 
-    <div class="mx-auto py-4 bg-white rounded-md shadow-md w-full">
-        <form method="POST" action="{{ route('report.rekap-upah-mingguan.index') }}">
-            @csrf
-            <div class="flex mx-4 items-center gap-2 flex-wrap lg:justify-between justify-center">
-                <div class="flex gap-2 text-sm">
-                    <div>
-                        <label for="tenagakerjarum" class="font-medium text-sm text-gray-700 block mb-1">Jenis Tenaga
-                            Kerja:</label>
-                        <select name="tenagakerjarum" id="tenagakerjarum"
-                            onchange="Alpine.store('loading').start(); this.form.submit()"
-                            class="w-fit border border-gray-300 rounded-md p-2 text-sm" required>
-                            <option value="" disabled
-                                {{ old('tenagakerjarum', session('tenagakerjarum')) == null ? 'selected' : '' }}>
-                                -- Tenaga Kerja --</option>
-                            <option value="Harian" class="text-black"
-                                {{ old('tenagakerjarum', session('tenagakerjarum')) == 'Harian' ? 'selected' : '' }}>
-                                Harian</option>
-                            <option value="Borongan" class="text-black"
-                                {{ old('tenagakerjarum', session('tenagakerjarum')) == 'Borongan' ? 'selected' : '' }}>
-                                Borongan
-                            </option>
-                        </select>
-                    </div>
+    <div class="mx-auto py-4">
+        <!-- Header Card with Gradient -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-white mb-2">Rekap Upah Mingguan</h1>
+                    <p class="text-indigo-100 text-sm">Kelola dan pantau rekap upah tenaga kerja mingguan</p>
                 </div>
+                <div class="hidden md:block">
+                    <svg class="w-16 h-16 text-indigo-300 opacity-50" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        </div>
 
-                <div class="flex items-end gap-2 flex-wrap justify-center">
-                    <div class="block">
-                        <span class="block mb-1 text-sm text-gray-700 font-medium">Range tanggal : </span>
-                        <div class="relative inline-block w-fit">
-                            <button type="button"
-                                class="inline-flex justify-center w-fit items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                id="menu-button" aria-expanded="false" aria-haspopup="true" onclick="toggleDropdown()">
-                                <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-                                    class="h-4 w-4 mr-2 text-gray-400" viewbox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Date Filter</span>
-                                <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+        <!-- Main Content Card -->
+        <div class="bg-white rounded-xl shadow-lg overflow-visible">
+            <!-- Filter Section -->
+            <form method="POST" action="{{ route('report.rekap-upah-mingguan.index') }}">
+                @csrf
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-4 rounded-t-lg">
+                    <div class="flex flex-wrap items-end gap-3 lg:justify-between justify-center">
+                        <!-- Left Section - Tenaga Kerja -->
+                        <div class="flex gap-3">
+                            <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                <label for="tenagakerjarum" class="block text-xs font-semibold text-gray-700 mb-2">
+                                    Jenis Tenaga Kerja <span class="text-red-500">*</span>
+                                </label>
+                                <select name="tenagakerjarum" id="tenagakerjarum"
+                                    onchange="Alpine.store('loading').start(); this.form.submit()"
+                                    class="w-48 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    required>
+                                    <option value="" disabled
+                                        {{ old('tenagakerjarum', session('tenagakerjarum')) == null ? 'selected' : '' }}>
+                                        -- Pilih Tenaga Kerja --
+                                    </option>
+                                    <option value="Harian"
+                                        {{ old('tenagakerjarum', session('tenagakerjarum')) == 'Harian' ? 'selected' : '' }}>
+                                        Harian
+                                    </option>
+                                    <option value="Borongan"
+                                        {{ old('tenagakerjarum', session('tenagakerjarum')) == 'Borongan' ? 'selected' : '' }}>
+                                        Borongan
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
 
-                            <div class="absolute left-0 z-10 mt-[1px] w-auto rounded-md bg-white border border-gray-300 shadow-lg hidden"
-                                id="menu-dropdown">
-                                <div class="py-1 px-4" role="menu" aria-orientation="vertical"
-                                    aria-labelledby="menu-button">
-                                    <div class="py-2">
-                                        <label for="start_date" class="block text-sm font-medium text-gray-700">Start
-                                            Date</label>
-                                        <input type="date" id="start_date" name="start_date" required
-                                            value="{{ old('start_date', $startDate ?? '') }}"
-                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
-                                    </div>
+                        <!-- Right Section - Filters & Actions -->
+                        <div class="flex items-end gap-2 flex-wrap">
+                            <!-- Date Filter -->
+                            <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                <label class="block text-xs font-semibold text-gray-700 mb-2">Range Tanggal</label>
+                                <div class="relative">
+                                    <button type="button"
+                                        class="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                                        id="menu-button" onclick="toggleDropdown()">
+                                        <svg class="h-4 w-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Date Filter</span>
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
 
-                                    <div class="py-2">
-                                        <label for="end_date" class="block text-sm font-medium text-gray-700">End
-                                            Date</label>
-                                        <input type="date" id="end_date" name="end_date" required
-                                            value="{{ old('end_date', $endDate ?? '') }}"
-                                            class="mt-1 block w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400"
-                                            oninput="this.className = this.value ? 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black' : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-gray-400'">
+                                    <div class="absolute left-0 z-10 mt-2 w-72 rounded-lg bg-white border border-gray-200 shadow-xl hidden"
+                                        id="menu-dropdown">
+                                        <div class="p-4 space-y-3">
+                                            <div>
+                                                <label for="start_date"
+                                                    class="block text-sm font-semibold text-gray-700 mb-1.5">Start
+                                                    Date</label>
+                                                <input type="date" id="start_date" name="start_date" required
+                                                    value="{{ old('start_date', $startDate ?? now()->startOfWeek()->format('Y-m-d')) }}"
+                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-sm" />
+                                            </div>
+                                            <div>
+                                                <label for="end_date"
+                                                    class="block text-sm font-semibold text-gray-700 mb-1.5">End
+                                                    Date</label>
+                                                <input type="date" id="end_date" name="end_date" required
+                                                    value="{{ old('end_date', $endDate ?? now()->endOfWeek()->format('Y-m-d')) }}"
+                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-sm" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div id="ajax-data" data-url="{{ route('report.rekap-upah-mingguan.index') }}">
-                        <div class="flex items-center gap-2 w-full">
-                            <div>
-                                <label for="perPage" class="text-sm font-medium text-gray-700">Show:</label>
+
+                            <!-- Items per page -->
+                            <div
+                                class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm">
+                                <label for="perPage"
+                                    class="text-xs font-medium text-gray-600 whitespace-nowrap">Show:</label>
                                 <input type="text" name="perPage" id="perPage" value="{{ $perPage }}"
-                                    min="1" autocomplete="off"
-                                    class="w-10 p-2 border border-gray-300 rounded-md text-sm text-center focus:ring-blue-500 focus:border-blue-500" />
-                                <span class="text-gray-700 text-sm font-medium"> entries</span>
+                                    class="w-12 p-1.5 border border-gray-300 rounded-md text-sm text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                                <span class="text-xs font-medium text-gray-600">entries</span>
+                            </div>
+
+                            <!-- Search Box -->
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+                                    </svg>
+                                </div>
+                                <input type="text" id="search" name="search"
+                                    value="{{ old('search', $search) }}"
+                                    class="w-80 pl-10 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    placeholder="Search Kegiatan..." />
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-2">
+                                <button type="button" onclick="openPreviewReport()"
+                                    class="bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fill-rule="evenodd"
+                                            d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Zm.5 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm0 5c.47 0 .917-.092 1.326-.26l1.967 1.967a1 1 0 0 0 1.414-1.414l-1.817-1.818A3.5 3.5 0 1 0 11.5 17Z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Preview</span>
+                                </button>
+                                <button type="button" onclick="printBp()"
+                                    class="bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-700 hover:to-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16.444 18H19a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.556M17 11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v6h10ZM7 15h10v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4Z" />
+                                    </svg>
+                                    <span>Print BP</span>
+                                </button>
+                                <button type="button" onclick="exportToExcel()"
+                                    class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fill-rule="evenodd"
+                                            d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Zm2-2a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2h-3Zm0 3a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2h-3Zm-6 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-6Zm8 1v1h-2v-1h2Zm0 3h-2v1h2v-1Zm-4-3v1H9v-1h2Zm0 3H9v1h2v-1Z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Export</span>
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
-                            </svg>
-                        </div>
-                        <input type="text" id="search" autocomplete="off" name="search"
-                            value="{{ old('search', $search) }}"
-                            class="block w-[350px] p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                            placeholder="Search Kegiatan..." />
-                    </div>
-
-                    <div class="flex items-end gap-2">
-                        <button type="button" onclick="openPreviewReport()"
-                            class="bg-gradient-to-r from-blue-600 to-sky-600 hover:bg-gradient-to-r hover:from-blue-700 hover:to-sky-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
-                            <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                    d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Zm.5 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm0 5c.47 0 .917-.092 1.326-.26l1.967 1.967a1 1 0 0 0 1.414-1.414l-1.817-1.818A3.5 3.5 0 1 0 11.5 17Z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            Preview Report
-                        </button>
-                        <button type="button" onclick="printBp()"
-                            class="bg-gradient-to-r from-red-600 to-rose-500 hover:bg-gradient-to-r hover:from-red-700 hover:to-rose-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
-                            <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linejoin="round" stroke-width="2"
-                                    d="M16.444 18H19a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.556M17 11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v6h10ZM7 15h10v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4Z" />
-                            </svg>
-                            Print BP
-                        </button>
-                        <button type="button" onclick="exportToExcel()"
-                            class="bg-gradient-to-r from-green-600 to-emerald-600 hover:bg-gradient-to-r hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2">
-                            <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                    d="M9 7V2.221a2 2 0 0 0-.5.365L4.586 6.5a2 2 0 0 0-.365.5H9Zm2 0V2h7a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9h5a2 2 0 0 0 2-2Zm2-2a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2h-3Zm0 3a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2h-3Zm-6 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-6Zm8 1v1h-2v-1h2Zm0 3h-2v1h2v-1Zm-4-3v1H9v-1h2Zm0 3H9v1h2v-1Z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            Export Excel
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
 
-        <div class="mx-auto px-4 py-4">
-            <div class="overflow-x-auto rounded-md border border-gray-300">
-                <table class="min-w-full bg-white text-sm text-center" id="tables">
-                    <thead>
+            <div id="ajax-data" data-url="{{ route('report.rekap-upah-mingguan.index') }}"></div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto" id="tables">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
                         <tr>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700 w-1">No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">LKH No.</th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Kegiatan</th>
-
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Plot</th>
-
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Tanggal
-                                Kegiatan
-                            </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Total Biaya
-                                (Rp)
-                            </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                LKH No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Kegiatan</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Plot</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Tanggal</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Total Biaya (Rp)</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                                 @if (session()->has('tenagakerjarum'))
                                     {{ session('tenagakerjarum') == 'Harian' ? 'TKH' : 'TKB' }}
                                 @else
                                     TK
                                 @endif
                             </th>
-                            <th class="py-2 px-4 border-b border-gray-300 bg-gray-100 text-gray-700">Aksi</th>
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-gray-200">
                         @if (session('tenagakerjarum') != null && $startDate && $endDate)
-                            @foreach ($rum as $item)
-                                <tr>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
-                                        {{ $item->no }}.</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-1">
-                                        {{ $item->lkhno }}</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->activityname }}</td>
-
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->plots }}</td>
-
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->lkhdate }}</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->totalupahall }}</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }}">
-                                        {{ $item->totalworkers ?? '' }}</td>
-                                    <td class="py-2 px-4 {{ $loop->last ? '' : 'border-b border-gray-300' }} w-40">
+                            @forelse ($rum as $item)
+                                <tr class="hover:bg-indigo-50 transition-colors duration-150">
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $item->no }}.</td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $item->lkhno }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">{{ $item->activityname }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700 max-w-96">{{ $item->plots }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">{{ $item->lkhdate }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">{{ $item->totalupahall }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">{{ $item->totalworkers ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-sm">
                                         <div class="flex items-center justify-center">
-                                            <button class="group flex items-center"
-                                                onclick="showList('{{ $item->lkhno }}')"><svg
-                                                    class="w-6 h-6 text-gray-500 dark:text-white group-hover:hidden"
-                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                    width="24" height="24" fill="none"
+                                            <button onclick="showList('{{ $item->lkhno }}')"
+                                                class="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
+                                                title="View Details">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
-                                                    <path stroke="currentColor" stroke-width="2"
+                                                    <path stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                    <path stroke-width="2"
                                                         d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z" />
-                                                    <path stroke="currentColor" stroke-width="2"
-                                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                 </svg>
-                                                <svg class="w-6 h-6 text-gray-500 dark:text-white hidden group-hover:block"
-                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                    width="24" height="24" fill="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path fill-rule="evenodd"
-                                                        d="M4.998 7.78C6.729 6.345 9.198 5 12 5c2.802 0 5.27 1.345 7.002 2.78a12.713 12.713 0 0 1 2.096 2.183c.253.344.465.682.618.997.14.286.284.658.284 1.04s-.145.754-.284 1.04a6.6 6.6 0 0 1-.618.997 12.712 12.712 0 0 1-2.096 2.183C17.271 17.655 14.802 19 12 19c-2.802 0-5.27-1.345-7.002-2.78a12.712 12.712 0 0 1-2.096-2.183 6.6 6.6 0 0 1-.618-.997C2.144 12.754 2 12.382 2 12s.145-.754.284-1.04c.153-.315.365-.653.618-.997A12.714 12.714 0 0 1 4.998 7.78ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                                <span class="w-2"></span>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-4 py-12">
+                                        <div class="flex flex-col items-center justify-center text-center">
+                                            <svg class="w-20 h-20 text-gray-300 mb-4" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    stroke-width="1.5"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <h3 class="text-lg font-semibold text-gray-700 mb-2">Belum Ada Rekap Upah
+                                                Minggu
+                                                Ini</h3>
+                                            <p class="text-gray-500 text-sm mb-4">Belum ada rekapan upah mingguan yang
+                                                sesuai dengan filter Anda</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
                         @else
                             <tr>
-                                <td colspan="8" class="px-2 py-4 text-center text-gray-500">Jenis Tenaga
-                                    Kerja atau Range Tanggal Belum Dipilih</td>
+                                <td colspan="8" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <div>
+                                            <p class="text-gray-600 font-medium">Belum Ada Data</p>
+                                            <p class="text-sm text-gray-500 mt-1">Silakan pilih Jenis Tenaga Kerja dan
+                                                Range Tanggal</p>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                         @endif
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        <div class="mx-4 mt-1" id="pagination-links">
-            @if ($rum->hasPages())
-                {{ $rum->appends(['perPage' => $rum->perPage()])->links() }}
-            @else
-                <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-600">
-                        Showing <span class="font-medium">{{ $rum->count() }}</span> of <span
-                            class="font-medium">{{ $rum->total() }}</span> results
-                    </p>
-                </div>
-            @endif
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 rounded-b-lg" id="pagination-links">
+                @if ($rum->hasPages())
+                    {{ $rum->appends(['perPage' => $rum->perPage()])->links() }}
+                @else
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-600">
+                            Showing <span class="font-semibold text-gray-900">{{ $rum->count() }}</span> of
+                            <span class="font-semibold text-gray-900">{{ $rum->total() }}</span> results
+                        </p>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
-    <!-- Modal dengan tinggi maksimal responsif -->
+    <!-- Detail Modal -->
     <div id="listModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out invisible opacity-0 transform scale-95 p-4"
-        style="opacity: 0; transform: scale(0.95);">
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 invisible opacity-0 transition-all duration-300">
         <div
-            class="bg-white w-11/12 max-w-7xl max-h-[90vh] flex flex-col rounded shadow-lg transition-transform duration-300 ease-out transform">
-            <!-- Header Modal - Fixed -->
-            <div class="flex items-center justify-between p-4 border-b border-gray-300 flex-shrink-0">
-                <h2 class="text-lg font-bold">Daftar List</h2>
-                <button onclick="closeModal()" class="p-2 hover:bg-gray-200 rounded-md">
-                    <svg class="w-5 h-5 text-gray-800 dark:text-white" aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                        viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18 17.94 6M18 18 6.06 6" />
+            class="bg-white w-11/12 max-w-7xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300">
+            <!-- Modal Header -->
+            <div
+                class="flex items-center justify-between p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path fill-rule="evenodd"
+                                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">Detail Daftar List</h2>
+                </div>
+                <button onclick="closeModal()" class="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <!-- Content Modal - Scrollable -->
-            <div class="overflow-auto flex-1 p-4">
-                <div class="rounded border border-gray-300">
-                    <table class="min-w-full bg-white text-sm">
-                        <thead class="bg-gray-100">
+            <!-- Modal Content -->
+            <div class="overflow-auto flex-1 p-6">
+                <div class="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gradient-to-r from-gray-100 to-gray-200 sticky top-0">
                             <tr>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">No.</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Kegiatan</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    No.</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Kegiatan</th>
                                 @if (session('tenagakerjarum') == 'Harian')
-                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Tenaga Kerja</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                        Tenaga Kerja</th>
                                 @endif
-
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Plot</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Luasan (Ha)</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Status Tanam</th>
-                                <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Hasil (Ha)</th>
-
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Plot</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Luasan (Ha)</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Status Tanam</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    Hasil (Ha)</th>
                                 @if (session('tenagakerjarum') == 'Harian')
-                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Cost/Unit</th>
-                                    <th class="py-2 px-4 border-b border-gray-300 bg-gray-100">Biaya (Rp)</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                        Cost/Unit</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                        Biaya (Rp)</th>
                                 @endif
                             </tr>
                         </thead>
-                        <tbody id="listTableBody">
+                        <tbody id="listTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="10" class="text-center py-4">Loading...</td>
+                                <td colspan="10" class="text-center py-8">
+                                    <div
+                                        class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-indigo-600">
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -287,7 +356,6 @@
     </div>
 
     <style>
-        /* Modal styling */
         .invisible {
             visibility: hidden;
             pointer-events: none;
@@ -298,15 +366,6 @@
             pointer-events: auto;
         }
 
-        /* Table styling */
-        th,
-        td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Custom scrollbar untuk modal */
         .overflow-auto::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -328,11 +387,26 @@
     </style>
 
     <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('menu-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        document.addEventListener("click", function(event) {
+            const dropdown = document.getElementById("menu-dropdown");
+            const button = document.getElementById("menu-button");
+
+            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add("hidden");
+            }
+        });
+
         function showList(lkhno) {
             const modal = document.getElementById('listModal');
             const tableBody = document.getElementById('listTableBody');
 
-            tableBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Loading...</td></tr>';
+            tableBody.innerHTML =
+                '<tr><td colspan="10" class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-indigo-600"></div></td></tr>';
 
             const url = `{{ route('report.rekap-upah-mingguan.show', ['lkhno' => '__lkhno__']) }}`.replace('__lkhno__',
                 lkhno);
@@ -349,18 +423,18 @@
 
                     if (response.error) {
                         tableBody.innerHTML =
-                            `<tr><td colspan="10" class="text-center py-4 text-red-600">${response.error}</td></tr>`;
+                            `<tr><td colspan="10" class="text-center py-8 text-red-600">${response.error}</td></tr>`;
                         return;
                     }
 
                     const data = response.data || response;
 
                     if (!data || data.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Tidak ada data</td></tr>';
+                        tableBody.innerHTML =
+                            '<tr><td colspan="10" class="text-center py-8 text-gray-500">Tidak ada data</td></tr>';
                         return;
                     }
 
-                    // Variabel untuk menghitung total biaya
                     let totalBiaya = 0;
 
                     data.forEach(item => {
@@ -372,30 +446,26 @@
                         @endif
 
                         const row = `
-                    <tr class="text-center">
-                        <td class="py-2 px-4 border-b border-gray-300">${item.no}.</td>
-                        <td class="py-2 px-4 border-b border-gray-300">${item.activityname || ''}</td>
-                        @if (session('tenagakerjarum') == 'Harian')
-                            <td class="py-2 px-4 border-b border-gray-300">${item.namatenagakerja}</td>
-                        @endif
-                        
-                        <td class="py-2 px-4 border-b border-gray-300">${item.plot || ''}</td>
-                        <td class="py-2 px-4 border-b border-gray-300">${item.luasrkh || ''}</td>
-                        <td class="py-2 px-4 border-b border-gray-300">${item.batchdate || ''}/${item.lifecyclestatus}</td>
-                        <td class="py-2 px-4 border-b border-gray-300">${item.luashasil || ''}</td>
-                        
-                        @if (session('tenagakerjarum') == 'Harian')
-                            <td class="py-2 px-4 border-b border-gray-300">${item.upah || '-'}</td>
-                            <td class="py-2 px-4 border-b border-gray-300">${item.total || '-'}</td>
-                        @endif
-                    </tr>
-                `;
+                            <tr class="hover:bg-indigo-50 transition-colors duration-150">
+                                <td class="px-4 py-3 text-sm text-gray-900">${item.no}.</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">${item.activityname || ''}</td>
+                                @if (session('tenagakerjarum') == 'Harian')
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.namatenagakerja}</td>
+                                @endif
+                                <td class="px-4 py-3 text-sm text-gray-700">${item.plot || ''}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">${item.luasrkh || ''}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">${item.batchdate || ''}/${item.lifecyclestatus}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">${item.luashasil || ''}</td>
+                                @if (session('tenagakerjarum') == 'Harian')
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.upah || '-'}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700">${item.total || '-'}</td>
+                                @endif
+                            </tr>
+                        `;
                         tableBody.innerHTML += row;
                     });
 
-                    // Tambahkan baris total jika tenaga kerja adalah Harian
                     @if (session('tenagakerjarum') == 'Harian')
-                        // Format total biaya ke format Rupiah dengan ,00 di belakang
                         const totalFormatted = new Intl.NumberFormat('id-ID', {
                             style: 'currency',
                             currency: 'IDR',
@@ -404,11 +474,11 @@
                         }).format(totalBiaya);
 
                         const totalRow = `
-                    <tr class="text-center font-bold bg-gray-50">
-                        <td colspan="8" class="py-2 px-4 border-t-2 border-gray-400 text-right">Total Biaya:</td>
-                        <td class="py-2 px-4 border-t-2 border-gray-400">${totalFormatted}</td>
-                    </tr>
-                `;
+                            <tr class="font-bold bg-indigo-50">
+                                <td colspan="8" class="px-4 py-3 text-right border-t-2 border-indigo-400 text-gray-900">Total Biaya:</td>
+                                <td class="px-4 py-3 border-t-2 border-indigo-400 text-indigo-700">${totalFormatted}</td>
+                            </tr>
+                        `;
                         tableBody.innerHTML += totalRow;
                     @endif
 
@@ -416,43 +486,26 @@
                     modal.classList.add('visible');
                     setTimeout(() => {
                         modal.style.opacity = "1";
-                        modal.style.transform = "scale(1)";
-                    }, 50);
+                        modal.querySelector('.bg-white').style.transform = "scale(1)";
+                    }, 10);
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
                     tableBody.innerHTML =
-                        `<tr><td colspan="10" class="text-center py-4 text-red-600">Gagal memuat data: ${error.message}</td></tr>`;
+                        `<tr><td colspan="10" class="text-center py-8 text-red-600">Gagal memuat data: ${error.message}</td></tr>`;
                 });
         }
 
         function closeModal() {
             const modal = document.getElementById('listModal');
-
             modal.style.opacity = "0";
-            modal.style.transform = "scale(0.95)";
-
+            modal.querySelector('.bg-white').style.transform = "scale(0.95)";
             setTimeout(() => {
                 modal.classList.remove('visible');
                 modal.classList.add('invisible');
             }, 300);
         }
 
-        function toggleDropdown() {
-            const dropdown = document.getElementById('menu-dropdown');
-            dropdown.classList.toggle('hidden');
-        }
-
-        document.addEventListener("click", function(event) {
-            const dropdown = document.getElementById("menu-dropdown");
-            const button = document.getElementById("menu-button");
-
-            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                dropdown.classList.add("hidden");
-            }
-        });
-
-        // Fungsi untuk membuka halaman preview dengan parameter tanggal
         function openPreviewReport() {
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
@@ -495,7 +548,6 @@
             window.open(url, '_blank');
         }
 
-        // Fungsi untuk export Excel
         function exportToExcel() {
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
@@ -505,11 +557,9 @@
                 return;
             }
 
-            // Buat URL untuk export Excel
             const baseUrl = "{{ route('report.rekap-upah-mingguan.export-excel') }}";
             const url = `${baseUrl}?start_date=${startDate}&end_date=${endDate}`;
 
-            // Download langsung
             window.location.href = url;
         }
     </script>
