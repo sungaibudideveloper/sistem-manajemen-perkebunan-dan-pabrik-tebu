@@ -603,7 +603,7 @@ public function submit(Request $request)
             return $item->lkhno . '-' . $item->itemcode;
         });
 
-    // Key details by lkhno untuk lookup
+    // Key details by lkhno untuk lookupa
     $detailsByLkhno = $details->keyBy('lkhno');
     $herbisidaItems = Herbisida::where('companycode', session('companycode'))->get()->keyBy('itemcode');
 
