@@ -528,10 +528,27 @@ public function submit(Request $request)
     $roundingByGroup = DB::table('herbisidagroup')
     ->pluck('rounddosage', 'herbisidagroupid');
 
-    if (strtoupper($first->flagstatus) != 'ACTIVE') {
+    // tambahan cek standar part 2 
+    $isFromApproval = $request->filled('approvalno') && DB::table('usematerialapproval')
+    ->where('companycode', session('companycode'))
+    ->where('approvalno', $request->approvalno)
+    ->where('rkhno', $request->rkhno)
+    ->where('approved', 1)
+    ->exists();
+    //
+
+    if (!$isFromApproval && strtoupper($first->flagstatus) != 'ACTIVE') {
         Cache::forget($lockKey);
         throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
     }
+
+    // tambahan cek standar part 2 
+    if ($isFromApproval && strtoupper($first->flagstatus) != 'WAIT_APPROVAL') {
+        Cache::forget($lockKey);
+        throw new \Exception('Execute approval hanya boleh saat status WAIT_APPROVAL');
+}
+
+
     if ($details->whereNotNull('nouse')->count() >= 1) {
         Cache::forget($lockKey);
         throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
@@ -709,21 +726,21 @@ public function submit(Request $request)
     //             return back()->with('error', 'Approval master "Use Material" belum di-setup');
     //         }
 
-    //         $approvalNo = $this->generateApprovalNo($companycode, now());
+    //         $approvalNo = $request->rkhno; // approvalno = rkhno
             
     //         DB::beginTransaction();
 
-    //         $pending = DB::table('approvaltransaction')
-    //             ->where('companycode', $companycode)
-    //             ->where('transactionnumber', $request->rkhno)
-    //             ->whereNull('approvalstatus')
-    //             ->exists();
+                // $exists = DB::table('approvaltransaction')
+                // ->where('companycode', $companycode)
+                // ->where('transactionnumber', $request->rkhno)
+                // ->exists();
 
-    //         if ($pending) {
-    //             DB::rollBack();
-    //             Cache::forget($lockKey);
-    //             return back()->with('warning', 'Sudah ada approval pending untuk RKH ini.');
-    //         }
+                // if ($exists) {
+                //     DB::rollBack();
+                //     Cache::forget($lockKey);
+                //     return back()->with('warning', "RKH {$request->rkhno} sudah punya approval. Tidak boleh buat lagi.");
+                // }
+
 
 
     //         // 1) insert approvaltransaction (workflow)
@@ -957,19 +974,6 @@ public function submit(Request $request)
         return redirect()->back()->with('warning', 'Data tersimpan, tapi error pada proses API: ' . $e->getMessage());
     }
 }
-
-    //tambahan cek standar
-    // private function generateApprovalNo($companycode, $date)
-    // {
-    //     $dateStr = $date->format('ymd');
-    //     $sequence = DB::table('approvaltransaction')
-    //         ->where('companycode', $companycode)
-    //         ->whereDate('createdat', $date)
-    //         ->count() + 1;
-
-    //     return "APV{$dateStr}" . str_pad($sequence, 2, '0', STR_PAD_LEFT);
-    // }
-    //
 
     public function handle(Request $request)
     {

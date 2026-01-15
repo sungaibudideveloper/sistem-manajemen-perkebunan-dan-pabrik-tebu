@@ -197,7 +197,9 @@ table th, table td {
             > 
                 @foreach ($itemlist as $item) 
                     <option value="{{ $item->itemcode }}" 
-                            {{ $item->itemcode == $d->itemcode && $item->herbisidagroupid && $item->itemcode == $d->itemcode && $item->activitycode == $activitycode ? 'selected' : '' }}
+                        {{ (strtoupper($details[0]->flagstatus) == 'ACTIVE')
+                        ? ($item->itemcode == $d->itemcode ? 'selected' : '')
+                        : ($item->itemcode == $d->itemcode ? 'selected' : '') }}
                             data-dosage="{{$item->dosageperha}}" 
                             data-measure="{{ $item->measure }}" 
                             data-itemname="{{ $item->itemname }}"
