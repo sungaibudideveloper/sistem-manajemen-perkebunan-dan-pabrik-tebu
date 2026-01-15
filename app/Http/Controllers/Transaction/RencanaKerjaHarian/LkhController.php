@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Transaction\RencanaKerjaHarian\Lkh\LkhService;
 use App\Services\Transaction\RencanaKerjaHarian\Lkh\LkhValidationService;
 use App\Services\Transaction\RencanaKerjaHarian\Generator\LkhGeneratorService;
+use App\Repositories\Transaction\RencanaKerjaHarian\Shared\MasterDataRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 
@@ -19,13 +20,16 @@ class LkhController extends Controller
 {
     protected $lkhService;
     protected $validationService;
+    protected $masterDataRepo;
 
     public function __construct(
         LkhService $lkhService,
-        LkhValidationService $validationService
+        LkhValidationService $validationService,
+        MasterDataRepository $masterDataRepo
     ) {
         $this->lkhService = $lkhService;
         $this->validationService = $validationService;
+        $this->masterDataRepo = $masterDataRepo;
     }
 
     /**
@@ -73,9 +77,18 @@ class LkhController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
 
-            // Route to appropriate view based on activity type
+            // Add borongan rate for borongan workers - ONLY from database
+            if ($pageData['lkhData']->jenistenagakerja == 2) {
+                $pageData['boronganRate'] = $this->masterDataRepo->getBoronganRate(
+                    $companycode, 
+                    $pageData['lkhData']->activitycode, 
+                    $pageData['lkhData']->lkhdate
+                );
+            }
+
             $activityType = $pageData['activity_type'];
             
+            // Route based on activity type
             if ($activityType === 'bsm') {
                 return view('transaction.rencanakerjaharian.lkh-report-bsm', array_merge([
                     'title' => 'Laporan Kegiatan Harian (LKH) - Cek BSM',
@@ -92,7 +105,7 @@ class LkhController extends Controller
                 ], $pageData));
             }
             
-            // Normal activity (default)
+            // Default: Normal activity
             return view('transaction.rencanakerjaharian.lkh-report', array_merge([
                 'title' => 'Laporan Kegiatan Harian (LKH)',
                 'navbar' => 'Input',

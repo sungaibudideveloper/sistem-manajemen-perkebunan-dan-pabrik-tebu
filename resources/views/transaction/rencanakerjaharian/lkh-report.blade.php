@@ -1,15 +1,13 @@
-{{--resources\views\input\rencanakerjaharian\lkh-report.blade.php--}}
+{{--resources\views\transaction\rencanakerjaharian\lkh-report.blade.php--}}
 <x-layout>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:navbar>{{ $navbar }}</x-slot:navbar>
     <x-slot:nav>{{ $nav }}</x-slot:nav>
 
-    <!-- Print-optimized container -->
     <div class="print:p-0 print:m-0 max-w-full mx-auto bg-white rounded-lg shadow-lg p-4">
-        <!-- Header and Summary Section - Combined Layout -->
+        {{-- Header Section --}}
         <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex gap-4">
-                <!-- Header Section - Takes remaining space -->
                 <div class="flex-1">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
@@ -43,7 +41,7 @@
                     </div>
                 </div>
 
-                <!-- Summary Section - Fixed width, positioned at far right -->
+                {{-- Summary Box --}}
                 <div class="w-64 bg-white rounded-lg p-4 border border-gray-300">
                     <h3 class="text-sm font-bold text-gray-800 mb-3">Ringkasan</h3>
                     <div class="space-y-2 text-sm">
@@ -68,7 +66,7 @@
             </div>
         </div>
 
-        <!-- Plot Details Section -->
+        {{-- Plot Details Section --}}
         @if($lkhPlotDetails && $lkhPlotDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -117,7 +115,7 @@
         </div>
         @endif
 
-        <!-- Worker Details Section - FIXED: Akses langsung dari query result -->
+        {{-- Worker Details Section --}}
         @if($lkhWorkerDetails && $lkhWorkerDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -127,15 +125,16 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full border-collapse bg-white">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-8">No</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Kode Pekerja</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-40">Nama Pekerja</th>
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-32">NIK</th>
-                            @if($lkhData->jenistenagakerja == 1)
+            @if($lkhData->jenistenagakerja == 1)
+                {{-- Tenaga Harian Table --}}
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-8">No</th>
+                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Kode Pekerja</th>
+                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-40">Nama Pekerja</th>
+                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-32">NIK</th>
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Masuk</th>
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Selesai</th>
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Jam Kerja</th>
@@ -144,27 +143,16 @@
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Harian</th>
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Lembur</th>
                                 <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Total Upah</th>
-                            @else
-                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Upah Borongan</th>
-                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-24">Total Upah</th>
-                            @endif
-                            <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($lkhWorkerDetails as $index => $worker)
-                        <tr class="hover:bg-gray-50">
-                            <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono text-center">
-                                {{ $worker->tenagakerjaid ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-medium">
-                                {{ $worker->nama ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-2 py-2 text-sm font-mono">
-                                {{ $worker->nik ?? '-' }}
-                            </td>
-                            @if($lkhData->jenistenagakerja == 1)
+                                <th class="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 w-20">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($lkhWorkerDetails as $index => $worker)
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-300 px-2 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
+                                <td class="border border-gray-300 px-2 py-2 text-sm font-mono text-center">{{ $worker->tenagakerjaid ?? '-' }}</td>
+                                <td class="border border-gray-300 px-2 py-2 text-sm font-medium">{{ $worker->nama ?? '-' }}</td>
+                                <td class="border border-gray-300 px-2 py-2 text-sm font-mono">{{ $worker->nik ?? '-' }}</td>
                                 <td class="border border-gray-300 px-2 py-2 text-center text-sm font-mono">
                                     {{ $worker->jammasuk ? \Carbon\Carbon::parse($worker->jammasuk)->format('H:i') : '-' }}
                                 </td>
@@ -189,23 +177,12 @@
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
                                     Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
                                 </td>
-                            @else
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm">
-                                    Rp {{ number_format($worker->upahborongan ?? 0, 0, ',', '.') }}
-                                </td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm font-semibold bg-green-50">
-                                    Rp {{ number_format($worker->totalupah ?? 0, 0, ',', '.') }}
-                                </td>
-                            @endif
-                            <td class="border border-gray-300 px-2 py-2 text-sm text-gray-600">
-                                {{ $worker->keterangan ?? '-' }}
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot class="bg-gray-100 font-semibold">
-                        <tr>
-                            @if($lkhData->jenistenagakerja == 1)
+                                <td class="border border-gray-300 px-2 py-2 text-sm text-gray-600">{{ $worker->keterangan ?? '-' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="bg-gray-100 font-semibold">
+                            <tr>
                                 <td colspan="10" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm">
                                     Rp {{ number_format($lkhWorkerDetails->sum('upahlembur'), 0, ',', '.') }}
@@ -213,21 +190,89 @@
                                 <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
                                     Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
                                 </td>
-                            @else
-                                <td colspan="5" class="border border-gray-300 px-2 py-2 text-center text-sm">TOTAL UPAH</td>
-                                <td class="border border-gray-300 px-2 py-2 text-right text-sm bg-green-100">
-                                    Rp {{ number_format($lkhWorkerDetails->sum('totalupah'), 0, ',', '.') }}
-                                </td>
-                            @endif
-                            <td class="border border-gray-300 px-2 py-2"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                                <td class="border border-gray-300 px-2 py-2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            @else
+                {{-- Tenaga Borongan Table --}}
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-12">No</th>
+                                <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-32">Kode Pekerja</th>
+                                <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Nama Pekerja</th>
+                                <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 w-40">NIK</th>
+                                <th class="border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($lkhWorkerDetails as $index => $worker)
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
+                                <td class="border border-gray-300 px-3 py-2 text-sm font-mono text-center">{{ $worker->tenagakerjaid ?? '-' }}</td>
+                                <td class="border border-gray-300 px-3 py-2 text-sm font-medium">{{ $worker->nama ?? '-' }}</td>
+                                <td class="border border-gray-300 px-3 py-2 text-sm font-mono">{{ $worker->nik ?? '-' }}</td>
+                                <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">{{ $worker->keterangan ?? '-' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Borongan Wage Summary --}}
+                <div class="mt-4 bg-white rounded-lg p-4 border border-gray-200">
+                    @if(isset($boronganRate) && $boronganRate > 0)
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-300">
+                            <h4 class="text-sm font-bold text-gray-800 mb-3">Total Upah Borongan</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="font-medium text-gray-700">Luas Hasil:</span> 
+                                    <span class="font-bold text-gray-900">{{ number_format($lkhData->totalhasil ?? 0, 2) }} Ha</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="font-medium text-gray-700">Rate per Ha:</span> 
+                                    <span class="font-bold text-gray-900">Rp {{ number_format($boronganRate, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="pt-2 border-t border-gray-300"></div>
+                                <div class="flex justify-between">
+                                    <span class="font-semibold text-gray-800">Total Upah:</span> 
+                                    <span class="font-bold text-lg text-gray-900">Rp {{ number_format($lkhData->totalupahall ?? 0, 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-gray-300">
+                                <p class="text-xs text-gray-600 italic">
+                                    * Pembagian upah ke masing-masing pekerja dikelola oleh mandor
+                                </p>
+                            </div>
+                        </div>
+                    @else
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-300">
+                            <div class="text-center py-3">
+                                <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-200 rounded-full mb-2">
+                                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-sm font-bold text-gray-800 mb-1">Rate Upah Borongan Tidak Ditemukan</h4>
+                                <p class="text-xs text-gray-600 mb-1">
+                                    Aktivitas: <span class="font-semibold">{{ $lkhData->activitycode }}</span> | 
+                                    Tanggal: <span class="font-semibold">{{ \Carbon\Carbon::parse($lkhData->lkhdate)->format('d/m/Y') }}</span>
+                                </p>
+                                <p class="text-xs text-gray-500 italic mt-2">
+                                    Silakan hubungi admin untuk mengatur rate upah borongan di master data
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
         @endif
 
-        <!-- Material Details Section -->
+        {{-- Material Details Section --}}
         @if($lkhMaterialDetails && $lkhMaterialDetails->count() > 0)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="flex justify-between items-center mb-3">
@@ -256,45 +301,25 @@
                         @foreach($lkhMaterialDetails as $index => $material)
                         <tr class="hover:bg-gray-50">
                             <td class="border border-gray-300 px-3 py-2 text-center text-sm bg-gray-50">{{ $index + 1 }}</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">
-                                {{ $material->plot ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm font-mono font-medium">
-                                {{ $material->itemcode }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm">
-                                {{ $material->itemname ?? 'Unknown Item' }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
-                                {{ number_format($material->qtyditerima ?? 0, 3) }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
-                                {{ number_format($material->qtysisa ?? 0, 3) }}
-                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm font-medium">{{ $material->plot ?? '-' }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm font-mono font-medium">{{ $material->itemcode }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm">{{ $material->itemname ?? 'Unknown Item' }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($material->qtyditerima ?? 0, 3) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($material->qtysisa ?? 0, 3) }}</td>
                             <td class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold {{ ($material->qtydigunakan ?? 0) > 0 ? 'text-green-600' : '' }}">
                                 {{ number_format($material->qtydigunakan ?? 0, 3) }}
                             </td>
-                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">
-                                {{ $material->satuan ?? '-' }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">
-                                {{ $material->keterangan ?? '-' }}
-                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center text-sm">{{ $material->satuan ?? '-' }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-sm text-gray-600">{{ $material->keterangan ?? '-' }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-100 font-semibold">
                         <tr>
                             <td colspan="4" class="border border-gray-300 px-3 py-2 text-center text-sm">TOTAL</td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
-                                {{ number_format($lkhMaterialDetails->sum('qtyditerima'), 3) }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">
-                                {{ number_format($lkhMaterialDetails->sum('qtysisa'), 3) }}
-                            </td>
-                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-bold text-green-600">
-                                {{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 3) }}
-                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhMaterialDetails->sum('qtyditerima'), 3) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm">{{ number_format($lkhMaterialDetails->sum('qtysisa'), 3) }}</td>
+                            <td class="border border-gray-300 px-3 py-2 text-right text-sm font-bold text-green-600">{{ number_format($lkhMaterialDetails->sum('qtydigunakan'), 3) }}</td>
                             <td colspan="2" class="border border-gray-300 px-3 py-2 text-center text-sm">-</td>
                         </tr>
                     </tfoot>
@@ -310,7 +335,7 @@
         </div>
         @endif
 
-        <!-- Keterangan Section -->
+        {{-- Keterangan Section --}}
         @if($lkhData->keterangan)
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <div class="mb-3">
@@ -322,7 +347,7 @@
         </div>
         @endif
 
-        <!-- Signature Section -->
+        {{-- Approval Section --}}
         <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
             <h3 class="text-lg font-bold text-gray-800 mb-3">Persetujuan</h3>
             <div class="grid grid-cols-3 gap-6">
@@ -365,7 +390,7 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        {{-- Action Buttons --}}
         <div class="mt-6 flex justify-center space-x-4 no-print">
             @if($lkhData->status != 'APPROVED' && $lkhData->status != 'COMPLETED' && !$lkhData->issubmit)
             <button 

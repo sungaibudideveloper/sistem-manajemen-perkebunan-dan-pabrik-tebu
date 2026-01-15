@@ -6,47 +6,22 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
-/**
- * WageCalculationService (FIXED VERSION)
- * 
- * Handles all wage calculations for different scenarios:
- * - Harian (daily wages with weekday/weekend/overtime rates) → reads from `upah` table
- * - Borongan (piece rate based on hectares or weight) → reads from `upahborongan` table
- * - Special conditions (sick leave, early departure, etc.)
- */
 class WageCalculationService
 {
-    /**
-     * Calculate wage for a single worker in LKH
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param int $jenistenagakerja (1=Harian, 2=Borongan, 3=Operator)
-     * @param string $workDate
-     * @param array $workerData
-     * @param array $plotData (for borongan calculation)
-     * @return array
-     */
     public function calculateWorkerWage($companycode, $activitycode, $jenistenagakerja, $workDate, $workerData, $plotData = [])
     {
         try {
-            // Get activity group from activity code
             $activitygroup = $this->getActivityGroup($activitycode);
             
             if (!$activitygroup) {
                 throw new \Exception("Activity group not found for activity: {$activitycode}");
             }
 
-            // Calculate based on jenis tenaga kerja
             if ($jenistenagakerja == 1 || $jenistenagakerja == 3) {
-                // Harian or Operator (same calculation)
                 return $this->calculateHarianWage($companycode, $activitygroup, $workDate, $workerData);
-            } elseif ($jenistenagakerja == 2) {
-                // Borongan
-                return $this->calculateBoronganWage($companycode, $activitycode, $workDate, $workerData, $plotData);
             }
 
-            throw new \Exception("Invalid jenistenagakerja: {$jenistenagakerja}");
+            throw new \Exception("Invalid jenistenagakerja: {$jenistenagakerja}. Use calculateBoronganWageTotal for borongan");
 
         } catch (\Exception $e) {
             Log::error("Wage calculation error", [
@@ -60,16 +35,47 @@ class WageCalculationService
         }
     }
 
-    /**
-     * Calculate Harian wage (daily/hourly with overtime)
-     * ✅ READS FROM: `upah` table (by activitygroup + wagetype)
-     *
-     * @param string $companycode
-     * @param string $activitygroup
-     * @param string $workDate
-     * @param array $workerData
-     * @return array
-     */
+    public function calculateBoronganWageTotal($companycode, $activitycode, $workDate, $plotsData)
+    {
+        try {
+            $totalArea = collect($plotsData)->sum('luashasil');
+            $boronganRate = $this->getBoronganRate($companycode, $activitycode, $workDate);
+            
+            if ($boronganRate === 0) {
+                Log::warning("No borongan rate found for activity", [
+                    'companycode' => $companycode,
+                    'activitycode' => $activitycode,
+                    'workDate' => $workDate
+                ]);
+            }
+            
+            $totalBorongan = $totalArea * $boronganRate;
+            
+            return [
+                'success' => true,
+                'calculation_method' => 'borongan_total',
+                'total_area' => $totalArea,
+                'rate_per_ha' => $boronganRate,
+                'upahharian' => 0,
+                'upahperjam' => 0,
+                'upahlembur' => 0,
+                'premi' => 0,
+                'upahborongan' => $totalBorongan,
+                'totalupah' => $totalBorongan,
+                'notes' => "Borongan: {$totalArea} ha × Rp " . number_format($boronganRate, 0, ',', '.') . " = Rp " . number_format($totalBorongan, 0, ',', '.')
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Borongan wage calculation error", [
+                'companycode' => $companycode,
+                'activitycode' => $activitycode,
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->getErrorWageResult($e->getMessage());
+        }
+    }
+
     private function calculateHarianWage($companycode, $activitygroup, $workDate, $workerData)
     {
         $dayType = $this->getDayType($workDate);
@@ -79,23 +85,18 @@ class WageCalculationService
         $overtimeHours = $workerData['overtimehours'] ?? 0;
         $premi = $workerData['premi'] ?? 0;
         
-        // Determine base wage calculation method
         if ($this->isFullDay($totalHours, $dayType)) {
-            // Use full day rate
             $baseWage = $this->getFullDayRate($wageRates, $dayType);
             $calculationMethod = 'full_day';
         } else {
-            // Use hourly rate
             $hourlyRate = $wageRates['HOURLY'] ?? 0;
             $baseWage = $hourlyRate * $totalHours;
             $calculationMethod = 'hourly';
         }
         
-        // Calculate overtime
         $overtimeRate = $wageRates['OVERTIME'] ?? 0;
         $overtimeWage = $overtimeHours * $overtimeRate;
         
-        // Total calculation
         $totalUpah = $baseWage + $overtimeWage + $premi;
         
         return [
@@ -115,134 +116,6 @@ class WageCalculationService
         ];
     }
 
-    /**
-     * Calculate Borongan wage (piece rate based on area or weight)
-     * ✅ READS FROM: `upahborongan` table (by activitycode)
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param string $workDate
-     * @param array $workerData
-     * @param array $plotData
-     * @return array
-     */
-    private function calculateBoronganWage($companycode, $activitycode, $workDate, $workerData, $plotData)
-    {
-        $premi = $workerData['premi'] ?? 0;
-        
-        // Get borongan rate from upahborongan table
-        $boronganRate = $this->getBoronganRate($companycode, $activitycode, $workDate);
-        
-        if ($boronganRate === 0) {
-            Log::warning("No borongan rate found for activity", [
-                'companycode' => $companycode,
-                'activitycode' => $activitycode,
-                'workDate' => $workDate
-            ]);
-        }
-        
-        // Determine calculation type based on activity group
-        $activitygroup = $this->getActivityGroup($activitycode);
-        
-        if ($activitygroup === 'IV') {
-            // Panen - calculate by weight (kg)
-            return $this->calculatePanenWage($companycode, $activitycode, $workDate, $plotData, $premi);
-        } else {
-            // Regular borongan - calculate by area (hectare)
-            return $this->calculatePerHectareWage($boronganRate, $plotData, $premi, $activitycode);
-        }
-    }
-
-    /**
-     * Calculate Panen wage (harvest + transport)
-     * UPDATED: Use new column names (luashasil for weight in panen)
-     * ✅ READS FROM: `upahborongan` table
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param string $workDate
-     * @param array $plotData
-     * @param float $premi
-     * @return array
-     */
-    private function calculatePanenWage($companycode, $activitycode, $workDate, $plotData, $premi)
-    {
-        // Get harvest & transport rates from upahborongan table
-        // Assuming separate activity codes for harvest and transport
-        $harvestRate = $this->getBoronganRate($companycode, $activitycode, $workDate);
-        
-        // Total weight from plot data - use luashasil for weight in panen
-        $totalWeight = collect($plotData)->sum('luashasil');
-        
-        // Calculate wages (simplified - using single rate)
-        $harvestWage = $totalWeight * $harvestRate;
-        $transportWage = 0; // If needed, get from separate activity code
-        $totalBorongan = $harvestWage + $transportWage;
-        $totalUpah = $totalBorongan + $premi;
-        
-        return [
-            'success' => true,
-            'calculation_method' => 'panen_per_kg',
-            'total_weight' => $totalWeight,
-            'harvest_rate' => $harvestRate,
-            'transport_rate' => 0,
-            'harvest_wage' => $harvestWage,
-            'transport_wage' => $transportWage,
-            'upahharian' => 0,
-            'upahperjam' => 0,
-            'upahlembur' => 0,
-            'premi' => $premi,
-            'upahborongan' => $totalBorongan,
-            'totalupah' => $totalUpah,
-            'notes' => "Panen: {$totalWeight} kg × Rp " . number_format($harvestRate, 0, ',', '.') . " = Rp " . number_format($totalBorongan, 0, ',', '.')
-        ];
-    }
-
-    /**
-     * Calculate per hectare wage
-     * UPDATED: Use new column names (luashasil instead of luasactual)
-     * ✅ READS FROM: `upahborongan` table
-     *
-     * @param float $perHectareRate
-     * @param array $plotData
-     * @param float $premi
-     * @param string $activitycode
-     * @return array
-     */
-    private function calculatePerHectareWage($perHectareRate, $plotData, $premi, $activitycode)
-    {
-        // Total area from plot data - use luashasil
-        $totalArea = collect($plotData)->sum('luashasil');
-        
-        // Calculate wage
-        $boronganWage = $totalArea * $perHectareRate;
-        $totalUpah = $boronganWage + $premi;
-        
-        return [
-            'success' => true,
-            'calculation_method' => 'per_hectare',
-            'activity_code' => $activitycode,
-            'total_area' => $totalArea,
-            'per_hectare_rate' => $perHectareRate,
-            'upahharian' => 0,
-            'upahperjam' => 0,
-            'upahlembur' => 0,
-            'premi' => $premi,
-            'upahborongan' => $boronganWage,
-            'totalupah' => $totalUpah,
-            'notes' => "Borongan [{$activitycode}]: {$totalArea} ha × Rp " . number_format($perHectareRate, 0, ',', '.') . " = Rp " . number_format($boronganWage, 0, ',', '.')
-        ];
-    }
-
-    /**
-     * Get Harian wage rates from `upah` table
-     * ✅ Reads effectivedate & enddate to determine active wage
-     *
-     * @param string $companycode
-     * @param string $activitygroup
-     * @param string $workDate
-     * @return array
-     */
     private function getHarianWageRates($companycode, $activitygroup, $workDate)
     {
         $workDate = Carbon::parse($workDate)->format('Y-m-d');
@@ -269,15 +142,6 @@ class WageCalculationService
         return $wageRates;
     }
 
-    /**
-     * Get Borongan rate from `upahborongan` table
-     * ✅ Reads effectivedate & enddate to determine active wage
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param string $workDate
-     * @return float
-     */
     private function getBoronganRate($companycode, $activitycode, $workDate)
     {
         $workDate = Carbon::parse($workDate)->format('Y-m-d');
@@ -296,19 +160,24 @@ class WageCalculationService
         return $rate ?? 0;
     }
 
-    /**
-     * Bulk calculate wages for multiple workers
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param int $jenistenagakerja
-     * @param string $workDate
-     * @param array $workersData
-     * @param array $plotsData
-     * @return array
-     */
     public function calculateBulkWages($companycode, $activitycode, $jenistenagakerja, $workDate, $workersData, $plotsData = [])
     {
+        if ($jenistenagakerja == 2) {
+            $totalWage = $this->calculateBoronganWageTotal($companycode, $activitycode, $workDate, $plotsData);
+            
+            return [
+                'success' => $totalWage['success'],
+                'workers' => [],
+                'summary' => [
+                    'total_workers' => count($workersData),
+                    'success_count' => $totalWage['success'] ? 1 : 0,
+                    'error_count' => $totalWage['success'] ? 0 : 1,
+                    'total_wages' => $totalWage['totalupah']
+                ],
+                'borongan_detail' => $totalWage
+            ];
+        }
+        
         $results = [];
         $totalWages = 0;
         $successCount = 0;
@@ -346,12 +215,6 @@ class WageCalculationService
         ];
     }
 
-    /**
-     * Get activity group from activity code
-     *
-     * @param string $activitycode
-     * @return string|null
-     */
     private function getActivityGroup($activitycode)
     {
         return DB::table('activity')
@@ -359,12 +222,6 @@ class WageCalculationService
             ->value('activitygroup');
     }
 
-    /**
-     * Determine day type for wage calculation
-     *
-     * @param string $workDate
-     * @return string
-     */
     private function getDayType($workDate)
     {
         $date = Carbon::parse($workDate);
@@ -378,31 +235,15 @@ class WageCalculationService
         return 'DAILY';
     }
 
-    /**
-     * Check if working hours qualify for full day rate
-     *
-     * @param float $totalHours
-     * @param string $dayType
-     * @return bool
-     */
     private function isFullDay($totalHours, $dayType)
     {
-        // For weekend, might have different full day criteria
         if (in_array($dayType, ['WEEKEND_SATURDAY', 'WEEKEND_SUNDAY'])) {
-            return $totalHours >= 8; // Still 8 hours for full day
+            return $totalHours >= 8;
         }
         
-        // Regular weekday - 8 hours for full day
         return $totalHours >= 8;
     }
 
-    /**
-     * Get full day rate based on day type
-     *
-     * @param array $wageRates
-     * @param string $dayType
-     * @return float
-     */
     private function getFullDayRate($wageRates, $dayType)
     {
         switch ($dayType) {
@@ -415,15 +256,6 @@ class WageCalculationService
         }
     }
 
-    /**
-     * Generate notes for harian calculation
-     *
-     * @param string $calculationMethod
-     * @param string $dayType
-     * @param float $totalHours
-     * @param float $overtimeHours
-     * @return string
-     */
     private function generateHarianNotes($calculationMethod, $dayType, $totalHours, $overtimeHours)
     {
         $notes = [];
@@ -441,12 +273,6 @@ class WageCalculationService
         return implode(', ', $notes);
     }
 
-    /**
-     * Get error wage result
-     *
-     * @param string $errorMessage
-     * @return array
-     */
     private function getErrorWageResult($errorMessage)
     {
         return [
@@ -462,12 +288,6 @@ class WageCalculationService
         ];
     }
 
-    /**
-     * Validate wage calculation parameters
-     *
-     * @param array $params
-     * @return array
-     */
     public function validateWageParameters($params)
     {
         $errors = [];

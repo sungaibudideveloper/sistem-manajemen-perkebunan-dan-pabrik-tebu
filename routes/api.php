@@ -47,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Mobile wage calculation and insertion
     Route::post('mobile/insert-upah-tenaga-kerja', [PerhitunganUpahApiMobile::class, 'insertWorkerWage'])
         ->name('api.mobile.insert-upah');
+    Route::post('mobile/insert-upah-tenaga-kerja-borongan', [PerhitunganUpahApiMobile::class, 'insertUpahBorongan'])
+        ->name('api.mobile.insert-upah-borongan');
     
     // Agronomi and HPT data submission
     Route::post('agronomistoremobile', [MobileController::class, 'storeMobileAgronomi']);
