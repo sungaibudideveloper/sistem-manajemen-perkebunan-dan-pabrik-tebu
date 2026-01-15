@@ -213,4 +213,18 @@ class MasterDataRepository
             ->get()
             ->toArray();
     }
+
+    public function getBoronganRate($companycode, $activitycode, $workDate)
+    {
+        return DB::table('upahborongan')
+            ->where('companycode', $companycode)
+            ->where('activitycode', $activitycode)
+            ->where('effectivedate', '<=', $workDate)
+            ->where(function ($q) use ($workDate) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', $workDate);
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->value('amount');
+    }
 }

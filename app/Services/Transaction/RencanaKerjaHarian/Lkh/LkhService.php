@@ -209,7 +209,20 @@ class LkhService
             $totalWorkers = count($dto['workers'] ?? []);
             $totalHasil = collect($dto['plots'] ?? [])->sum('luashasil');
             $totalSisa = collect($dto['plots'] ?? [])->sum('luassisa');
-            $totalUpah = $this->calculateTotalUpah($dto['workers'] ?? [], $lkhData);
+            
+            // Get full LKH data for wage calculation
+            $fullLkhData = $this->lkhRepo->getHeaderForEdit($companycode, $lkhno);
+            
+            if ($fullLkhData->jenistenagakerja == 2) {
+                $totalUpah = $this->calculateBoronganFromPlots(
+                    $dto['plots'] ?? [], 
+                    $fullLkhData->activitycode, 
+                    $companycode, 
+                    $fullLkhData->lkhdate
+                );
+            } else {
+                $totalUpah = $this->calculateTotalUpah($dto['workers'] ?? [], $fullLkhData);
+            }
 
             // Update header
             $headerData = [
@@ -311,314 +324,6 @@ class LkhService
         });
     }
 
-    // =====================================
-    // PRIVATE HELPER METHODS
-    // =====================================
-
-    /**
-     * Format LKH data for response
-     */
-    private function formatLkhData($lkhList, $plotsByLkh, $workersByLkh, $materialsByLkh)
-    {
-        return $lkhList->map(function($lkh) use ($plotsByLkh, $workersByLkh, $materialsByLkh) {
-            $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
-            
-            $canEdit = !$lkh->issubmit;
-            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';
-
-            $plots = ($plotsByLkh[$lkh->lkhno] ?? collect())
-                ->pluck('plot')
-                ->unique()
-                ->join(', ');
-
-            $workersAssigned = $workersByLkh[$lkh->lkhno] ?? 0;
-            $materialCount = $materialsByLkh[$lkh->lkhno] ?? 0;
-
-            return [
-                'lkhno' => $lkh->lkhno,
-                'activitycode' => $lkh->activitycode,
-                'activityname' => $lkh->activityname ?? 'Unknown Activity',
-                'plots' => $plots ?: 'No plots assigned',
-                'jenistenagakerja' => $lkh->jenistenagakerja,
-                'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
-                'status' => $lkh->status ?? 'EMPTY',
-                'approval_status' => $approvalStatus,
-                'workers_assigned' => $workersAssigned,
-                'material_count' => $materialCount,
-                'totalhasil' => $lkh->totalhasil,
-                'totalsisa' => $lkh->totalsisa,
-                'totalupah' => $lkh->totalupahall ?? 0,
-                'issubmit' => (bool) $lkh->issubmit,
-                'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
-                'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
-                'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
-                'can_edit' => $canEdit,
-                'can_submit' => $canSubmit,
-                
-                // FIX: Generate URLs
-                'view_url' => route('transaction.rencanakerjaharian.showLKH', $lkh->lkhno),
-                'edit_url' => route('transaction.rencanakerjaharian.editLKH', $lkh->lkhno),
-            ];
-        });
-    }
-
-    /**
-     * Calculate LKH approval status
-     */
-    private function calculateLKHApprovalStatus($lkh)
-    {
-        if (!$lkh->issubmit) {
-            return 'Not Yet Submitted';
-        }
-
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return 'No Approval Required';
-        }
-
-        if ($this->isLKHFullyApproved($lkh)) {
-            return 'Approved';
-        }
-
-        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
-            return 'Declined';
-        }
-
-        $completed = 0;
-        if ($lkh->approval1flag === '1') $completed++;
-        if ($lkh->approval2flag === '1') $completed++;
-        if ($lkh->approval3flag === '1') $completed++;
-
-        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
-    }
-
-    /**
-     * Check if LKH is fully approved
-     */
-    private function isLKHFullyApproved($lkh)
-    {
-        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
-            return true;
-        }
-
-        switch ($lkh->jumlahapproval) {
-            case 1:
-                return $lkh->approval1flag === '1';
-            case 2:
-                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
-            case 3:
-                return $lkh->approval1flag === '1' && 
-                       $lkh->approval2flag === '1' && 
-                       $lkh->approval3flag === '1';
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * Get LKH generate info
-     */
-    private function getLkhGenerateInfo($companycode, $rkhno, $lkhList)
-    {
-        $canGenerateLkh = false;
-        $generateMessage = '';
-        
-        $rkhData = $this->rkhRepo->getHeader($companycode, $rkhno);
-            
-        if ($rkhData) {
-            if ($this->isRkhFullyApproved($rkhData)) {
-                if ($lkhList->isEmpty()) {
-                    $canGenerateLkh = true;
-                    $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
-                } else {
-                    $generateMessage = 'LKH sudah pernah di-generate';
-                }
-            } else {
-                $generateMessage = 'RKH belum fully approved';
-            }
-        }
-
-        return [
-            'can_generate' => $canGenerateLkh,
-            'message' => $generateMessage
-        ];
-    }
-
-    /**
-     * Check if RKH is fully approved
-     */
-    private function isRkhFullyApproved($rkh)
-    {
-        if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
-            return true;
-        }
-
-        switch ($rkh->jumlahapproval) {
-            case 1:
-                return $rkh->approval1flag === '1';
-            case 2:
-                return $rkh->approval1flag === '1' && $rkh->approval2flag === '1';
-            case 3:
-                return $rkh->approval1flag === '1' && 
-                       $rkh->approval2flag === '1' && 
-                       $rkh->approval3flag === '1';
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * Get LKH approvals data
-     */
-    private function getLkhApprovalsData($lkhData)
-    {
-        $approvals = new \stdClass();
-        
-        if ($lkhData->jumlahapproval > 0) {
-            $jabatanIds = array_filter([
-                $lkhData->idjabatanapproval1,
-                $lkhData->idjabatanapproval2,
-                $lkhData->idjabatanapproval3
-            ]);
-            
-            if (!empty($jabatanIds)) {
-                $jabatanData = $this->masterDataRepo->getJabatanNamesByIds($jabatanIds);
-
-                $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
-                $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
-                $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
-            }
-        }
-
-        return $approvals;
-    }
-
-    /**
-     * Load LKH edit form data
-     */
-    private function loadLkhEditFormData($companycode)
-    {
-        return [
-            'tenagaKerja' => DB::table('tenagakerja')
-                ->where('companycode', $companycode)
-                ->where('isactive', 1)
-                ->select(['tenagakerjaid', 'nama', 'nik', 'jenistenagakerja'])
-                ->orderBy('nama')
-                ->get(),
-            'bloks' => $this->masterDataRepo->getBlokData($companycode),
-            'masterlist' => $this->batchRepo->getAllActivePlotsWithBatch($companycode),
-            'plots' => $this->batchRepo->getAllActivePlotsWithBatch($companycode),
-        ];
-    }
-
-    /**
-     * Calculate total upah for update
-     */
-    private function calculateTotalUpah($workers, $lkhData)
-    {
-        $totalUpah = 0;
-
-        foreach ($workers as $worker) {
-            if ($lkhData->jenistenagakerja == 1) {
-                // Harian: upah harian + premi + overtime
-                $upahHarian = $worker['upahharian'] ?? 0;
-                $premi = $worker['premi'] ?? 0;
-                $upahlembur = $worker['upahlembur'] ?? 0;
-                $totalUpah += $upahHarian + $premi + $upahlembur;
-            } else {
-                // Borongan: upah borongan
-                $upahBorongan = $worker['upahborongan'] ?? 0;
-                $totalUpah += $upahBorongan;
-            }
-        }
-
-        return $totalUpah;
-    }
-
-    /**
-     * Build LKH plot detail records
-     */
-    private function buildLkhPlotDetails($plots, $lkhno, $companycode)
-    {
-        $details = [];
-        
-        foreach ($plots as $plot) {
-            $details[] = [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'blok' => $plot['blok'],
-                'plot' => $plot['plot'],
-                'luasrkh' => $plot['luasrkh'] ?? 0,
-                'luashasil' => $plot['luashasil'] ?? 0,
-                'luassisa' => $plot['luassisa'] ?? 0,
-                'batchno' => $plot['batchno'] ?? null,
-                'batchid' => $plot['batchid'] ?? null,
-                'createdat' => now()
-            ];
-        }
-        
-        return $details;
-    }
-
-    /**
-     * Build LKH worker detail records
-     */
-    private function buildLkhWorkerDetails($workers, $lkhno, $companycode)
-    {
-        $details = [];
-        
-        foreach ($workers as $index => $worker) {
-            $details[] = [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'tenagakerjaid' => $worker['tenagakerjaid'],
-                'tenagakerjaurutan' => $index + 1,
-                'jammasuk' => $worker['jammasuk'] ?? null,
-                'jamselesai' => $worker['jamselesai'] ?? null,
-                'totaljamkerja' => $worker['totaljamkerja'] ?? 0,
-                'overtimehours' => $worker['overtimehours'] ?? 0,
-                'premi' => $worker['premi'] ?? 0,
-                'upahharian' => $worker['upahharian'] ?? 0,
-                'upahperjam' => $worker['upahperjam'] ?? 0,
-                'upahlembur' => $worker['upahlembur'] ?? 0,
-                'upahborongan' => $worker['upahborongan'] ?? 0,
-                'totalupah' => $worker['totalupah'] ?? 0,
-                'keterangan' => $worker['keterangan'] ?? null,
-                'createdat' => now()
-            ];
-        }
-
-        return $details;
-    }
-
-    /**
-     * Build LKH material detail records
-     */
-    private function buildLkhMaterialDetails($materials, $lkhno, $companycode, $inputby)
-    {
-        $details = [];
-        
-        foreach ($materials as $material) {
-            $details[] = [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'plot' => $material['plot'] ?? null,
-                'itemcode' => $material['itemcode'],
-                'qtyditerima' => $material['qtyditerima'] ?? 0,
-                'qtysisa' => $material['qtysisa'] ?? 0,
-                'qtydigunakan' => ($material['qtyditerima'] ?? 0) - ($material['qtysisa'] ?? 0),
-                'keterangan' => $material['keterangan'] ?? null,
-                'inputby' => $inputby,
-                'createdat' => now()
-            ];
-        }
-        
-        return $details;
-    }
-
-    // ============================================
-    // APPROVAL INFO METHODS (READ-ONLY)
-    // ============================================
-
     /**
      * Get LKH approval detail (for info modal)
      * 
@@ -679,5 +384,277 @@ class LkhService
             'jumlah_approval' => $lkh->jumlahapproval ?? 0,
             'levels' => $levels
         ];
+    }
+
+    // =====================================
+    // PRIVATE HELPER METHODS
+    // =====================================
+
+    private function formatLkhData($lkhList, $plotsByLkh, $workersByLkh, $materialsByLkh)
+    {
+        return $lkhList->map(function($lkh) use ($plotsByLkh, $workersByLkh, $materialsByLkh) {
+            $approvalStatus = $this->calculateLKHApprovalStatus($lkh);
+            
+            $canEdit = !$lkh->issubmit;
+            $canSubmit = !$lkh->issubmit && $lkh->status === 'DRAFT';
+
+            $plots = ($plotsByLkh[$lkh->lkhno] ?? collect())
+                ->pluck('plot')
+                ->unique()
+                ->join(', ');
+
+            $workersAssigned = $workersByLkh[$lkh->lkhno] ?? 0;
+            $materialCount = $materialsByLkh[$lkh->lkhno] ?? 0;
+
+            return [
+                'lkhno' => $lkh->lkhno,
+                'activitycode' => $lkh->activitycode,
+                'activityname' => $lkh->activityname ?? 'Unknown Activity',
+                'plots' => $plots ?: 'No plots assigned',
+                'jenistenagakerja' => $lkh->jenistenagakerja,
+                'jenis_tenaga' => $lkh->jenistenagakerja == 1 ? 'Harian' : 'Borongan',
+                'status' => $lkh->status ?? 'EMPTY',
+                'approval_status' => $approvalStatus,
+                'workers_assigned' => $workersAssigned,
+                'material_count' => $materialCount,
+                'totalhasil' => $lkh->totalhasil,
+                'totalsisa' => $lkh->totalsisa,
+                'totalupah' => $lkh->totalupahall ?? 0,
+                'issubmit' => (bool) $lkh->issubmit,
+                'date_formatted' => $lkh->lkhdate ? Carbon::parse($lkh->lkhdate)->format('d/m/Y') : '-',
+                'created_at' => $lkh->createdat ? Carbon::parse($lkh->createdat)->format('d/m/Y H:i') : '-',
+                'submit_info' => $lkh->submitat ? 'Submitted at ' . Carbon::parse($lkh->submitat)->format('d/m/Y H:i') : null,
+                'can_edit' => $canEdit,
+                'can_submit' => $canSubmit,
+                'view_url' => route('transaction.rencanakerjaharian.showLKH', $lkh->lkhno),
+                'edit_url' => route('transaction.rencanakerjaharian.editLKH', $lkh->lkhno),
+            ];
+        });
+    }
+
+    private function calculateLKHApprovalStatus($lkh)
+    {
+        if (!$lkh->issubmit) {
+            return 'Not Yet Submitted';
+        }
+
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return 'No Approval Required';
+        }
+
+        if ($this->isLKHFullyApproved($lkh)) {
+            return 'Approved';
+        }
+
+        if ($lkh->approval1flag === '0' || $lkh->approval2flag === '0' || $lkh->approval3flag === '0') {
+            return 'Declined';
+        }
+
+        $completed = 0;
+        if ($lkh->approval1flag === '1') $completed++;
+        if ($lkh->approval2flag === '1') $completed++;
+        if ($lkh->approval3flag === '1') $completed++;
+
+        return "Waiting ({$completed} / {$lkh->jumlahapproval})";
+    }
+
+    private function isLKHFullyApproved($lkh)
+    {
+        if (!$lkh->jumlahapproval || $lkh->jumlahapproval == 0) {
+            return true;
+        }
+
+        switch ($lkh->jumlahapproval) {
+            case 1:
+                return $lkh->approval1flag === '1';
+            case 2:
+                return $lkh->approval1flag === '1' && $lkh->approval2flag === '1';
+            case 3:
+                return $lkh->approval1flag === '1' && 
+                       $lkh->approval2flag === '1' && 
+                       $lkh->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    private function getLkhGenerateInfo($companycode, $rkhno, $lkhList)
+    {
+        $canGenerateLkh = false;
+        $generateMessage = '';
+        
+        $rkhData = $this->rkhRepo->getHeader($companycode, $rkhno);
+            
+        if ($rkhData) {
+            if ($this->isRkhFullyApproved($rkhData)) {
+                if ($lkhList->isEmpty()) {
+                    $canGenerateLkh = true;
+                    $generateMessage = 'RKH sudah approved, LKH bisa di-generate';
+                } else {
+                    $generateMessage = 'LKH sudah pernah di-generate';
+                }
+            } else {
+                $generateMessage = 'RKH belum fully approved';
+            }
+        }
+
+        return [
+            'can_generate' => $canGenerateLkh,
+            'message' => $generateMessage
+        ];
+    }
+
+    private function isRkhFullyApproved($rkh)
+    {
+        if (!$rkh->jumlahapproval || $rkh->jumlahapproval == 0) {
+            return true;
+        }
+
+        switch ($rkh->jumlahapproval) {
+            case 1:
+                return $rkh->approval1flag === '1';
+            case 2:
+                return $rkh->approval1flag === '1' && $rkh->approval2flag === '1';
+            case 3:
+                return $rkh->approval1flag === '1' && 
+                       $rkh->approval2flag === '1' && 
+                       $rkh->approval3flag === '1';
+            default:
+                return false;
+        }
+    }
+
+    private function getLkhApprovalsData($lkhData)
+    {
+        $approvals = new \stdClass();
+        
+        if ($lkhData->jumlahapproval > 0) {
+            $jabatanIds = array_filter([
+                $lkhData->idjabatanapproval1,
+                $lkhData->idjabatanapproval2,
+                $lkhData->idjabatanapproval3
+            ]);
+            
+            if (!empty($jabatanIds)) {
+                $jabatanData = $this->masterDataRepo->getJabatanNamesByIds($jabatanIds);
+
+                $approvals->jabatan1name = $jabatanData[$lkhData->idjabatanapproval1] ?? null;
+                $approvals->jabatan2name = $jabatanData[$lkhData->idjabatanapproval2] ?? null;
+                $approvals->jabatan3name = $jabatanData[$lkhData->idjabatanapproval3] ?? null;
+            }
+        }
+
+        return $approvals;
+    }
+
+    private function loadLkhEditFormData($companycode)
+    {
+        return [
+            'tenagaKerja' => DB::table('tenagakerja')
+                ->where('companycode', $companycode)
+                ->where('isactive', 1)
+                ->select(['tenagakerjaid', 'nama', 'nik', 'jenistenagakerja'])
+                ->orderBy('nama')
+                ->get(),
+            'bloks' => $this->masterDataRepo->getBlokData($companycode),
+            'masterlist' => $this->batchRepo->getAllActivePlotsWithBatch($companycode),
+            'plots' => $this->batchRepo->getAllActivePlotsWithBatch($companycode),
+        ];
+    }
+
+    private function calculateTotalUpah($workers, $lkhData)
+    {
+        $totalUpah = 0;
+
+        if ($lkhData->jenistenagakerja == 1) {
+            foreach ($workers as $worker) {
+                $upahHarian = $worker['upahharian'] ?? 0;
+                $premi = $worker['premi'] ?? 0;
+                $upahlembur = $worker['upahlembur'] ?? 0;
+                $totalUpah += $upahHarian + $premi + $upahlembur;
+            }
+        }
+
+        return $totalUpah;
+    }
+
+    private function calculateBoronganFromPlots($plots, $activitycode, $companycode, $lkhdate)
+    {
+        $totalArea = collect($plots)->sum('luashasil');
+        $rate = $this->masterDataRepo->getBoronganRate($companycode, $activitycode, $lkhdate);
+        
+        return $totalArea * ($rate ?? 0);
+    }
+
+    private function buildLkhPlotDetails($plots, $lkhno, $companycode)
+    {
+        $details = [];
+        
+        foreach ($plots as $plot) {
+            $details[] = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'blok' => $plot['blok'],
+                'plot' => $plot['plot'],
+                'luasrkh' => $plot['luasrkh'] ?? 0,
+                'luashasil' => $plot['luashasil'] ?? 0,
+                'luassisa' => $plot['luassisa'] ?? 0,
+                'batchno' => $plot['batchno'] ?? null,
+                'batchid' => $plot['batchid'] ?? null,
+                'createdat' => now()
+            ];
+        }
+        
+        return $details;
+    }
+
+    private function buildLkhWorkerDetails($workers, $lkhno, $companycode)
+    {
+        $details = [];
+        
+        foreach ($workers as $index => $worker) {
+            $details[] = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'tenagakerjaid' => $worker['tenagakerjaid'],
+                'tenagakerjaurutan' => $index + 1,
+                'jammasuk' => $worker['jammasuk'] ?? null,
+                'jamselesai' => $worker['jamselesai'] ?? null,
+                'totaljamkerja' => $worker['totaljamkerja'] ?? 0,
+                'overtimehours' => $worker['overtimehours'] ?? 0,
+                'premi' => $worker['premi'] ?? 0,
+                'upahharian' => $worker['upahharian'] ?? 0,
+                'upahperjam' => $worker['upahperjam'] ?? 0,
+                'upahlembur' => $worker['upahlembur'] ?? 0,
+                'upahborongan' => $worker['upahborongan'] ?? 0,
+                'totalupah' => $worker['totalupah'] ?? 0,
+                'keterangan' => $worker['keterangan'] ?? null,
+                'createdat' => now()
+            ];
+        }
+
+        return $details;
+    }
+
+    private function buildLkhMaterialDetails($materials, $lkhno, $companycode, $inputby)
+    {
+        $details = [];
+        
+        foreach ($materials as $material) {
+            $details[] = [
+                'companycode' => $companycode,
+                'lkhno' => $lkhno,
+                'plot' => $material['plot'] ?? null,
+                'itemcode' => $material['itemcode'],
+                'qtyditerima' => $material['qtyditerima'] ?? 0,
+                'qtysisa' => $material['qtysisa'] ?? 0,
+                'qtydigunakan' => ($material['qtyditerima'] ?? 0) - ($material['qtysisa'] ?? 0),
+                'keterangan' => $material['keterangan'] ?? null,
+                'inputby' => $inputby,
+                'createdat' => now()
+            ];
+        }
+        
+        return $details;
     }
 }

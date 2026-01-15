@@ -9,12 +9,6 @@ use Carbon\Carbon;
 
 class PerhitunganUpahApiMobile extends Controller
 {
-    /**
-     * Calculate wage and insert/update to database
-     * Android team requirement: single API call with direct insert
-     * 
-     * POST /api/mobile/insert-worker-wage
-     */
     public function insertWorkerWage(Request $request)
     {
         try {
@@ -33,37 +27,21 @@ class PerhitunganUpahApiMobile extends Controller
                 'keterangan' => 'nullable|string|max:255',
             ]);
             
-            // ✅ Handle jenis tenaga kerja 3 dan 5 (return null)
-            if (in_array($validated['jenistenagakerja'], [3, 5])) {
+            if (in_array($validated['jenistenagakerja'], [2, 3, 5])) {
                 return response()->json([
-                    'status' => 1,
-                    'description' => 'Jenis tenaga kerja 3 dan 5 tidak memerlukan perhitungan upah',
-                    'data' => [
-                        'total_upah' => null,
-                        'jam_kerja' => null,
-                        'breakdown' => [
-                            'upah_harian' => null,
-                            'upah_perjam' => null,
-                            'upah_lembur' => null,
-                            'upah_borongan' => null,
-                            'premi' => null
-                        ]
-                    ]
-                ], 200);
+                    'status' => 0,
+                    'description' => 'Jenis tenaga kerja ini tidak menggunakan API upah per pekerja'
+                ], 400);
             }
             
-            // ✅ Convert jenis 4 → 1 (harian)
             if ($validated['jenistenagakerja'] == 4) {
                 $validated['jenistenagakerja'] = 1;
             }
             
-            // Calculate work hours
             $totalJamKerja = $this->calculateWorkHours($validated['jammulai'], $validated['jamselesai']);
             
-            // Calculate wage
             $wageData = $this->calculateWage($validated, $totalJamKerja);
             
-            // Check if record exists first
             $existingRecord = DB::table('lkhdetailworker')
                 ->where('companycode', $validated['companycode'])
                 ->where('lkhno', $validated['lkhno'])
@@ -77,7 +55,6 @@ class PerhitunganUpahApiMobile extends Controller
                 ], 404);
             }
 
-            // Update existing record only
             $updated = DB::table('lkhdetailworker')
                 ->where('companycode', $validated['companycode'])
                 ->where('lkhno', $validated['lkhno'])
@@ -88,21 +65,17 @@ class PerhitunganUpahApiMobile extends Controller
                     'jamselesai' => $validated['jamselesai'],
                     'totaljamkerja' => $totalJamKerja,
                     'overtimehours' => $validated['overtimehours'] ?? 0,
-                    
-                    // Calculated wage fields
                     'premi' => $wageData['premi'],
                     'upahharian' => $wageData['upahharian'],
                     'upahperjam' => $wageData['upahperjam'],
                     'upahlembur' => $wageData['upahlembur'],
                     'upahborongan' => $wageData['upahborongan'],
                     'totalupah' => $wageData['totalupah'],
-                    
                     'keterangan' => $validated['keterangan'] ?? 'Mobile upload',
                     'updatedat' => now()
                 ]);
 
             if ($updated) {
-                // Sync header totals
                 $this->syncLkhHeaderTotals($validated['companycode'], $validated['lkhno']);
                 
                 return response()->json([
@@ -115,7 +88,6 @@ class PerhitunganUpahApiMobile extends Controller
                             'upah_harian' => $wageData['upahharian'],
                             'upah_perjam' => $wageData['upahperjam'],
                             'upah_lembur' => $wageData['upahlembur'],
-                            'upah_borongan' => $wageData['upahborongan'],
                             'premi' => $wageData['premi']
                         ]
                     ]
@@ -123,7 +95,7 @@ class PerhitunganUpahApiMobile extends Controller
             } else {
                 return response()->json([
                     'status' => 0,
-                    'description' => 'Failed to update worker wage. No changes were made to the record'
+                    'description' => 'Failed to update worker wage'
                 ], 400);
             }
             
@@ -136,7 +108,6 @@ class PerhitunganUpahApiMobile extends Controller
         } catch (\Exception $e) {
             \Log::error('Error in insertWorkerWage API', [
                 'description' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
             
@@ -147,28 +118,127 @@ class PerhitunganUpahApiMobile extends Controller
         }
     }
 
-    /**
-     * ✅ SYNC LKH HEADER TOTALS DENGAN DETAIL DATA
-     */
+    public function insertUpahBorongan(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'companycode' => 'required|string|max:4',
+                'lkhno' => 'required|string',
+            ]);
+            
+            $lkh = DB::table('lkhhdr')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->first();
+            
+            if (!$lkh) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'LKH tidak ditemukan'
+                ], 404);
+            }
+            
+            if ($lkh->jenistenagakerja != 2) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'LKH ini bukan jenis borongan'
+                ], 400);
+            }
+            
+            $totalArea = DB::table('lkhdetailplot')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->sum('luashasil');
+            
+            if ($totalArea <= 0) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'Tidak ada data plot atau luas hasil = 0'
+                ], 400);
+            }
+            
+            $rate = DB::table('upahborongan')
+                ->where('companycode', $validated['companycode'])
+                ->where('activitycode', $lkh->activitycode)
+                ->where('effectivedate', '<=', $lkh->lkhdate)
+                ->where(function($q) use ($lkh) {
+                    $q->whereNull('enddate')
+                      ->orWhere('enddate', '>=', $lkh->lkhdate);
+                })
+                ->orderBy('effectivedate', 'DESC')
+                ->value('amount');
+            
+            if (!$rate) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => 'Tidak ditemukan upah borongan aktif untuk Company: ' . $validated['companycode'] . ', Activity: ' . $lkh->activitycode . ', Tanggal: ' . \Carbon\Carbon::parse($lkh->lkhdate)->format('d/m/Y')
+                ], 404);
+            }
+            
+            $totalUpah = $totalArea * $rate;
+            
+            $totalWorkers = DB::table('lkhdetailworker')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->count();
+            
+            DB::table('lkhhdr')
+                ->where('companycode', $validated['companycode'])
+                ->where('lkhno', $validated['lkhno'])
+                ->update([
+                    'totalupahall' => $totalUpah,
+                    'totalhasil' => $totalArea,
+                    'totalworkers' => $totalWorkers,
+                    'updatedat' => now()
+                ]);
+            
+            return response()->json([
+                'status' => 1,
+                'description' => 'Total upah borongan berhasil dihitung',
+                'data' => [
+                    'lkhno' => $validated['lkhno'],
+                    'total_area' => (float) $totalArea,
+                    'rate_per_ha' => (float) $rate,
+                    'total_upah' => (float) $totalUpah,
+                    'total_workers' => $totalWorkers
+                ]
+            ], 200);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 0,
+                'description' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in insertUpahBorongan API', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'status' => 0,
+                'description' => 'Calculation failed: ' . (config('app.debug') ? $e->getMessage() : 'Internal server error')
+            ], 500);
+        }
+    }
+
     private function syncLkhHeaderTotals($companycode, $lkhno)
     {
         try {
-            // Hitung total dari lkhdetailworker
             $workerTotals = DB::table('lkhdetailworker')
                 ->where('companycode', $companycode)
                 ->where('lkhno', $lkhno)
                 ->selectRaw('COUNT(*) as total_workers, SUM(totalupah) as total_upah')
                 ->first();
 
-            // Hitung total dari lkhdetailplot (hasil dan sisa)
             $plotTotals = DB::table('lkhdetailplot')
                 ->where('companycode', $companycode)
                 ->where('lkhno', $lkhno)
                 ->selectRaw('SUM(luashasil) as total_hasil, SUM(luassisa) as total_sisa')
                 ->first();
             
-            // Update header lkhhdr
-            $updateResult = DB::table('lkhhdr')
+            DB::table('lkhhdr')
                 ->where('companycode', $companycode)
                 ->where('lkhno', $lkhno)
                 ->update([
@@ -179,15 +249,6 @@ class PerhitunganUpahApiMobile extends Controller
                     'updatedat' => now()
                 ]);
 
-            \Log::info('LKH Header synced via API', [
-                'companycode' => $companycode,
-                'lkhno' => $lkhno,
-                'totalworkers' => $workerTotals->total_workers ?? 0,
-                'totalupahall' => $workerTotals->total_upah ?? 0,
-                'totalhasil' => $plotTotals->total_hasil ?? 0,
-                'updated_rows' => $updateResult
-            ]);
-
         } catch (\Exception $e) {
             \Log::error('Error syncing LKH header totals', [
                 'companycode' => $companycode,
@@ -197,10 +258,6 @@ class PerhitunganUpahApiMobile extends Controller
         }
     }
     
-    /**
-     * Calculate wage based on validated input
-     * ✅ FIXED: Harian reads from `upah`, Borongan reads from `upahborongan`
-     */
     private function calculateWage($data, $totalJamKerja)
     {
         $activityGroup = $this->getActivityGroupFromCode($data['activitycode']);
@@ -215,52 +272,26 @@ class PerhitunganUpahApiMobile extends Controller
             'totalupah' => 0
         ];
         
-        if ($data['jenistenagakerja'] == 1) {
-            // ✅ HARIAN: Read from `upah` table
-            if ($totalJamKerja >= 8) {
-                $dailyRate = $this->getHarianRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
-                $wageData['upahharian'] = $dailyRate ?: 115722.8;
-            } else {
-                $hourlyRate = $this->getHarianRate($data['companycode'], $activityGroup, 'HOURLY', $data['lkhdate']);
-                $wageData['upahperjam'] = $hourlyRate ?: 16532;
-                $wageData['upahharian'] = $totalJamKerja * $wageData['upahperjam'];
-            }
-            
-            // Overtime
-            $overtimeHours = $data['overtimehours'] ?? 0;
-            if ($overtimeHours > 0) {
-                $overtimeRate = $this->getHarianRate($data['companycode'], $activityGroup, 'OVERTIME', $data['lkhdate']);
-                $wageData['upahlembur'] = $overtimeHours * ($overtimeRate ?: 12542);
-            }
-            
-            $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'];
-            
+        if ($totalJamKerja >= 8) {
+            $dailyRate = $this->getHarianRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
+            $wageData['upahharian'] = $dailyRate ?: 115722.8;
         } else {
-            // ✅ BORONGAN: Read from `upahborongan` table
-            $boronganRate = $this->getBoronganRate($data['companycode'], $data['activitycode'], $data['lkhdate']);
-            
-            if (isset($data['luashasil']) && $data['luashasil'] > 0) {
-                $wageData['upahborongan'] = $boronganRate * $data['luashasil'];
-            } else {
-                $wageData['upahborongan'] = $boronganRate ?: 140000;
-            }
-            
-            $wageData['totalupah'] = $wageData['upahborongan'];
+            $hourlyRate = $this->getHarianRate($data['companycode'], $activityGroup, 'HOURLY', $data['lkhdate']);
+            $wageData['upahperjam'] = $hourlyRate ?: 16532;
+            $wageData['upahharian'] = $totalJamKerja * $wageData['upahperjam'];
         }
+        
+        $overtimeHours = $data['overtimehours'] ?? 0;
+        if ($overtimeHours > 0) {
+            $overtimeRate = $this->getHarianRate($data['companycode'], $activityGroup, 'OVERTIME', $data['lkhdate']);
+            $wageData['upahlembur'] = $overtimeHours * ($overtimeRate ?: 12542);
+        }
+        
+        $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'];
         
         return $wageData;
     }
 
-    /**
-     * ✅ Get Harian rate from `upah` table (by activitygroup + wagetype)
-     * Reads effectivedate & enddate
-     *
-     * @param string $companycode
-     * @param string $activitygroup
-     * @param string $wagetype
-     * @param string $workDate
-     * @return float
-     */
     private function getHarianRate($companycode, $activitygroup, $wagetype, $workDate)
     {
         $workDate = Carbon::parse($workDate)->format('Y-m-d');
@@ -277,35 +308,7 @@ class PerhitunganUpahApiMobile extends Controller
             ->orderBy('effectivedate', 'DESC')
             ->value('amount') ?? 0;
     }
-
-    /**
-     * ✅ Get Borongan rate from `upahborongan` table (by activitycode)
-     * Reads effectivedate & enddate
-     *
-     * @param string $companycode
-     * @param string $activitycode
-     * @param string $workDate
-     * @return float
-     */
-    private function getBoronganRate($companycode, $activitycode, $workDate)
-    {
-        $workDate = Carbon::parse($workDate)->format('Y-m-d');
-        
-        return DB::table('upahborongan')
-            ->where('companycode', $companycode)
-            ->where('activitycode', $activitycode)
-            ->where('effectivedate', '<=', $workDate)
-            ->where(function ($q) use ($workDate) {
-                $q->whereNull('enddate')
-                    ->orWhere('enddate', '>=', $workDate);
-            })
-            ->orderBy('effectivedate', 'DESC')
-            ->value('amount') ?? 0;
-    }
     
-    /**
-     * Calculate work hours (with break deduction)
-     */
     private function calculateWorkHours($jamMasuk, $jamSelesai)
     {
         $start = Carbon::createFromFormat('H:i:s', $jamMasuk);
@@ -315,31 +318,22 @@ class PerhitunganUpahApiMobile extends Controller
             $end->addDay();
         }
         
-        // Total hours including break
         $totalHours = $start->diffInHours($end, false);
         
-        // Define break time
         $breakStart = Carbon::createFromFormat('H:i:s', '12:00:00');
         $breakEnd = Carbon::createFromFormat('H:i:s', '13:00:00');
         
-        // Check if work period overlaps with break time
         $breakDeduction = 0;
         
         if ($start->lt($breakEnd) && $end->gt($breakStart)) {
-            // Work period overlaps with break
             $overlapStart = $start->gt($breakStart) ? $start : $breakStart;
             $overlapEnd = $end->lt($breakEnd) ? $end : $breakEnd;
-            
-            // Calculate break overlap in hours
             $breakDeduction = $overlapStart->diffInHours($overlapEnd, false);
         }
         
         return $totalHours - $breakDeduction;
     }
     
-    /**
-     * Determine day type (DAILY, WEEKEND_SATURDAY, WEEKEND_SUNDAY)
-     */
     private function getDayType($workDate)
     {
         $dayOfWeek = Carbon::parse($workDate)->dayOfWeek;
@@ -353,12 +347,8 @@ class PerhitunganUpahApiMobile extends Controller
         return 'DAILY';
     }
     
-    /**
-     * Get activity group from activity code
-     */
     private function getActivityGroupFromCode($activitycode)
     {
-        // Try to get from database first
         $activitygroup = DB::table('activity')
             ->where('activitycode', $activitycode)
             ->value('activitygroup');
@@ -367,11 +357,10 @@ class PerhitunganUpahApiMobile extends Controller
             return $activitygroup;
         }
         
-        // Fallback: Extract from activity code pattern
         if (preg_match('/^([IVX]+)/', $activitycode, $matches)) {
             return $matches[1];
         }
         
-        return 'V'; // Default fallback
+        return 'V';
     }
 }
