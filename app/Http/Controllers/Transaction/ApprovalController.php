@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Transaction\GudangController;
 
 // Import Services for post-approval actions
 use App\Services\Transaction\RencanaKerjaHarian\Generator\LkhGeneratorService;
@@ -346,6 +347,11 @@ class ApprovalController extends Controller
 
             // Execute post-approval actions if fully approved
             if ($action === 'approve' && ($updateData['approvalstatus'] ?? null) === '1') {
+                // cio tambahan cek standar part 2 
+                // if (strtolower(trim($approval->category ?? '')) === 'use material') {
+                //     $this->finalizeUseMaterialAndSubmit($approvalno, $companycode, $currentUser);
+                // }
+                //
                 $message = $this->executeOtherApprovalActions($approval, $message, $companycode);
             }
 
@@ -969,4 +975,91 @@ class ApprovalController extends Controller
                 return false;
         }
     }
+
+
+//cio tambahan cek standar part 2 
+// private function finalizeUseMaterialAndSubmit($approvalno, $companycode, $currentUser)
+// {
+//     // 1) Ambil approvaltransaction untuk dapat rkhno
+//     $at = DB::table('approvaltransaction as at')
+//         ->join('approval as am', 'at.approvalcategoryid', '=', 'am.id')
+//         ->where('at.companycode', $companycode)
+//         ->where('at.approvalno', $approvalno)
+//         ->select(['at.transactionnumber', 'am.category'])
+//         ->first();
+
+//     if (!$at) {
+//         throw new \Exception('Approval transaction tidak ditemukan untuk finalize.');
+//     }
+
+//     if (strtolower(trim($at->category ?? '')) !== 'use material') {
+//         // bukan use material, tidak usah apa-apa
+//         return;
+//     }
+
+//     $rkhno = $at->transactionnumber;
+
+//     // 2) Set approved=1 pada snapshot usematerialapproval
+//     DB::table('usematerialapproval')
+//         ->where('companycode', $companycode)
+//         ->where('approvalno', $approvalno)
+//         ->where('rkhno', $rkhno)
+//         ->update([
+//             'approved'   => 1,
+//             'approvedat' => now(),
+//             'approvedby' => $currentUser->userid,
+//         ]);
+
+//     // 3) Panggil GudangController@submit
+//     // Penting: submit kamu butuh request->itemcode/dosage/unit/luas.
+//     // Cara paling "seamless": kita bentuk request dari snapshot usematerialapproval.
+//     $snap = DB::table('usematerialapproval')
+//         ->where('companycode', $companycode)
+//         ->where('approvalno', $approvalno)
+//         ->where('rkhno', $rkhno)
+//         ->get();
+
+//     if ($snap->isEmpty()) {
+//         throw new \Exception('Snapshot usematerialapproval kosong.');
+//     }
+
+//     // Bentuk request format submit yg lama
+//     $itemcode = [];
+//     $dosage   = [];
+//     $unit     = [];
+//     $luas     = [];
+
+//     foreach ($snap as $row) {
+//         $plotKey = (string) $row->plot;
+
+//         $itemcode[$row->lkhno][$row->itemcode][$plotKey] = $row->itemcode;
+//         $dosage[$row->lkhno][$row->itemcode][$plotKey]   = (float) ($row->dosageperha ?? 0);
+//         $unit[$row->lkhno][$row->itemcode][$plotKey]     = $row->unit ?? null;
+
+//         // submit: qty = luas * dosage
+//         // supaya qty hasilnya sesuai snapshot: luas = qty/dosage
+//         $d = (float) ($row->dosageperha ?? 0);
+//         $q = (float) ($row->qty ?? 0);
+//         $luas[$row->lkhno][$row->itemcode][$plotKey] = $d > 0 ? ($q / $d) : 0;
+//     }
+
+//     $subRequest = new \Illuminate\Http\Request([
+//         'rkhno'      => $rkhno,
+//         'costcenter' => $snap->first()->costcenter ?? null,
+//         'approvalno' => $approvalno, // buat bypass ACTIVE (lihat step 3)
+//         'itemcode'   => $itemcode,
+//         'dosage'     => $dosage,
+//         'unit'       => $unit,
+//         'luas'       => $luas,
+//     ]);
+
+//     // Pastikan session companycode sama seperti approver
+//     session(['companycode' => $companycode]);
+
+//     $gudang = new GudangController();
+//     $gudang->submit($subRequest);
+// }
+// tambahan cio
+
+
 }
