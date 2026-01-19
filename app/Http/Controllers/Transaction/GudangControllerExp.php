@@ -310,6 +310,22 @@ class GudangController extends Controller
 
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno, 1));
         $first = $details->first();
+
+        Log::info('SUBMIT DEBUG CONTEXT', [
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+            'session_companycode' => session('companycode'),
+            'req_rkhno' => $request->rkhno,
+            'req_approvalno' => $request->approvalno ?? null,
+            'req_costcenter' => $request->costcenter ?? null,
+            'host' => $request->getHost(),
+            'user_userid' => Auth::user()->userid ?? null,
+            'first_hdr_companycode' => $first->companycode ?? null,
+            'first_hdr_flagstatus' => $first->flagstatus ?? null,
+            'first_hdr_factoryinv' => $first->factoryinv ?? null,
+            'first_hdr_companyinv' => $first->companyinv ?? null,
+        ]);
+
         // $detailmaterial2 = collect($usemateriallst->where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->orderBy('lkhno')->orderBy('plot')->get());
         $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
             ->leftJoin('lkhdetailplot', function ($join) {
@@ -330,6 +346,15 @@ class GudangController extends Controller
             //
         $groupIds = $details->pluck('herbisidagroupid')->unique();
         $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get();
+
+        Log::info('DETAIL DEBUG USEMATERIALLST', [
+            'rkhno' => $request->rkhno,
+            'session_companycode' => session('companycode'),
+            'lst_count' => $lst->count(),
+            'lst_max_nouse' => $lst->max('nouse'),
+            'lst_nouse_sample' => $lst->pluck('nouse')->filter()->unique()->take(5)->values()->toArray(),
+            'lst_itemcodes_sample' => $lst->pluck('itemcode')->take(10)->values()->toArray(),
+        ]);        
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
@@ -369,14 +394,67 @@ class GudangController extends Controller
     }
 
     public function retur(Request $request)
-    {
+    {   
+        Log::info('RETUR DEBUG CONTEXT', [
+            'url' => $request->fullUrl(),
+            'session_companycode' => session('companycode'),
+            'req_rkhno' => $request->rkhno,
+            'req_lkhno' => $request->lkhno,
+            'req_itemcode' => $request->itemcode,
+            'req_plot' => $request->plot,
+            'user_userid' => Auth::user()->userid ?? null,
+            'host' => $request->getHost(),
+        ]);
+        
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno, 1)->get();
         $hfirst = $header->first();
 
+        Log::info('RETUR DEBUG HEADER', [
+            'header_count' => $header->count(),
+            'hfirst_exists' => (bool) $hfirst,
+            'hfirst_rkhno' => $hfirst->rkhno ?? null,
+            'hfirst_companycode' => $hfirst->companycode ?? null,
+            'hfirst_flagstatus' => $hfirst->flagstatus ?? null,
+            'hfirst_companyinv' => $hfirst->companyinv ?? null,
+            'hfirst_factoryinv' => $hfirst->factoryinv ?? null,
+            'hfirst_mandorname' => $hfirst->mandorname ?? null,
+        ]);        
+
         $details = usemateriallst::where('companycode', session('companycode'))->where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
         $first = $details->first();
+
+        Log::info('RETUR DEBUG LST ROW', [
+            'first_exists' => (bool) $first,
+            'first_itemcode' => $first->itemcode ?? null,
+            'first_plot' => $first->plot ?? null,
+            'first_lkhno' => $first->lkhno ?? null,
+            'first_qty' => $first->qty ?? null,
+            'first_qtyretur' => $first->qtyretur ?? null,
+            'first_nouse' => $first->nouse ?? null,
+            'first_noretur' => $first->noretur ?? null,
+            'first_costcenter' => $first->costcenter ?? null,
+        ]);
+        //debug
+        $group = DB::table('usemateriallst')
+            ->where('rkhno', $request->rkhno)
+            ->where('lkhno', $request->lkhno)
+            ->where('itemcode', $request->itemcode)
+            ->where('plot', $request->plot)
+            ->select('companycode', DB::raw('COUNT(*) as cnt'), DB::raw('MAX(nouse) as max_nouse'))
+            ->groupBy('companycode')
+            ->get();
+
+        Log::info('RETUR DEBUG SAME ROW GROUP BY COMPANY', [
+            'rkhno' => $request->rkhno,
+            'lkhno' => $request->lkhno,
+            'itemcode' => $request->itemcode,
+            'plot' => $request->plot,
+            'group' => $group
+        ]);
+
+        //
 
         if (strtoupper($hfirst->flagstatus) == 'COMPLETED') {
             return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
@@ -431,6 +509,18 @@ class GudangController extends Controller
         
         $companyinv = company::where('companycode', session('companycode'))->first();
         if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
+        Log::info('RETUR API PAYLOAD SUMMARY', [
+            'connection' => $koneksi ?? null,
+            'company_inventory' => $companyinv->companyinventory ?? null,
+            'companytebu' => session('companycode'),
+            'rkhno' => $request->rkhno,
+            'factory' => $hfirst->factoryinv ?? null,
+            'nouse' => $first->nouse ?? null,
+            'rkhdate' => $rkhdate ?? null,
+            'qtyretur' => $first->qtyretur ?? null,
+            'itemcode' => $first->itemcode ?? null,
+        ]);        
+
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
@@ -447,6 +537,10 @@ class GudangController extends Controller
             ]);
 
         //log
+        Log::info('RETUR API RESPONSE', [
+            'http_status' => $response->status(),
+            'body' => $response->json(),
+        ]);        
         if ($response->successful()) {
             Log::info('API success:', $response->json());
         } else {
@@ -460,6 +554,14 @@ class GudangController extends Controller
             if ($response->json()['status'] == 1) {
                 usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->where('itemcode', $first->itemcode)
                     ->where('lkhno', $first->lkhno)->where('plot', $first->plot)->update(['noretur' => $response->json()['noretur'],'tglretur'  => now()]);
+
+                    Log::info('RETUR DB UPDATED', [
+                        'rkhno' => $request->rkhno,
+                        'companycode' => session('companycode'),
+                        'itemcode' => $first->itemcode,
+                        'plot' => $first->plot,
+                        'noretur' => $response->json()['noretur'] ?? null,
+                    ]);                    
             }
         } else {
             dd($response->json(), $response->body(), $response->status());
@@ -504,18 +606,7 @@ class GudangController extends Controller
 
 
 public function submit(Request $request)
-{   
-    $request->validate([
-        'dosage' => ['required', 'array'],
-        'dosage.*' => ['array'],
-        'dosage.*.*' => ['array'],
-        'dosage.*.*.*' => ['nullable', 'numeric', 'min:0'],
-    ], [
-        'dosage.*.*.*.min'     => 'Dosage tidak boleh minus.',
-        'dosage.*.*.*.numeric' => 'Dosage harus angka.',
-    ]);
-    
-
+{
     //kunci proses di cache agar ga dobel submit 
     $lockKey = 'submit_lock_' . session('companycode') . '_' . $request->rkhno;
     if (Cache::has($lockKey)) {
@@ -575,16 +666,16 @@ public function submit(Request $request)
     }
 
     //tambahan cek standar
-    // $stdMap = DB::table('herbisidadosage')
-    // ->where('companycode', session('companycode'))
-    // ->select('herbisidagroupid','itemcode','dosageperha')
-    // ->get()
-    // ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
-    // ->all();
+    $stdMap = DB::table('herbisidadosage')
+    ->where('companycode', session('companycode'))
+    ->select('herbisidagroupid','itemcode','dosageperha')
+    ->get()
+    ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
+    ->all();
 
-    // $EPS = 0.0001;
-    // $isApproval = false;
-    // $approvalReasons = [];
+    $EPS = 0.0001;
+    $isApproval = false;
+    $approvalReasons = [];
     //
 
     // Validasi duplikat: lkhno + plot + itemcode
@@ -636,38 +727,38 @@ public function submit(Request $request)
                 $qtyraw = $luas * $dosage ?? 0;
 
                 //tambahan cek standar cek dosage standard 
-                // $groupId = $detail->herbisidagroupid ?? null;
-                // if ($groupId) {
-                //     $kstd = $groupId.'|'.$itemcode;
+                $groupId = $detail->herbisidagroupid ?? null;
+                if ($groupId) {
+                    $kstd = $groupId.'|'.$itemcode;
                 
-                //     // itemcode tidak ada di standar untuk group tsb
-                //     if (!isset($stdMap[$kstd])) {
-                //         $isApproval = true;
-                //         $approvalReasons[] = [
-                //             'type' => 'INVALID_ITEMCODE',
-                //             'lkhno' => $lkhno,
-                //             'plot' => $key,
-                //             'group' => $groupId,
-                //             'itemcode' => $itemcode,
-                //             'dosage_input' => $dosage,
-                //         ];
-                //     } else {
-                //         // dosage berbeda dari standar
-                //         $stdDos = (float)$stdMap[$kstd];
-                //         if (abs($dosage - $stdDos) > $EPS) {
-                //             $isApproval = true;
-                //             $approvalReasons[] = [
-                //                 'type' => 'DOSAGE_CHANGED',
-                //                 'lkhno' => $lkhno,
-                //                 'plot' => $key,
-                //                 'group' => $groupId,
-                //                 'itemcode' => $itemcode,
-                //                 'dosage_input' => $dosage,
-                //                 'dosage_std' => $stdDos,
-                //             ];
-                //         }
-                //     }
-                // }
+                    // itemcode tidak ada di standar untuk group tsb
+                    if (!isset($stdMap[$kstd])) {
+                        $isApproval = true;
+                        $approvalReasons[] = [
+                            'type' => 'INVALID_ITEMCODE',
+                            'lkhno' => $lkhno,
+                            'plot' => $key,
+                            'group' => $groupId,
+                            'itemcode' => $itemcode,
+                            'dosage_input' => $dosage,
+                        ];
+                    } else {
+                        // dosage berbeda dari standar
+                        $stdDos = (float)$stdMap[$kstd];
+                        if (abs($dosage - $stdDos) > $EPS) {
+                            $isApproval = true;
+                            $approvalReasons[] = [
+                                'type' => 'DOSAGE_CHANGED',
+                                'lkhno' => $lkhno,
+                                'plot' => $key,
+                                'group' => $groupId,
+                                'itemcode' => $itemcode,
+                                'dosage_input' => $dosage,
+                                'dosage_std' => $stdDos,
+                            ];
+                        }
+                    }
+                }
                 //
 
                 // ambil group & flag rounding
@@ -722,96 +813,96 @@ public function submit(Request $request)
     // STOP & CREATE APPROVAL DOC
     // =====================================
 
-    // if ($isApproval) {
-    //     try {
-    //         $companycode = session('companycode');
+    if ($isApproval) {
+        try {
+            $companycode = session('companycode');
 
-    //         // ambil master approval
-    //         $approvalMaster = DB::table('approval')
-    //             ->where('companycode', $companycode)
-    //             ->where('category', 'Use Material') // pastikan sama persis
-    //             ->first();
+            // ambil master approval
+            $approvalMaster = DB::table('approval')
+                ->where('companycode', $companycode)
+                ->where('category', 'Use Material') // pastikan sama persis
+                ->first();
 
-    //         if (!$approvalMaster) {
-    //             Cache::forget($lockKey);
-    //             return back()->with('error', 'Approval master "Use Material" belum di-setup');
-    //         }
+            if (!$approvalMaster) {
+                Cache::forget($lockKey);
+                return back()->with('error', 'Approval master "Use Material" belum di-setup');
+            }
 
-    //         $approvalNo = $request->rkhno; // approvalno = rkhno
+            $approvalNo = $request->rkhno; // approvalno = rkhno
             
-    //         DB::beginTransaction();
+            DB::beginTransaction();
 
-                // $exists = DB::table('approvaltransaction')
-                // ->where('companycode', $companycode)
-                // ->where('transactionnumber', $request->rkhno)
-                // ->exists();
+                $exists = DB::table('approvaltransaction')
+                ->where('companycode', $companycode)
+                ->where('transactionnumber', $request->rkhno)
+                ->exists();
 
-                // if ($exists) {
-                //     DB::rollBack();
-                //     Cache::forget($lockKey);
-                //     return back()->with('warning', "RKH {$request->rkhno} sudah punya approval. Tidak boleh buat lagi.");
-                // }
+                if ($exists) {
+                    DB::rollBack();
+                    Cache::forget($lockKey);
+                    return back()->with('warning', "RKH {$request->rkhno} sudah punya approval. Tidak boleh buat lagi.");
+                }
 
 
 
-    //         // 1) insert approvaltransaction (workflow)
-    //         DB::table('approvaltransaction')->insert([
-    //             'approvalno' => $approvalNo,
-    //             'companycode' => $companycode,
-    //             'approvalcategoryid' => $approvalMaster->id,
-    //             'transactionnumber' => $request->rkhno, // tampil di approval center
-    //             'jumlahapproval' => $approvalMaster->jumlahapproval,
-    //             'approval1idjabatan' => $approvalMaster->idjabatanapproval1,
-    //             'approval2idjabatan' => $approvalMaster->idjabatanapproval2,
-    //             'approval3idjabatan' => $approvalMaster->idjabatanapproval3,
-    //             'approvalstatus' => null,
-    //             'inputby' => Auth::user()->userid,
-    //             'createdat' => now(),
-    //         ]);
+            // 1) insert approvaltransaction (workflow)
+            DB::table('approvaltransaction')->insert([
+                'approvalno' => $approvalNo,
+                'companycode' => $companycode,
+                'approvalcategoryid' => $approvalMaster->id,
+                'transactionnumber' => $request->rkhno, // tampil di approval center
+                'jumlahapproval' => $approvalMaster->jumlahapproval,
+                'approval1idjabatan' => $approvalMaster->idjabatanapproval1,
+                'approval2idjabatan' => $approvalMaster->idjabatanapproval2,
+                'approval3idjabatan' => $approvalMaster->idjabatanapproval3,
+                'approvalstatus' => null,
+                'inputby' => Auth::user()->userid,
+                'createdat' => now(),
+            ]);
             
 
-    //         // 2) insert snapshot ke usematerialapproval (detail-only)
-    //         $rows = [];
-    //         foreach ($insertData as $row) {
-    //             $rows[] = [
-    //                 'companycode' => $companycode,
-    //                 'approvalno' => $approvalNo,
-    //                 'rkhno' => $request->rkhno,
-    //                 'lkhno' => $row['lkhno'],
-    //                 'plot' => $row['plot'],
-    //                 'itemcode' => $row['itemcode'],
-    //                 'dosageperha' => $row['dosageperha'],
-    //                 'unit' => $row['unit'],
-    //                 'qty' => $row['qty'],
-    //                 'flagstatus' => 'WAIT_APPROVAL',
-    //                 'costcenter' => $request->costcenter,
-    //                 'createdat' => now(),
-    //             ];
-    //         }
-    //         DB::table('usematerialapproval')->insert($rows);
+            // 2) insert snapshot ke usematerialapproval (detail-only)
+            $rows = [];
+            foreach ($insertData as $row) {
+                $rows[] = [
+                    'companycode' => $companycode,
+                    'approvalno' => $approvalNo,
+                    'rkhno' => $request->rkhno,
+                    'lkhno' => $row['lkhno'],
+                    'plot' => $row['plot'],
+                    'itemcode' => $row['itemcode'],
+                    'dosageperha' => $row['dosageperha'],
+                    'unit' => $row['unit'],
+                    'qty' => $row['qty'],
+                    'flagstatus' => 'WAIT_APPROVAL',
+                    'costcenter' => $request->costcenter,
+                    'createdat' => now(),
+                ];
+            }
+            DB::table('usematerialapproval')->insert($rows);
 
-    //         usematerialhdr::where('companycode', $companycode)
-    //         ->where('rkhno', $request->rkhno)
-    //         ->update([
-    //             'flagstatus' => 'WAIT_APPROVAL',
-    //             'updatedat' => now(),
-    //             'updateby' => Auth::user()->userid
-    //         ]);
+            usematerialhdr::where('companycode', $companycode)
+            ->where('rkhno', $request->rkhno)
+            ->update([
+                'flagstatus' => 'WAIT_APPROVAL',
+                'updatedat' => now(),
+                'updateby' => Auth::user()->userid
+            ]);
 
-    //         DB::commit();
-    //         Cache::forget($lockKey);
+            DB::commit();
+            Cache::forget($lockKey);
 
-    //         // optional: tampilkan alasan ringkas
-    //         $msg = "Butuh approval. ApprovalNo: {$approvalNo}";
-    //         return back()->with('warning', $msg);
+            // optional: tampilkan alasan ringkas
+            $msg = "Butuh approval. ApprovalNo: {$approvalNo}";
+            return back()->with('warning', $msg);
 
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         Cache::forget($lockKey);
-    //         Log::error('Create approval failed', ['error' => $e->getMessage(),'trace' => $e->getTraceAsString(),]);
-    //         return back()->with('error', 'Gagal membuat approval: ' . $e->getMessage());
-    //     }
-    // }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Cache::forget($lockKey);
+            Log::error('Create approval failed', ['error' => $e->getMessage(),'trace' => $e->getTraceAsString(),]);
+            return back()->with('error', 'Gagal membuat approval: ' . $e->getMessage());
+        }
+    }
     //
 
     foreach ($qtyByItemcode as $itemcode => $totalQty) {
@@ -878,6 +969,18 @@ public function submit(Request $request)
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
         if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
+        Log::info('SUBMIT API PAYLOAD SUMMARY', [
+            'connection' => $koneksi ?? null,
+            'company_inventory' => $companyinv->companyinventory ?? null,
+            'companytebu' => session('companycode'),
+            'rkhno' => $request->rkhno,
+            'factory' => $first->factoryinv ?? null,
+            'costcenter' => $request->costcenter ?? null,
+            'rkhdate' => $rkhdate ?? null,
+            'items_count' => is_array($apiPayload) ? count($apiPayload) : null,
+            'api_itemcodes' => array_slice(array_keys($apiPayload ?? []), 0, 10),
+        ]);
+        
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
@@ -914,36 +1017,71 @@ public function submit(Request $request)
         }
 
         $responseData = $response->json();
-
+        Log::info('SUBMIT API RESPONSE BASIC', [
+            'http_status' => $response->status(),
+            'resp_status' => $responseData['status'] ?? null,
+            'resp_noUse' => $responseData['noUse'] ?? null,
+            'stockitem_type' => isset($responseData['stockitem']) ? gettype($responseData['stockitem']) : null,
+            'stockitem_count' => is_array($responseData['stockitem'] ?? null) ? count($responseData['stockitem']) : null,
+            'stockitem_keys_sample' => is_array($responseData['stockitem'] ?? null) ? array_slice(array_keys($responseData['stockitem']), 0, 10) : null,
+        ]);
+        
         // Check response
         if ($response->status() == 200 && isset($responseData['status']) && $responseData['status'] == 1) {
-
+            //new
+            Log::info('SUBMIT BEFORE UPDATE USEMATERIALLST', [
+                'rkhno' => $request->rkhno,
+                'session_companycode' => session('companycode'),
+                'db_lst_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->count(),
+                'db_lst_null_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNull('nouse')
+                    ->count(),
+                'db_lst_itemcodes_sample' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->limit(10)
+                    ->pluck('itemcode')
+                    ->toArray(),
+            ]);
+            
+            // ===== FIX: stockitem dari API use_api adalah associative array (key = itemcode) =====
             $itemPriceMap = [];
-            foreach ($responseData['stockitem'] as $row) {
-                $itemcode = $row['Itemcode'] ?? null;
-                if ($itemcode) {
-                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+            foreach (($responseData['stockitem'] ?? []) as $itemcode => $row) {
+
+                // $row kadang object, kadang array
+                if (is_object($row)) {
+                    $row = (array) $row;
                 }
+
+                $itemPriceMap[$itemcode] = [
+                    'itemprice'  => $row['Itemprice'] ?? 0,
+                    'startstock' => $row['StartStock'] ?? 0,
+                    'endstock'   => $row['EndStock'] ?? 0,
+                ];
             }
 
             // Update nouse & itemprice
-            foreach ($itemPriceMap as $itemcode => $itemprice) {
+            foreach ($itemPriceMap as $itemcode => $val) {
 
                 Log::info("Before DB update:", [
                     'itemcode' => $itemcode,
-                    'itemprice' => $itemprice,
-                    'type' => gettype($itemprice)
+                    'itemprice' => $val['itemprice'],
+                    'type' => gettype($val['itemprice']),
+                    'startstock' => $val['startstock'],
+                    'endstock' => $val['endstock'],
                 ]);
 
-                usemateriallst::where('rkhno', $request->rkhno)
+                $affected = usemateriallst::where('rkhno', $request->rkhno)
                     ->where('companycode', session('companycode'))
                     ->where('itemcode', $itemcode)
                     ->update([
-                        'nouse' => $responseData['noUse'],
-                        'itemprice' => $itemprice,
+                        'nouse' => $responseData['noUse'] ?? null,
+                        'itemprice' => $val['itemprice'],
                         'costcenter' => $request->costcenter,
-                        'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
-                        'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+                        'startstock' => $val['startstock'],
+                        'endstock' => $val['endstock'],
                         'tgluse'    => now()
                     ]);
 
@@ -956,12 +1094,90 @@ public function submit(Request $request)
                 Log::info("After DB update:", [
                     'itemcode' => $itemcode,
                     'itemprice_saved' => $saved,
+                    'affected_rows' => $affected,
                     'type' => gettype($saved)
                 ]);
+
+                if ($affected === 0) {
+                    Log::warning('usemateriallst not updated (possible itemcode mismatch)', [
+                        'rkhno' => $request->rkhno,
+                        'companycode' => session('companycode'),
+                        'itemcode' => $itemcode,
+                        'noUse' => $responseData['noUse'] ?? null
+                    ]);
+                }
             }
 
+            Log::info('SUBMIT AFTER UPDATE USEMATERIALLST', [
+                'rkhno' => $request->rkhno,
+                'session_companycode' => session('companycode'),
+                'db_lst_max_nouse' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->max('nouse'),
+                'db_lst_nouse_distinct' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNotNull('nouse')
+                    ->distinct()
+                    ->pluck('nouse')
+                    ->take(5)
+                    ->toArray(),
+                'db_lst_notnull_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNotNull('nouse')
+                    ->count(),
+            ]);
+            
             Cache::forget($lockKey);
             return redirect()->back()->with('success1', 'Data updated successfully');
+
+            //new
+
+
+
+            // $itemPriceMap = [];
+            // foreach ($responseData['stockitem'] as $row) {
+            //     $itemcode = $row['Itemcode'] ?? null;
+            //     if ($itemcode) {
+            //         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+            //     }
+            // }
+
+            // // Update nouse & itemprice
+            // foreach ($itemPriceMap as $itemcode => $itemprice) {
+
+            //     Log::info("Before DB update:", [
+            //         'itemcode' => $itemcode,
+            //         'itemprice' => $itemprice,
+            //         'type' => gettype($itemprice)
+            //     ]);
+
+            //     usemateriallst::where('rkhno', $request->rkhno)
+            //         ->where('companycode', session('companycode'))
+            //         ->where('itemcode', $itemcode)
+            //         ->update([
+            //             'nouse' => $responseData['noUse'],
+            //             'itemprice' => $itemprice,
+            //             'costcenter' => $request->costcenter,
+            //             'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
+            //             'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+            //             'tgluse'    => now()
+            //         ]);
+
+            //     // Cek hasil di database
+            //     $saved = usemateriallst::where('rkhno', $request->rkhno)
+            //         ->where('companycode', session('companycode'))
+            //         ->where('itemcode', $itemcode)
+            //         ->value('itemprice');
+
+            //     Log::info("After DB update:", [
+            //         'itemcode' => $itemcode,
+            //         'itemprice_saved' => $saved,
+            //         'type' => gettype($saved)
+            //     ]);
+            // }
+
+            // Cache::forget($lockKey);
+            // return redirect()->back()->with('success1', 'Data updated successfully');
 
         } else {
             Cache::forget($lockKey);
