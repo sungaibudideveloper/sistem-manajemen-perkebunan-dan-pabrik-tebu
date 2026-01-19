@@ -228,7 +228,6 @@ class RkhRepository
             ->where('companycode', $companycode)
             ->where('mandorid', $mandorId)
             ->whereDate('rkhdate', $date)
-            ->whereNull('deleted_at')
             ->first(['rkhno', 'rkhdate', 'status']);
     }
 
