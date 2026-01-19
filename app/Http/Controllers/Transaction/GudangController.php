@@ -906,33 +906,43 @@ public function submit(Request $request)
 
         // Check response
         if ($response->status() == 200 && isset($responseData['status']) && $responseData['status'] == 1) {
-
+            //new
+            // ===== FIX: stockitem dari API use_api adalah associative array (key = itemcode) =====
             $itemPriceMap = [];
-            foreach ($responseData['stockitem'] as $row) {
-                $itemcode = $row['Itemcode'] ?? null;
-                if ($itemcode) {
-                    $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+            foreach (($responseData['stockitem'] ?? []) as $itemcode => $row) {
+
+                // $row kadang object, kadang array
+                if (is_object($row)) {
+                    $row = (array) $row;
                 }
+
+                $itemPriceMap[$itemcode] = [
+                    'itemprice'  => $row['Itemprice'] ?? 0,
+                    'startstock' => $row['StartStock'] ?? 0,
+                    'endstock'   => $row['EndStock'] ?? 0,
+                ];
             }
 
             // Update nouse & itemprice
-            foreach ($itemPriceMap as $itemcode => $itemprice) {
+            foreach ($itemPriceMap as $itemcode => $val) {
 
                 Log::info("Before DB update:", [
                     'itemcode' => $itemcode,
-                    'itemprice' => $itemprice,
-                    'type' => gettype($itemprice)
+                    'itemprice' => $val['itemprice'],
+                    'type' => gettype($val['itemprice']),
+                    'startstock' => $val['startstock'],
+                    'endstock' => $val['endstock'],
                 ]);
 
-                usemateriallst::where('rkhno', $request->rkhno)
+                $affected = usemateriallst::where('rkhno', $request->rkhno)
                     ->where('companycode', session('companycode'))
                     ->where('itemcode', $itemcode)
                     ->update([
-                        'nouse' => $responseData['noUse'],
-                        'itemprice' => $itemprice,
+                        'nouse' => $responseData['noUse'] ?? null,
+                        'itemprice' => $val['itemprice'],
                         'costcenter' => $request->costcenter,
-                        'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
-                        'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+                        'startstock' => $val['startstock'],
+                        'endstock' => $val['endstock'],
                         'tgluse'    => now()
                     ]);
 
@@ -945,12 +955,71 @@ public function submit(Request $request)
                 Log::info("After DB update:", [
                     'itemcode' => $itemcode,
                     'itemprice_saved' => $saved,
+                    'affected_rows' => $affected,
                     'type' => gettype($saved)
                 ]);
+
+                if ($affected === 0) {
+                    Log::warning('usemateriallst not updated (possible itemcode mismatch)', [
+                        'rkhno' => $request->rkhno,
+                        'companycode' => session('companycode'),
+                        'itemcode' => $itemcode,
+                        'noUse' => $responseData['noUse'] ?? null
+                    ]);
+                }
             }
 
             Cache::forget($lockKey);
             return redirect()->back()->with('success1', 'Data updated successfully');
+
+            //new
+
+
+
+            // $itemPriceMap = [];
+            // foreach ($responseData['stockitem'] as $row) {
+            //     $itemcode = $row['Itemcode'] ?? null;
+            //     if ($itemcode) {
+            //         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
+            //     }
+            // }
+
+            // // Update nouse & itemprice
+            // foreach ($itemPriceMap as $itemcode => $itemprice) {
+
+            //     Log::info("Before DB update:", [
+            //         'itemcode' => $itemcode,
+            //         'itemprice' => $itemprice,
+            //         'type' => gettype($itemprice)
+            //     ]);
+
+            //     usemateriallst::where('rkhno', $request->rkhno)
+            //         ->where('companycode', session('companycode'))
+            //         ->where('itemcode', $itemcode)
+            //         ->update([
+            //             'nouse' => $responseData['noUse'],
+            //             'itemprice' => $itemprice,
+            //             'costcenter' => $request->costcenter,
+            //             'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
+            //             'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
+            //             'tgluse'    => now()
+            //         ]);
+
+            //     // Cek hasil di database
+            //     $saved = usemateriallst::where('rkhno', $request->rkhno)
+            //         ->where('companycode', session('companycode'))
+            //         ->where('itemcode', $itemcode)
+            //         ->value('itemprice');
+
+            //     Log::info("After DB update:", [
+            //         'itemcode' => $itemcode,
+            //         'itemprice_saved' => $saved,
+            //         'type' => gettype($saved)
+            //     ]);
+            // }
+
+            // Cache::forget($lockKey);
+            // return redirect()->back()->with('success1', 'Data updated successfully');
 
         } else {
             Cache::forget($lockKey);
