@@ -6,7 +6,7 @@
 
   <div x-data="rkhWizardApp()" class="max-w-7xl mx-auto px-4 pb-6">
     
-    {{-- ✅ STICKY Progress Bar - Compact & Professional --}}
+    {{-- STICKY Progress Bar - Compact & Professional --}}
     <div class="sticky top-[6rem] z-30 bg-white border-b border-gray-200 shadow-sm mb-6">
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between relative">
@@ -364,7 +364,7 @@
   @push('scripts')
 <script>
   // ============================================================
-  // ✅ GLOBAL DATA INITIALIZATION
+  // GLOBAL DATA INITIALIZATION
   // ============================================================
   window.activitiesData = @json($activities ?? []);
   window.bloksData = @json($bloks ?? []);
@@ -1036,28 +1036,46 @@
         // PROTECTION 1: Check if already submitting
         if (this.isSubmitting) {
           console.warn('Submit blocked: Already submitting');
+          showToast('Sedang memproses, mohon tunggu...', 'warning', 2000);
           return false;
         }
 
         // PROTECTION 2: Check global lock
         if (window.RKH_SUBMISSION_LOCK) {
           console.warn('Submit blocked: Global lock active');
+          showToast('Sedang memproses, mohon tunggu...', 'warning', 2000);
           return false;
         }
 
-        // PROTECTION 3: Disable submit button IMMEDIATELY
+        // PROTECTION 3: Disable button IMMEDIATELY (before any async operation)
         const submitBtn = document.getElementById('submit-btn');
         if (submitBtn) {
           if (submitBtn.disabled) {
             console.warn('Submit blocked: Button already disabled');
+            showToast('Mohon tunggu...', 'warning', 2000);
             return false;
           }
           submitBtn.disabled = true;
         }
 
-        // ACTIVATE ALL LOCKS
+        // ACTIVATE ALL LOCKS IMMEDIATELY
         this.isSubmitting = true;
         window.RKH_SUBMISSION_LOCK = true;
+
+        // Set minimum submit time (prevent rapid retry)
+        const MIN_SUBMIT_INTERVAL = 5000; // 5 seconds
+        const lastSubmitTime = window.LAST_RKH_SUBMIT || 0;
+        const timeSinceLastSubmit = Date.now() - lastSubmitTime;
+        
+        if (timeSinceLastSubmit < MIN_SUBMIT_INTERVAL) {
+          const remainingTime = Math.ceil((MIN_SUBMIT_INTERVAL - timeSinceLastSubmit) / 1000);
+          showToast(`Tunggu ${remainingTime} detik sebelum submit lagi`, 'warning', 3000);
+          this.unlockSubmission();
+          return false;
+        }
+        
+        window.LAST_RKH_SUBMIT = Date.now();
+
         const payload = this.transformToBackendFormat();
         
         try {
@@ -1076,7 +1094,9 @@
           if (result.success) {
             console.log('Submit successful:', result.rkhno);
             
-            // Show success modal with data
+            // Keep locks active on success (don't unlock)
+            // User will be redirected anyway via modal
+            
             window.dispatchEvent(new CustomEvent('rkh-success', {
               detail: {
                 rkhno: result.rkhno || '-',
@@ -1091,25 +1111,51 @@
 
           } else {
             console.error('Submit failed:', result.message);
-            showToast(result.message || 'Gagal submit RKH', 'error', 4000);
-            this.unlockSubmission();
+            
+            // Handle backend duplicate detection
+            if (response.status === 429) {
+              showToast('Permintaan terlalu cepat, tunggu sebentar...', 'warning', 4000);
+            } else if (response.status === 409) {
+              showToast(result.message, 'error', 5000);
+            } else {
+              showToast(result.message || 'Gagal submit RKH', 'error', 4000);
+            }
+            
+            // Unlock after 5 seconds
+            setTimeout(() => {
+              this.unlockSubmission();
+            }, 5000);
           }
         } catch (error) {
           console.error('Submit error:', error);
-          showToast('Terjadi kesalahan sistem', 'error', 4000);
-          this.unlockSubmission();
+          showToast('Terjadi kesalahan koneksi', 'error', 4000);
+          
+          // Unlock after 5 seconds on network error
+          setTimeout(() => {
+            this.unlockSubmission();
+          }, 5000);
         }
       },
 
-      // Helper to unlock submission (only on errors)
+      // Helper to unlock submission (with visual feedback)
       unlockSubmission() {
+        console.log('Unlocking submission...');
+        
         this.isSubmitting = false;
         window.RKH_SUBMISSION_LOCK = false;
         
         const submitBtn = document.getElementById('submit-btn');
         if (submitBtn) {
           submitBtn.disabled = false;
+          
+          // Add visual feedback when button is re-enabled
+          submitBtn.classList.add('animate-pulse');
+          setTimeout(() => {
+            submitBtn.classList.remove('animate-pulse');
+          }, 1000);
         }
+        
+        showToast('Silakan coba submit lagi', 'info', 2000);
       },
 
       transformToBackendFormat() {

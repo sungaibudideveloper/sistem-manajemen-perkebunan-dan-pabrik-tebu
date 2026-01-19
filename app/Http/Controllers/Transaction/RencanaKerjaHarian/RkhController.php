@@ -11,6 +11,7 @@ use App\Services\Transaction\RencanaKerjaHarian\Utility\RkhUtilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
 
 class RkhController extends Controller
 {
@@ -233,52 +234,96 @@ class RkhController extends Controller
         try {
             $companycode = Session::get('companycode');
             $userid = Auth::user()->userid;
+            $mandorId = $request->input('mandor_id');
+            $tanggal = $request->input('tanggal');
 
-            \Log::info('RKH Store - Incoming Request', [
-                'tanggal' => $request->input('tanggal'),
-                'mandor_id' => $request->input('mandor_id'),
-                'rows_count' => count($request->input('rows', [])),
-                'has_workers' => $request->has('workers'),
-                'has_kendaraan' => $request->has('kendaraan'),
-            ]);
-
-            // Validate request
-            $this->validationService->validateRkhRequest($request);
-
-            \Log::info('RKH Store - Validation Passed');
-
-            // Prepare DTO
-            $dto = [
-                'companycode' => $companycode,
-                'userid' => $userid,
-                'rkhdate' => $request->input('tanggal'),
-                'mandorid' => $request->input('mandor_id'),
-                'rows' => $request->input('rows', []),
-                'workers' => $request->input('workers', []),
-                'kendaraan' => $request->input('kendaraan', []),
-            ];
-
-            // Create RKH via service
-            $result = $this->rkhService->createRkh($dto, $companycode, $userid);
-
-            \Log::info('RKH Store - Service Result', [
-                'success' => $result['success'],
-                'rkhno' => $result['rkhno'] ?? 'N/A'
-            ]);
-
-            if ($result['success']) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $result['message'],
-                    'rkhno' => $result['rkhno'],
-                    'redirect_url' => route('transaction.rencanakerjaharian.show', $result['rkhno'])
+            // PROTECTION 1: Cache-based submission lock
+            $cacheKey = "rkh_submit_{$companycode}_{$mandorId}_{$tanggal}";
+            
+            if (Cache::has($cacheKey)) {
+                \Log::warning('RKH Store - Duplicate Submission Blocked', [
+                    'mandor_id' => $mandorId,
+                    'tanggal' => $tanggal
                 ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sedang diproses, mohon tunggu...'
+                ], 429);
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => $result['message']
-            ], 400);
+            // Lock for 10 seconds
+            Cache::put($cacheKey, true, 10);
+
+            try {
+                \Log::info('RKH Store - Incoming Request', [
+                    'tanggal' => $tanggal,
+                    'mandor_id' => $mandorId,
+                    'rows_count' => count($request->input('rows', [])),
+                ]);
+
+                // PROTECTION 2: Database duplicate check
+                $duplicateCheck = $this->utilityService->checkDuplicateRkh($companycode, $mandorId, $tanggal);
+                
+                if ($duplicateCheck['exists']) {
+                    Cache::forget($cacheKey);
+                    
+                    \Log::warning('RKH Store - Duplicate Found', [
+                        'existing_rkhno' => $duplicateCheck['rkhno']
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'RKH untuk tanggal ini sudah ada (No: ' . $duplicateCheck['rkhno'] . ')'
+                    ], 409);
+                }
+
+                // Validate request
+                $this->validationService->validateRkhRequest($request);
+
+                \Log::info('RKH Store - Validation Passed');
+
+                // Prepare DTO
+                $dto = [
+                    'companycode' => $companycode,
+                    'userid' => $userid,
+                    'rkhdate' => $tanggal,
+                    'mandorid' => $mandorId,
+                    'rows' => $request->input('rows', []),
+                    'workers' => $request->input('workers', []),
+                    'kendaraan' => $request->input('kendaraan', []),
+                ];
+
+                // Create RKH via service
+                $result = $this->rkhService->createRkh($dto, $companycode, $userid);
+
+                // Clear lock after success
+                Cache::forget($cacheKey);
+
+                \Log::info('RKH Store - Service Result', [
+                    'success' => $result['success'],
+                    'rkhno' => $result['rkhno'] ?? 'N/A'
+                ]);
+
+                if ($result['success']) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'rkhno' => $result['rkhno'],
+                        'redirect_url' => route('transaction.rencanakerjaharian.show', $result['rkhno'])
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], 400);
+
+            } catch (\Exception $e) {
+                // Clear lock on error
+                Cache::forget($cacheKey);
+                throw $e;
+            }
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::warning('RKH Store - Validation Failed', [
@@ -314,7 +359,6 @@ class RkhController extends Controller
         try {
             $companycode = Session::get('companycode');
             
-            // ✅ FIX: Pastikan urutan parameter benar
             $data = $this->rkhService->getShowPageData($rkhno, $companycode);
 
             return view('transaction.rencanakerjaharian.rkh-show', array_merge($data, [
@@ -382,7 +426,6 @@ class RkhController extends Controller
 
             \Log::info('RKH Update - Validation Passed');
 
-            // ✅ FIX: Prepare DTO yang lengkap (sama kayak store)
             $dto = [
                 'companycode' => $companycode,
                 'userid' => $userid,
@@ -394,7 +437,6 @@ class RkhController extends Controller
                 'kendaraan' => $request->input('kendaraan', []),
             ];
 
-            // ✅ Update RKH via service
             $result = $this->rkhService->updateRkh($rkhno, $dto, $companycode, $userid);
 
             \Log::info('RKH Update - Service Result', ['success' => $result]);
@@ -447,7 +489,7 @@ class RkhController extends Controller
         try {
             $companycode = Session::get('companycode');
             
-            // ✅ FIX: Correct parameter order (rkhno first, then companycode)
+            // Correct parameter order (rkhno first, then companycode)
             $result = $this->rkhService->deleteRkh($rkhno, $companycode);
 
             return response()->json($result, $result['success'] ? 200 : 400);
