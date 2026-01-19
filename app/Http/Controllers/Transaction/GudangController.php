@@ -310,6 +310,22 @@ class GudangController extends Controller
 
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno, 1));
         $first = $details->first();
+
+        Log::info('SUBMIT DEBUG CONTEXT', [
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+            'session_companycode' => session('companycode'),
+            'req_rkhno' => $request->rkhno,
+            'req_approvalno' => $request->approvalno ?? null,
+            'req_costcenter' => $request->costcenter ?? null,
+            'host' => $request->getHost(),
+            'user_userid' => Auth::user()->userid ?? null,
+            'first_hdr_companycode' => $first->companycode ?? null,
+            'first_hdr_flagstatus' => $first->flagstatus ?? null,
+            'first_hdr_factoryinv' => $first->factoryinv ?? null,
+            'first_hdr_companyinv' => $first->companyinv ?? null,
+        ]);
+
         // $detailmaterial2 = collect($usemateriallst->where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->orderBy('lkhno')->orderBy('plot')->get());
         $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
             ->leftJoin('lkhdetailplot', function ($join) {
@@ -330,6 +346,15 @@ class GudangController extends Controller
             //
         $groupIds = $details->pluck('herbisidagroupid')->unique();
         $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get();
+
+        Log::info('DETAIL DEBUG USEMATERIALLST', [
+            'rkhno' => $request->rkhno,
+            'session_companycode' => session('companycode'),
+            'lst_count' => $lst->count(),
+            'lst_max_nouse' => $lst->max('nouse'),
+            'lst_nouse_sample' => $lst->pluck('nouse')->filter()->unique()->take(5)->values()->toArray(),
+            'lst_itemcodes_sample' => $lst->pluck('itemcode')->take(10)->values()->toArray(),
+        ]);        
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
@@ -369,14 +394,67 @@ class GudangController extends Controller
     }
 
     public function retur(Request $request)
-    {
+    {   
+        Log::info('RETUR DEBUG CONTEXT', [
+            'url' => $request->fullUrl(),
+            'session_companycode' => session('companycode'),
+            'req_rkhno' => $request->rkhno,
+            'req_lkhno' => $request->lkhno,
+            'req_itemcode' => $request->itemcode,
+            'req_plot' => $request->plot,
+            'user_userid' => Auth::user()->userid ?? null,
+            'host' => $request->getHost(),
+        ]);
+        
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $header = $usematerialhdr->selectuse(session('companycode'), $request->rkhno, 1)->get();
         $hfirst = $header->first();
 
+        Log::info('RETUR DEBUG HEADER', [
+            'header_count' => $header->count(),
+            'hfirst_exists' => (bool) $hfirst,
+            'hfirst_rkhno' => $hfirst->rkhno ?? null,
+            'hfirst_companycode' => $hfirst->companycode ?? null,
+            'hfirst_flagstatus' => $hfirst->flagstatus ?? null,
+            'hfirst_companyinv' => $hfirst->companyinv ?? null,
+            'hfirst_factoryinv' => $hfirst->factoryinv ?? null,
+            'hfirst_mandorname' => $hfirst->mandorname ?? null,
+        ]);        
+
         $details = usemateriallst::where('companycode', session('companycode'))->where('rkhno', $hfirst->rkhno)->where('lkhno', $request->lkhno)->where('itemcode', $request->itemcode)->where('plot', $request->plot);
         $first = $details->first();
+
+        Log::info('RETUR DEBUG LST ROW', [
+            'first_exists' => (bool) $first,
+            'first_itemcode' => $first->itemcode ?? null,
+            'first_plot' => $first->plot ?? null,
+            'first_lkhno' => $first->lkhno ?? null,
+            'first_qty' => $first->qty ?? null,
+            'first_qtyretur' => $first->qtyretur ?? null,
+            'first_nouse' => $first->nouse ?? null,
+            'first_noretur' => $first->noretur ?? null,
+            'first_costcenter' => $first->costcenter ?? null,
+        ]);
+        //debug
+        $group = DB::table('usemateriallst')
+            ->where('rkhno', $request->rkhno)
+            ->where('lkhno', $request->lkhno)
+            ->where('itemcode', $request->itemcode)
+            ->where('plot', $request->plot)
+            ->select('companycode', DB::raw('COUNT(*) as cnt'), DB::raw('MAX(nouse) as max_nouse'))
+            ->groupBy('companycode')
+            ->get();
+
+        Log::info('RETUR DEBUG SAME ROW GROUP BY COMPANY', [
+            'rkhno' => $request->rkhno,
+            'lkhno' => $request->lkhno,
+            'itemcode' => $request->itemcode,
+            'plot' => $request->plot,
+            'group' => $group
+        ]);
+
+        //
 
         if (strtoupper($hfirst->flagstatus) == 'COMPLETED') {
             return redirect()->back()->with('error', 'Status Barang Sudah Selesai');
@@ -431,6 +509,18 @@ class GudangController extends Controller
         
         $companyinv = company::where('companycode', session('companycode'))->first();
         if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
+        Log::info('RETUR API PAYLOAD SUMMARY', [
+            'connection' => $koneksi ?? null,
+            'company_inventory' => $companyinv->companyinventory ?? null,
+            'companytebu' => session('companycode'),
+            'rkhno' => $request->rkhno,
+            'factory' => $hfirst->factoryinv ?? null,
+            'nouse' => $first->nouse ?? null,
+            'rkhdate' => $rkhdate ?? null,
+            'qtyretur' => $first->qtyretur ?? null,
+            'itemcode' => $first->itemcode ?? null,
+        ]);        
+
         $response = Http::withoutVerifying()->withOptions([
             'headers' => ['Accept' => 'application/json']
         ])->asJson()
@@ -447,6 +537,10 @@ class GudangController extends Controller
             ]);
 
         //log
+        Log::info('RETUR API RESPONSE', [
+            'http_status' => $response->status(),
+            'body' => $response->json(),
+        ]);        
         if ($response->successful()) {
             Log::info('API success:', $response->json());
         } else {
@@ -460,6 +554,14 @@ class GudangController extends Controller
             if ($response->json()['status'] == 1) {
                 usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->where('itemcode', $first->itemcode)
                     ->where('lkhno', $first->lkhno)->where('plot', $first->plot)->update(['noretur' => $response->json()['noretur'],'tglretur'  => now()]);
+
+                    Log::info('RETUR DB UPDATED', [
+                        'rkhno' => $request->rkhno,
+                        'companycode' => session('companycode'),
+                        'itemcode' => $first->itemcode,
+                        'plot' => $first->plot,
+                        'noretur' => $response->json()['noretur'] ?? null,
+                    ]);                    
             }
         } else {
             dd($response->json(), $response->body(), $response->status());
@@ -867,6 +969,18 @@ public function submit(Request $request)
     try {
         $companyinv = company::where('companycode', session('companycode'))->first();
         if( request()->getHost() == 'sugarcane.sblampung.com' ){$koneksi = '172.17.1.39';}else{$koneksi = 'TESTING';}
+        Log::info('SUBMIT API PAYLOAD SUMMARY', [
+            'connection' => $koneksi ?? null,
+            'company_inventory' => $companyinv->companyinventory ?? null,
+            'companytebu' => session('companycode'),
+            'rkhno' => $request->rkhno,
+            'factory' => $first->factoryinv ?? null,
+            'costcenter' => $request->costcenter ?? null,
+            'rkhdate' => $rkhdate ?? null,
+            'items_count' => is_array($apiPayload) ? count($apiPayload) : null,
+            'api_itemcodes' => array_slice(array_keys($apiPayload ?? []), 0, 10),
+        ]);
+        
         $response = Http::withoutVerifying()
             ->withOptions(['headers' => ['Accept' => 'application/json']])
             ->asJson()
@@ -903,10 +1017,35 @@ public function submit(Request $request)
         }
 
         $responseData = $response->json();
-
+        Log::info('SUBMIT API RESPONSE BASIC', [
+            'http_status' => $response->status(),
+            'resp_status' => $responseData['status'] ?? null,
+            'resp_noUse' => $responseData['noUse'] ?? null,
+            'stockitem_type' => isset($responseData['stockitem']) ? gettype($responseData['stockitem']) : null,
+            'stockitem_count' => is_array($responseData['stockitem'] ?? null) ? count($responseData['stockitem']) : null,
+            'stockitem_keys_sample' => is_array($responseData['stockitem'] ?? null) ? array_slice(array_keys($responseData['stockitem']), 0, 10) : null,
+        ]);
+        
         // Check response
         if ($response->status() == 200 && isset($responseData['status']) && $responseData['status'] == 1) {
             //new
+            Log::info('SUBMIT BEFORE UPDATE USEMATERIALLST', [
+                'rkhno' => $request->rkhno,
+                'session_companycode' => session('companycode'),
+                'db_lst_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->count(),
+                'db_lst_null_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNull('nouse')
+                    ->count(),
+                'db_lst_itemcodes_sample' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->limit(10)
+                    ->pluck('itemcode')
+                    ->toArray(),
+            ]);
+            
             // ===== FIX: stockitem dari API use_api adalah associative array (key = itemcode) =====
             $itemPriceMap = [];
             foreach (($responseData['stockitem'] ?? []) as $itemcode => $row) {
@@ -969,6 +1108,25 @@ public function submit(Request $request)
                 }
             }
 
+            Log::info('SUBMIT AFTER UPDATE USEMATERIALLST', [
+                'rkhno' => $request->rkhno,
+                'session_companycode' => session('companycode'),
+                'db_lst_max_nouse' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->max('nouse'),
+                'db_lst_nouse_distinct' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNotNull('nouse')
+                    ->distinct()
+                    ->pluck('nouse')
+                    ->take(5)
+                    ->toArray(),
+                'db_lst_notnull_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereNotNull('nouse')
+                    ->count(),
+            ]);
+            
             Cache::forget($lockKey);
             return redirect()->back()->with('success1', 'Data updated successfully');
 
