@@ -6,61 +6,63 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 /**
- * KendaraanController - Updated untuk lkhdetailkendaraan (NO PLOT!)
- * 
- * Manages vehicle BBM (fuel) data for workshop operations
- * - Admin workshop input hourmeter + solar
- * - Print BBM order with order number
- * - Gudang BBM confirmation
+ * KendaraanController - Fixed: Use Session company instead of User company
  */
 class KendaraanController extends Controller
 {
     /**
      * Display a listing of vehicle BBM data
-     * ✅ FIXED: Get plots via JOIN to lkhdetailplot
+     *  FIXED: Use Session::get('companycode') instead of auth()->user()->companycode
      */
     public function index(Request $request)
     {
         try {
+            //  CRITICAL FIX: Read from SESSION, not from user table
+            $companycode = Session::get('companycode');
             $user = auth()->user();
+            
             $search = $request->input('search');
             $filterDate = $request->input('filter_date', now()->format('Y-m-d'));
+            $showAllDate = $request->boolean('show_all_date', true);
             
-            // ✅ FIXED: Get plots via JOIN
+            //  FIXED: Use $companycode everywhere
             $query = DB::table('lkhdetailkendaraan as lk')
-                ->join('lkhhdr as lh', function($join) {
+                ->join('lkhhdr as lh', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'lh.companycode')
-                         ->on('lk.lkhno', '=', 'lh.lkhno');
+                         ->on('lk.lkhno', '=', 'lh.lkhno')
+                         ->where('lh.companycode', '=', $companycode);
                 })
-                ->join('kendaraan as k', function($join) use ($user) {
+                ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                         ->where('k.companycode', '=', $user->companycode)
+                         ->where('k.companycode', '=', $companycode)
                          ->where('k.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk_operator', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk_operator.tenagakerjaid')
-                         ->where('tk_operator.companycode', '=', $user->companycode)
+                         ->where('tk_operator.companycode', '=', $companycode)
                          ->where('tk_operator.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk_helper', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
                     $join->on('lk.helperid', '=', 'tk_helper.tenagakerjaid')
-                         ->where('tk_helper.companycode', '=', $user->companycode)
+                         ->where('tk_helper.companycode', '=', $companycode)
                          ->where('tk_helper.isactive', '=', 1);
                 })
                 ->leftJoin('activity as act', 'lh.activitycode', '=', 'act.activitycode')
-                // ✅ NEW: JOIN to get plots
-                ->leftJoin('lkhdetailplot as ldp', function($join) {
+                ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
-                         ->on('lk.lkhno', '=', 'ldp.lkhno');
+                         ->on('lk.lkhno', '=', 'ldp.lkhno')
+                         ->where('ldp.companycode', '=', $companycode);
                 })
-                ->where('lk.companycode', $user->companycode)
+                ->where('lk.companycode', $companycode)
                 ->whereNotNull('lk.jammulai')
                 ->whereNotNull('lk.jamselesai')
                 ->select([
                     'lk.id',
+                    'lk.companycode',
                     'lk.lkhno',
                     'lk.nokendaraan', 
                     'lk.jammulai',
@@ -80,7 +82,6 @@ class KendaraanController extends Controller
                     'k.jenis',
                     'tk_operator.nama as operator_nama',
                     'tk_helper.nama as helper_nama',
-                    // ✅ Get plots via GROUP_CONCAT
                     DB::raw('GROUP_CONCAT(DISTINCT ldp.plot ORDER BY ldp.plot SEPARATOR ", ") as plots'),
                     DB::raw('TIMESTAMPDIFF(HOUR, lk.jammulai, lk.jamselesai) as work_duration')
                 ]);
@@ -96,20 +97,34 @@ class KendaraanController extends Controller
                 });
             }
             
-            // Apply date filter
-            if ($filterDate) {
+            // Apply date filter ONLY if NOT showing all dates
+            if (!$showAllDate && $filterDate) {
                 $query->whereDate('lh.lkhdate', $filterDate);
             }
             
-            // ✅ Group by kendaraan (not plot!)
+            // Group by kendaraan
             $query->groupBy([
-                'lk.id', 'lk.lkhno', 'lk.nokendaraan',
-                'lk.jammulai', 'lk.jamselesai', 'lk.hourmeterstart',
-                'lk.hourmeterend', 'lk.solar', 'lk.status',
-                'lk.ordernumber', 'lk.printedby', 'lk.printedat',
-                'lk.createdat', 'lh.lkhdate', 'lh.activitycode',
-                'lh.mandorid', 'act.activityname', 'k.jenis',
-                'tk_operator.nama', 'tk_helper.nama'
+                'lk.id', 
+                'lk.companycode',
+                'lk.lkhno', 
+                'lk.nokendaraan',
+                'lk.jammulai', 
+                'lk.jamselesai', 
+                'lk.hourmeterstart',
+                'lk.hourmeterend', 
+                'lk.solar', 
+                'lk.status',
+                'lk.ordernumber', 
+                'lk.printedby', 
+                'lk.printedat',
+                'lk.createdat', 
+                'lh.lkhdate', 
+                'lh.activitycode',
+                'lh.mandorid', 
+                'act.activityname', 
+                'k.jenis',
+                'tk_operator.nama', 
+                'tk_helper.nama'
             ]);
             
             $kendaraanData = $query->orderBy('lh.lkhdate', 'desc')
@@ -118,32 +133,33 @@ class KendaraanController extends Controller
                                   ->paginate(20);
             
             // Calculate statistics
+            $statsQuery = DB::table('lkhdetailkendaraan as lk')
+                ->join('lkhhdr as lh', function($join) use ($companycode) {
+                    $join->on('lk.companycode', '=', 'lh.companycode')
+                         ->on('lk.lkhno', '=', 'lh.lkhno')
+                         ->where('lh.companycode', '=', $companycode);
+                })
+                ->where('lk.companycode', $companycode)
+                ->whereNotNull('lk.jammulai');
+            
+            // Apply same date filter to stats
+            if (!$showAllDate && $filterDate) {
+                $statsQuery->whereDate('lh.lkhdate', $filterDate);
+            }
+            
             $stats = [
-                'total' => DB::table('lkhdetailkendaraan')
-                    ->where('companycode', $user->companycode)
-                    ->whereNotNull('jammulai')
-                    ->whereDate('createdat', '>=', now()->subDays(7))
-                    ->count(),
-                'pending' => DB::table('lkhdetailkendaraan')
-                    ->where('companycode', $user->companycode)
-                    ->whereNotNull('jammulai')
-                    ->whereNull('status')
-                    ->count(),
-                'completed' => DB::table('lkhdetailkendaraan')
-                    ->where('companycode', $user->companycode)
-                    ->where('status', 'INPUTTED')
-                    ->count(),
-                'printed' => DB::table('lkhdetailkendaraan')
-                    ->where('companycode', $user->companycode)
-                    ->where('status', 'PRINTED')
-                    ->count(),
+                'total' => (clone $statsQuery)->count(),
+                'pending' => (clone $statsQuery)->whereNull('lk.status')->count(),
+                'completed' => (clone $statsQuery)->where('lk.status', 'INPUTTED')->count(),
+                'printed' => (clone $statsQuery)->where('lk.status', 'PRINTED')->count(),
             ];
             
             return view('transaction.kendaraan-workshop.index', compact(
                 'kendaraanData',
                 'stats', 
                 'search',
-                'filterDate'
+                'filterDate',
+                'showAllDate'
             ))->with([
                 'title' => 'Input Data Kendaraan',
                 'navbar' => 'Input Data Kendaraan',
@@ -162,7 +178,6 @@ class KendaraanController extends Controller
 
     /**
      * Store vehicle BBM data
-     * ✅ FIXED: No plot field
      */
     public function store(Request $request)
     {
@@ -174,11 +189,12 @@ class KendaraanController extends Controller
                 'solar' => 'required|numeric|min:0.01'
             ]);
             
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             $existingRecord = DB::table('lkhdetailkendaraan')
                 ->where('id', $request->id)
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->first();
             
             if (!$existingRecord) {
@@ -199,7 +215,7 @@ class KendaraanController extends Controller
             
             DB::table('lkhdetailkendaraan')
                 ->where('id', $request->id)
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->update([
                     'hourmeterstart' => $request->hourmeterstart,
                     'hourmeterend' => $request->hourmeterend,
@@ -247,7 +263,6 @@ class KendaraanController extends Controller
 
     /**
      * Update vehicle BBM data
-     * ✅ FIXED: No plot field
      */
     public function update(Request $request)
     {
@@ -259,11 +274,12 @@ class KendaraanController extends Controller
                 'solar' => 'required|numeric|min:0.01'
             ]);
             
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             $existingRecord = DB::table('lkhdetailkendaraan')
                 ->where('id', $request->id)
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->first();
             
             if (!$existingRecord) {
@@ -284,7 +300,7 @@ class KendaraanController extends Controller
             
             DB::table('lkhdetailkendaraan')
                 ->where('id', $request->id)
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->update([
                     'hourmeterstart' => $request->hourmeterstart,
                     'hourmeterend' => $request->hourmeterend,
@@ -331,15 +347,15 @@ class KendaraanController extends Controller
 
     /**
      * Mark as printed dan generate order number
-     * ✅ FIXED: No plot field
      */
     public function markPrinted($lkhno)
     {
         try {
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             $existingData = DB::table('lkhdetailkendaraan')
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->where('lkhno', $lkhno)
                 ->where('status', 'INPUTTED')
                 ->whereNotNull('solar')
@@ -357,7 +373,7 @@ class KendaraanController extends Controller
             $orderNumber = $this->generateOrderNumber();
             
             $updated = DB::table('lkhdetailkendaraan')
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->where('lkhno', $lkhno)
                 ->where('status', 'INPUTTED')
                 ->update([
@@ -402,17 +418,17 @@ class KendaraanController extends Controller
 
     /**
      * Display print page
-     * ✅ FIXED: Get plots via JOIN
      */
     public function print($lkhno)
     {
         try {
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             $lkhData = DB::table('lkhhdr as lkh')
                 ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
                 ->leftJoin('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                ->where('lkh.companycode', $user->companycode)
+                ->where('lkh.companycode', $companycode)
                 ->where('lkh.lkhno', $lkhno)
                 ->select([
                     'lkh.*',
@@ -426,29 +442,28 @@ class KendaraanController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
             
-            // ✅ FIXED: Get plots via JOIN
             $vehicleData = DB::table('lkhdetailkendaraan as lk')
-                ->join('kendaraan as k', function($join) use ($user) {
+                ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                        ->where('k.companycode', '=', $user->companycode)
+                        ->where('k.companycode', '=', $companycode)
                         ->where('k.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk_operator', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk_operator.tenagakerjaid')
-                        ->where('tk_operator.companycode', '=', $user->companycode)
+                        ->where('tk_operator.companycode', '=', $companycode)
                         ->where('tk_operator.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk_helper', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
                     $join->on('lk.helperid', '=', 'tk_helper.tenagakerjaid')
-                        ->where('tk_helper.companycode', '=', $user->companycode)
+                        ->where('tk_helper.companycode', '=', $companycode)
                         ->where('tk_helper.isactive', '=', 1);
                 })
-                // ✅ NEW: JOIN to get plots
-                ->leftJoin('lkhdetailplot as ldp', function($join) use ($user) {
+                ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
-                         ->on('lk.lkhno', '=', 'ldp.lkhno');
+                         ->on('lk.lkhno', '=', 'ldp.lkhno')
+                         ->where('ldp.companycode', '=', $companycode);
                 })
-                ->where('lk.companycode', $user->companycode)
+                ->where('lk.companycode', $companycode)
                 ->where('lk.lkhno', $lkhno)
                 ->whereIn('lk.status', ['INPUTTED', 'PRINTED'])
                 ->whereNotNull('lk.solar')
@@ -464,7 +479,6 @@ class KendaraanController extends Controller
                     'k.jenis',
                     'tk_operator.nama as operator_nama',
                     'tk_helper.nama as helper_nama',
-                    // ✅ Get plots via GROUP_CONCAT
                     DB::raw('GROUP_CONCAT(DISTINCT ldp.plot ORDER BY ldp.plot SEPARATOR ", ") as plots')
                 ])
                 ->groupBy([
@@ -524,8 +538,7 @@ class KendaraanController extends Controller
      */
     private function generateOrderNumber()
     {
-        $user = auth()->user();
-        $companycode = $user->companycode;
+        $companycode = Session::get('companycode');
         
         try {
             $lastOrder = DB::table('lkhdetailkendaraan')
@@ -558,33 +571,31 @@ class KendaraanController extends Controller
     }
 
     /**
-     * ✅ Get kendaraan details for specific LKH (API endpoint)
-     * ✅ FIXED: Include plots via JOIN
+     * Get kendaraan details for specific LKH (API endpoint)
      */
     public function getKendaraanForLkh($lkhno)
     {
         try {
-            $user = auth()->user();
+            $companycode = Session::get('companycode');
             
             $kendaraanData = DB::table('lkhdetailkendaraan as lk')
-                ->join('kendaraan as k', function($join) use ($user) {
+                ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                        ->where('k.companycode', '=', $user->companycode);
+                        ->where('k.companycode', '=', $companycode);
                 })
-                ->leftJoin('tenagakerja as tk_operator', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk_operator.tenagakerjaid')
-                        ->where('tk_operator.companycode', '=', $user->companycode);
+                        ->where('tk_operator.companycode', '=', $companycode);
                 })
-                ->leftJoin('tenagakerja as tk_helper', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
                     $join->on('lk.helperid', '=', 'tk_helper.tenagakerjaid')
-                        ->where('tk_helper.companycode', '=', $user->companycode);
+                        ->where('tk_helper.companycode', '=', $companycode);
                 })
-                // ✅ NEW: JOIN to get plots
                 ->leftJoin('lkhdetailplot as ldp', function($join) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
                          ->on('lk.lkhno', '=', 'ldp.lkhno');
                 })
-                ->where('lk.companycode', $user->companycode)
+                ->where('lk.companycode', $companycode)
                 ->where('lk.lkhno', $lkhno)
                 ->select([
                     'lk.id',
@@ -634,7 +645,6 @@ class KendaraanController extends Controller
 
     /**
      * Bulk update kendaraan data (for handheld mobile)
-     * ✅ FIXED: No plot field
      */
     public function bulkUpdateFromHandheld(Request $request)
     {
@@ -647,8 +657,8 @@ class KendaraanController extends Controller
                 'vehicles.*.jamselesai' => 'required|date_format:H:i|after:vehicles.*.jammulai'
             ]);
             
+            $companycode = Session::get('companycode');
             $user = auth()->user();
-            $companycode = $user->companycode;
             
             DB::beginTransaction();
             
