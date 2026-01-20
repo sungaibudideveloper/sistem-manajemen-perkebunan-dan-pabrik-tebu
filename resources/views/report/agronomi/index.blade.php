@@ -25,10 +25,10 @@
                             <span>Export to Excel</span>
                         </button>
                     @endcan
-                    @can('report.agronomi.export')
+                    @can('dashboard.agronomi.pivot')
                         <button
                             class="bg-blue-700 text-white px-4 py-2 border border-transparent shadow-sm rounded-md font-medium hover:bg-blue-800 flex items-center space-x-2"
-                            onclick="window.location.href='{{ route('pivotTableAgronomi', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
+                            onclick="window.location.href='{{ route('report.pivotTableAgronomi', ['start_date' => old('start_date', request()->start_date), 'end_date' => old('end_date', request()->end_date)]) }}'">
                             <svg class="w-5 h-5 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                 width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                                 <path fill-rule="evenodd"
