@@ -6,49 +6,51 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 /**
- * GudangBbmController - Updated untuk lkhdetailkendaraan (NO PLOT!)
- * ✅ FIXED: Get plots via JOIN to lkhdetailplot
+ * GudangBbmController - FIXED: Use Session company consistently
  */
 class GudangBbmController extends Controller
 {
     /**
      * Display a listing of BBM orders ready for confirmation
-     * ✅ FIXED: Get plots via JOIN
+     * ✅ FIXED: Use Session::get('companycode') instead of auth()->user()->companycode
      */
     public function index(Request $request)
     {
         try {
+            // ✅ CRITICAL FIX: Read from SESSION, not from user table
+            $companycode = Session::get('companycode');
             $user = auth()->user();
+            
             $search = $request->input('search');
             $filterDate = $request->input('filter_date', now()->format('Y-m-d'));
             $showAll = $request->boolean('show_all');
 
-            // ✅ FIXED: Get plots via JOIN
+            // ✅ FIXED: Use $companycode everywhere
             $query = DB::table('lkhdetailkendaraan as lk')
-                ->join('lkhhdr as lkh', function($join) {
+                ->join('lkhhdr as lkh', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'lkh.companycode')
                          ->on('lk.lkhno', '=', 'lkh.lkhno');
                 })
-                ->join('kendaraan as k', function($join) use ($user) {
+                ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                         ->where('k.companycode', '=', $user->companycode)
+                         ->where('k.companycode', '=', $companycode)
                          ->where('k.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk.tenagakerjaid')
-                         ->where('tk.companycode', '=', $user->companycode)
+                         ->where('tk.companycode', '=', $companycode)
                          ->where('tk.isactive', '=', 1);
                 })
                 ->leftJoin('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                // ✅ NEW: JOIN to get plots
                 ->leftJoin('lkhdetailplot as ldp', function($join) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
                          ->on('lk.lkhno', '=', 'ldp.lkhno');
                 })
-                ->where('lk.companycode', $user->companycode)
+                ->where('lk.companycode', $companycode)
                 ->where('lk.status', 'PRINTED')
                 ->whereNotNull('lk.ordernumber')
                 ->whereNotNull('lk.solar')
@@ -72,7 +74,6 @@ class GudangBbmController extends Controller
                     'act.activityname',
                     'k.jenis',
                     'tk.nama as operator_nama',
-                    // ✅ Get plots via GROUP_CONCAT
                     DB::raw('GROUP_CONCAT(DISTINCT ldp.plot ORDER BY ldp.plot SEPARATOR ", ") as plots')
                 ]);
 
@@ -90,7 +91,7 @@ class GudangBbmController extends Controller
                 $query->whereDate('lkh.lkhdate', $filterDate);
             }
 
-            // ✅ Group by kendaraan (not plot!)
+            // Group by kendaraan
             $query->groupBy([
                 'lk.id', 'lk.lkhno', 'lk.nokendaraan',
                 'lk.jammulai', 'lk.jamselesai', 'lk.hourmeterstart',
@@ -134,7 +135,7 @@ class GudangBbmController extends Controller
 
             $stats = [
                 'pending_confirm' => $groupedData->where('gudangconfirm', 0)->count(),
-                'confirmed_today' => $this->getConfirmedTodayCount($user->companycode, $filterDate),
+                'confirmed_today' => $this->getConfirmedTodayCount($companycode, $filterDate),
                 'total_vehicles' => $rawData->count(),
                 'total_solar' => $rawData->sum('solar')
             ];
@@ -156,16 +157,17 @@ class GudangBbmController extends Controller
 
     /**
      * Show print view for specific Order Number
-     * ✅ FIXED: Get plots via JOIN
+     * ✅ FIXED: Use Session company
      */
     public function show($ordernumber)
     {
         try {
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             // Get order data from lkhdetailkendaraan
             $orderData = DB::table('lkhdetailkendaraan')
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->where('ordernumber', $ordernumber)
                 ->where('status', 'PRINTED')
                 ->first();
@@ -179,7 +181,7 @@ class GudangBbmController extends Controller
             $lkhData = DB::table('lkhhdr as lkh')
                 ->leftJoin('user as u', 'lkh.mandorid', '=', 'u.userid')
                 ->leftJoin('activity as act', 'lkh.activitycode', '=', 'act.activitycode')
-                ->where('lkh.companycode', $user->companycode)
+                ->where('lkh.companycode', $companycode)
                 ->where('lkh.lkhno', $orderData->lkhno)
                 ->select([
                     'lkh.*',
@@ -193,24 +195,23 @@ class GudangBbmController extends Controller
                     ->with('error', 'Data LKH tidak ditemukan');
             }
             
-            // ✅ FIXED: Get vehicle data with plots via JOIN
+            // Get vehicle data with plots via JOIN
             $vehicleData = DB::table('lkhdetailkendaraan as lk')
-                ->join('kendaraan as k', function($join) use ($user) {
+                ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                         ->where('k.companycode', '=', $user->companycode)
+                         ->where('k.companycode', '=', $companycode)
                          ->where('k.isactive', '=', 1);
                 })
-                ->leftJoin('tenagakerja as tk', function($join) use ($user) {
+                ->leftJoin('tenagakerja as tk', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk.tenagakerjaid')
-                         ->where('tk.companycode', '=', $user->companycode)
+                         ->where('tk.companycode', '=', $companycode)
                          ->where('tk.isactive', '=', 1);
                 })
-                // ✅ NEW: JOIN to get plots
                 ->leftJoin('lkhdetailplot as ldp', function($join) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
                          ->on('lk.lkhno', '=', 'ldp.lkhno');
                 })
-                ->where('lk.companycode', $user->companycode)
+                ->where('lk.companycode', $companycode)
                 ->where('lk.ordernumber', $ordernumber)
                 ->where('lk.status', 'PRINTED')
                 ->whereNotNull('lk.solar')
@@ -226,7 +227,6 @@ class GudangBbmController extends Controller
                     'lk.gudangconfirm',
                     'k.jenis',
                     'tk.nama as operator_nama',
-                    // ✅ Get plots via GROUP_CONCAT
                     DB::raw('GROUP_CONCAT(DISTINCT ldp.plot ORDER BY ldp.plot SEPARATOR ", ") as plots')
                 ])
                 ->groupBy([
@@ -276,7 +276,7 @@ class GudangBbmController extends Controller
 
     /**
      * Mark BBM order as confirmed (by Order Number)
-     * ✅ FIXED: No plot field
+     * ✅ FIXED: Use Session company
      */
     public function markConfirmed(Request $request, $ordernumber)
     {
@@ -285,11 +285,12 @@ class GudangBbmController extends Controller
                 'ordernumber' => 'required|string'
             ]);
             
+            $companycode = Session::get('companycode');
             $user = auth()->user();
             
             // Verify from lkhdetailkendaraan
             $orderExists = DB::table('lkhdetailkendaraan')
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->where('ordernumber', $ordernumber)
                 ->where('status', 'PRINTED')
                 ->exists();
@@ -305,7 +306,7 @@ class GudangBbmController extends Controller
             
             // Update lkhdetailkendaraan
             $updated = DB::table('lkhdetailkendaraan')
-                ->where('companycode', $user->companycode)
+                ->where('companycode', $companycode)
                 ->where('ordernumber', $ordernumber)
                 ->where('status', 'PRINTED')
                 ->where('gudangconfirm', 0)
@@ -361,7 +362,7 @@ class GudangBbmController extends Controller
 
     /**
      * Get count of confirmed orders today for statistics
-     * ✅ FIXED: Use lkhdetailkendaraan
+     * ✅ FIXED: Use $companycode parameter
      */
     private function getConfirmedTodayCount($companycode, $filterDate)
     {

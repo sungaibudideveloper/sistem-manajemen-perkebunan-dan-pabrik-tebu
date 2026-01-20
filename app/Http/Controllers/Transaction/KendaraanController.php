@@ -21,41 +21,41 @@ class KendaraanController extends Controller
     public function index(Request $request)
     {
         try {
-            //  CRITICAL FIX: Read from SESSION, not from user table
             $companycode = Session::get('companycode');
             $user = auth()->user();
             
             $search = $request->input('search');
-            $filterDate = $request->input('filter_date', now()->format('Y-m-d'));
-            $showAllDate = $request->boolean('show_all_date', true);
             
-            //  FIXED: Use $companycode everywhere
+            // ✅ FIX: Sama seperti Gudang BBM
+            $filterDate = $request->input('filter_date', now()->format('Y-m-d')); // Default = today
+            $showAllDate = $request->boolean('show_all_date'); // ❌ HAPUS parameter kedua (default = false)
+            
             $query = DB::table('lkhdetailkendaraan as lk')
                 ->join('lkhhdr as lh', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'lh.companycode')
-                         ->on('lk.lkhno', '=', 'lh.lkhno')
-                         ->where('lh.companycode', '=', $companycode);
+                        ->on('lk.lkhno', '=', 'lh.lkhno')
+                        ->where('lh.companycode', '=', $companycode);
                 })
                 ->join('kendaraan as k', function($join) use ($companycode) {
                     $join->on('lk.nokendaraan', '=', 'k.nokendaraan')
-                         ->where('k.companycode', '=', $companycode)
-                         ->where('k.isactive', '=', 1);
+                        ->where('k.companycode', '=', $companycode)
+                        ->where('k.isactive', '=', 1);
                 })
                 ->leftJoin('tenagakerja as tk_operator', function($join) use ($companycode) {
                     $join->on('lk.operatorid', '=', 'tk_operator.tenagakerjaid')
-                         ->where('tk_operator.companycode', '=', $companycode)
-                         ->where('tk_operator.isactive', '=', 1);
+                        ->where('tk_operator.companycode', '=', $companycode)
+                        ->where('tk_operator.isactive', '=', 1);
                 })
                 ->leftJoin('tenagakerja as tk_helper', function($join) use ($companycode) {
                     $join->on('lk.helperid', '=', 'tk_helper.tenagakerjaid')
-                         ->where('tk_helper.companycode', '=', $companycode)
-                         ->where('tk_helper.isactive', '=', 1);
+                        ->where('tk_helper.companycode', '=', $companycode)
+                        ->where('tk_helper.isactive', '=', 1);
                 })
                 ->leftJoin('activity as act', 'lh.activitycode', '=', 'act.activitycode')
                 ->leftJoin('lkhdetailplot as ldp', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'ldp.companycode')
-                         ->on('lk.lkhno', '=', 'ldp.lkhno')
-                         ->where('ldp.companycode', '=', $companycode);
+                        ->on('lk.lkhno', '=', 'ldp.lkhno')
+                        ->where('ldp.companycode', '=', $companycode);
                 })
                 ->where('lk.companycode', $companycode)
                 ->whereNotNull('lk.jammulai')
@@ -90,15 +90,15 @@ class KendaraanController extends Controller
             if ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('lk.lkhno', 'like', "%{$search}%")
-                      ->orWhere('lk.nokendaraan', 'like', "%{$search}%")
-                      ->orWhere('lk.ordernumber', 'like', "%{$search}%")
-                      ->orWhere('tk_operator.nama', 'like', "%{$search}%")
-                      ->orWhere('act.activityname', 'like', "%{$search}%");
+                    ->orWhere('lk.nokendaraan', 'like', "%{$search}%")
+                    ->orWhere('lk.ordernumber', 'like', "%{$search}%")
+                    ->orWhere('tk_operator.nama', 'like', "%{$search}%")
+                    ->orWhere('act.activityname', 'like', "%{$search}%");
                 });
             }
             
-            // Apply date filter ONLY if NOT showing all dates
-            if (!$showAllDate && $filterDate) {
+            // ✅ FIX: Apply date filter - SAMA SEPERTI GUDANG BBM
+            if ($filterDate && !$showAllDate) {
                 $query->whereDate('lh.lkhdate', $filterDate);
             }
             
@@ -128,22 +128,22 @@ class KendaraanController extends Controller
             ]);
             
             $kendaraanData = $query->orderBy('lh.lkhdate', 'desc')
-                                  ->orderBy('lk.lkhno')
-                                  ->orderBy('lk.nokendaraan')
-                                  ->paginate(20);
+                                ->orderBy('lk.lkhno')
+                                ->orderBy('lk.nokendaraan')
+                                ->paginate(20);
             
             // Calculate statistics
             $statsQuery = DB::table('lkhdetailkendaraan as lk')
                 ->join('lkhhdr as lh', function($join) use ($companycode) {
                     $join->on('lk.companycode', '=', 'lh.companycode')
-                         ->on('lk.lkhno', '=', 'lh.lkhno')
-                         ->where('lh.companycode', '=', $companycode);
+                        ->on('lk.lkhno', '=', 'lh.lkhno')
+                        ->where('lh.companycode', '=', $companycode);
                 })
                 ->where('lk.companycode', $companycode)
                 ->whereNotNull('lk.jammulai');
             
-            // Apply same date filter to stats
-            if (!$showAllDate && $filterDate) {
+            // ✅ FIX: Apply same date filter to stats
+            if ($filterDate && !$showAllDate) {
                 $statsQuery->whereDate('lh.lkhdate', $filterDate);
             }
             
