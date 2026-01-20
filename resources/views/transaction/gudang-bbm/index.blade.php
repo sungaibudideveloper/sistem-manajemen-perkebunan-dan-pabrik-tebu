@@ -23,7 +23,7 @@
                         <input type="checkbox" name="show_all" value="1" {{ request('show_all') ? 'checked' : '' }}
                                onchange="this.form.submit()"
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        <span>Tampilkan semua tanggal</span>
+                        <span>Show All Date</span>
                     </label>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm rounded">
                         Cari
