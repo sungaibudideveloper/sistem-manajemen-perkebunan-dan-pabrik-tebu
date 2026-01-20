@@ -52,9 +52,9 @@ class ReportController extends Controller
                 $join->on('agrohdr.blok', '=', 'blok.blok')
                     ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('agrohdr.plot', '=', 'plot.plot')
-                    ->whereColumn('agrohdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('agrohdr.plot', '=', 'batch.plot')
+                    ->whereColumn('agrohdr.companycode', '=', 'batch.companycode');
             })
             ->where('agrolst.companycode', session('companycode'))
             ->where('agrohdr.companycode', session('companycode'))
@@ -83,9 +83,9 @@ class ReportController extends Controller
             'agrohdr.tanggaltanam',
             'company.name as compName',
             'blok.blok as blokName',
-            'plot.plot as plotName',
-            'plot.luasarea',
-            'plot.jaraktanam',
+            'batch.plot as plotName',
+            'batch.batcharea as luasarea',
+            'batch.pkp as jaraktanam',
         )
             ->orderBy('agrohdr.tanggalpengamatan', 'asc');
 
@@ -139,9 +139,9 @@ class ReportController extends Controller
                 $join->on('hpthdr.blok', '=', 'blok.blok')
                     ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('hpthdr.plot', '=', 'plot.plot')
-                    ->whereColumn('hpthdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('hpthdr.plot', '=', 'batch.plot')
+                    ->whereColumn('hpthdr.companycode', '=', 'batch.companycode');
             })
             ->where('hptlst.companycode', session('companycode'))
             ->where('hpthdr.companycode', session('companycode'))
@@ -168,8 +168,8 @@ class ReportController extends Controller
             'hpthdr.tanggaltanam',
             'company.name as compName',
             'blok.blok as blokName',
-            'plot.plot as plotName',
-            'plot.luasarea',
+            'batch.plot as plotName',
+            'batch.luasarea',
         )
             ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 

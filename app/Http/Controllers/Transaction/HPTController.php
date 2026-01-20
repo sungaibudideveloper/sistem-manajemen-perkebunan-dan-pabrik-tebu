@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
-use App\Http\Controllers\NotificationController;
 use Box\Spout\Writer\Common\Creator\Style\StyleBuilder;
 use Box\Spout\Writer\Common\Creator\WriterEntityFactory;
 
@@ -202,7 +201,6 @@ class HPTController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate($this->requestValidated());
-        $notifController = new NotificationController();
 
         $existsInHeader = DB::table('hpthdr')->where('nosample', $request->nosample)
             ->where('companycode', $request->companycode)
@@ -606,9 +604,9 @@ class HPTController extends Controller
                 $join->on('hpthdr.blok', '=', 'blok.blok')
                     ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plotting', function ($join) {
-                $join->on('hpthdr.plot', '=', 'plotting.plot')
-                    ->whereColumn('hpthdr.companycode', '=', 'plotting.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('hpthdr.plot', '=', 'batch.plot')
+                    ->whereColumn('hpthdr.companycode', '=', 'batch.companycode');
             })
             ->where('hptlst.companycode', session('companycode'))
             ->where('hpthdr.companycode', session('companycode'))
@@ -620,10 +618,10 @@ class HPTController extends Controller
                 'hpthdr.kat',
                 'hpthdr.tanggalpengamatan',
                 'hpthdr.tanggaltanam',
-                'company.nama as compName',
+                'company.name as compName',
                 'blok.blok as blokName',
-                'plotting.plot as plotName',
-                'plotting.luasarea',
+                'batch.plot as plotName',
+                'batch.batcharea as luasarea',
             )
             ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 

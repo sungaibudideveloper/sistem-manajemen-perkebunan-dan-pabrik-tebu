@@ -505,9 +505,9 @@ class AgronomiController extends Controller
                 $join->on('agrohdr.blok', '=', 'blok.blok')
                     ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plotting', function ($join) {
-                $join->on('agrohdr.plot', '=', 'plotting.plot')
-                    ->whereColumn('agrohdr.companycode', '=', 'plotting.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('agrohdr.plot', '=', 'batch.plot')
+                    ->whereColumn('agrohdr.companycode', '=', 'batch.companycode');
             })
             ->where('agrolst.companycode', session('companycode'))
             ->where('agrohdr.companycode', session('companycode'))
@@ -518,11 +518,11 @@ class AgronomiController extends Controller
                 'agrohdr.varietas',
                 'agrohdr.kat',
                 'agrohdr.tanggaltanam',
-                'company.nama as compName',
+                'company.name as compName',
                 'blok.blok as blokName',
-                'plotting.plot as plotName',
-                'plotting.luasarea',
-                'plotting.jaraktanam',
+                'batch.plot as plotName',
+                'batch.batcharea as luasarea',
+                'batch.pkp as jaraktanam',
             )
             ->orderBy('agrohdr.tanggalpengamatan', 'desc');
 

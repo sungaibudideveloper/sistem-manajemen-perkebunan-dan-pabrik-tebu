@@ -2,10 +2,10 @@
 
 /**
  * Navigation Menu Configuration
-*/
+ */
 
 return [
-    
+
     // ============================================
     // MASTER DATA
     // ============================================
@@ -325,19 +325,19 @@ return [
             ],
             [
                 'name' => 'Upload GPX File',
-                'route' => 'upload.gpx.view',
+                'route' => 'process.uploadgpx',
                 'permission' => 'process.uploadgpx.view',
             ],
             [
                 'name' => 'Export KML File',
-                'route' => 'export.kml.view',
+                'route' => 'process.exportkml',
                 'permission' => 'process.exportkml.view',
             ],
-            [
-                'name' => 'Closing',
-                'route' => 'process.closing',
-                'permission' => 'process.closing.view',
-            ],
+            // [
+            //     'name' => 'Closing',
+            //     'route' => 'process.closing',
+            //     'permission' => 'process.closing.view',
+            // ],
         ],
     ],
 

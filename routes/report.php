@@ -125,8 +125,10 @@ Route::middleware('auth')->prefix('report')->name('report.')->group(function () 
     // ============================================================================
     // PIVOT TABLES
     // ============================================================================
-    Route::middleware('permission:report.pivot.view')->group(function () {
+    Route::middleware('permission:dashboard.agronomi.pivot')->group(function () {
         Route::get('agronomipivot', [PivotController::class, 'pivotTableAgronomi'])->name('pivotTableAgronomi');
+    });
+    Route::middleware('permission:dashboard.hpt.pivot')->group(function () {
         Route::get('hptpivot', [PivotController::class, 'pivotTableHPT'])->name('pivotTableHPT');
     });
 
