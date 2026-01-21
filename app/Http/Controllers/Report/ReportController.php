@@ -197,8 +197,8 @@ class ReportController extends Controller
         $nav = "ZPK";
         $search = $request->input('search', '');
 
-        // $startDate = $request->input('start_date', now()->toDateString());
-        // $endDate = $request->input('end_date', now()->toDateString());
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -214,7 +214,13 @@ class ReportController extends Controller
             ->join('lkhhdr', 'lkhhdr.lkhno', '=', 'lkhdetailplot.lkhno')
             ->where('batch.companycode', '=', session('companycode'))
             ->where('lkhhdr.activitycode', '=', '4.2.1')
-            ->where('batch.isactive', '=', 1);
+            ->where('batch.isactive', '=', 1)
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('lkhhdr.lkhdate', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('lkhhdr.lkhdate', '<=', $endDate);
+            });
         if (!empty($search)) {
             $querys->where(function ($query) use ($search) {
                 $query->where('kodevarietas', 'like', '%' . $search . '%')
@@ -237,10 +243,10 @@ class ReportController extends Controller
         }
 
         if ($request->ajax()) {
-            return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'zpk'));
+            return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'startDate', 'endDate', 'zpk'));
         }
 
-        return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'zpk'));
+        return view('report.zpk.index', compact('title', 'nav', 'search', 'perPage', 'startDate', 'endDate', 'zpk'));
     }
 
     public function trash(Request $request)
