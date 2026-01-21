@@ -55,8 +55,8 @@ class AgronomiController extends Controller
         $title = "Daftar Agronomi";
         $search = $request->input('search', '');
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
         $userid = Auth::user()->userid;
         $companycode = DB::table('usercompany')
             ->where('userid', $userid)

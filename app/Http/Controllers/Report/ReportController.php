@@ -27,8 +27,8 @@ class ReportController extends Controller
 
         $company = DB::table('company')->get();
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
 
         if ($request->isMethod('post')) {
             $request->validate([
@@ -114,8 +114,8 @@ class ReportController extends Controller
         $search = $request->input('search', '');
         $company = DB::table('company')->get();
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
 
         if ($request->isMethod('post')) {
             $request->validate([

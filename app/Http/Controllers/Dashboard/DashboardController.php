@@ -87,9 +87,9 @@ class DashboardController extends Controller
                         ->on('agrohdr.companycode', '=', 'agrolst.companycode');
                 })
                 ->join('company', 'agrohdr.companycode', '=', 'company.companycode')
-                ->join('plot', function ($join) {
-                    $join->on('agrohdr.plot', '=', 'plot.plot')
-                        ->on('agrohdr.companycode', '=', 'plot.companycode');
+                ->join('batch', function ($join) {
+                    $join->on('agrohdr.plot', '=', 'batch.plot')
+                        ->on('agrohdr.companycode', '=', 'batch.companycode');
                 })
                 ->leftJoin('blok', function ($join) {
                     $join->on('agrohdr.blok', '=', 'blok.blok')
@@ -106,7 +106,7 @@ class DashboardController extends Controller
                 END as total"),
                     'company.name as company_nama',
                     'blok.blok as blok_nama',
-                    'plot.plot as plot_nama',
+                    'batch.plot as plot_nama',
                     DB::raw("ROUND(DATEDIFF(CURDATE(), agrohdr.tanggaltanam) / 30) as umur_bulan")
                 )
                 ->when($kdCompAgronomi, function ($query) use ($kdCompAgronomi) {
@@ -149,7 +149,7 @@ class DashboardController extends Controller
                         );
                     }
                 })
-                ->groupBy('bln_amat', 'kat', 'company.name', 'blok.blok', 'plot.plot')
+                ->groupBy('bln_amat', 'kat', 'company.name', 'blok.blok', 'batch.plot')
                 ->orderBy('kat');
 
             $chartDataResult = $chartDataQuery->get();
@@ -254,18 +254,18 @@ class DashboardController extends Controller
             ->get();
 
         if (!empty($kdBlokAgronomi)) {
-            $kdPlotAgroOpt = DB::table('plot')
-                ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
+            $kdPlotAgroOpt = DB::table('batch')
+                ->join('agrohdr', 'batch.plot', '=', 'agrohdr.plot')
                 ->whereIn('agrohdr.blok', $kdBlokAgronomi)
-                ->select('plot.plot')
-                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->select('batch.plot')
+                ->orderByRaw("LEFT(batch.plot, 1), CAST(SUBSTRING(batch.plot, 2) AS UNSIGNED)")
                 ->distinct()
                 ->get();
         } else {
-            $kdPlotAgroOpt = DB::table('plot')
-                ->join('agrohdr', 'plot.plot', '=', 'agrohdr.plot')
-                ->select('plot.plot')
-                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+            $kdPlotAgroOpt = DB::table('batch')
+                ->join('agrohdr', 'batch.plot', '=', 'agrohdr.plot')
+                ->select('batch.plot')
+                ->orderByRaw("LEFT(batch.plot, 1), CAST(SUBSTRING(batch.plot, 2) AS UNSIGNED)")
                 ->distinct()
                 ->get();
         }
@@ -394,8 +394,8 @@ class DashboardController extends Controller
                         ->on('hpthdr.companycode', '=', 'hptlst.companycode');
                 })
                 ->join('plot', function ($join) {
-                    $join->on('hpthdr.plot', '=', 'plot.plot')
-                        ->on('hpthdr.companycode', '=', 'plot.companycode');
+                    $join->on('hpthdr.plot', '=', 'batch.plot')
+                        ->on('hpthdr.companycode', '=', 'batch.companycode');
                 })
                 ->join('company', 'hpthdr.companycode', '=', 'company.companycode')
                 ->leftJoin('blok', function ($join) {
@@ -412,7 +412,7 @@ class DashboardController extends Controller
                     END as total"),
                     'company.name as company_nama',
                     'blok.blok as blok_nama',
-                    'plot.plot as plot_nama',
+                    'batch.plot as plot_nama',
                     DB::raw("ROUND(DATEDIFF(CURDATE(), hpthdr.tanggaltanam) / 30) as umur_bulan")
                 )
                 ->when($kdCompHPT, function ($query) use ($kdCompHPT) {
@@ -455,7 +455,7 @@ class DashboardController extends Controller
                         );
                     }
                 })
-                ->groupBy('company.name', 'blok.blok', 'plot.plot', 'bln_amat')
+                ->groupBy('company.name', 'blok.blok', 'batch.plot', 'bln_amat')
                 ->orderBy('plot_nama');
 
 
@@ -554,18 +554,18 @@ class DashboardController extends Controller
             ->get();
 
         if (!empty($kdBlokHPT)) {
-            $kdPlotHPTOpt = DB::table('plot')
-                ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
+            $kdPlotHPTOpt = DB::table('batch')
+                ->join('hpthdr', 'batch.plot', '=', 'hpthdr.plot')
                 ->whereIn('hpthdr.blok', $kdBlokHPT)
-                ->select('plot.plot')
-                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+                ->select('batch.plot')
+                ->orderByRaw("LEFT(batch.plot, 1), CAST(SUBSTRING(batch.plot, 2) AS UNSIGNED)")
                 ->distinct()
                 ->get();
         } else {
-            $kdPlotHPTOpt = DB::table('plot')
-                ->join('hpthdr', 'plot.plot', '=', 'hpthdr.plot')
-                ->select('plot.plot')
-                ->orderByRaw("LEFT(plot.plot, 1), CAST(SUBSTRING(plot.plot, 2) AS UNSIGNED)")
+            $kdPlotHPTOpt = DB::table('batch')
+                ->join('hpthdr', 'batch.plot', '=', 'hpthdr.plot')
+                ->select('batch.plot')
+                ->orderByRaw("LEFT(batch.plot, 1), CAST(SUBSTRING(batch.plot, 2) AS UNSIGNED)")
                 ->distinct()
                 ->get();
         }

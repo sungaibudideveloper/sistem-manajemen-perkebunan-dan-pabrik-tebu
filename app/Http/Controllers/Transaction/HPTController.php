@@ -81,8 +81,9 @@ class HPTController extends Controller
         $title = "Daftar HPT";
         $search = $request->input('search', '');
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
         $userid = Auth::user()->userid;
         $companycode = DB::table('usercompany')
             ->where('userid', $userid)
@@ -117,8 +118,8 @@ class HPTController extends Controller
                     ->orWhere('hpthdr.plot', 'like', '%' . $search . '%')
                     ->orWhere('hpthdr.kat', 'like', '%' . $search . '%');
             });
-
         }
+
         $hpt = $hpt->select(
             'hpthdr.*',
             'company.name as nama_comp'

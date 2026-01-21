@@ -24,14 +24,8 @@ class UnpostController extends Controller
         $title = "Unposting";
         $search = $request->input('search', '');
 
-        if ($request->has('start_date')) {
-            session(['start_date_unposting' => $request->start_date]);
-        }
-        if ($request->has('end_date')) {
-            session(['end_date_unposting' => $request->end_date]);
-        }
-        $startDate = session('start_date_unposting');
-        $endDate = session('end_date_unposting');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
         $userid = Auth::user()->userid;
         $companycode = DB::table('usercompany')
             ->where('userid', $userid)
