@@ -24,14 +24,8 @@ class PostController extends Controller
         $title = "Posting";
         $search = $request->input('search', '');
 
-        if ($request->has('start_date')) {
-            session(['start_date_posting' => $request->start_date]);
-        }
-        if ($request->has('end_date')) {
-            session(['end_date_posting' => $request->end_date]);
-        }
-        $startDate = session('start_date_posting');
-        $endDate = session('end_date_posting');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
         $userid = Auth::user()->userid;
         $companycode = DB::table('usercompany')
             ->where('userid', $userid)
