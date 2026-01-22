@@ -24,8 +24,9 @@ class HerbisidaDosageController extends Controller
                  ->on('d.itemcode',    '=', 'h.itemcode');
         })
         ->join('herbisidagroup as g', 'd.herbisidagroupid', '=', 'g.herbisidagroupid')
+        ->join('activity as a', 'a.activitycode', '=', 'g.activitycode')
         ->where('d.companycode', $companycode) // Filter by company session
-        ->select('d.*', 'h.itemname', 'h.measure', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode');
+        ->select('d.*', 'h.itemname', 'h.measure', 'g.herbisidagroupid', 'g.herbisidagroupname', 'g.activitycode','a.activityname');
 
         if ($search) {
             $qb->where(function($q) use ($search) {
