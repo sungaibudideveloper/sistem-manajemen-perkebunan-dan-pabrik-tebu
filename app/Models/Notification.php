@@ -75,7 +75,7 @@ class Notification extends Model
     public function getIsReadAttribute(): bool
     {
         $userId = auth()->id();
-        
+
         if (!$userId) {
             return false;
         }
@@ -112,7 +112,7 @@ class Notification extends Model
         }
 
         return self::create([
-            'notification_type' => 'agronomi_alert',
+            'notification_type' => 'system',
             'reference_type' => 'agronomi',
             'reference_id' => $data['plot'],
             'companycode' => $data['companycode'],
@@ -161,7 +161,7 @@ class Notification extends Model
         }
 
         return self::create([
-            'notification_type' => 'hpt_alert',
+            'notification_type' => 'system',
             'reference_type' => 'hpt',
             'reference_id' => $data['plot'],
             'companycode' => $data['companycode'],

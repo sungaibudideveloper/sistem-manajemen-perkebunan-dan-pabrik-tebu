@@ -192,7 +192,7 @@ class AgronomiController extends Controller
 
         if ($existsInHeader || $existsInLists) {
             return back()->with([
-                'success1' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
+                'success' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
             ])->withInput();
         }
 
@@ -275,7 +275,7 @@ class AgronomiController extends Controller
 
             DB::commit();
             return redirect()->back()
-                ->with('success1', 'Data created successfully.');
+                ->with('success', 'Data created successfully.');
         } catch (\Exception $e) {
 
             DB::rollBack();
@@ -310,9 +310,9 @@ class AgronomiController extends Controller
                 $join->on('agrohdr.blok', '=', 'blok.blok')
                     ->whereColumn('agrohdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('agrohdr.plot', '=', 'plot.plot')
-                    ->whereColumn('agrohdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('agrohdr.plot', '=', 'batch.plot')
+                    ->whereColumn('agrohdr.companycode', '=', 'batch.companycode');
             })
             ->select(
                 'agrolst.*',
@@ -321,9 +321,9 @@ class AgronomiController extends Controller
                 'agrohdr.tanggaltanam',
                 'company.name as compName',
                 'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
-                'plot.jaraktanam',
+                'batch.plot as plotName',
+                'batch.batcharea as luasarea',
+                'batch.pkp as jaraktanam',
             )
             ->where('agrolst.nosample', $nosample)
             ->where('agrolst.companycode', $companycode)
@@ -368,7 +368,7 @@ class AgronomiController extends Controller
         $url = route('transaction.agronomi.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggalpengamatan' => $tanggalpengamatan]);
 
         if ($header->status === "Posted") {
-            return redirect()->route('transaction.agronomi.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
+            return redirect()->route('transaction.agronomi.index')->with('success', 'Data telah di posting, tidak dapat mengakses edit.');
         }
 
         return view('transaction.agronomi.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
@@ -453,7 +453,7 @@ class AgronomiController extends Controller
             DB::commit();
 
             return redirect()->route('transaction.agronomi.index')
-                ->with('success1', 'Data updated successfully.');
+                ->with('success', 'Data updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
 
