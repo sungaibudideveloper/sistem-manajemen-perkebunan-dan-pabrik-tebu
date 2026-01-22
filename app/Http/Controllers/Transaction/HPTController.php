@@ -215,7 +215,7 @@ class HPTController extends Controller
 
         if ($existsInHeader || $existsInLists) {
             return back()->with([
-                'success1' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
+                'success' => 'Data sudah ada di salah satu tabel, silahkan coba dengan data yang berbeda.',
             ])->withInput();
         }
 
@@ -337,7 +337,7 @@ class HPTController extends Controller
             DB::commit();
 
             return redirect()->back()
-                ->with('success1', 'Data created successfully.');
+                ->with('success', 'Data created successfully.');
         } catch (\Exception $e) {
 
             DB::rollBack();
@@ -373,9 +373,9 @@ class HPTController extends Controller
                 $join->on('hpthdr.blok', '=', 'blok.blok')
                     ->whereColumn('hpthdr.companycode', '=', 'blok.companycode');
             })
-            ->leftJoin('plot', function ($join) {
-                $join->on('hpthdr.plot', '=', 'plot.plot')
-                    ->whereColumn('hpthdr.companycode', '=', 'plot.companycode');
+            ->leftJoin('batch', function ($join) {
+                $join->on('hpthdr.plot', '=', 'batch.plot')
+                    ->whereColumn('hpthdr.companycode', '=', 'batch.companycode');
             })
             ->select(
                 'hptlst.*',
@@ -384,8 +384,8 @@ class HPTController extends Controller
                 'hpthdr.tanggaltanam',
                 'company.name as compName',
                 'blok.blok as blokName',
-                'plot.plot as plotName',
-                'plot.luasarea',
+                'batch.plot as plotName',
+                'batch.batcharea as luasarea',
             )
             ->where('hptlst.nosample', $nosample)
             ->where('hptlst.companycode', $companycode)
@@ -431,7 +431,7 @@ class HPTController extends Controller
         $url = route('transaction.hpt.update', ['nosample' => $nosample, 'companycode' => $companycode, 'tanggalpengamatan' => $tanggalpengamatan]);
 
         if ($header->status === "Posted") {
-            return redirect()->route('transaction.hpt.index')->with('success1', 'Data telah di posting, tidak dapat mengakses edit.');
+            return redirect()->route('transaction.hpt.index')->with('success', 'Data telah di posting, tidak dapat mengakses edit.');
         }
 
         return view('transaction.hpt.form', compact('buttonSubmit', 'header', 'list', 'company', 'mapping', 'title', 'method', 'url'));
@@ -553,7 +553,7 @@ class HPTController extends Controller
             DB::commit();
 
             return redirect()->route('transaction.hpt.index')
-                ->with('success1', 'Data updated successfully.');
+                ->with('success', 'Data updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
 
