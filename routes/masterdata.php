@@ -65,7 +65,7 @@ Route::middleware('auth')->prefix('masterdata')->name('masterdata.')->group(func
         Route::post('herbisida', [HerbisidaController::class, 'store'])->name('herbisida.store');
         Route::get('herbisida/group', [HerbisidaController::class, 'group'])->name('herbisida.group');
         Route::get('herbisida/items', function (\Illuminate\Http\Request $request) {
-            return \App\Models\Herbisida::where('companycode', $request->companycode)
+            return \App\Models\Masterdata\Herbisida::where('companycode', $request->companycode)
                 ->select('itemcode', 'itemname')
                 ->orderBy('itemcode')
                 ->get();

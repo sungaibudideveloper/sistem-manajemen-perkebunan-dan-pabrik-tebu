@@ -613,11 +613,29 @@ public function submit(Request $request)
         return redirect()->back()->with('error', 'Sedang memproses request sebelumnya. Mohon tunggu...');
     }
     Cache::put($lockKey, true, 20);
+    //tambahan locked
+    $releaseLockAndBack = function(string $type, string $msg, int $step) use ($lockKey) {
+        Cache::forget($lockKey);
+        Log::warning('SUBMIT_EARLY_EXIT', [
+            'step' => $step,
+            'lockKey' => $lockKey,
+            'type' => $type,
+            'msg' => $msg,
+            'companycode' => session('companycode'),
+            'rkhno' => request()->rkhno ?? null,
+        ]);
+        return back()->with($type, $msg);
+    };
     
+    //
+
+
     // Validasi basic
     $details = collect((new usematerialhdr)->selectusematerial(session('companycode'), $request->rkhno, 1));
     $first = $details->first();
-
+    if (!$first) {
+        return $releaseLockAndBack('error', 'Header usematerial tidak ditemukan.', 1);
+    }
     Log::info('SUBMIT DEBUG FIRST:', [
         'session_company' => session('companycode'),
         'rkhno' => $request->rkhno,
@@ -640,42 +658,42 @@ public function submit(Request $request)
     //
 
     if (!$isFromApproval && strtoupper($first->flagstatus) != 'ACTIVE') {
-        Cache::forget($lockKey);
-        throw new \Exception('Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE');
+        return $releaseLockAndBack('error', 'Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE', 2);
     }
 
     // tambahan cek standar part 2 
     if ($isFromApproval && strtoupper($first->flagstatus) != 'WAIT_APPROVAL') {
-        Cache::forget($lockKey);
-        throw new \Exception('Execute approval hanya boleh saat status WAIT_APPROVAL');
-}
-
+        return $releaseLockAndBack('error', 'Execute approval hanya boleh saat status WAIT_APPROVAL', 3);
+    }    
 
     if ($details->whereNotNull('nouse')->count() >= 1) {
-        Cache::forget($lockKey);
-        throw new \Exception('Tidak Dapat Edit! Silahkan Retur');
+        return $releaseLockAndBack('error', 'Tidak Dapat Edit! Silahkan Retur', 4);
     }
-
+    
     $rkhdate = DB::table('rkhhdr')
     ->where('companycode', session('companycode'))
     ->where('rkhno', $request->rkhno)
     ->value('rkhdate');
 
     if (!$rkhdate) {
-        return back()->with('error', 'RKH Date tidak ditemukan.');
-    }
+        return $releaseLockAndBack('error', 'RKH Date tidak ditemukan.', 5);
+    }    
 
     //tambahan cek standar
-    $stdMap = DB::table('herbisidadosage')
-    ->where('companycode', session('companycode'))
-    ->select('herbisidagroupid','itemcode','dosageperha')
-    ->get()
-    ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
-    ->all();
-
-    $EPS = 0.0001;
     $isApproval = false;
     $approvalReasons = [];
+    $EPS = 0.0001;
+    $stdMap = [];
+    
+    if (!$isFromApproval) {
+        $stdMap = DB::table('herbisidadosage')
+            ->where('companycode', session('companycode'))
+            ->select('herbisidagroupid','itemcode','dosageperha')
+            ->get()
+            ->mapWithKeys(fn($r)=>[($r->herbisidagroupid.'|'.$r->itemcode) => (float)$r->dosageperha])
+            ->all();
+    } 
+
     //
 
     // Validasi duplikat: lkhno + plot + itemcode
@@ -719,6 +737,8 @@ public function submit(Request $request)
         $detail = $detailsByLkhno[$lkhno];
 
         foreach ($items as $itemcode => $keys) {
+            // hilangin item newline spasi gajelas
+            $itemcode = preg_replace('/\s+/', '', trim($itemcode));
             foreach ($keys as $key => $val) {
 
                 $dosage = floatval($request->dosage[$lkhno][$itemcode][$key] ?? 0);
@@ -727,39 +747,41 @@ public function submit(Request $request)
                 $qtyraw = $luas * $dosage ?? 0;
 
                 //tambahan cek standar cek dosage standard 
-                $groupId = $detail->herbisidagroupid ?? null;
-                if ($groupId) {
-                    $kstd = $groupId.'|'.$itemcode;
-                
-                    // itemcode tidak ada di standar untuk group tsb
-                    if (!isset($stdMap[$kstd])) {
-                        $isApproval = true;
-                        $approvalReasons[] = [
-                            'type' => 'INVALID_ITEMCODE',
-                            'lkhno' => $lkhno,
-                            'plot' => $key,
-                            'group' => $groupId,
-                            'itemcode' => $itemcode,
-                            'dosage_input' => $dosage,
-                        ];
-                    } else {
-                        // dosage berbeda dari standar
-                        $stdDos = (float)$stdMap[$kstd];
-                        if (abs($dosage - $stdDos) > $EPS) {
+                if (!$isFromApproval) {
+                    $groupId = $detail->herbisidagroupid ?? null;
+                    if ($groupId) {
+                        $kstd = $groupId.'|'.$itemcode;
+
+                        // itemcode tidak ada di standar untuk group tsb
+                        if (!isset($stdMap[$kstd])) {
                             $isApproval = true;
                             $approvalReasons[] = [
-                                'type' => 'DOSAGE_CHANGED',
+                                'type' => 'INVALID_ITEMCODE',
                                 'lkhno' => $lkhno,
                                 'plot' => $key,
                                 'group' => $groupId,
                                 'itemcode' => $itemcode,
                                 'dosage_input' => $dosage,
-                                'dosage_std' => $stdDos,
                             ];
+                        } else {
+                            // dosage berbeda dari standar
+                            $stdDos = (float)$stdMap[$kstd];
+                            if (abs($dosage - $stdDos) > $EPS) {
+                                $isApproval = true;
+                                $approvalReasons[] = [
+                                    'type' => 'DOSAGE_CHANGED',
+                                    'lkhno' => $lkhno,
+                                    'plot' => $key,
+                                    'group' => $groupId,
+                                    'itemcode' => $itemcode,
+                                    'dosage_input' => $dosage,
+                                    'dosage_std' => $stdDos,
+                                ];
+                            }
                         }
                     }
-                }
-                //
+                } 
+                // <-- ini closing bungkus cek standar
 
                 // ambil group & flag rounding
                 $groupId     = $detail->herbisidagroupid ?? null;
@@ -813,7 +835,7 @@ public function submit(Request $request)
     // STOP & CREATE APPROVAL DOC
     // =====================================
 
-    if ($isApproval) {
+    if (!$isFromApproval && $isApproval) {
         try {
             $companycode = session('companycode');
 
@@ -871,6 +893,7 @@ public function submit(Request $request)
                     'lkhno' => $row['lkhno'],
                     'plot' => $row['plot'],
                     'itemcode' => $row['itemcode'],
+                    'itemname' => $row['itemname'] ?? null,
                     'dosageperha' => $row['dosageperha'],
                     'unit' => $row['unit'],
                     'qty' => $row['qty'],
@@ -904,7 +927,10 @@ public function submit(Request $request)
         }
     }
     //
-
+    Log::info('GUDANG_TERIMA_QTY', [
+        'rkhno' => $request->rkhno,
+        'qtyByItemcode' => $qtyByItemcode,
+    ]);
     foreach ($qtyByItemcode as $itemcode => $totalQty) {
         $detail = $itemDetails[$itemcode]['detail'];
         $unit = $itemDetails[$itemcode]['unit'];
@@ -921,7 +947,7 @@ public function submit(Request $request)
             'qtybpb' => round($totalQty, 3),
             'Keterangan' => $detail->herbisidagroupname . ' - ' . $detail->name. ' | rkhno:' . $request->rkhno . ' company:' . session('companycode'),
             'vehiclenumber' => '',
-            'flagstatus' => $detail->flagstatus,
+            'flagstatus' => $isFromApproval ? 'ACTIVE' : $detail->flagstatus,
             'qtydigunakan' => $detail->qtydigunakan
         ];
     }
@@ -940,17 +966,53 @@ public function submit(Request $request)
             ->where('companycode', session('companycode'))
             ->delete();
         
+            //tambahan cio
+            // DEBUG FK herbisida mismatch (lihat itemcode sebenarnya)
+            $debugItems = collect($insertData)->take(10)->map(function($r){
+                $ic = (string)($r['itemcode'] ?? '');
+                return [
+                    'companycode' => $r['companycode'] ?? null,
+                    'itemcode_raw' => $ic,
+                    'itemcode_hex' => bin2hex($ic),
+                    'itemcode_trim' => rtrim($ic),
+                    'itemcode_trim_hex' => bin2hex(rtrim($ic)),
+                    'itemname_from_lookup' => $r['itemname'] ?? null,
+                ];
+            })->toArray();
+
+            Log::warning('DEBUG_BEFORE_INSERT_USEMATERIALLST', [
+                'rkhno' => $request->rkhno,
+                'companycode' => session('companycode'),
+                'sample' => $debugItems,
+            ]);
+            
+            $missing = [];
+            foreach ($insertData as $r) {
+                $ic = (string)($r['itemcode'] ?? '');
+                $exists = DB::table('herbisida')
+                    ->where('companycode', $r['companycode'])
+                    ->where('itemcode', $ic)
+                    ->exists();
+
+                if (!$exists) {
+                    $missing[] = [
+                        'companycode' => $r['companycode'],
+                        'itemcode_raw' => $ic,
+                        'itemcode_hex' => bin2hex($ic),
+                    ];
+                }
+            }
+
+            Log::warning('DEBUG_HERBISIDA_MASTER_CHECK', [
+                'rkhno' => $request->rkhno,
+                'missing_count' => count($missing),
+                'missing_sample' => array_slice($missing, 0, 10),
+            ]);
+
+
+            //
         // Bulk insert
         usemateriallst::insert($insertData);
-
-        // Update header status
-        usematerialhdr::where('rkhno', $request->rkhno)
-            ->where('companycode', session('companycode'))
-            ->update([
-                'flagstatus' => 'DISPATCHED',
-                'updatedat' => date("Y-m-d H:i:s"),
-                'updateby' => Auth::user()->userid
-            ]);
 
         // ✅ COMMIT - Semua operasi DB sudah selesai
         DB::commit();
@@ -1125,6 +1187,14 @@ public function submit(Request $request)
                     ->where('companycode', session('companycode'))
                     ->whereNotNull('nouse')
                     ->count(),
+            ]);
+
+            usematerialhdr::where('rkhno', $request->rkhno)
+            ->where('companycode', session('companycode'))
+            ->update([
+                'flagstatus' => 'DISPATCHED',
+                'updatedat' => now(),
+                'updateby' => Auth::user()->userid
             ]);
             
             Cache::forget($lockKey);
