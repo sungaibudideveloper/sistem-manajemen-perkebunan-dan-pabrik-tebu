@@ -195,7 +195,7 @@
                         <tr class="hover:bg-gray-50">
                         <td class="py-2 px-4 border-b">{{ $herbisidaDosages->firstItem() + $index }}</td>
                             <td class="py-2 px-4 border-b">{{ $data->companycode }}</td>
-                            <td class="py-2 px-4 border-b">{{ $data->herbisidagroupid }} - {{ $data->activitycode }}</td>
+                            <td class="py-2 px-4 border-b">{{ $data->herbisidagroupid }} - {{ $data->activitycode }} {{ $data->activityname }}</td>
                             <td class="py-2 px-4 border-b">
                               <a
                                 href="{{ route('masterdata.herbisida.index', ['search' => $data->itemcode]) }}"
