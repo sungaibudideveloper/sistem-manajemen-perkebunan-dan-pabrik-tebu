@@ -152,10 +152,28 @@ class OtherApprovalService
             //cio
             if ($category === 'USE MATERIAL') {
                 try {
+                    Log::info('USE_MATERIAL_FINALIZE_START', [
+                        'approvalno' => $approval->approvalno,
+                        'companycode' => $companycode,
+                        'transactionnumber' => $approval->transactionnumber,
+                        'user' => auth()->user()->userid ?? null,
+                    ]);
+                    
                     $this->finalizeUseMaterialAndSubmit($approval->approvalno, $companycode, auth()->user());
+                    Log::info('USE_MATERIAL_FINALIZE_OK', [
+                        'approvalno' => $approval->approvalno,
+                        'companycode' => $companycode,
+                    ]);
+                    
                     return ['success' => true, 'message' => '. Use Material finalized'];
                 } catch (\Throwable $e) {
-                    Log::error('Finalize Use Material failed', ['err' => $e->getMessage()]);
+                    Log::error('USE_MATERIAL_FINALIZE_FAIL', [
+                        'approvalno' => $approval->approvalno,
+                        'companycode' => $companycode,
+                        'err' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    
                     return ['success' => false, 'message' => 'Finalize Use Material failed: '.$e->getMessage()];
                 }
             }
@@ -361,13 +379,22 @@ class OtherApprovalService
 //cio
 private function finalizeUseMaterialAndSubmit(string $approvalno, string $companycode, $currentUser): void
 {
-    $approval = $this->repository->findByApprovalno($companycode, $approvalno);
-    if (!$approval) throw new \Exception('Approval tidak ditemukan.');
+    Log::info('USE_MATERIAL_FINALIZE_HIT', [
+        'approvalno' => $approvalno,
+        'companycode' => $companycode,
+        'user' => $currentUser->userid ?? null,
+        'file' => __FILE__,
+    ]);
 
-    $rkhno = $approval->transactionnumber;
+    $approval = $this->repository->findByApprovalno($companycode, $approvalno);
+    if (!$approval) {
+        throw new \Exception('Approval tidak ditemukan.');
+    }
+
+    $rkhno = trim((string) $approval->transactionnumber);
 
     // ✅ mark snapshot approved (biar GudangController submit bisa lewat gate $isFromApproval)
-    DB::table('usematerialapproval')
+    $updatedRows = DB::table('usematerialapproval')
         ->where('companycode', $companycode)
         ->where('approvalno', $approvalno)
         ->where('rkhno', $rkhno)
@@ -377,13 +404,22 @@ private function finalizeUseMaterialAndSubmit(string $approvalno, string $compan
             'approvedby' => $currentUser->userid,
         ]);
 
+    Log::info('USE_MATERIAL_APPROVED_UPDATED', [
+        'approvalno' => $approvalno,
+        'companycode' => $companycode,
+        'rkhno' => $rkhno,
+        'updated_rows' => $updatedRows,
+    ]);
+
     $snap = DB::table('usematerialapproval')
         ->where('companycode', $companycode)
         ->where('approvalno', $approvalno)
         ->where('rkhno', $rkhno)
         ->get();
 
-    if ($snap->isEmpty()) throw new \Exception('Snapshot usematerialapproval kosong.');
+    if ($snap->isEmpty()) {
+        throw new \Exception('Snapshot usematerialapproval kosong.');
+    }
 
     // build request format yg dipakai GudangController::submit
     $itemcode = [];
@@ -392,15 +428,27 @@ private function finalizeUseMaterialAndSubmit(string $approvalno, string $compan
     $luas     = [];
 
     foreach ($snap as $row) {
-        $plotKey = (string)$row->plot;
-        $itemcode[$row->lkhno][$row->itemcode][$plotKey] = $row->itemcode;
-        $dosage[$row->lkhno][$row->itemcode][$plotKey]   = (float)($row->dosageperha ?? 0);
-        $unit[$row->lkhno][$row->itemcode][$plotKey]     = $row->unit ?? null;
-
-        $d = (float)($row->dosageperha ?? 0);
-        $q = (float)($row->qty ?? 0);
-        $luas[$row->lkhno][$row->itemcode][$plotKey] = $d > 0 ? ($q / $d) : 0;
+        $lkhno   = trim((string) $row->lkhno);
+        $plotKey = trim((string) $row->plot);
+        $ic = preg_replace('/\s+/', '', trim((string) $row->itemcode));
+    
+        $itemcode[$lkhno][$ic][$plotKey] = $ic;
+        $dosage[$lkhno][$ic][$plotKey]   = (float) ($row->dosageperha ?? 0);
+        $unit[$lkhno][$ic][$plotKey]     = $row->unit ?? null;
+    
+        // submit: qty = luas * dosage
+        // supaya qty hasilnya sesuai snapshot: luas = qty/dosage
+        $d = (float) ($row->dosageperha ?? 0);
+        $q = (float) ($row->qty ?? 0);
+        $luas[$lkhno][$ic][$plotKey] = $d > 0 ? ($q / $d) : 0;
     }
+
+    // ✅ TAMBAH LOG INI (setelah loop):
+    Log::info('APPROVAL_KIRIM_REQUEST', [
+        'rkhno' => $rkhno,
+        'itemcode_sample' => array_slice($itemcode, 0, 1, true),
+        'dosage_sample' => array_slice($dosage, 0, 1, true),
+    ]);
 
     // pastikan session companycode ada (GudangController masih pakai session)
     session(['companycode' => $companycode]);
@@ -415,8 +463,22 @@ private function finalizeUseMaterialAndSubmit(string $approvalno, string $compan
         'luas'       => $luas,
     ]);
 
-    // ✅ Panggil GudangController submit (simple version)
+    Log::info('USE_MATERIAL_CALL_SUBMIT', [
+        'approvalno' => $approvalno,
+        'companycode' => $companycode,
+        'rkhno' => $rkhno,
+        'snap_count' => $snap->count(),
+        'costcenter' => $snap->first()->costcenter ?? null,
+    ]);
+
+    // ✅ Panggil GudangController submit
     app(\App\Http\Controllers\Transaction\GudangController::class)->submit($req);
+
+    Log::info('USE_MATERIAL_SUBMIT_RETURNED', [
+        'approvalno' => $approvalno,
+        'companycode' => $companycode,
+        'rkhno' => $rkhno,
+    ]);
 }
 
 //cio
