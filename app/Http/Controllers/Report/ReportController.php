@@ -169,7 +169,7 @@ class ReportController extends Controller
             'company.name as compName',
             'blok.blok as blokName',
             'batch.plot as plotName',
-            'batch.luasarea',
+            'batch.batcharea as luasarea',
         )
             ->orderBy('hpthdr.tanggalpengamatan', 'desc');
 

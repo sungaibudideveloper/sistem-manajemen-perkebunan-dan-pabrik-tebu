@@ -335,7 +335,7 @@ class AgronomiController extends Controller
 
         $agronomiLists = $agronomiLists->map(function ($item) use ($now) {
             $tgl_tanam = Carbon::parse($item->tanggaltanam);
-            $item->umur_tanam = $tgl_tanam->diffInMonths($now);
+            $item->umur_tanam = round($tgl_tanam->diffInMonths($now));
             return $item;
         });
 
@@ -482,8 +482,8 @@ class AgronomiController extends Controller
 
     public function excel(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
         $search = $request->input('search');
 
         $request->validate([

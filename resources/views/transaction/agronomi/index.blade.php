@@ -391,12 +391,6 @@
                 .then(data => {
                     tableBody.innerHTML = '';
                     data.forEach(item => {
-                        const tanggaltanam = new Date(item.tanggaltanam);
-                        const now = new Date();
-                        let diffInMonths = (now.getFullYear() - tanggaltanam.getFullYear()) * 12;
-                        diffInMonths += now.getMonth() - tanggaltanam.getMonth();
-                        if (now.getDate() < tanggaltanam.getDate()) diffInMonths--;
-                        const umurTanam = diffInMonths >= 0 ? `${diffInMonths} Bulan` : 'Tunggu Tanggal Tanam';
                         const dateInput = new Date(item.tanggalpengamatan);
                         const month = dateInput.toLocaleString('en-US', {
                             month: 'long'
@@ -413,7 +407,7 @@
                                 <td class="py-3 px-4 text-gray-700">${item.varietas}</td>
                                 <td class="py-3 px-4 text-gray-700">${item.kat}</td>
                                 <td class="py-3 px-4 text-gray-700">${item.tanggaltanam}</td>
-                                <td class="py-3 px-4 text-gray-700">${umurTanam}</td>
+                                <td class="py-3 px-4 text-gray-700">${item.umur_tanam} Bulan</td>
                                 <td class="py-3 px-4 text-gray-700">${item.jaraktanam}</td>
                                 <td class="py-3 px-4 text-gray-700">${item.tanggalpengamatan}</td>
                                 <td class="py-3 px-4 text-gray-700">${month}</td>

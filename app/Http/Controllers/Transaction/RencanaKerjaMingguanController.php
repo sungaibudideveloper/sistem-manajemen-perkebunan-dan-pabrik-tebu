@@ -316,6 +316,7 @@ class RencanaKerjaMingguanController extends Controller
         return response()->json($rkmLists);
     }
 
+
     public function edit($rkmno)
     {
         $title = 'Edit Data';
@@ -412,8 +413,8 @@ class RencanaKerjaMingguanController extends Controller
 
     public function excel(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', Carbon::now()->startOfWeek()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::now()->endOfWeek()->format('Y-m-d'));
         $search = $request->input('search');
         $companyCode = session('companycode');
 
