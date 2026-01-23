@@ -17,7 +17,7 @@ use App\Models\usemateriallst;
 use App\Models\MasterData\HerbisidaDosage;
 use App\Models\MasterData\Herbisida;
 
-class GudangController extends Controller
+class GudangControllerr extends Controller
 {
 
     public function __construct()
@@ -372,10 +372,12 @@ class GudangController extends Controller
         
 
         if (strtoupper($details->first()->flagstatus ?? '') === 'WAIT_APPROVAL') {
+            $ap = DB::table('usematerialapproval')
+            ->where('companycode', session('companycode'))
+            ->where('rkhno', $request->rkhno);
+            $usematerialapproval = $ap->get();
             if($details[0]->costcenter == NULL){
-            $details[0]->costcenter = DB::table('usematerialapproval')
-                ->where('companycode', session('companycode'))
-                ->where('rkhno', $request->rkhno)
+            $details[0]->costcenter = $ap
                 ->value('costcenter');
             }
         }
@@ -389,7 +391,8 @@ class GudangController extends Controller
             'itemlist' => $itemlist,
             'costcenter' => $costcenter,
             'detailmaterial' => $detailmaterial,
-            'islokal' => $islokal
+            'islokal' => $islokal,
+            'usematerialapproval' => $usematerialapproval
         ]);
     }
 
@@ -653,12 +656,11 @@ public function submit(Request $request)
     ->where('companycode', session('companycode'))
     ->where('approvalno', $request->approvalno)
     ->where('rkhno', $request->rkhno)
-    ->where('approved', 1)
     ->exists();
     //
 
     if (!$isFromApproval && strtoupper($first->flagstatus) != 'ACTIVE') {
-        return $releaseLockAndBack('error', 'Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE', 2);
+        return $releaseLockAndBack('error', 'Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE'.$isFromApproval.' | '.strtoupper($first->flagstatus).'', 2);
     }
 
     // tambahan cek standar part 2 
@@ -869,7 +871,7 @@ public function submit(Request $request)
 
             // 1) insert approvaltransaction (workflow)
             DB::table('approvaltransaction')->insert([
-                'approvalno' => $approvalNo,
+                'approvalno' => $companycode.$approvalNo,
                 'companycode' => $companycode,
                 'approvalcategoryid' => $approvalMaster->id,
                 'transactionnumber' => $request->rkhno, // tampil di approval center
@@ -888,7 +890,7 @@ public function submit(Request $request)
             foreach ($insertData as $row) {
                 $rows[] = [
                     'companycode' => $companycode,
-                    'approvalno' => $approvalNo,
+                    'approvalno' => $companycode.$approvalNo,
                     'rkhno' => $request->rkhno,
                     'lkhno' => $row['lkhno'],
                     'plot' => $row['plot'],
@@ -1196,6 +1198,24 @@ public function submit(Request $request)
                 'updatedat' => now(),
                 'updateby' => Auth::user()->userid
             ]);
+
+            // ✅ Update approval snapshot - DI SINI setelah API sukses!
+            if ($isFromApproval) {
+                DB::table('usematerialapproval')
+                    ->where('companycode', session('companycode'))
+                    ->where('rkhno', $request->rkhno)
+                    ->update([
+                        'approved' => 1,                    
+                        'approvedat' => now(),              
+                        'approvedby' => Auth::user()->userid, 
+                        'flagstatus' => 'DISPATCHED',
+                    ]);
+                
+                Log::info('APPROVAL_FINALIZED_AFTER_API_SUCCESS', [
+                    'rkhno' => $request->rkhno,
+                    'approvalno' => $request->approvalno ?? $request->rkhno,
+                ]);
+            }
             
             Cache::forget($lockKey);
             return redirect()->back()->with('success1', 'Data updated successfully');
