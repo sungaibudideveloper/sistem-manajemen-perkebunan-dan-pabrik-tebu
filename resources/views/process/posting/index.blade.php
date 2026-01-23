@@ -24,7 +24,8 @@
                     <form action="{{ route('process.posting.submit') }}" method="POST" id="post">
                         @csrf
                         <input type="hidden" name="selected_items" id="selected_items">
-                        <button type="submit"
+                        <input type="hidden" name="posting_type" id="posting_type" value="{{ $posting }}">
+                        <button type="submit" onclick="Alpine.store('loading').start();"
                             class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path fill-rule="evenodd"
@@ -42,8 +43,7 @@
         </div>
 
         <!-- Filter Section -->
-        <form method="POST" action="{{ route('process.posting') }}">
-            @csrf
+        <form method="GET" action="{{ route('process.posting') }}" id="filterForm">
             <div class="px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
                 <div class="flex items-end gap-4 flex-wrap justify-between">
                     <!-- Left Side Filters -->
@@ -52,18 +52,16 @@
                         <div>
                             <label for="posting" class="block text-sm font-semibold text-gray-700 mb-2">Pilih
                                 Pengamatan:</label>
-                            <select name="posting" id="posting" onchange="this.form.submit()"
+                            <select name="posting" id="posting"
+                                onchange="Alpine.store('loading').start(); this.form.submit();"
                                 class="px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 bg-white transition-all duration-200">
-                                <option value="" disabled
-                                    {{ old('posting', session('posting')) == null ? 'selected' : '' }}>
+                                <option value="" {{ $posting == '' ? 'selected' : '' }}>
                                     --Pilih Pengamatan--
                                 </option>
-                                <option value="Agronomi"
-                                    {{ old('posting', session('posting')) == 'Agronomi' ? 'selected' : '' }}>
+                                <option value="Agronomi" {{ $posting == 'Agronomi' ? 'selected' : '' }}>
                                     Agronomi
                                 </option>
-                                <option value="HPT"
-                                    {{ old('posting', session('posting')) == 'HPT' ? 'selected' : '' }}>
+                                <option value="HPT" {{ $posting == 'HPT' ? 'selected' : '' }}>
                                     HPT
                                 </option>
                             </select>
@@ -116,7 +114,7 @@
                                                 class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 text-sm transition-all duration-200">
                                         </div>
 
-                                        <button type="submit" name="filter"
+                                        <button type="submit"
                                             class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
                                             Terapkan Filter
                                         </button>
@@ -158,88 +156,119 @@
         </form>
 
         <!-- Info Note -->
-        <div class="px-6 py-3 bg-blue-50 border-b border-blue-100">
-            <p class="text-xs text-blue-600 flex items-center gap-2">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clip-rule="evenodd" />
-                </svg>
-                <span>Centang checkbox untuk data yang akan diposting ke sistem</span>
-            </p>
-        </div>
+        @if (!empty($posting))
+            <div class="px-6 py-3 bg-blue-50 border-b border-blue-100">
+                <p class="text-xs text-blue-600 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>Centang checkbox untuk data yang akan diposting ke sistem</span>
+                </p>
+            </div>
+        @endif
 
         <!-- Table Section -->
         <div class="px-6 py-5">
-            <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                <table class="min-w-full bg-white text-sm" id="tables">
-                    <thead>
-                        <tr class="bg-gradient-to-r from-gray-100 to-gray-50">
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap w-1">
-                                <input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"
-                                    class="rounded focus:ring-2 focus:ring-green-500">
-                            </th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                No.</th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                No. Sample</th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                Varietas</th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                Kategori</th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                Tanggal Tanam</th>
-                            <th
-                                class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
-                                Tanggal Pengamatan</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        @foreach ($posts as $item)
-                            <tr class="hover:bg-green-50 transition-colors duration-150">
-                                <td class="py-3 px-4 text-center w-1">
-                                    <input type="checkbox"
-                                        class="rowCheckbox rounded focus:ring-2 focus:ring-green-500"
-                                        name="selected_items[]"
-                                        value="{{ $item->nosample }},{{ $item->companycode }},{{ $item->tanggalpengamatan }}">
-                                </td>
-                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->no }}.</td>
-                                <td class="py-3 px-4 text-center text-gray-700 font-medium">{{ $item->nosample }}</td>
-                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->varietas }}</td>
-                                <td class="py-3 px-4 text-center text-gray-700">
-                                    <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ $item->kat }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->tanggaltanam }}</td>
-                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->tanggalpengamatan }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Pagination Section -->
-        <div class="px-6 pb-2" id="pagination-links">
-            @if ($posts->hasPages())
-                {{ $posts->appends(['perPage' => $posts->perPage(), 'start_date' => $startDate, 'end_date' => $endDate])->links() }}
-            @else
-                <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg">
-                    <p class="text-sm text-gray-600">
-                        Menampilkan <span class="font-semibold text-gray-800">{{ $posts->count() }}</span> dari <span
-                            class="font-semibold text-gray-800">{{ $posts->total() }}</span> hasil
+            @if (empty($posting))
+                <div class="text-center py-12">
+                    <svg class="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Belum Ada Pengamatan Dipilih</h3>
+                    <p class="text-gray-500 text-sm">Silakan pilih jenis pengamatan terlebih dahulu (Agronomi atau HPT)
                     </p>
+                </div>
+            @else
+                <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                    <table class="min-w-full bg-white text-sm" id="tables">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-gray-100 to-gray-50">
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap w-1">
+                                    <input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"
+                                        class="rounded focus:ring-2 focus:ring-green-500">
+                                </th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    No.</th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    No. Sample</th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    Varietas</th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    Kategori</th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    Tanggal Tanam</th>
+                                <th
+                                    class="py-3 px-4 border-b-2 border-gray-300 text-gray-700 font-bold text-center whitespace-nowrap">
+                                    Tanggal Pengamatan</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse ($posts as $item)
+                                <tr class="hover:bg-green-50 transition-colors duration-150">
+                                    <td class="py-3 px-4 text-center w-1">
+                                        <input type="checkbox"
+                                            class="rowCheckbox rounded focus:ring-2 focus:ring-green-500"
+                                            name="selected_items[]"
+                                            value="{{ $item->nosample }},{{ $item->companycode }},{{ $item->tanggalpengamatan }}">
+                                    </td>
+                                    <td class="py-3 px-4 text-center text-gray-700">{{ $item->no }}.</td>
+                                    <td class="py-3 px-4 text-center text-gray-700 font-medium">{{ $item->nosample }}
+                                    </td>
+                                    <td class="py-3 px-4 text-center text-gray-700">{{ $item->varietas }}</td>
+                                    <td class="py-3 px-4 text-center text-gray-700">
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ $item->kat }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-center text-gray-700">{{ $item->tanggaltanam }}</td>
+                                    <td class="py-3 px-4 text-center text-gray-700">{{ $item->tanggalpengamatan }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-gray-500">
+                                        Tidak ada data yang tersedia
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             @endif
         </div>
+
+        <!-- Pagination Section -->
+        @if (!empty($posting))
+            <div class="px-6 pb-2" id="pagination-links">
+                @if ($posts->hasPages())
+                    {{ $posts->appends([
+                            'perPage' => $posts->perPage(),
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
+                            'posting' => $posting,
+                            'search' => $search,
+                        ])->links() }}
+                @else
+                    <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg">
+                        <p class="text-sm text-gray-600">
+                            Menampilkan <span class="font-semibold text-gray-800">{{ $posts->count() }}</span> dari
+                            <span class="font-semibold text-gray-800">{{ $posts->total() }}</span> hasil
+                        </p>
+                    </div>
+                @endif
+            </div>
+        @endif
     </div>
 
     <script>
@@ -279,6 +308,26 @@
             }
             document.getElementById("selected_items").value = JSON.stringify(selectedItems);
             this.submit();
+        });
+
+        // Handle search input
+        const searchInput = document.getElementById('search');
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 500);
+        });
+
+        // Handle perPage change
+        const perPageInput = document.getElementById('perPage');
+        let perPageTimeout;
+        perPageInput.addEventListener('input', function() {
+            clearTimeout(perPageTimeout);
+            perPageTimeout = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 500);
         });
     </script>
 
