@@ -327,7 +327,7 @@
                                 <td class="py-3 px-4 text-center text-gray-700 font-medium">{{ $item->nosample }}</td>
                                 <td class="py-3 px-4 text-center text-gray-700">{{ $item->blokName ?? '-' }}</td>
                                 <td class="py-3 px-4 text-center text-gray-700">{{ $item->plotName ?? '-' }}</td>
-                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->luas_area ?? '-' }}</td>
+                                <td class="py-3 px-4 text-center text-gray-700">{{ $item->luasarea ?? '-' }}</td>
                                 <td class="py-3 px-4 text-center text-gray-700">{{ $item->tanggaltanam ?? '-' }}</td>
                                 <td class="py-3 px-4 text-center text-gray-700">
                                     <span
