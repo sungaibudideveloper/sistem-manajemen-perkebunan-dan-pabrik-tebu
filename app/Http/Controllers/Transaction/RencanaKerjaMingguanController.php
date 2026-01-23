@@ -271,42 +271,48 @@ class RencanaKerjaMingguanController extends Controller
                     ->on('a.rkmno', '=', 'b.rkmno');
             })
             ->leftJoin('lkhhdr as c', function ($join) {
-                $join->on('a.companycode', '=', 'b.companycode')
+                $join->on('a.companycode', '=', 'c.companycode')
                     ->on('a.activitycode', '=', 'c.activitycode')
-                    ->whereBetween('c.lkhdate', [DB::raw('a.startdate'), DB::raw('a.enddate')]);
+                    ->whereColumn('c.lkhdate', '>=', 'a.startdate')
+                    ->whereColumn('c.lkhdate', '<=', 'a.enddate');
             })
             ->leftJoin('lkhdetailplot as d', function ($join) {
-                $join->on('c.lkhno', '=', 'd.lkhno')
-                    ->on('a.companycode', '=', 'b.companycode')
+                $join->on('c.companycode', '=', 'd.companycode')
+                    ->on('c.lkhno', '=', 'd.lkhno')
+                    ->on('b.blok', '=', 'd.blok')
                     ->on('b.plot', '=', 'd.plot');
             })
             ->leftJoin('activity as act', 'a.activitycode', '=', 'act.activitycode')
             ->select(
-                'a.rkmno',
+                'b.rkmno',
                 'a.startdate',
                 'a.enddate',
                 'a.activitycode',
                 'act.activityname',
-                'b.totalestimasi',
                 'b.blok',
                 'b.plot',
-                'b.totalluasactual',
-                DB::raw('SUM(d.luashasil) AS hasil'),
-                DB::raw('b.totalestimasi - SUM(d.luashasil) AS sisa')
+                'b.totalluasplot as luasplot',
+                'b.totalestimasi as estimasi',
+                'b.totalluasactual as aktual',
+                DB::raw('COALESCE(SUM(d.luashasil), 0) AS hasil'),
+                DB::raw('b.totalluasactual - COALESCE(SUM(d.luashasil), 0) AS sisa')
             )
             ->where('a.companycode', $companyCode)
             ->where('a.rkmno', $rkmno)
             ->groupBy(
-                'a.rkmno',
+                'b.rkmno',
                 'a.startdate',
                 'a.enddate',
                 'a.activitycode',
                 'act.activityname',
-                'b.totalestimasi',
                 'b.blok',
                 'b.plot',
+                'b.totalluasplot',
+                'b.totalestimasi',
                 'b.totalluasactual'
             )
+            ->orderBy('b.blok')
+            ->orderBy('b.plot')
             ->get();
 
         foreach ($rkmLists as $index => $item) {
