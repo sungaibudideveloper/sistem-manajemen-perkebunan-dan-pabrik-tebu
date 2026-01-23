@@ -26,7 +26,7 @@ class BatchController extends Controller
                   ->orWhere('plot', 'like', "%{$search}%")
                   ->orWhere('kodevarietas', 'like', "%{$search}%")
                   ->orWhere('lifecyclestatus', 'like', "%{$search}%")
-                  ->orWhere('plantingrkhno', 'like', "%{$search}%")
+                  ->orWhere('plantinglkhno', 'like', "%{$search}%")
                   ->orWhere('plottype', 'like', "%{$search}%");
             });
         }
@@ -64,7 +64,7 @@ class BatchController extends Controller
             'lifecyclestatus' => 'required|in:PC,RC1,RC2,RC3',
             'pkp' => 'nullable|integer|min:0',
             'lastactivity' => 'nullable|string|max:100',
-            'plantingrkhno' => 'nullable|string|max:15',
+            'plantinglkhno' => 'nullable|string|max:15',
             'tanggalpanen' => 'nullable|date',
         ]);
 
@@ -90,7 +90,7 @@ class BatchController extends Controller
             'pkp' => $request->input('pkp'),
             'lastactivity' => $request->input('lastactivity'),
             'isactive' => 1,
-            'plantingrkhno' => $request->input('plantingrkhno'),
+            'plantinglkhno' => $request->input('plantinglkhno'),
             'tanggalpanen' => $request->input('tanggalpanen'),
             'inputby' => Auth::user()->userid,
             'createdat' => now(),
@@ -118,7 +118,7 @@ class BatchController extends Controller
             'pkp' => 'nullable|integer|min:0',
             'lastactivity' => 'nullable|string|max:100',
             'isactive' => 'required|boolean',
-            'plantingrkhno' => 'nullable|string|max:15',
+            'plantinglkhno' => 'nullable|string|max:15',
             'tanggalpanen' => 'nullable|date',
         ]);
         
@@ -145,7 +145,7 @@ class BatchController extends Controller
             'pkp' => $validated['pkp'],
             'lastactivity' => $validated['lastactivity'],
             'isactive' => $validated['isactive'],
-            'plantingrkhno' => $validated['plantingrkhno'],
+            'plantinglkhno' => $validated['plantinglkhno'],
             'tanggalpanen' => $validated['tanggalpanen'],
         ]);
     

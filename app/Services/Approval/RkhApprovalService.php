@@ -271,7 +271,7 @@ class RkhApprovalService
                 'plot' => $plotData->plot,
                 'batchdate' => $plotData->rkhdate,
                 'batcharea' => $plotData->luasarea,
-                'plantingrkhno' => $rkhno,
+                'plantinglkhno' => $rkhno,
                 'inputby' => Auth::user()->userid,
                 'createdat' => now()
             ]);

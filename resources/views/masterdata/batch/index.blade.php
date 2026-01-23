@@ -19,7 +19,7 @@
         pkp: '',
         lastactivity: '',
         isactive: '1',
-        plantingrkhno: '',
+        plantinglkhno: '',
         tanggalpanen: ''
       },
       resetForm() {
@@ -36,7 +36,7 @@
           pkp: '',
           lastactivity: '',
           isactive: '1',
-          plantingrkhno: '',
+          plantinglkhno: '',
           tanggalpanen: ''
         };
         this.open = true;
@@ -218,9 +218,9 @@
 
                     <div class="grid grid-cols-2 gap-4">
                       <div>
-                        <label for="plantingrkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
-                        <input type="text" name="plantingrkhno" id="plantingrkhno" x-model="form.plantingrkhno" 
-                              x-init="form.plantingrkhno = '{{ old('plantingrkhno') }}'"
+                        <label for="plantinglkhno" class="block text-sm font-medium text-gray-700">Planting RKH No</label>
+                        <input type="text" name="plantinglkhno" id="plantinglkhno" x-model="form.plantinglkhno" 
+                              x-init="form.plantinglkhno = '{{ old('plantinglkhno') }}'"
                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                               maxlength="15">
                       </div>
@@ -332,7 +332,7 @@
                                       form.pkp = '{{ $data->pkp }}';
                                       form.lastactivity = '{{ $data->lastactivity }}';
                                       form.isactive = '{{ $data->isactive }}';
-                                      form.plantingrkhno = '{{ $data->plantingrkhno }}';
+                                      form.plantinglkhno = '{{ $data->plantinglkhno }}';
                                       form.tanggalpanen = '{{ $data->tanggalpanen }}';
                                       open = true
                                     "
