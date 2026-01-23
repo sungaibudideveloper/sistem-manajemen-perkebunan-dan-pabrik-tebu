@@ -273,46 +273,40 @@ class RencanaKerjaMingguanController extends Controller
             ->leftJoin('lkhhdr as c', function ($join) {
                 $join->on('a.companycode', '=', 'c.companycode')
                     ->on('a.activitycode', '=', 'c.activitycode')
-                    ->whereColumn('c.lkhdate', '>=', 'a.startdate')
-                    ->whereColumn('c.lkhdate', '<=', 'a.enddate');
+                    ->whereBetween('c.lkhdate', [DB::raw('a.startdate'), DB::raw('a.enddate')]);
             })
             ->leftJoin('lkhdetailplot as d', function ($join) {
-                $join->on('c.companycode', '=', 'd.companycode')
-                    ->on('c.lkhno', '=', 'd.lkhno')
-                    ->on('b.blok', '=', 'd.blok')
+                $join->on('c.lkhno', '=', 'd.lkhno')
+                    ->on('c.companycode', '=', 'd.companycode') // Ubah dari a.companycode ke c.companycode
                     ->on('b.plot', '=', 'd.plot');
             })
             ->leftJoin('activity as act', 'a.activitycode', '=', 'act.activitycode')
             ->select(
-                'b.rkmno',
+                'a.rkmno',
                 'a.startdate',
                 'a.enddate',
                 'a.activitycode',
                 'act.activityname',
+                'b.totalestimasi',
                 'b.blok',
                 'b.plot',
-                'b.totalluasplot as luasplot',
-                'b.totalestimasi as estimasi',
-                'b.totalluasactual as aktual',
+                'b.totalluasactual',
                 DB::raw('COALESCE(SUM(d.luashasil), 0) AS hasil'),
-                DB::raw('b.totalluasactual - COALESCE(SUM(d.luashasil), 0) AS sisa')
+                DB::raw('COALESCE(b.totalestimasi - SUM(d.luashasil), b.totalestimasi) AS sisa')
             )
             ->where('a.companycode', $companyCode)
             ->where('a.rkmno', $rkmno)
             ->groupBy(
-                'b.rkmno',
+                'a.rkmno',
                 'a.startdate',
                 'a.enddate',
                 'a.activitycode',
                 'act.activityname',
+                'b.totalestimasi',
                 'b.blok',
                 'b.plot',
-                'b.totalluasplot',
-                'b.totalestimasi',
                 'b.totalluasactual'
             )
-            ->orderBy('b.blok')
-            ->orderBy('b.plot')
             ->get();
 
         foreach ($rkmLists as $index => $item) {
@@ -321,7 +315,6 @@ class RencanaKerjaMingguanController extends Controller
 
         return response()->json($rkmLists);
     }
-
 
     public function edit($rkmno)
     {
