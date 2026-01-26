@@ -110,35 +110,47 @@ class UpahBoronganController extends Controller
 
         $companycode = Session::get('companycode');
 
-        // ✅ VALIDASI: Cek apakah sudah ada upah aktif untuk activity ini
-        $existingActive = DB::table('upahborongan')
+        // ✅ VALIDASI: Cek OVERLAP periode dengan upah existing
+        $overlapping = DB::table('upahborongan')
             ->where('companycode', $companycode)
             ->where('activitycode', $request->activitycode)
-            ->where(function ($q) {
-                $q->whereNull('enddate')
-                    ->orWhere('enddate', '>=', now()->format('Y-m-d'));
+            ->where(function($q) use ($request) {
+                // Case 1: enddate baru NULL (unlimited) - harus cek ada ga yang overlap
+                if (empty($request->enddate)) {
+                    $q->where(function($q2) use ($request) {
+                        // Existing yang enddate NULL atau >= effectivedate baru
+                        $q2->whereNull('enddate')
+                           ->orWhere('enddate', '>=', $request->effectivedate);
+                    })
+                    ->where(function($q2) use ($request) {
+                        // Existing yang effectivedate <= effectivedate baru (artinya masih berlaku)
+                        $q2->where('effectivedate', '<=', $request->effectivedate);
+                    });
+                } else {
+                    // Case 2: enddate baru ADA (ada batas waktu)
+                    $q->where(function($q2) use ($request) {
+                        // Check overlap: existing.effectivedate <= new.enddate AND (existing.enddate >= new.effectivedate OR existing.enddate IS NULL)
+                        $q2->where('effectivedate', '<=', $request->enddate)
+                           ->where(function($q3) use ($request) {
+                               $q3->whereNull('enddate')
+                                  ->orWhere('enddate', '>=', $request->effectivedate);
+                           });
+                    });
+                }
             })
             ->first();
 
-        if ($existingActive) {
+        if ($overlapping) {
             $activityName = DB::table('activity')
                 ->where('activitycode', $request->activitycode)
                 ->value('activityname');
 
-            return redirect()->route('masterdata.upah-borongan.index')
-                ->with('error', "Tidak dapat menambah upah baru! Masih ada upah aktif untuk aktivitas [{$request->activitycode} - {$activityName}] dengan nominal Rp " . number_format($existingActive->amount, 0, ',', '.') . " yang berlaku sejak " . date('d-m-Y', strtotime($existingActive->effectivedate)) . ". Silakan EDIT upah tersebut dan set tanggal berakhir terlebih dahulu.");
-        }
+            $endDateText = $overlapping->enddate 
+                ? date('d-m-Y', strtotime($overlapping->enddate))
+                : 'sekarang';
 
-        // Cek duplikasi untuk periode yang sama
-        $duplicate = DB::table('upahborongan')
-            ->where('companycode', $companycode)
-            ->where('activitycode', $request->activitycode)
-            ->where('effectivedate', $request->effectivedate)
-            ->exists();
-
-        if ($duplicate) {
             return redirect()->route('masterdata.upah-borongan.index')
-                ->with('error', 'Upah untuk aktivitas ini pada tanggal yang sama sudah ada.');
+                ->with('error', "Tidak dapat menambah upah! Periode OVERLAP dengan upah existing untuk [{$request->activitycode} - {$activityName}] dengan nominal Rp " . number_format($overlapping->amount, 0, ',', '.') . " yang berlaku dari " . date('d-m-Y', strtotime($overlapping->effectivedate)) . " sampai {$endDateText}. Silakan sesuaikan tanggal atau edit upah yang sudah ada.");
         }
 
         // Insert data
@@ -190,37 +202,43 @@ class UpahBoronganController extends Controller
                 ->with('error', 'Data upah borongan tidak ditemukan.');
         }
 
-        // Cek duplikasi (exclude current record)
-        $duplicate = DB::table('upahborongan')
-            ->where('companycode', $companycode)
-            ->where('activitycode', $request->activitycode)
-            ->where('effectivedate', $request->effectivedate)
-            ->where('id', '!=', $id)
-            ->exists();
-
-        if ($duplicate) {
-            return redirect()->route('masterdata.upah-borongan.index')
-                ->with('error', 'Upah untuk aktivitas ini pada tanggal yang sama sudah ada.');
-        }
-
-        // ✅ VALIDASI: Cek overlap dengan upah aktif lain (exclude current record)
-        $hasOtherActive = DB::table('upahborongan')
+        // ✅ VALIDASI: Cek OVERLAP dengan record lain (exclude current record)
+        $overlapping = DB::table('upahborongan')
             ->where('companycode', $companycode)
             ->where('activitycode', $request->activitycode)
             ->where('id', '!=', $id)
-            ->where(function ($q) {
-                $q->whereNull('enddate')
-                    ->orWhere('enddate', '>=', now()->format('Y-m-d'));
+            ->where(function($q) use ($request) {
+                if (empty($request->enddate)) {
+                    $q->where(function($q2) use ($request) {
+                        $q2->whereNull('enddate')
+                           ->orWhere('enddate', '>=', $request->effectivedate);
+                    })
+                    ->where(function($q2) use ($request) {
+                        $q2->where('effectivedate', '<=', $request->effectivedate);
+                    });
+                } else {
+                    $q->where(function($q2) use ($request) {
+                        $q2->where('effectivedate', '<=', $request->enddate)
+                           ->where(function($q3) use ($request) {
+                               $q3->whereNull('enddate')
+                                  ->orWhere('enddate', '>=', $request->effectivedate);
+                           });
+                    });
+                }
             })
             ->first();
 
-        if ($hasOtherActive && empty($request->enddate)) {
+        if ($overlapping) {
             $activityName = DB::table('activity')
                 ->where('activitycode', $request->activitycode)
                 ->value('activityname');
 
+            $endDateText = $overlapping->enddate 
+                ? date('d-m-Y', strtotime($overlapping->enddate))
+                : 'sekarang';
+
             return redirect()->route('masterdata.upah-borongan.index')
-                ->with('error', "Tidak dapat mengaktifkan upah ini! Masih ada upah aktif lain untuk aktivitas [{$request->activitycode} - {$activityName}] dengan nominal Rp " . number_format($hasOtherActive->amount, 0, ',', '.') . " yang berlaku sejak " . date('d-m-Y', strtotime($hasOtherActive->effectivedate)) . ". Silakan set tanggal berakhir pada upah tersebut terlebih dahulu.");
+                ->with('error', "Tidak dapat mengupdate upah! Periode OVERLAP dengan upah lain untuk [{$request->activitycode} - {$activityName}] dengan nominal Rp " . number_format($overlapping->amount, 0, ',', '.') . " yang berlaku dari " . date('d-m-Y', strtotime($overlapping->effectivedate)) . " sampai {$endDateText}.");
         }
 
         // Update data
@@ -253,19 +271,6 @@ class UpahBoronganController extends Controller
             return redirect()->route('masterdata.upah-borongan.index')
                 ->with('error', 'Data upah borongan tidak ditemukan.');
         }
-
-        // Optional: Cek apakah upah ini sudah dipakai di transaksi
-        // Uncomment jika ada tabel transaksi yang reference ke upahborongan
-        /*
-        $isUsed = DB::table('transaksi_table')
-            ->where('upahborongan_id', $id)
-            ->exists();
-
-        if ($isUsed) {
-            return redirect()->route('masterdata.upah-borongan.index')
-                ->with('error', 'Data upah borongan tidak dapat dihapus karena sudah digunakan dalam transaksi.');
-        }
-        */
 
         // Delete data
         DB::table('upahborongan')

@@ -15,12 +15,36 @@ class UpahController extends Controller
     {
         $query = DB::table('upah')->select('*');
 
+        // Search functionality
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('activitygroup', 'like', '%' . $request->search . '%')
-                    ->orWhere('wagetype', 'like', '%' . $request->search . '%')
-                    ->orWhere('effectivedate', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('activitygroup', 'like', "%{$search}%")
+                    ->orWhere('wagetype', 'like', "%{$search}%")
+                    ->orWhere('parameter', 'like', "%{$search}%");
             });
+        }
+
+        // Filter by activitygroup
+        if ($request->filled('activitygroup')) {
+            $query->where('activitygroup', $request->activitygroup);
+        }
+
+        // Filter by wagetype
+        if ($request->filled('wagetype')) {
+            $query->where('wagetype', $request->wagetype);
+        }
+
+        // Filter by status (active/expired)
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where(function ($q) {
+                    $q->whereNull('enddate')
+                        ->orWhere('enddate', '>=', now()->format('Y-m-d'));
+                });
+            } elseif ($request->status === 'expired') {
+                $query->where('enddate', '<', now()->format('Y-m-d'));
+            }
         }
 
         $query->where('companycode', Session::get('companycode'));
@@ -31,11 +55,11 @@ class UpahController extends Controller
         $user = Auth::user()->userid;
         $userdata = User::where('userid', $user)->firstOrFail();
 
-        $activityGroups = DB::table('upah')
-            ->select('activitygroup')
-            ->where('companycode', Session::get('companycode'))
-            ->distinct()
-            ->pluck('activitygroup');
+        // Read from activitygroup table
+        $activityGroups = DB::table('activitygroup')
+            ->select('activitygroup', 'groupname')
+            ->orderBy('activitygroup')
+            ->get();
 
         $wageTypes = [
             'DAILY' => 'Harian',
@@ -79,20 +103,58 @@ class UpahController extends Controller
 
         $companycode = Session::get('companycode');
 
-        // Validasi duplikasi data
-        $cek = DB::table('upah')
+        // ✅ VALIDASI: Cek OVERLAP periode dengan upah existing
+        $overlapping = DB::table('upah')
             ->where('companycode', $companycode)
             ->where('activitygroup', $request->activitygroup)
             ->where('wagetype', $request->wagetype)
-            ->where('effectivedate', $request->effectivedate)
             ->where('parameter', $request->parameter)
-            ->exists();
+            ->where(function($q) use ($request) {
+                // Case 1: enddate baru NULL (unlimited) - harus cek ada ga yang overlap
+                if (empty($request->enddate)) {
+                    $q->where(function($q2) use ($request) {
+                        // Existing yang enddate NULL atau >= effectivedate baru
+                        $q2->whereNull('enddate')
+                        ->orWhere('enddate', '>=', $request->effectivedate);
+                    })
+                    ->where(function($q2) use ($request) {
+                        // Existing yang effectivedate <= effectivedate baru (artinya masih berlaku)
+                        $q2->where('effectivedate', '<=', $request->effectivedate);
+                    });
+                } else {
+                    // Case 2: enddate baru ADA (ada batas waktu)
+                    $q->where(function($q2) use ($request) {
+                        // Check overlap: existing.effectivedate <= new.enddate AND (existing.enddate >= new.effectivedate OR existing.enddate IS NULL)
+                        $q2->where('effectivedate', '<=', $request->enddate)
+                        ->where(function($q3) use ($request) {
+                            $q3->whereNull('enddate')
+                                ->orWhere('enddate', '>=', $request->effectivedate);
+                        });
+                    });
+                }
+            })
+            ->first();
 
-        if ($cek) {
+        if ($overlapping) {
+            $wageTypes = [
+                'DAILY' => 'Harian',
+                'HOURLY' => 'Per Jam', 
+                'OVERTIME' => 'Lembur',
+                'WEEKEND_SATURDAY' => 'Weekend Sabtu',
+                'WEEKEND_SUNDAY' => 'Weekend Minggu',
+                'PER_HECTARE' => 'Per Hektar',
+                'PER_KG' => 'Per Kilogram'
+            ];
+
+            $endDateText = $overlapping->enddate 
+                ? date('d-m-Y', strtotime($overlapping->enddate))
+                : 'sekarang';
+
             return redirect()->route('masterdata.upah.index')
-                ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
+                ->with('error', "Tidak dapat menambah upah! Periode OVERLAP dengan upah existing untuk [{$request->activitygroup} - {$wageTypes[$request->wagetype]}] dengan nominal Rp " . number_format($overlapping->amount, 0, ',', '.') . " yang berlaku dari " . date('d-m-Y', strtotime($overlapping->effectivedate)) . " sampai {$endDateText}. Silakan sesuaikan tanggal atau edit upah yang sudah ada.");
         }
 
+        // Insert data
         DB::table('upah')->insert([
             'companycode' => $companycode,
             'activitygroup' => $request->activitygroup,
@@ -129,22 +191,66 @@ class UpahController extends Controller
 
         $companycode = Session::get('companycode');
 
-        // Validasi duplikasi data (kecuali data yang sedang diedit)
-        $validasi = DB::table('upah')
+        // Cek apakah data exist
+        $existing = DB::table('upah')
+            ->where('id', $id)
+            ->where('companycode', $companycode)
+            ->first();
+
+        if (!$existing) {
+            return redirect()->route('masterdata.upah.index')
+                ->with('error', 'Data upah tidak ditemukan.');
+        }
+
+        // ✅ VALIDASI: Cek OVERLAP dengan record lain (exclude current record)
+        $overlapping = DB::table('upah')
             ->where('companycode', $companycode)
             ->where('activitygroup', $request->activitygroup)
             ->where('wagetype', $request->wagetype)
-            ->where('effectivedate', $request->effectivedate)
             ->where('parameter', $request->parameter)
             ->where('id', '!=', $id)
-            ->exists();
+            ->where(function($q) use ($request) {
+                if (empty($request->enddate)) {
+                    $q->where(function($q2) use ($request) {
+                        $q2->whereNull('enddate')
+                        ->orWhere('enddate', '>=', $request->effectivedate);
+                    })
+                    ->where(function($q2) use ($request) {
+                        $q2->where('effectivedate', '<=', $request->effectivedate);
+                    });
+                } else {
+                    $q->where(function($q2) use ($request) {
+                        $q2->where('effectivedate', '<=', $request->enddate)
+                        ->where(function($q3) use ($request) {
+                            $q3->whereNull('enddate')
+                                ->orWhere('enddate', '>=', $request->effectivedate);
+                        });
+                    });
+                }
+            })
+            ->first();
 
-        if ($validasi) {
+        if ($overlapping) {
+            $wageTypes = [
+                'DAILY' => 'Harian',
+                'HOURLY' => 'Per Jam', 
+                'OVERTIME' => 'Lembur',
+                'WEEKEND_SATURDAY' => 'Weekend Sabtu',
+                'WEEKEND_SUNDAY' => 'Weekend Minggu',
+                'PER_HECTARE' => 'Per Hektar',
+                'PER_KG' => 'Per Kilogram'
+            ];
+
+            $endDateText = $overlapping->enddate 
+                ? date('d-m-Y', strtotime($overlapping->enddate))
+                : 'sekarang';
+
             return redirect()->route('masterdata.upah.index')
-                ->with('error', 'Data upah dengan kombinasi yang sama sudah ada.');
+                ->with('error', "Tidak dapat mengupdate upah! Periode OVERLAP dengan upah lain untuk [{$request->activitygroup} - {$wageTypes[$request->wagetype]}] dengan nominal Rp " . number_format($overlapping->amount, 0, ',', '.') . " yang berlaku dari " . date('d-m-Y', strtotime($overlapping->effectivedate)) . " sampai {$endDateText}.");
         }
 
-        $updated = DB::table('upah')
+        // Update data
+        DB::table('upah')
             ->where('id', $id)
             ->where('companycode', $companycode)
             ->update([
@@ -157,13 +263,8 @@ class UpahController extends Controller
                 'updatedat' => now(),
             ]);
 
-        if ($updated) {
-            return redirect()->route('masterdata.upah.index')
-                ->with('success', 'Data upah berhasil diupdate');
-        }
-
         return redirect()->route('masterdata.upah.index')
-            ->with('error', 'Data upah tidak ditemukan.');
+            ->with('success', 'Data upah berhasil diupdate');
     }
 
     public function destroy($id)
@@ -182,5 +283,30 @@ class UpahController extends Controller
 
         return redirect()->route('masterdata.upah.index')
             ->with('error', 'Data upah tidak ditemukan.');
+    }
+
+    /**
+     * Get current wage untuk reference (Optional untuk future enhancement)
+     */
+    public function getCurrentWage(Request $request)
+    {
+        $activitygroup = $request->get('activitygroup');
+        $wagetype = $request->get('wagetype');
+        $parameter = $request->get('parameter');
+        $companycode = Session::get('companycode');
+
+        $currentWage = DB::table('upah')
+            ->where('companycode', $companycode)
+            ->where('activitygroup', $activitygroup)
+            ->where('wagetype', $wagetype)
+            ->where('parameter', $parameter)
+            ->where(function ($q) {
+                $q->whereNull('enddate')
+                    ->orWhere('enddate', '>=', now()->format('Y-m-d'));
+            })
+            ->orderBy('effectivedate', 'DESC')
+            ->first();
+
+        return response()->json($currentWage);
     }
 }
