@@ -42,6 +42,14 @@ class PerhitunganUpahApiMobile extends Controller
             
             $wageData = $this->calculateWage($validated, $totalJamKerja);
             
+            // Check if wage calculation returned error
+            if (isset($wageData['error'])) {
+                return response()->json([
+                    'status' => 0,
+                    'description' => $wageData['error']
+                ], 404);
+            }
+            
             $existingRecord = DB::table('lkhdetailworker')
                 ->where('companycode', $validated['companycode'])
                 ->where('lkhno', $validated['lkhno'])
@@ -274,17 +282,38 @@ class PerhitunganUpahApiMobile extends Controller
         
         if ($totalJamKerja >= 8) {
             $dailyRate = $this->getHarianRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
-            $wageData['upahharian'] = $dailyRate ?: 115722.8;
+            
+            if ($dailyRate === null) {
+                return [
+                    'error' => "Data upah untuk Activity Group '{$activityGroup}' dengan tipe '{$dayType}' pada Company '{$data['companycode']}' belum tersedia. Silakan tambahkan data upah melalui Website terlebih dahulu."
+                ];
+            }
+            
+            $wageData['upahharian'] = $dailyRate;
         } else {
             $hourlyRate = $this->getHarianRate($data['companycode'], $activityGroup, 'HOURLY', $data['lkhdate']);
-            $wageData['upahperjam'] = $hourlyRate ?: 16532;
+            
+            if ($hourlyRate === null) {
+                return [
+                    'error' => "Data upah HOURLY untuk Activity Group '{$activityGroup}' pada Company '{$data['companycode']}' belum tersedia. Silakan tambahkan data upah melalui Website terlebih dahulu."
+                ];
+            }
+            
+            $wageData['upahperjam'] = $hourlyRate;
             $wageData['upahharian'] = $totalJamKerja * $wageData['upahperjam'];
         }
         
         $overtimeHours = $data['overtimehours'] ?? 0;
         if ($overtimeHours > 0) {
             $overtimeRate = $this->getHarianRate($data['companycode'], $activityGroup, 'OVERTIME', $data['lkhdate']);
-            $wageData['upahlembur'] = $overtimeHours * ($overtimeRate ?: 12542);
+            
+            if ($overtimeRate === null) {
+                return [
+                    'error' => "Data upah OVERTIME untuk Activity Group '{$activityGroup}' pada Company '{$data['companycode']}' belum tersedia. Silakan tambahkan data upah melalui Website terlebih dahulu."
+                ];
+            }
+            
+            $wageData['upahlembur'] = $overtimeHours * $overtimeRate;
         }
         
         $wageData['totalupah'] = $wageData['upahharian'] + $wageData['upahlembur'];
@@ -296,7 +325,7 @@ class PerhitunganUpahApiMobile extends Controller
     {
         $workDate = Carbon::parse($workDate)->format('Y-m-d');
         
-        return DB::table('upah')
+        $rate = DB::table('upah')
             ->where('companycode', $companycode)
             ->where('activitygroup', $activitygroup)
             ->where('wagetype', $wagetype)
@@ -306,7 +335,10 @@ class PerhitunganUpahApiMobile extends Controller
                     ->orWhere('enddate', '>=', $workDate);
             })
             ->orderBy('effectivedate', 'DESC')
-            ->value('amount') ?? 0;
+            ->value('amount');
+        
+        // Return null if not found (no fallback)
+        return $rate;
     }
     
     private function calculateWorkHours($jamMasuk, $jamSelesai)
