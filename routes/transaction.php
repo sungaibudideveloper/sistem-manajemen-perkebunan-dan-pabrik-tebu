@@ -114,6 +114,10 @@ Route::middleware('auth')->prefix('transaction')->name('transaction.')->group(fu
                 Route::get('/{rkhno}/edit', 'edit')->name('edit');
                 Route::put('/{rkhno}', 'update')->name('update');
                 Route::delete('/{rkhno}', 'destroy')->name('destroy');
+
+                // Cancel
+                Route::post('/{rkhno}/cancel', 'cancel')->name('cancel');
+                Route::get('/{rkhno}/batal-detail', 'getBatalDetail')->name('batalDetail');
             });
 
             // ============================================================
