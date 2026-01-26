@@ -507,4 +507,82 @@ class RkhController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Cancel RKH
+     * 
+     * @param Request $request
+     * @param string $rkhno
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancel(Request $request, $rkhno)
+    {
+        try {
+            $request->validate([
+                'alasan' => 'required|string|min:10|max:500'
+            ], [
+                'alasan.required' => 'Alasan pembatalan wajib diisi',
+                'alasan.min' => 'Alasan pembatalan minimal 10 karakter',
+                'alasan.max' => 'Alasan pembatalan maksimal 500 karakter'
+            ]);
+            
+            $companycode = Session::get('companycode');
+            $userid = Auth::user()->userid;
+            $alasan = $request->input('alasan');
+            
+            $result = $this->rkhService->cancelRkh($rkhno, $alasan, $companycode, $userid);
+            
+            return response()->json($result, $result['success'] ? 200 : 400);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->validator->errors()->first()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \Log::error('RKH Cancel Error', [
+                'rkhno' => $rkhno,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat membatalkan RKH: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get cancellation detail
+     * 
+     * @param string $rkhno
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getBatalDetail($rkhno)
+    {
+        try {
+            $companycode = Session::get('companycode');
+            $batalDetail = $this->rkhService->getBatalDetail($rkhno, $companycode);
+            
+            if (!$batalDetail) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data pembatalan tidak ditemukan'
+                ], 404);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => $batalDetail
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

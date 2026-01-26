@@ -618,4 +618,87 @@ class RkhService
             'levels' => $levels
         ];
     }
+
+    /**
+     * Cancel RKH
+     * 
+     * @param string $rkhno
+     * @param string $alasan
+     * @param string $companycode
+     * @param string $userid
+     * @return array
+     */
+    public function cancelRkh($rkhno, $alasan, $companycode, $userid)
+    {
+        // Validate can cancel
+        $canCancel = $this->rkhRepo->canCancelRkh($companycode, $rkhno);
+        
+        if (!$canCancel['can_cancel']) {
+            return [
+                'success' => false,
+                'message' => $canCancel['reason']
+            ];
+        }
+        
+        // Validate alasan
+        if (empty(trim($alasan))) {
+            return [
+                'success' => false,
+                'message' => 'Alasan pembatalan wajib diisi'
+            ];
+        }
+        
+        if (strlen(trim($alasan)) < 10) {
+            return [
+                'success' => false,
+                'message' => 'Alasan pembatalan minimal 10 karakter'
+            ];
+        }
+        
+        // Execute cancel
+        $updated = $this->rkhRepo->cancelRkh($companycode, $rkhno, $userid, trim($alasan));
+        
+        if ($updated) {
+            \Log::info('RKH Cancelled', [
+                'rkhno' => $rkhno,
+                'companycode' => $companycode,
+                'cancelled_by' => $userid,
+                'reason' => $alasan
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'RKH berhasil dibatalkan'
+            ];
+        }
+        
+        return [
+            'success' => false,
+            'message' => 'Gagal membatalkan RKH'
+        ];
+    }
+
+    /**
+     * Get batal detail
+     * 
+     * @param string $rkhno
+     * @param string $companycode
+     * @return array|null
+     */
+    public function getBatalDetail($rkhno, $companycode)
+    {
+        $rkh = $this->rkhRepo->getBatalDetail($companycode, $rkhno);
+        
+        if (!$rkh) {
+            return null;
+        }
+        
+        return [
+            'rkhno' => $rkh->rkhno,
+            'rkhdate_formatted' => \Carbon\Carbon::parse($rkh->rkhdate)->format('d/m/Y'),
+            'batalat_formatted' => \Carbon\Carbon::parse($rkh->batalat)->format('d/m/Y H:i'),
+            'batal_by_nama' => $rkh->batal_by_nama ?? 'Unknown',
+            'batalalasan' => $rkh->batalalasan
+        ];
+    }
 }

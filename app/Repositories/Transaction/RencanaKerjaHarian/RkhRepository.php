@@ -194,7 +194,7 @@ class RkhRepository
 
     /**
      * Get latest outstanding RKH by mandor
-     * (status != Completed OR status IS NULL)
+     * (status != Completed AND status != Batal)
      * 
      * @param string $companycode
      * @param string $mandorId
@@ -206,8 +206,8 @@ class RkhRepository
             ->where('companycode', $companycode)
             ->where('mandorid', $mandorId)
             ->where(function($query) {
-                $query->where('status', '!=', 'Completed')
-                      ->orWhereNull('status');
+                $query->whereNull('status')
+                    ->orWhereNotIn('status', ['Completed', 'Batal']);
             })
             ->orderBy('rkhdate', 'desc')
             ->select(['rkhno', 'rkhdate', 'status'])
@@ -215,7 +215,7 @@ class RkhRepository
     }
 
     /**
-     * Get RKH by mandor and date
+     * Get RKH by mandor and date (exclude Batal)
      * 
      * @param string $companycode
      * @param string $mandorId
@@ -228,6 +228,10 @@ class RkhRepository
             ->where('companycode', $companycode)
             ->where('mandorid', $mandorId)
             ->whereDate('rkhdate', $date)
+            ->where(function($query) {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'Batal');
+            })
             ->first(['rkhno', 'rkhdate', 'status']);
     }
 
@@ -305,9 +309,10 @@ class RkhRepository
 
     /**
      * Paginate RKH index with filters
+     * Updated: Handle 'Batal' status
      * 
      * @param string $companycode
-     * @param array $filters [search, filterApproval, filterStatus, filterDate, allDate]
+     * @param array $filters [search, filterApproval, filterStatus, filterDate, allDate, showBatal]
      * @param int $perPage
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
@@ -320,6 +325,7 @@ class RkhRepository
                     ->where('app.companycode', '=', $companycode);
             })
             ->leftJoin('activitygroup as ag', 'r.activitygroup', '=', 'ag.activitygroup')
+            ->leftJoin('user as bataluser', 'r.batalby', '=', 'bataluser.userid') // JOIN untuk nama pembatal
             ->where('r.companycode', $companycode)
             ->select([
                 'r.*',
@@ -330,6 +336,13 @@ class RkhRepository
                 'app.idjabatanapproval2',
                 'app.idjabatanapproval3',
                 'r.approvalstatus',
+                'bataluser.name as batal_by_nama',
+
+                DB::raw('(SELECT COUNT(*) FROM lkhhdr 
+                      WHERE lkhhdr.companycode = r.companycode 
+                      AND lkhhdr.rkhno = r.rkhno 
+                      AND lkhhdr.status != "EMPTY") as non_empty_lkh_count'),
+
                 DB::raw('CASE 
                     WHEN r.approvalstatus = "1" THEN "Approved"
                     WHEN r.approvalstatus = "0" THEN "Rejected"
@@ -342,7 +355,9 @@ class RkhRepository
                     WHEN r.approval3flag = "0" THEN "Declined"
                     ELSE "Waiting"
                 END as approval_status'),
+                
                 DB::raw('CASE 
+                    WHEN r.status = "Batal" THEN "Batal"
                     WHEN r.status = "Completed" THEN "Completed"
                     ELSE "In Progress"
                 END as current_status')
@@ -355,17 +370,32 @@ class RkhRepository
 
         // Apply approval filter
         if (!empty($filters['filterApproval'])) {
-            $query = $this->applyApprovalFilter($query, $filters['filterApproval']);
+            $this->applyApprovalFilter($query, $filters['filterApproval']);
         }
 
-        // Apply status filter
+        // Apply status filter (UPDATED: handle Batal)
         if (!empty($filters['filterStatus'])) {
             if ($filters['filterStatus'] === 'Completed') {
                 $query->where('r.status', 'Completed');
-            } else {
+            } elseif ($filters['filterStatus'] === 'Batal') {
+                $query->where('r.status', 'Batal');
+            } elseif ($filters['filterStatus'] === 'In Progress') {
                 $query->where(function($q) {
                     $q->whereNull('r.status')
-                    ->orWhere('r.status', '!=', 'Completed');
+                    ->orWhereNotIn('r.status', ['Completed', 'Batal']);
+                });
+            }
+        }
+
+        if (!empty($filters['filterStatus'])) {
+            if ($filters['filterStatus'] === 'Completed') {
+                $query->where('r.status', 'Completed');
+            } elseif ($filters['filterStatus'] === 'Batal') {
+                $query->where('r.status', 'Batal');
+            } elseif ($filters['filterStatus'] === 'In Progress') {
+                $query->where(function($q) {
+                    $q->whereNull('r.status')
+                    ->orWhereNotIn('r.status', ['Completed', 'Batal']);
                 });
             }
         }
@@ -632,6 +662,105 @@ class RkhRepository
                 'status' => $status,
                 'updateby' => $userid,
                 'updatedat' => $now
+            ]);
+    }
+
+    /**
+     * Cancel RKH (set status to Batal)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @param string $userid
+     * @param string $alasan
+     * @return int
+     */
+    public function cancelRkh($companycode, $rkhno, $userid, $alasan)
+    {
+        return DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->update([
+                'status' => 'Batal',
+                'batalat' => now(),
+                'batalby' => $userid,
+                'batalalasan' => $alasan,
+                'updateby' => $userid,
+                'updatedat' => now()
+            ]);
+    }
+
+    /**
+     * Check if RKH can be cancelled
+     * Rules: 
+     * - approvalstatus = '1' (fully approved)
+     * - status not Completed/Batal
+     * - All LKH must be EMPTY (no work done yet)
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return array
+     */
+    public function canCancelRkh($companycode, $rkhno)
+    {
+        $rkh = DB::table('rkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->first(['status', 'approvalstatus']);
+        
+        if (!$rkh) {
+            return ['can_cancel' => false, 'reason' => 'RKH tidak ditemukan'];
+        }
+        
+        // Already cancelled
+        if ($rkh->status === 'Batal') {
+            return ['can_cancel' => false, 'reason' => 'RKH sudah dibatalkan'];
+        }
+        
+        // Already completed
+        if ($rkh->status === 'Completed') {
+            return ['can_cancel' => false, 'reason' => 'RKH sudah Completed, tidak bisa dibatalkan'];
+        }
+        
+        // Must be fully approved (approvalstatus = '1')
+        if ($rkh->approvalstatus !== '1') {
+            return ['can_cancel' => false, 'reason' => 'RKH belum fully approved. Gunakan tombol Hapus jika ingin menghapus.'];
+        }
+        
+        // Check if all LKH are still EMPTY
+        $nonEmptyLkhCount = DB::table('lkhhdr')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->where('status', '!=', 'EMPTY')
+            ->count();
+        
+        if ($nonEmptyLkhCount > 0) {
+            return ['can_cancel' => false, 'reason' => 'Tidak dapat membatalkan RKH. Ada LKH yang sudah dikerjakan (status bukan EMPTY).'];
+        }
+        
+        return ['can_cancel' => true, 'reason' => null];
+    }
+
+    /**
+     * Get batal detail
+     * 
+     * @param string $companycode
+     * @param string $rkhno
+     * @return object|null
+     */
+    public function getBatalDetail($companycode, $rkhno)
+    {
+        return DB::table('rkhhdr as r')
+            ->leftJoin('user as u', 'r.batalby', '=', 'u.userid')
+            ->where('r.companycode', $companycode)
+            ->where('r.rkhno', $rkhno)
+            ->where('r.status', 'Batal')
+            ->first([
+                'r.rkhno',
+                'r.rkhdate',
+                'r.batalat',
+                'r.batalby',
+                'r.batalalasan',
+                'u.name as batal_by_nama'
             ]);
     }
 }
