@@ -280,7 +280,7 @@ class PerhitunganUpahApiMobile extends Controller
             'totalupah' => 0
         ];
         
-        if ($totalJamKerja >= 8) {
+        if ($totalJamKerja >= 7) {
             $dailyRate = $this->getHarianRate($data['companycode'], $activityGroup, $dayType, $data['lkhdate']);
             
             if ($dailyRate === null) {
