@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  * Business logic untuk generic approval workflow
  * Handles: Split/Merge, Purchase Request, Open Rework, etc.
  */
-class OtherApprovalService
+class OtherApprovalServicee
 {
     protected $repository;
 
@@ -393,24 +393,6 @@ private function finalizeUseMaterialAndSubmit(string $approvalno, string $compan
 
     $rkhno = trim((string) $approval->transactionnumber);
 
-    // ✅ mark snapshot approved (biar GudangController submit bisa lewat gate $isFromApproval)
-    $updatedRows = DB::table('usematerialapproval')
-        ->where('companycode', $companycode)
-        ->where('approvalno', $approvalno)
-        ->where('rkhno', $rkhno)
-        ->update([
-            'approved'   => 1,
-            'approvedat' => now(),
-            'approvedby' => $currentUser->userid,
-        ]);
-
-    Log::info('USE_MATERIAL_APPROVED_UPDATED', [
-        'approvalno' => $approvalno,
-        'companycode' => $companycode,
-        'rkhno' => $rkhno,
-        'updated_rows' => $updatedRows,
-    ]);
-
     $snap = DB::table('usematerialapproval')
         ->where('companycode', $companycode)
         ->where('approvalno', $approvalno)
@@ -474,11 +456,29 @@ private function finalizeUseMaterialAndSubmit(string $approvalno, string $compan
     // ✅ Panggil GudangController submit
     app(\App\Http\Controllers\Transaction\GudangController::class)->submit($req);
 
-    Log::info('USE_MATERIAL_SUBMIT_RETURNED', [
+    // ✅ Check apakah submit berhasil
+    $sessionError = session()->get('error');
+    $sessionWarning = session()->get('warning');
+
+    if ($sessionError || $sessionWarning) {
+        $errorMessage = $sessionError ?? $sessionWarning;
+        
+        Log::error('USE_MATERIAL_SUBMIT_FAILED', [
+            'approvalno' => $approvalno,
+            'rkhno' => $rkhno,
+            'error' => $errorMessage,
+        ]);
+        
+        // ✅ Throw exception - approval gagal
+        throw new \Exception('Submit gagal: ' . $errorMessage);
+    }
+
+    Log::info('USE_MATERIAL_SUBMIT_SUCCESS', [
         'approvalno' => $approvalno,
-        'companycode' => $companycode,
         'rkhno' => $rkhno,
     ]);
+
+
 }
 
 //cio
