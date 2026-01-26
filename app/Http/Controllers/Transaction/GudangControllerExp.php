@@ -370,7 +370,7 @@ class GudangControllerr extends Controller
         $costcenter = collect($response->json('costcenter'));
 
         
-
+        $usematerialapproval=null;
         if (strtoupper($details->first()->flagstatus ?? '') === 'WAIT_APPROVAL') {
             $ap = DB::table('usematerialapproval')
             ->where('companycode', session('companycode'))
@@ -733,7 +733,8 @@ public function submit(Request $request)
     $apiPayload = [];
     $qtyByItemcode = [];
     $itemDetails = [];
-
+    $seq = 1;
+    
     // Process flat - langsung dari request
     foreach ($request->itemcode as $lkhno => $items) {
         $detail = $detailsByLkhno[$lkhno];
@@ -803,7 +804,7 @@ public function submit(Request $request)
 
                 $existingKey = $lkhno . '-' . $itemcode . '-' . $key;
                 $existing = $existingData->get($existingKey);
-
+                
                 $insertData[] = [
                     'companycode' => session('companycode'),
                     'rkhno' => $request->rkhno,
@@ -815,7 +816,8 @@ public function submit(Request $request)
                     'itemname' => $herbisidaItems[$itemcode]->itemname ?? '',
                     'dosageperha' => $dosage,
                     'nouse' => $existing?->nouse ?? null,
-                    'plot' => $key
+                    'plot' => $key,
+                    'itemseq' => $seq++,
                 ];
 
                 // Jumlahkan qty per itemcode
@@ -886,7 +888,7 @@ public function submit(Request $request)
             
 
             // 2) insert snapshot ke usematerialapproval (detail-only)
-            $rows = [];
+            $rows = []; $seq = 1;
             foreach ($insertData as $row) {
                 $rows[] = [
                     'companycode' => $companycode,
@@ -902,6 +904,7 @@ public function submit(Request $request)
                     'flagstatus' => 'WAIT_APPROVAL',
                     'costcenter' => $request->costcenter,
                     'createdat' => now(),
+                    'itemseq'     => $seq++,
                 ];
             }
             DB::table('usematerialapproval')->insert($rows);
