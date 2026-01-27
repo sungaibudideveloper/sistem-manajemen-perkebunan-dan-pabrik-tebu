@@ -94,26 +94,12 @@ class GudangController extends Controller
                 });
             }
 
-            \Log::info('GUDANG HOME DEBUG:', [
-                'companycode' => session('companycode'),
-                'search' => $search,
-                'startDate' => $startDate,
-                'endDate' => $endDate,
-                'perPage' => $perPage,
-                'sql' => $usehdr->toSql(),
-                'bindings' => $usehdr->getBindings()
-            ]);
 
             $usehdr = $usehdr->select('a.*', 'c.name', 'd.nouse', 'b.rkhdate')
                 ->orderBy('a.createdat', 'desc')
                 ->paginate($perPage)
                 ->appends($request->query());
 
-            \Log::info('GUDANG HOME RESULT:', [
-                'total' => $usehdr->total(),
-                'count' => $usehdr->count(),
-                'data' => $usehdr->items()
-            ]);
 
             return view('transaction.gudang.home')->with([
                 'title' => 'Gudang',
@@ -311,21 +297,6 @@ class GudangController extends Controller
         $details = collect($usematerialhdr->selectusematerial(session('companycode'), $request->rkhno, 1));
         $first = $details->first();
 
-        Log::info('SUBMIT DEBUG CONTEXT', [
-            'url' => $request->fullUrl(),
-            'method' => $request->method(),
-            'session_companycode' => session('companycode'),
-            'req_rkhno' => $request->rkhno,
-            'req_approvalno' => $request->approvalno ?? null,
-            'req_costcenter' => $request->costcenter ?? null,
-            'host' => $request->getHost(),
-            'user_userid' => Auth::user()->userid ?? null,
-            'first_hdr_companycode' => $first->companycode ?? null,
-            'first_hdr_flagstatus' => $first->flagstatus ?? null,
-            'first_hdr_factoryinv' => $first->factoryinv ?? null,
-            'first_hdr_companyinv' => $first->companyinv ?? null,
-        ]);
-
         // $detailmaterial2 = collect($usemateriallst->where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->orderBy('lkhno')->orderBy('plot')->get());
         $detailmaterial = collect($usemateriallst->select('usemateriallst.*', 'lkhdetailplot.luasrkh')
             ->leftJoin('lkhdetailplot', function ($join) {
@@ -345,16 +316,7 @@ class GudangController extends Controller
             });
             //
         $groupIds = $details->pluck('herbisidagroupid')->unique();
-        $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get();
-
-        Log::info('DETAIL DEBUG USEMATERIALLST', [
-            'rkhno' => $request->rkhno,
-            'session_companycode' => session('companycode'),
-            'lst_count' => $lst->count(),
-            'lst_max_nouse' => $lst->max('nouse'),
-            'lst_nouse_sample' => $lst->pluck('nouse')->filter()->unique()->take(5)->values()->toArray(),
-            'lst_itemcodes_sample' => $lst->pluck('itemcode')->take(10)->values()->toArray(),
-        ]);        
+        $lst = usemateriallst::where('rkhno', $request->rkhno)->where('companycode', session('companycode'))->get();     
 
         //api_costcenter
         $companyinv = company::where('companycode', session('companycode'))->first();
@@ -943,14 +905,7 @@ public function submit(Request $request)
         // Bulk insert
         usemateriallst::insert($insertData);
 
-        // Update header status
-        usematerialhdr::where('rkhno', $request->rkhno)
-            ->where('companycode', session('companycode'))
-            ->update([
-                'flagstatus' => 'DISPATCHED',
-                'updatedat' => date("Y-m-d H:i:s"),
-                'updateby' => Auth::user()->userid
-            ]);
+
 
         // ✅ COMMIT - Semua operasi DB sudah selesai
         DB::commit();
@@ -1063,6 +1018,7 @@ public function submit(Request $request)
             }
 
             // Update nouse & itemprice
+            $unaffected=0;
             foreach ($itemPriceMap as $itemcode => $val) {
 
                 Log::info("Before DB update:", [
@@ -1085,46 +1041,51 @@ public function submit(Request $request)
                         'tgluse'    => now()
                     ]);
 
-                // Cek hasil di database
-                $saved = usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->where('itemcode', $itemcode)
-                    ->value('itemprice');
-
-                Log::info("After DB update:", [
-                    'itemcode' => $itemcode,
-                    'itemprice_saved' => $saved,
-                    'affected_rows' => $affected,
-                    'type' => gettype($saved)
-                ]);
-
-                if ($affected === 0) {
+                if ($affected === 0) { $unaffected++;
                     Log::warning('usemateriallst not updated (possible itemcode mismatch)', [
                         'rkhno' => $request->rkhno,
                         'companycode' => session('companycode'),
                         'itemcode' => $itemcode,
                         'noUse' => $responseData['noUse'] ?? null
                     ]);
+
+                    $dbRows = usemateriallst::where('rkhno', $request->rkhno)
+                    ->where('companycode', session('companycode'))
+                    ->whereRaw('TRIM(itemcode) = ?', [$itemcode])
+                    ->select([
+                        'lkhno', 'plot', 'itemcode',
+                        DB::raw('HEX(itemcode) as itemcode_hex'),
+                        DB::raw('LENGTH(itemcode) as len'),
+                    ])
+                    ->get()
+                    ->toArray();
+            
+                    Log::warning('USEMATERIALLST_UPDATE_MISS', [
+                        'rkhno' => $request->rkhno,
+                        'companycode' => session('companycode'),
+                
+                        // item yang sedang di-loop (yang gagal update)
+                        'api_itemcode' => (string)$itemcode,
+                        'api_itemcode_hex' => bin2hex((string)$itemcode),
+                        'api_has_whitespace' => (bool)preg_match('/\s/', (string)$itemcode),
+                
+                        // “padanan” item di DB untuk item yang sama (kalau ada, berarti beda whitespace/CRLF)
+                        'db_rows_trim_match' => $dbRows,   // ini bukan sample, ini semua row yang match TRIM
+                        'db_rows_count' => count($dbRows),
+                
+                        'noUse' => $responseData['noUse'] ?? null,
+                        'costcenter' => $request->costcenter ?? null,
+                    ]);
                 }
             }
-
-            Log::info('SUBMIT AFTER UPDATE USEMATERIALLST', [
-                'rkhno' => $request->rkhno,
-                'session_companycode' => session('companycode'),
-                'db_lst_max_nouse' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->max('nouse'),
-                'db_lst_nouse_distinct' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->whereNotNull('nouse')
-                    ->distinct()
-                    ->pluck('nouse')
-                    ->take(5)
-                    ->toArray(),
-                'db_lst_notnull_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->whereNotNull('nouse')
-                    ->count(),
+            
+            // Update header status
+            usematerialhdr::where('rkhno', $request->rkhno)
+            ->where('companycode', session('companycode'))
+            ->update([
+                'flagstatus' => 'DISPATCHED',
+                'updatedat' => date("Y-m-d H:i:s"),
+                'updateby' => Auth::user()->userid
             ]);
             
             Cache::forget($lockKey);
