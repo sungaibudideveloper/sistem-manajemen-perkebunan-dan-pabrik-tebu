@@ -274,7 +274,7 @@ class GudangControllerr extends Controller
     public function detail(Request $request)
     {   
         if( request()->getHost() == 'sugarcane.sblampung.com' ){$islokal = 'LIVE';}else{$islokal = 'TESTING';}
-
+        
         $usematerialhdr = new usematerialhdr;
         $usemateriallst = new usemateriallst;
         $dosage = new HerbisidaDosage;
@@ -284,6 +284,35 @@ class GudangControllerr extends Controller
 
         $validItemCodes = HerbisidaDosage::get()->pluck('itemcode')->unique();
 
+        //tambahan itemseq
+        $companycode = session('companycode');
+        $rkhno = $request->rkhno;
+
+        $needSeq = DB::table('usemateriallst')
+            ->where('companycode', $companycode)
+            ->where('rkhno', $rkhno)
+            ->whereNull('itemseq')
+            ->exists();
+
+        if ($needSeq) {
+            DB::statement("
+                SET @seq := (
+                    SELECT COALESCE(MAX(itemseq), 0)
+                    FROM usemateriallst
+                    WHERE companycode = ? AND rkhno = ?
+                );
+            ", [$companycode, $rkhno]);
+
+            DB::statement("
+                UPDATE usemateriallst
+                SET itemseq = (@seq := @seq + 1)
+                WHERE companycode = ? AND rkhno = ? AND itemseq IS NULL
+                ORDER BY lkhno, plot, itemcode
+            ", [$companycode, $rkhno]);
+        }
+
+        //tambahan itemseq
+        
         $itemlist = DB::table('herbisidadosage as d')
             ->join('herbisida as h', function ($join) {
                 $join->on('d.itemcode', '=', 'h.itemcode')
@@ -639,14 +668,6 @@ public function submit(Request $request)
     if (!$first) {
         return $releaseLockAndBack('error', 'Header usematerial tidak ditemukan.', 1);
     }
-    Log::info('SUBMIT DEBUG FIRST:', [
-        'session_company' => session('companycode'),
-        'rkhno' => $request->rkhno,
-        'first_company' => $first->companycode ?? null,
-        'first_factory' => $first->factoryinv ?? null,
-        'first_flagstatus' => $first->flagstatus ?? null,
-        'details_count' => $details->count(),
-    ]);
 
     $roundingByGroup = DB::table('herbisidagroup')
     ->pluck('rounddosage', 'herbisidagroupid');
@@ -659,6 +680,7 @@ public function submit(Request $request)
     ->exists();
     //
 
+    
     if (!$isFromApproval && strtoupper($first->flagstatus) != 'ACTIVE') {
         return $releaseLockAndBack('error', 'Tidak Dapat Edit! Item Sudah Tidak Lagi ACTIVE'.$isFromApproval.' | '.strtoupper($first->flagstatus).'', 2);
     }
@@ -733,7 +755,6 @@ public function submit(Request $request)
     $apiPayload = [];
     $qtyByItemcode = [];
     $itemDetails = [];
-    $seq = 1;
     
     // Process flat - langsung dari request
     foreach ($request->itemcode as $lkhno => $items) {
@@ -766,6 +787,8 @@ public function submit(Request $request)
                                 'itemcode' => $itemcode,
                                 'dosage_input' => $dosage,
                             ];
+                            Log::warning("STD_FAIL:INVALID_ITEMCODE | rkh={$request->rkhno} | lkh={$lkhno} | plot={$key} | group={$groupId} | item={$itemcode} | input_dosage={$dosage} | std=NOT_FOUND"); 
+
                         } else {
                             // dosage berbeda dari standar
                             $stdDos = (float)$stdMap[$kstd];
@@ -781,6 +804,7 @@ public function submit(Request $request)
                                     'dosage_std' => $stdDos,
                                 ];
                             }
+                            Log::warning("STD_FAIL:DOSAGE_CHANGED | rkh={$request->rkhno} | lkh={$lkhno} | plot={$key} | group={$groupId} | item={$itemcode} | input_dosage={$dosage} | std_dosage={$stdDos} | diff=" . abs($dosage - $stdDos));
                         }
                     }
                 } 
@@ -816,8 +840,7 @@ public function submit(Request $request)
                     'itemname' => $herbisidaItems[$itemcode]->itemname ?? '',
                     'dosageperha' => $dosage,
                     'nouse' => $existing?->nouse ?? null,
-                    'plot' => $key,
-                    'itemseq' => $seq++,
+                    'plot' => $key
                 ];
 
                 // Jumlahkan qty per itemcode
@@ -838,7 +861,10 @@ public function submit(Request $request)
     // =====================================
     // STOP & CREATE APPROVAL DOC
     // =====================================
-
+    Log::info("STD_SUMMARY | rkh={$request->rkhno} | isFromApproval=" . ($isFromApproval ? '1' : '0') .
+    " | isApproval=" . ($isApproval ? '1' : '0') .
+    " | reasons=" . count($approvalReasons));
+    
     if (!$isFromApproval && $isApproval) {
         try {
             $companycode = session('companycode');
@@ -851,6 +877,7 @@ public function submit(Request $request)
 
             if (!$approvalMaster) {
                 Cache::forget($lockKey);
+                Log::warning("Approval master 'Use Material' belum di-setup");
                 return back()->with('error', 'Approval master "Use Material" belum di-setup');
             }
 
@@ -866,6 +893,7 @@ public function submit(Request $request)
                 if ($exists) {
                     DB::rollBack();
                     Cache::forget($lockKey);
+                    Log::warning("APPROVAL_EXISTS | rkhno={$request->rkhno} | company={$companycode}");
                     return back()->with('warning', "RKH {$request->rkhno} sudah punya approval. Tidak boleh buat lagi.");
                 }
 
@@ -886,10 +914,17 @@ public function submit(Request $request)
                 'createdat' => now(),
             ]);
             
+            $itemSeqMap = usemateriallst::where('companycode', $companycode)
+            ->where('rkhno', $request->rkhno)
+            ->get(['lkhno','plot','itemcode','itemseq'])
+            ->keyBy(fn($r) => $r->lkhno.'|'.$r->plot.'|'.$r->itemcode);
 
             // 2) insert snapshot ke usematerialapproval (detail-only)
-            $rows = []; $seq = 1;
+            $rows = []; 
             foreach ($insertData as $row) {
+                $k = $row['lkhno'].'|'.$row['plot'].'|'.$row['itemcode']; // itemcode BARU dari request
+                $seqVal = (int)($itemSeqMap[$k]->itemseq ?? 0);
+
                 $rows[] = [
                     'companycode' => $companycode,
                     'approvalno' => $companycode.$approvalNo,
@@ -904,9 +939,12 @@ public function submit(Request $request)
                     'flagstatus' => 'WAIT_APPROVAL',
                     'costcenter' => $request->costcenter,
                     'createdat' => now(),
-                    'itemseq'     => $seq++,
+                    'itemseq'     => $seqVal,
                 ];
             }
+            $approvalNoFull = $companycode.$approvalNo;
+
+
             DB::table('usematerialapproval')->insert($rows);
 
             usematerialhdr::where('companycode', $companycode)
@@ -1096,22 +1134,7 @@ public function submit(Request $request)
         // Check response
         if ($response->status() == 200 && isset($responseData['status']) && $responseData['status'] == 1) {
             //new
-            Log::info('SUBMIT BEFORE UPDATE USEMATERIALLST', [
-                'rkhno' => $request->rkhno,
-                'session_companycode' => session('companycode'),
-                'db_lst_count' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->count(),
-                'db_lst_null_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->whereNull('nouse')
-                    ->count(),
-                'db_lst_itemcodes_sample' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->limit(10)
-                    ->pluck('itemcode')
-                    ->toArray(),
-            ]);
+
             
             // ===== FIX: stockitem dari API use_api adalah associative array (key = itemcode) =====
             $itemPriceMap = [];
@@ -1175,25 +1198,6 @@ public function submit(Request $request)
                 }
             }
 
-            Log::info('SUBMIT AFTER UPDATE USEMATERIALLST', [
-                'rkhno' => $request->rkhno,
-                'session_companycode' => session('companycode'),
-                'db_lst_max_nouse' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->max('nouse'),
-                'db_lst_nouse_distinct' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->whereNotNull('nouse')
-                    ->distinct()
-                    ->pluck('nouse')
-                    ->take(5)
-                    ->toArray(),
-                'db_lst_notnull_nouse_count' => usemateriallst::where('rkhno', $request->rkhno)
-                    ->where('companycode', session('companycode'))
-                    ->whereNotNull('nouse')
-                    ->count(),
-            ]);
-
             usematerialhdr::where('rkhno', $request->rkhno)
             ->where('companycode', session('companycode'))
             ->update([
@@ -1222,55 +1226,6 @@ public function submit(Request $request)
             
             Cache::forget($lockKey);
             return redirect()->back()->with('success1', 'Data updated successfully');
-
-            //new
-
-
-
-            // $itemPriceMap = [];
-            // foreach ($responseData['stockitem'] as $row) {
-            //     $itemcode = $row['Itemcode'] ?? null;
-            //     if ($itemcode) {
-            //         $itemPriceMap[$itemcode] = $row['Itemprice'] ?? 0;
-            //     }
-            // }
-
-            // // Update nouse & itemprice
-            // foreach ($itemPriceMap as $itemcode => $itemprice) {
-
-            //     Log::info("Before DB update:", [
-            //         'itemcode' => $itemcode,
-            //         'itemprice' => $itemprice,
-            //         'type' => gettype($itemprice)
-            //     ]);
-
-            //     usemateriallst::where('rkhno', $request->rkhno)
-            //         ->where('companycode', session('companycode'))
-            //         ->where('itemcode', $itemcode)
-            //         ->update([
-            //             'nouse' => $responseData['noUse'],
-            //             'itemprice' => $itemprice,
-            //             'costcenter' => $request->costcenter,
-            //             'startstock' => $responseData['stockitem'][$itemcode]['StartStock'] ?? 0,
-            //             'endstock' => $responseData['stockitem'][$itemcode]['EndStock'] ?? 0,
-            //             'tgluse'    => now()
-            //         ]);
-
-            //     // Cek hasil di database
-            //     $saved = usemateriallst::where('rkhno', $request->rkhno)
-            //         ->where('companycode', session('companycode'))
-            //         ->where('itemcode', $itemcode)
-            //         ->value('itemprice');
-
-            //     Log::info("After DB update:", [
-            //         'itemcode' => $itemcode,
-            //         'itemprice_saved' => $saved,
-            //         'type' => gettype($saved)
-            //     ]);
-            // }
-
-            // Cache::forget($lockKey);
-            // return redirect()->back()->with('success1', 'Data updated successfully');
 
         } else {
             Cache::forget($lockKey);
